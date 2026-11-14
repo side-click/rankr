@@ -265,6 +265,14 @@ export function BallotShareView({
       return;
     }
 
+    if (overlays.length > 0) {
+      fetch("/api/notify-publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ballotId: ballot.id }),
+      }).catch(() => {});
+    }
+
     setSavedOverlays(overlays);
     setEditingOverlays(false);
     setSavingOverlays(false);

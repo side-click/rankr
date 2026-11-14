@@ -93,6 +93,10 @@ export async function POST(request: Request) {
     ? ballot.overlays.length
     : 0;
 
+  if (!isFlagged && overlayCount === 0) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
   await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
