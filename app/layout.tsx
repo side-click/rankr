@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import Link from "next/link";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
@@ -57,7 +63,7 @@ export default async function RootLayout({
   const maintenanceMode = Boolean(settings?.maintenance_mode);
 
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body className="min-h-screen flex flex-col antialiased">
         <Navbar />
         {maintenanceMode && isAdmin && (
