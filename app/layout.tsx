@@ -26,6 +26,10 @@ export const metadata: Metadata = {
   ),
   title: siteTitle,
   description: siteDescription,
+  robots: {
+    index: false,
+    follow: false,
+  },
   openGraph: {
     type: "website",
     siteName: "Rankr",
