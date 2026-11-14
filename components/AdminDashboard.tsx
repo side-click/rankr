@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type {
+  AllowedDiscordUser,
   AppSettings,
   Division,
   DivisionTheme,
@@ -21,13 +22,17 @@ import {
   ArrowDown,
   ArrowUp,
   Ban,
+  Check,
   ExternalLink,
+  Lock,
   Plus,
   Power,
   Save,
   ShieldAlert,
   Trash2,
   Upload,
+  UserCheck,
+  X,
 } from "lucide-react";
 
 interface AdminPublishedBallot {
@@ -53,6 +58,7 @@ interface AdminDashboardProps {
   initialAppSettings: AppSettings;
   initialProfiles: Profile[];
   initialPublishedBallots: AdminPublishedBallot[];
+  initialAllowedUsers: AllowedDiscordUser[];
 }
 
 function slugify(value: string) {
@@ -74,6 +80,7 @@ export function AdminDashboard({
   initialAppSettings,
   initialProfiles,
   initialPublishedBallots,
+  initialAllowedUsers,
 }: AdminDashboardProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -97,7 +104,16 @@ export function AdminDashboard({
   const [publishedBallots, setPublishedBallots] = useState<
     AdminPublishedBallot[]
   >(initialPublishedBallots);
+  const [allowedUsers, setAllowedUsers] =
+    useState<AllowedDiscordUser[]>(initialAllowedUsers);
+  const [newAllowedDiscordId, setNewAllowedDiscordId] = useState("");
+  const [newAllowedLabel, setNewAllowedLabel] = useState("");
   const [userSearch, setUserSearch] = useState("");
+
+  const allowedIdSet = useMemo(
+    () => new Set(allowedUsers.map((u) => u.discord_id)),
+    [allowedUsers]
+  );
 
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>(
     initialSeasons.find((s) => s.is_active)?.id ?? initialSeasons[0]?.id ?? ""
@@ -145,7 +161,7 @@ export function AdminDashboard({
   const [newTeamCaptain, setNewTeamCaptain] = useState("");
 
   async function refreshAll() {
-    const [l, s, d, th, e, t, cfg, prof, bal] = await Promise.all([
+    const [l, s, d, th, e, t, cfg, prof, bal, allow] = await Promise.all([
       supabase.from("leagues").select("*").order("created_at", { ascending: true }),
       supabase.from("seasons").select("*").order("created_at", { ascending: false }),
       supabase.from("divisions").select("*").order("name"),
@@ -162,6 +178,10 @@ export function AdminDashboard({
         .eq("status", "published")
         .order("published_at", { ascending: false })
         .limit(50),
+      supabase
+        .from("allowed_discord_users")
+        .select("*")
+        .order("created_at", { ascending: false }),
     ]);
     if (l.data) setLeagues(l.data);
     if (s.data) setSeasons(s.data);
@@ -172,6 +192,7 @@ export function AdminDashboard({
     if (cfg.data) setAppSettings(cfg.data);
     if (prof.data) setProfiles(prof.data);
     if (bal.data) setPublishedBallots(bal.data);
+    if (allow.data) setAllowedUsers(allow.data);
     router.refresh();
   }
 
@@ -549,6 +570,62 @@ export function AdminDashboard({
     });
     setStatusMsg(
       error ? `Error: ${error.message}` : "Maintenance message saved."
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleToggleAllowlistMode() {
+    const nextRequire = !appSettings.require_allowlist;
+    setBusy(true);
+    const { error } = await supabase.from("app_settings").upsert({
+      id: 1,
+      maintenance_mode: appSettings.maintenance_mode,
+      maintenance_message: appSettings.maintenance_message,
+      require_allowlist: nextRequire,
+      updated_at: new Date().toISOString(),
+    });
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : nextRequire
+        ? "Discord Allowlist ENABLED — only allowlisted Discord IDs & admins can sign in and rank."
+        : "Discord Allowlist DISABLED — anyone can sign in with Discord."
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleAddAllowedUser(discordId: string, label?: string | null) {
+    const trimmed = discordId.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    const { error } = await supabase.from("allowed_discord_users").upsert({
+      discord_id: trimmed,
+      label: label?.trim() || null,
+      added_by: currentUserId,
+    });
+    if (error) {
+      setStatusMsg(`Error: ${error.message}`);
+    } else {
+      setNewAllowedDiscordId("");
+      setNewAllowedLabel("");
+      setStatusMsg(`Allowlisted Discord ID ${trimmed}.`);
+      await refreshAll();
+    }
+    setBusy(false);
+  }
+
+  async function handleRemoveAllowedUser(discordId: string) {
+    setBusy(true);
+    const { error } = await supabase
+      .from("allowed_discord_users")
+      .delete()
+      .eq("discord_id", discordId);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : `Removed Discord ID ${discordId} from allowlist.`
     );
     await refreshAll();
     setBusy(false);
@@ -1880,6 +1957,109 @@ export function AdminDashboard({
             </div>
           </div>
 
+          {/* Discord Allowlist (Invite-Only Authoring) */}
+          <div className="xp-panel p-3 space-y-3 border border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Lock
+                  className={`w-5 h-5 ${
+                    appSettings.require_allowlist
+                      ? "text-[#f0c020]"
+                      : "text-[#a6a89e]"
+                  }`}
+                />
+                <div>
+                  <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                    Discord Allowlist (Invite-Only Authoring)
+                  </h2>
+                  <p className="text-[11px] text-[#a6a89e]">
+                    Everyone can still browse and view ballot links, but only
+                    allowlisted Discord IDs (and admins) can sign in to rank or
+                    edit.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleToggleAllowlistMode}
+                className={`xp-btn text-xs ${
+                  appSettings.require_allowlist ? "xp-btn-primary" : ""
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>
+                  {appSettings.require_allowlist
+                    ? "Allowlist Active (Click to Open)"
+                    : "Require Allowlist"}
+                </span>
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddAllowedUser(newAllowedDiscordId, newAllowedLabel);
+              }}
+              className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10"
+            >
+              <input
+                type="text"
+                value={newAllowedDiscordId}
+                onChange={(e) => setNewAllowedDiscordId(e.target.value)}
+                placeholder="Discord User ID (e.g. 123456789012345678)"
+                className="flex-1 min-w-[200px] xp-inset px-2.5 py-1.5 text-xs font-mono"
+              />
+              <input
+                type="text"
+                value={newAllowedLabel}
+                onChange={(e) => setNewAllowedLabel(e.target.value)}
+                placeholder="Label / Name (optional)"
+                className="w-48 xp-inset px-2.5 py-1.5 text-xs"
+              />
+              <button
+                type="submit"
+                disabled={busy || !newAllowedDiscordId.trim()}
+                className="xp-btn xp-btn-primary text-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Discord ID</span>
+              </button>
+            </form>
+
+            {allowedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {allowedUsers.map((entry) => {
+                  const matchedProfile = profiles.find(
+                    (p) => p.discord_id === entry.discord_id
+                  );
+                  return (
+                    <div
+                      key={entry.discord_id}
+                      className="xp-inset px-2 py-1 text-[11px] flex items-center gap-1.5"
+                    >
+                      <span className="font-bold text-[#f0ede0]">
+                        {entry.label || matchedProfile?.username || "Approved"}
+                      </span>
+                      <code className="text-[10px] text-[#a6a89e] font-mono">
+                        {entry.discord_id}
+                      </code>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleRemoveAllowedUser(entry.discord_id)}
+                        className="text-[#ff857a] hover:text-white ml-0.5"
+                        title="Remove from allowlist"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             {/* Published Rankings Moderation */}
             <div className="lg:col-span-6 xp-panel p-3 space-y-2.5">
@@ -1985,6 +2165,13 @@ export function AdminDashboard({
                                 Admin
                               </span>
                             )}
+                            {!p.is_admin &&
+                              p.discord_id &&
+                              allowedIdSet.has(p.discord_id) && (
+                                <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#1f3d5a] text-[#7cc4ff] rounded-xs">
+                                  Allowed
+                                </span>
+                              )}
                             {p.is_banned && (
                               <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#451717] text-[#ff857a] rounded-xs">
                                 Banned
@@ -1998,17 +2185,47 @@ export function AdminDashboard({
                         </div>
                       </div>
                       {p.id !== currentUserId && !p.is_admin && (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleToggleBanUser(p)}
-                          className={`xp-btn text-[11px] px-2 py-1 shrink-0 ${
-                            p.is_banned ? "xp-btn-primary" : "xp-btn-danger"
-                          }`}
-                        >
-                          <Ban className="w-3 h-3" />
-                          <span>{p.is_banned ? "Unban" : "Ban"}</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {p.discord_id &&
+                            (allowedIdSet.has(p.discord_id) ? (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleRemoveAllowedUser(p.discord_id!)
+                                }
+                                className="xp-btn text-[11px] px-2 py-1"
+                                title="Remove from allowlist"
+                              >
+                                <X className="w-3 h-3" />
+                                <span>Revoke</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleAddAllowedUser(p.discord_id!, p.username)
+                                }
+                                className="xp-btn xp-btn-primary text-[11px] px-2 py-1"
+                                title="Approve Discord user for ranking"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Approve</span>
+                              </button>
+                            ))}
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleToggleBanUser(p)}
+                            className={`xp-btn text-[11px] px-2 py-1 ${
+                              p.is_banned ? "xp-btn-primary" : "xp-btn-danger"
+                            }`}
+                          >
+                            <Ban className="w-3 h-3" />
+                            <span>{p.is_banned ? "Unban" : "Ban"}</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}

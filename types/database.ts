@@ -16,7 +16,15 @@ export interface AppSettings {
   id: number;
   maintenance_mode: boolean;
   maintenance_message: string;
+  require_allowlist: boolean;
   updated_at: string;
+}
+
+export interface AllowedDiscordUser {
+  discord_id: string;
+  label: string | null;
+  added_by: string | null;
+  created_at: string;
 }
 
 export interface League {

@@ -48,6 +48,7 @@ export default async function AdminPage() {
     { data: appSettings },
     { data: profiles },
     { data: recentBallots },
+    { data: allowedUsers },
   ] = await Promise.all([
     supabase.from("leagues").select("*").order("created_at", { ascending: true }),
     supabase.from("seasons").select("*").order("created_at", { ascending: false }),
@@ -65,6 +66,10 @@ export default async function AdminPage() {
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(50),
+    supabase
+      .from("allowed_discord_users")
+      .select("*")
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -82,11 +87,13 @@ export default async function AdminPage() {
           maintenance_mode: false,
           maintenance_message:
             "Rankr is temporarily offline for maintenance. Please check back shortly.",
+          require_allowlist: false,
           updated_at: new Date().toISOString(),
         }
       }
       initialProfiles={profiles ?? []}
       initialPublishedBallots={recentBallots ?? []}
+      initialAllowedUsers={allowedUsers ?? []}
     />
   );
 }

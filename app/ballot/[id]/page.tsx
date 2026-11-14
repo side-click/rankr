@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
+import { checkUserAllowlisted } from "@/utils/allowlist";
 import { BallotShareView } from "@/components/BallotShareView";
 
 export const dynamic = "force-dynamic";
@@ -146,29 +147,34 @@ export default async function BallotPage({
     notFound();
   }
 
-  const [{ data: entries }, { data: divisionThemes }, { data: viewerProfile }] =
-    await Promise.all([
-      supabase
-        .from("ballot_entries")
-        .select("*")
-        .eq("ballot_id", ballot.id)
-        .order("rank", { ascending: true }),
-      supabase.from("division_themes").select("*").order("name"),
-      user
-        ? supabase
-            .from("profiles")
-            .select("is_admin")
-            .eq("id", user.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+  const [
+    { data: entries },
+    { data: divisionThemes },
+    { data: viewerProfile },
+    isAllowlisted,
+  ] = await Promise.all([
+    supabase
+      .from("ballot_entries")
+      .select("*")
+      .eq("ballot_id", ballot.id)
+      .order("rank", { ascending: true }),
+    supabase.from("division_themes").select("*").order("name"),
+    user
+      ? supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    user ? checkUserAllowlisted(supabase) : Promise.resolve(false),
+  ]);
 
   return (
     <BallotShareView
       ballot={ballot}
       entries={entries ?? []}
       themes={divisionThemes ?? []}
-      isOwner={user?.id === ballot.user_id}
+      isOwner={user?.id === ballot.user_id && isAllowlisted}
       isAdmin={Boolean(viewerProfile?.is_admin)}
     />
   );

@@ -8,8 +8,17 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const { data: allowed } = await supabase.rpc("is_allowlisted");
+      if (allowed === false) {
+        const meta = data.user?.user_metadata ?? {};
+        const discordId = String(meta.provider_id ?? meta.sub ?? "");
+        await supabase.auth.signOut();
+        const params = new URLSearchParams({ auth_error: "not_authorized" });
+        if (discordId) params.set("discord_id", discordId);
+        return NextResponse.redirect(`${origin}/?${params.toString()}`);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

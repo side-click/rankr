@@ -1,7 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
+import { checkUserAllowlisted } from "@/utils/allowlist";
 import { BallotEditor } from "@/components/BallotEditor";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
+import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,7 @@ export default async function RankPage({
   }
 
   const [
+    isAllowlisted,
     { data: profile },
     { data: seasons },
     { data: divisions },
@@ -46,9 +49,10 @@ export default async function RankPage({
     { data: editions },
     { data: teams },
   ] = await Promise.all([
+    checkUserAllowlisted(supabase),
     supabase
       .from("profiles")
-      .select("username, is_banned, ban_reason")
+      .select("username, avatar_url, discord_id, is_banned, ban_reason")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -68,6 +72,20 @@ export default async function RankPage({
       .eq("is_active", true)
       .order("default_order", { ascending: true }),
   ]);
+
+  if (!isAllowlisted) {
+    return (
+      <AllowlistBlockedWindow
+        title="Power Rankings Editor — Invite Only"
+        user={{
+          id: user.id,
+          username: profile?.username ?? "Discord User",
+          avatarUrl: profile?.avatar_url ?? null,
+          discordId: profile?.discord_id ?? null,
+        }}
+      />
+    );
+  }
 
   if (profile?.is_banned) {
     return (

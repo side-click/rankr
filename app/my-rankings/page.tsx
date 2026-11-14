@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
+import { checkUserAllowlisted } from "@/utils/allowlist";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
+import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { getLeaguePrefix } from "@/components/BallotCard";
 import { Edit3, ExternalLink, Lock } from "lucide-react";
 
@@ -26,6 +28,29 @@ export default async function MyRankingsPage() {
           </div>
         </div>
       </RetroWindow>
+    );
+  }
+
+  const [isAllowlisted, { data: profile }] = await Promise.all([
+    checkUserAllowlisted(supabase),
+    supabase
+      .from("profiles")
+      .select("username, avatar_url, discord_id")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
+
+  if (!isAllowlisted) {
+    return (
+      <AllowlistBlockedWindow
+        title="My Ranking History — Invite Only"
+        user={{
+          id: user.id,
+          username: profile?.username ?? "Discord User",
+          avatarUrl: profile?.avatar_url ?? null,
+          discordId: profile?.discord_id ?? null,
+        }}
+      />
     );
   }
 

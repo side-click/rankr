@@ -7,7 +7,9 @@ const inter = Inter({
   variable: "--font-inter",
 });
 import "./globals.css";
+import { Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
+import { AuthNoticeBanner } from "@/components/AuthNoticeBanner";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { ShieldAlert } from "lucide-react";
@@ -70,6 +72,9 @@ export default async function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen flex flex-col antialiased">
         <Navbar />
+        <Suspense fallback={null}>
+          <AuthNoticeBanner />
+        </Suspense>
         {maintenanceMode && isAdmin && (
           <div className="bg-[#7a1616] border-b border-[#ff857a] text-white text-xs font-bold px-4 py-2 text-center">
             KILL SWITCH ACTIVE — Rankr is currently offline for non-admin users.{" "}
