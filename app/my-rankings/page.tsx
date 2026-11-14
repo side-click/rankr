@@ -16,6 +16,12 @@ export default async function MyRankingsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    const { data: appSettings } = await supabase
+      .from("app_settings")
+      .select("require_allowlist")
+      .eq("id", 1)
+      .maybeSingle();
+
     return (
       <RetroWindow title="My Ranking History" theme="scdl">
         <div className="py-8 text-center space-y-3">
@@ -24,7 +30,10 @@ export default async function MyRankingsPage() {
             Sign in with Discord to view your ranking history.
           </p>
           <div className="flex justify-center">
-            <AuthButton user={null} />
+            <AuthButton
+              user={null}
+              requireAllowlist={Boolean(appSettings?.require_allowlist)}
+            />
           </div>
         </div>
       </RetroWindow>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, MessageSquare } from "lucide-react";
+import { Lock, LogOut, MessageSquare, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 interface AuthButtonProps {
@@ -10,13 +10,15 @@ interface AuthButtonProps {
     username: string;
     avatarUrl: string | null;
   } | null;
+  requireAllowlist?: boolean;
 }
 
-export function AuthButton({ user }: AuthButtonProps) {
+export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const supabase = createClient();
 
-  async function handleSignIn() {
+  async function startDiscordOAuth() {
     setLoading(true);
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
       window.location.pathname + window.location.search
@@ -28,6 +30,14 @@ export function AuthButton({ user }: AuthButtonProps) {
     });
   }
 
+  function handleSignInClick() {
+    if (requireAllowlist) {
+      setConfirmOpen(true);
+      return;
+    }
+    void startDiscordOAuth();
+  }
+
   async function handleSignOut() {
     setLoading(true);
     await supabase.auth.signOut();
@@ -36,18 +46,77 @@ export function AuthButton({ user }: AuthButtonProps) {
 
   if (!user) {
     return (
-      <button
-        type="button"
-        onClick={handleSignIn}
-        disabled={loading}
-        className="xp-btn xp-btn-discord text-xs shrink-0"
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        <span className="sm:hidden">{loading ? "..." : "Sign in"}</span>
-        <span className="hidden sm:inline">
-          {loading ? "Connecting..." : "Sign in with Discord"}
-        </span>
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={handleSignInClick}
+          disabled={loading}
+          className="xp-btn xp-btn-discord text-xs shrink-0"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span className="sm:hidden">{loading ? "..." : "Sign in"}</span>
+          <span className="hidden sm:inline">
+            {loading ? "Connecting..." : "Sign in with Discord"}
+          </span>
+        </button>
+
+        {confirmOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4"
+            onClick={() => !loading && setConfirmOpen(false)}
+          >
+            <div
+              className="w-full max-w-sm xp-window overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <Lock className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <span>Authorized Creators Only</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setConfirmOpen(false)}
+                  className="text-white/80 hover:text-white"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
+                <p className="leading-relaxed">
+                  Sign-in and publishing rankings are currently for{" "}
+                  <strong className="text-[#f0c020]">
+                    authorized creators only
+                  </strong>
+                  . You can still browse and view all rankings without signing
+                  in.
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setConfirmOpen(false)}
+                    className="xp-btn text-xs"
+                  >
+                    Nevermind
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void startDiscordOAuth()}
+                    className="xp-btn xp-btn-discord text-xs"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>{loading ? "Connecting..." : "Proceed"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

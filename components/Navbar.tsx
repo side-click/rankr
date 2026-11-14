@@ -21,11 +21,18 @@ export async function Navbar() {
     profile = data;
   }
 
-  const { data: seasonsData } = await supabase
-    .from("seasons")
-    .select("id, name, slug, is_active, leagues ( * )")
-    .order("is_active", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [{ data: seasonsData }, { data: appSettings }] = await Promise.all([
+    supabase
+      .from("seasons")
+      .select("id, name, slug, is_active, leagues ( * )")
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("app_settings")
+      .select("require_allowlist")
+      .eq("id", 1)
+      .maybeSingle(),
+  ]);
 
   const headerSeasons = (seasonsData ?? []).map((s) => {
     const league = Array.isArray(s.leagues) ? s.leagues[0] : s.leagues;
@@ -60,6 +67,7 @@ export async function Navbar() {
         </Suspense>
 
         <AuthButton
+          requireAllowlist={Boolean(appSettings?.require_allowlist)}
           user={
             user
               ? {

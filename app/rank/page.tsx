@@ -20,6 +20,12 @@ export default async function RankPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
+    const { data: appSettings } = await supabase
+      .from("app_settings")
+      .select("require_allowlist")
+      .eq("id", 1)
+      .maybeSingle();
+
     return (
       <RetroWindow
         title="Sign In Required — Power Rankings Editor"
@@ -33,7 +39,10 @@ export default async function RankPage({
             Sign in with Discord to Rank Teams
           </h1>
           <div className="flex justify-center">
-            <AuthButton user={null} />
+            <AuthButton
+              user={null}
+              requireAllowlist={Boolean(appSettings?.require_allowlist)}
+            />
           </div>
         </div>
       </RetroWindow>
