@@ -10,13 +10,13 @@ type OgFont = {
 
 let cachedFonts: OgFont[] | null = null;
 
-async function readLocalFont(
+async function readLocalOrRemoteFont(
   filename: string,
   name: string,
   weight: 400 | 700
 ): Promise<OgFont | null> {
   try {
-    const filePath = path.join(process.cwd(), "assets/fonts", filename);
+    const filePath = path.join(process.cwd(), "public/fonts", filename);
     const buffer = await readFile(filePath);
     const data = buffer.buffer.slice(
       buffer.byteOffset,
@@ -24,7 +24,16 @@ async function readLocalFont(
     ) as ArrayBuffer;
     return { name, data, weight, style: "normal" };
   } catch {
-    return null;
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
+      const res = await fetch(`${baseUrl}/fonts/${filename}`);
+      if (!res.ok) return null;
+      const data = await res.arrayBuffer();
+      return { name, data, weight, style: "normal" };
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -32,9 +41,9 @@ export async function loadOgFonts(): Promise<OgFont[]> {
   if (cachedFonts && cachedFonts.length > 0) return cachedFonts;
 
   const results = await Promise.all([
-    readLocalFont("PTSerif-Bold.ttf", "WowHeading", 700),
-    readLocalFont("PTSans-Regular.ttf", "SiteBody", 400),
-    readLocalFont("PTSans-Bold.ttf", "SiteBody", 700),
+    readLocalOrRemoteFont("PTSerif-Bold.ttf", "WowHeading", 700),
+    readLocalOrRemoteFont("PTSans-Regular.ttf", "SiteBody", 400),
+    readLocalOrRemoteFont("PTSans-Bold.ttf", "SiteBody", 700),
   ]);
 
   const fonts = results.filter((f): f is OgFont => f !== null);

@@ -291,14 +291,14 @@ export default async function BallotOpenGraphImage({
                 >
                   <div
                     style={{
-                      width: "60px",
-                      height: "60px",
+                      width: "64px",
+                      height: "64px",
                       borderRadius: "10px",
                       background: badgeColor,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "32px",
+                      fontSize: "34px",
                       fontWeight: 700,
                       color: "#ffffff",
                     }}
