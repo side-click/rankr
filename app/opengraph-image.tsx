@@ -44,69 +44,31 @@ export default async function OpenGraphImage() {
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: "24px",
           }}
         >
-          <div
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt="Rankr"
+              width={96}
+              height={96}
+              style={{ objectFit: "contain" }}
+            />
+          )}
+          <span
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "24px",
-            }}
-          >
-            {logoUrl && (
-              <img
-                src={logoUrl}
-                alt="Rankr"
-                width={96}
-                height={96}
-                style={{ objectFit: "contain" }}
-              />
-            )}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  letterSpacing: "4px",
-                  color: "#f0c020",
-                  textTransform: "uppercase",
-                }}
-              >
-                SCUTTLE CRAB DRAFT LEAGUE
-              </span>
-              <span
-                style={{
-                  fontFamily: "WowHeading, serif",
-                  fontSize: "72px",
-                  fontWeight: 700,
-                  letterSpacing: "1px",
-                  color: "#f0c020",
-                  lineHeight: 1.05,
-                  textShadow: "0 3px 6px rgba(0, 0, 0, 0.7)",
-                }}
-              >
-                Rankr
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "12px 24px",
-              borderRadius: "8px",
-              border: "2px solid #c89b3c",
-              background: "rgba(200, 155, 60, 0.14)",
-              color: "#f0c020",
-              fontSize: "20px",
+              fontFamily: "WowHeading, serif",
+              fontSize: "76px",
               fontWeight: 700,
-              letterSpacing: "1.5px",
+              letterSpacing: "1px",
+              color: "#f0c020",
+              lineHeight: 1.05,
+              textShadow: "0 3px 6px rgba(0, 0, 0, 0.7)",
             }}
           >
-            POWER RANKINGS
-          </div>
+            Rankr
+          </span>
         </div>
 
         <div

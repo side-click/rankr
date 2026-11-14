@@ -14,8 +14,20 @@ const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
 
 async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<string | null> {
   if (!logoUrl) return null;
-  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://") || logoUrl.startsWith("data:")) {
+  if (logoUrl.startsWith("data:")) {
     return logoUrl;
+  }
+  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
+    try {
+      const res = await fetch(logoUrl);
+      if (!res.ok) return null;
+      const contentTypeHeader = res.headers.get("content-type") || "image/png";
+      const mime = contentTypeHeader.split(";")[0].trim();
+      const buffer = Buffer.from(await res.arrayBuffer());
+      return `data:${mime};base64,${buffer.toString("base64")}`;
+    } catch {
+      return null;
+    }
   }
   if (logoUrl.startsWith("/")) {
     try {
