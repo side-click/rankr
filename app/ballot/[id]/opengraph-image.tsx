@@ -12,22 +12,34 @@ export const contentType = "image/png";
 
 const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
 
+const SUPPORTED_OG_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+]);
+
+async function fetchImageAsDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const contentTypeHeader = res.headers.get("content-type") || "";
+    const mime = contentTypeHeader.split(";")[0].trim().toLowerCase();
+    if (!SUPPORTED_OG_MIMES.has(mime)) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return `data:${mime};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<string | null> {
   if (!logoUrl) return null;
-  if (logoUrl.startsWith("data:")) {
+  if (logoUrl.startsWith("data:image/")) {
     return logoUrl;
   }
   if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
-    try {
-      const res = await fetch(logoUrl);
-      if (!res.ok) return null;
-      const contentTypeHeader = res.headers.get("content-type") || "image/png";
-      const mime = contentTypeHeader.split(";")[0].trim();
-      const buffer = Buffer.from(await res.arrayBuffer());
-      return `data:${mime};base64,${buffer.toString("base64")}`;
-    } catch {
-      return null;
-    }
+    return fetchImageAsDataUri(logoUrl);
   }
   if (logoUrl.startsWith("/")) {
     try {
@@ -38,29 +50,21 @@ async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<strin
       const mime =
         ext === ".jpg" || ext === ".jpeg"
           ? "image/jpeg"
-          : ext === ".webp"
-          ? "image/webp"
-          : "image/png";
+          : ext === ".gif"
+          ? "image/gif"
+          : ext === ".png"
+          ? "image/png"
+          : null;
+      if (!mime) return null;
       return `data:${mime};base64,${buffer.toString("base64")}`;
     } catch {
-      // On Vercel serverless functions, public/ assets aren't bundled into process.cwd();
-      // fall back to fetching from the deployed CDN URL.
-      try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_SITE_URL ??
-          (process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : "https://league-rankr.vercel.app");
-        const absoluteUrl = new URL(encodeURI(decodeURI(logoUrl)), baseUrl).toString();
-        const res = await fetch(absoluteUrl);
-        if (!res.ok) return null;
-        const contentTypeHeader = res.headers.get("content-type") || "image/png";
-        const mime = contentTypeHeader.split(";")[0].trim();
-        const buffer = Buffer.from(await res.arrayBuffer());
-        return `data:${mime};base64,${buffer.toString("base64")}`;
-      } catch {
-        return null;
-      }
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
+      const absoluteUrl = new URL(
+        encodeURI(decodeURI(logoUrl)),
+        baseUrl
+      ).toString();
+      return fetchImageAsDataUri(absoluteUrl);
     }
   }
   return null;
