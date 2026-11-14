@@ -113,8 +113,81 @@ function SortableTeamRow({
       }`}
     >
       <div className="flex flex-col md:flex-row md:items-center gap-3">
-        {/* Grabber + Rank + Change + Move */}
-        <div className="flex items-center justify-between md:justify-start gap-2.5 md:w-[170px] lg:w-[185px] shrink-0 md:border-r md:border-white/10 md:pr-3">
+        {/* Mobile-only compact header matching mockup */}
+        <div className="flex items-center justify-between gap-2.5 md:hidden">
+          <div className="flex items-center gap-2 shrink-0">
+            {!disabled && (
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded-md text-white/55 hover:text-white hover:bg-white/10 transition-colors"
+                title="Drag to reorder"
+              >
+                <GripVertical className="w-5 h-5" />
+              </button>
+            )}
+            <div className="flex flex-col items-center gap-1">
+              <span
+                style={{
+                  backgroundColor: rankColor.badgeBg,
+                  borderColor: rankColor.borderColor,
+                  color: rankColor.badgeText,
+                }}
+                className="w-10 h-10 rounded-xl border font-black text-xl flex items-center justify-center shadow-sm shrink-0"
+              >
+                {currentRank}
+              </span>
+              {!disabled && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onMove(index, -1)}
+                    disabled={index === 0}
+                    className="p-1 rounded-md bg-black/25 hover:bg-black/45 border border-white/15 text-[#f0ede0] disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    title="Move up"
+                  >
+                    <ArrowUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMove(index, 1)}
+                    disabled={index === total - 1}
+                    className="p-1 rounded-md bg-black/25 hover:bg-black/45 border border-white/15 text-[#f0ede0] disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    title="Move down"
+                  >
+                    <ArrowDown className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+            {item.team.logo_url ? (
+              <img
+                src={item.team.logo_url}
+                alt={item.team.name}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <span className="text-[10px] font-bold text-white/40">LOGO</span>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-1 min-w-0 flex-1 text-center">
+            <div className="font-black text-xl text-[#f7f5eb] tracking-tight leading-tight truncate max-w-full">
+              {item.team.name}
+            </div>
+            <RankChangeBadge
+              previousRank={item.previousRank}
+              rankChange={rankChange}
+            />
+          </div>
+        </div>
+
+        {/* Desktop-only Grabber + Rank + Change + Move */}
+        <div className="hidden md:flex items-center justify-start gap-2.5 md:w-[170px] lg:w-[185px] shrink-0 md:border-r md:border-white/10 md:pr-3">
           <div className="flex items-center gap-2.5">
             {!disabled && (
               <button
@@ -170,8 +243,8 @@ function SortableTeamRow({
           </div>
         </div>
 
-        {/* Team Logo + Prominent Team Name */}
-        <div className="flex items-center gap-3 md:flex-[1.35] min-w-0">
+        {/* Desktop-only Team Logo + Prominent Team Name */}
+        <div className="hidden md:flex items-center gap-3 md:flex-[1.35] min-w-0">
           <div className="w-20 h-20 shrink-0 flex items-center justify-center">
             {item.team.logo_url ? (
               <img
@@ -192,7 +265,7 @@ function SortableTeamRow({
 
         {/* 5-Player Roster (beside Team Name) */}
         <div className="md:w-[180px] lg:w-[200px] shrink-0 min-w-0">
-          <ul className="space-y-1 text-xs text-[#e5e3d8]">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:block gap-x-3 gap-y-1 md:space-y-1 text-xs text-[#e5e3d8]">
             {normalizeRoster(item.team.roster, item.team.captain).map(
               (slot, pIdx) => {
                 const roleMeta = getRoleMeta(slot.role);
@@ -341,11 +414,11 @@ export function BallotEditor({
   useEffect(() => {
     if (initialSeasonSlug) {
       const matched = seasons.find((s) => s.slug === initialSeasonSlug);
-      if (matched && matched.id !== seasonId) {
+      if (matched) {
         setSeasonId(matched.id);
       }
     }
-  }, [initialSeasonSlug, seasons, seasonId]);
+  }, [initialSeasonSlug, seasons]);
 
   useEffect(() => {
     if (seasonDivisions.length === 0) {
@@ -655,7 +728,16 @@ export function BallotEditor({
             </label>
             <select
               value={seasonId}
-              onChange={(e) => setSeasonId(e.target.value)}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSeasonId(newId);
+                const nextSeason = seasons.find((s) => s.id === newId);
+                if (nextSeason?.slug) {
+                  router.replace(
+                    `/rank?season=${encodeURIComponent(nextSeason.slug)}`
+                  );
+                }
+              }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
             >
               {seasons.map((s) => {
@@ -725,7 +807,7 @@ export function BallotEditor({
             </button>
 
             {showCustomAuthor && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 w-72 sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+              <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <label className="text-[11px] font-bold text-[#c7c5b8]">
                     Custom Author Name
@@ -768,7 +850,7 @@ export function BallotEditor({
             </button>
 
             {showGeneralNotes && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 w-80 sm:w-[420px] bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+              <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-[420px] bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <label className="text-[11px] font-bold text-[#c7c5b8]">
                     General Notes

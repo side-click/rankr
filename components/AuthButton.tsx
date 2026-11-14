@@ -43,7 +43,10 @@ export function AuthButton({ user }: AuthButtonProps) {
         className="xp-btn xp-btn-discord text-xs shrink-0"
       >
         <MessageSquare className="w-3.5 h-3.5" />
-        <span>{loading ? "Connecting..." : "Sign in with Discord"}</span>
+        <span className="sm:hidden">{loading ? "..." : "Sign in"}</span>
+        <span className="hidden sm:inline">
+          {loading ? "Connecting..." : "Sign in with Discord"}
+        </span>
       </button>
     );
   }

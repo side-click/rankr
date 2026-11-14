@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { BallotCard, getLeaguePrefix, type BallotCardData } from "@/components/BallotCard";
 
 interface SeasonOption {
@@ -35,8 +36,19 @@ export function RecentBallotsPanel({
   seasons,
   divisions,
 }: RecentBallotsPanelProps) {
-  const [seasonSlug, setSeasonSlug] = useState("");
+  const searchParams = useSearchParams();
+  const urlSeasonSlug = searchParams.get("season") ?? "";
+  const matchedUrlSeason = seasons.some((s) => s.slug === urlSeasonSlug)
+    ? urlSeasonSlug
+    : "";
+
+  const [seasonSlug, setSeasonSlug] = useState(matchedUrlSeason);
   const [divisionSlug, setDivisionSlug] = useState("");
+
+  useEffect(() => {
+    setSeasonSlug(matchedUrlSeason);
+    setDivisionSlug("");
+  }, [matchedUrlSeason]);
 
   const selectedSeason = seasons.find((s) => s.slug === seasonSlug) ?? null;
 

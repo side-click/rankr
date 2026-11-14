@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, ListOrdered } from "lucide-react";
+import { Eye, History, ListOrdered, Menu, Shield, X } from "lucide-react";
 
 interface HeaderSeasonOption {
   id: string;
@@ -20,6 +20,7 @@ interface HeaderNavProps {
 }
 
 export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,15 +40,13 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
       params.delete("season");
     }
 
-    // If on /rank or /browse, stay on current page with new season; otherwise navigate to /rank
     if (pathname === "/rank" || pathname === "/browse") {
       // Clear division/edition when switching seasons so stale slugs don't persist
       params.delete("division");
       params.delete("edition");
-      router.push(`${pathname}?${params.toString()}`);
-    } else {
-      router.push(`/rank?season=${encodeURIComponent(newSlug)}`);
     }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
   }
 
   const seasonQuery = selectedSeasonSlug
@@ -75,7 +74,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           aria-label="Select Season"
           value={selectedSeasonSlug}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          className="xp-inset px-2 py-1 text-xs font-bold w-[140px] sm:w-[195px] shrink-0 truncate"
+          className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[170px] lg:w-[195px] shrink-0 truncate"
         >
           {seasons.map((s) => (
             <option key={s.id} value={s.slug}>
@@ -87,7 +86,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         </select>
       )}
 
-      <nav className="flex items-center gap-1 text-xs font-bold min-w-0">
+      <nav className="hidden lg:flex items-center gap-1 text-xs font-bold min-w-0">
         <Link
           href={`/rank${seasonQuery}`}
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
@@ -105,20 +104,100 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         {isLoggedIn && (
           <Link
             href="/my-rankings"
-            className="px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
           >
-            My History
+            <History className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+            <span>My History</span>
           </Link>
         )}
         {isAdmin && (
           <Link
             href="/admin"
-            className="px-2 py-1.5 rounded text-[#ffe57f] bg-black/25 hover:bg-black/40 border border-[#f0c020]/60 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-[#ffe57f] bg-black/25 hover:bg-black/40 border border-[#f0c020]/60 whitespace-nowrap"
           >
-            Admin
+            <Shield className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+            <span>Admin</span>
           </Link>
         )}
       </nav>
+
+      <button
+        type="button"
+        onClick={() => setMobileMenuOpen((prev) => !prev)}
+        aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={mobileMenuOpen}
+        className="lg:hidden ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0"
+      >
+        {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+      </button>
+
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-2.5">
+          {seasons.length > 0 && (
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1">
+                Active Season
+              </label>
+              <select
+                aria-label="Select Season"
+                value={selectedSeasonSlug}
+                onChange={(e) => {
+                  handleSeasonChange(e.target.value);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full xp-inset px-2.5 py-2 text-xs font-bold"
+              >
+                {seasons.map((s) => (
+                  <option key={s.id} value={s.slug}>
+                    {s.leagueName ? `${s.leagueName}: ` : ""}
+                    {s.name}
+                    {!s.is_active ? " (Inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1 text-xs font-bold">
+            <Link
+              href={`/rank${seasonQuery}`}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            >
+              <ListOrdered className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Create Ranking</span>
+            </Link>
+            <Link
+              href={`/browse${seasonQuery}`}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            >
+              <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Published Rankings</span>
+            </Link>
+            {isLoggedIn && (
+              <Link
+                href="/my-rankings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+              >
+                <History className="w-4 h-4 text-[#f0c020] shrink-0" />
+                <span>My History</span>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/35 hover:bg-black/50 text-[#ffe57f] border border-[#f0c020]/60"
+              >
+                <Shield className="w-4 h-4 text-[#f0c020] shrink-0" />
+                <span>Admin</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

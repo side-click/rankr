@@ -72,7 +72,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
 
   if (!text) {
     return (
-      <div className="text-sm text-[#f0ede0] text-center min-w-0">
+      <div className="text-sm text-[#f0ede0] text-left md:text-center min-w-0">
         <span className="italic text-white/40">—</span>
       </div>
     );
@@ -81,7 +81,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
   return (
     <div
       ref={ref}
-      className="text-sm leading-relaxed text-[#f0ede0] text-center whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
+      className="text-sm leading-relaxed text-[#f0ede0] text-left md:text-center whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
     >
       {text}
     </div>
@@ -516,25 +516,29 @@ export function BallotShareView({
               exporting ? "px-9 sm:px-11 py-5 sm:py-6" : "px-5 py-4 sm:py-5"
             }`}
           >
-            <div className="flex items-center gap-4">
-              {leagueLogo && (
-                <img
-                  src={leagueLogo}
-                  alt={leagueName}
-                  crossOrigin="anonymous"
-                  className="w-16 h-14 sm:w-20 sm:h-16 object-contain drop-shadow"
-                />
-              )}
-              {divisionLogo && (
-                <img
-                  src={divisionLogo}
-                  alt={divisionName}
-                  crossOrigin="anonymous"
-                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow"
-                />
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
+              {(leagueLogo || divisionLogo) && (
+                <div className="flex items-center justify-center gap-3 shrink-0">
+                  {leagueLogo && (
+                    <img
+                      src={leagueLogo}
+                      alt={leagueName}
+                      crossOrigin="anonymous"
+                      className="w-12 h-11 sm:w-20 sm:h-16 object-contain drop-shadow"
+                    />
+                  )}
+                  {divisionLogo && (
+                    <img
+                      src={divisionLogo}
+                      alt={divisionName}
+                      crossOrigin="anonymous"
+                      className="w-11 h-11 sm:w-16 sm:h-16 object-contain drop-shadow"
+                    />
+                  )}
+                </div>
               )}
               <div>
-                <div className="text-xs sm:text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                <div className="text-[11px] sm:text-sm uppercase tracking-wider font-bold text-[#f0c020]">
                   {leagueName} ({seasonName})
                 </div>
                 <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
@@ -602,10 +606,45 @@ export function BallotShareView({
                       : "px-3 py-3"
                   }`}
                 >
-                  <div className="flex items-center justify-between md:justify-center">
-                    <span className="md:hidden text-xs font-bold text-white/70">
-                      Rank #{entry.rank}
-                    </span>
+                  {/* Compact mobile header: Rank + Logo + Team + Change */}
+                  <div className="flex items-center justify-between gap-2.5 md:hidden">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        style={{
+                          backgroundColor: rankColor.badgeBg,
+                          borderColor: rankColor.borderColor,
+                          color: rankColor.badgeText,
+                        }}
+                        className="w-10 h-10 rounded-xl border font-black text-lg flex items-center justify-center shadow-sm shrink-0"
+                      >
+                        {entry.rank}
+                      </span>
+                      <div className="w-12 h-12 shrink-0 flex items-center justify-center">
+                        {entry.team_logo_snapshot ? (
+                          <img
+                            src={entry.team_logo_snapshot}
+                            alt={entry.team_name_snapshot}
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-white/40">LOGO</span>
+                        )}
+                      </div>
+                      <div className="font-black text-lg text-[#f7f5eb] tracking-tight leading-tight truncate">
+                        {entry.team_name_snapshot}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <RankChangeBadge
+                        previousRank={entry.previous_rank}
+                        rankChange={entry.rank_change}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Desktop columns: Rank, Change, Team */}
+                  <div className="hidden md:flex items-center justify-center">
                     <span
                       style={{
                         backgroundColor: rankColor.badgeBg,
@@ -618,15 +657,15 @@ export function BallotShareView({
                     </span>
                   </div>
 
-                  <div className="flex md:justify-center">
+                  <div className="hidden md:flex justify-center">
                     <RankChangeBadge
                       previousRank={entry.previous_rank}
                       rankChange={entry.rank_change}
                     />
                   </div>
 
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 flex items-center justify-center">
+                  <div className="hidden md:flex items-center gap-3 min-w-0">
+                    <div className="w-20 h-20 shrink-0 flex items-center justify-center">
                       {entry.team_logo_snapshot ? (
                         <img
                           src={entry.team_logo_snapshot}
@@ -638,13 +677,13 @@ export function BallotShareView({
                         <span className="text-[9px] text-white/40">LOGO</span>
                       )}
                     </div>
-                    <div className="font-black text-lg md:text-xl text-[#f7f5eb] tracking-tight leading-tight">
+                    <div className="font-black text-xl text-[#f7f5eb] tracking-tight leading-tight">
                       {entry.team_name_snapshot}
                     </div>
                   </div>
 
                   <div className="min-w-0">
-                    <ul className="text-[11px] font-mono text-[#e5e3d8] space-y-0.5">
+                    <ul className="grid grid-cols-2 sm:grid-cols-3 md:block gap-x-3 gap-y-0.5 md:space-y-0.5 text-[11px] font-mono text-[#e5e3d8]">
                       {normalizeRoster(entry.roster_snapshot).map(
                         (slot, pIdx) => {
                           const roleMeta = getRoleMeta(slot.role);

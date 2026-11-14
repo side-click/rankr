@@ -1507,7 +1507,7 @@ export function AdminDashboard({
                 filteredEditions.map((ed, idx) => (
                   <div
                     key={ed.id}
-                    className="xp-inset p-2 flex items-center gap-1.5 text-xs"
+                    className="xp-inset p-2 flex flex-wrap sm:flex-nowrap items-center gap-1.5 text-xs"
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -1765,46 +1765,48 @@ export function AdminDashboard({
 
             <form
               onSubmit={handleAddTheme}
-              className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-white/10"
+              className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 pt-2 border-t border-white/10"
             >
               <input
                 type="text"
                 value={newThemeName}
                 onChange={(e) => setNewThemeName(e.target.value)}
                 placeholder="New Theme Name (e.g. Herald Theme)"
-                className="flex-1 min-w-[180px] xp-inset px-2 py-1 text-xs"
+                className="w-full sm:w-auto sm:flex-1 min-w-[180px] xp-inset px-2 py-1 text-xs"
               />
-              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
-                <span>Primary</span>
-                <input
-                  type="color"
-                  value={newThemePrimary}
-                  onChange={(e) => setNewThemePrimary(e.target.value)}
-                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
-                />
-              </label>
-              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
-                <span>Secondary</span>
-                <input
-                  type="color"
-                  value={newThemeSecondary}
-                  onChange={(e) => setNewThemeSecondary(e.target.value)}
-                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
-                />
-              </label>
-              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
-                <span>Text</span>
-                <input
-                  type="color"
-                  value={newThemeText}
-                  onChange={(e) => setNewThemeText(e.target.value)}
-                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
-                />
-              </label>
-              <button type="submit" disabled={busy} className="xp-btn text-xs">
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Theme</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                  <span>Primary</span>
+                  <input
+                    type="color"
+                    value={newThemePrimary}
+                    onChange={(e) => setNewThemePrimary(e.target.value)}
+                    className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                  <span>Secondary</span>
+                  <input
+                    type="color"
+                    value={newThemeSecondary}
+                    onChange={(e) => setNewThemeSecondary(e.target.value)}
+                    className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                  <span>Text</span>
+                  <input
+                    type="color"
+                    value={newThemeText}
+                    onChange={(e) => setNewThemeText(e.target.value)}
+                    className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                  />
+                </label>
+                <button type="submit" disabled={busy} className="xp-btn text-xs">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Theme</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
