@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
@@ -35,19 +35,57 @@ interface BallotShareViewProps {
   isAdmin?: boolean;
 }
 
-function getCommentSizeClass(text: string | null | undefined): string {
-  if (!text) return "text-sm leading-relaxed";
-  const lineBreaks = (text.match(/\n/g) ?? []).length;
-  if (text.length <= 180 && lineBreaks <= 3) {
-    return "text-sm leading-relaxed";
+const MAX_COMMENT_HEIGHT_PX = 90;
+
+function AutoFitComment({ text }: { text: string | null | undefined }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const fit = () => {
+      // On mobile stacked layout (< 768px), let comments breathe naturally
+      if (window.innerWidth < 768) {
+        el.style.fontSize = "14px";
+        el.style.lineHeight = "1.5";
+        return;
+      }
+
+      let size = 14;
+      const minSize = 9.5;
+      el.style.fontSize = `${size}px`;
+      el.style.lineHeight = "1.45";
+
+      while (el.scrollHeight > MAX_COMMENT_HEIGHT_PX && size > minSize) {
+        size = Math.max(minSize, size - 0.5);
+        el.style.fontSize = `${size}px`;
+        el.style.lineHeight = size <= 11.5 ? "1.2" : size <= 12.5 ? "1.3" : "1.4";
+      }
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text]);
+
+  if (!text) {
+    return (
+      <div className="text-sm text-[#f0ede0] min-w-0">
+        <span className="italic text-white/40">—</span>
+      </div>
+    );
   }
-  if (text.length <= 320 && lineBreaks <= 5) {
-    return "text-[13px] leading-snug";
-  }
-  if (text.length <= 480) {
-    return "text-xs leading-snug";
-  }
-  return "text-[11px] leading-tight";
+
+  return (
+    <div
+      ref={ref}
+      className="text-sm leading-relaxed text-[#f0ede0] whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
+    >
+      {text}
+    </div>
+  );
 }
 
 export function BallotShareView({
@@ -637,15 +675,7 @@ export function BallotShareView({
                     </ul>
                   </div>
 
-                  <div
-                    className={`${getCommentSizeClass(
-                      entry.commentary
-                    )} text-[#f0ede0] whitespace-pre-wrap break-words min-w-0`}
-                  >
-                    {entry.commentary || (
-                      <span className="italic text-white/40">—</span>
-                    )}
-                  </div>
+                  <AutoFitComment text={entry.commentary} />
                 </div>
               );
             })}
