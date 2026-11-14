@@ -43,7 +43,24 @@ async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<strin
           : "image/png";
       return `data:${mime};base64,${buffer.toString("base64")}`;
     } catch {
-      return null;
+      // On Vercel serverless functions, public/ assets aren't bundled into process.cwd();
+      // fall back to fetching from the deployed CDN URL.
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_SITE_URL ??
+          (process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : "https://league-rankr.vercel.app");
+        const absoluteUrl = new URL(encodeURI(decodeURI(logoUrl)), baseUrl).toString();
+        const res = await fetch(absoluteUrl);
+        if (!res.ok) return null;
+        const contentTypeHeader = res.headers.get("content-type") || "image/png";
+        const mime = contentTypeHeader.split(";")[0].trim();
+        const buffer = Buffer.from(await res.arrayBuffer());
+        return `data:${mime};base64,${buffer.toString("base64")}`;
+      } catch {
+        return null;
+      }
     }
   }
   return null;
@@ -223,11 +240,11 @@ export default async function BallotOpenGraphImage({
             style={{
               display: "flex",
               alignItems: "center",
-              padding: "14px 26px",
+              padding: "14px 28px",
               borderRadius: "10px",
               background: "rgba(0, 0, 0, 0.45)",
               border: "2px solid rgba(255, 255, 255, 0.25)",
-              fontSize: "26px",
+              fontSize: "34px",
               fontWeight: 700,
               color: "#ffffff",
             }}
@@ -270,14 +287,14 @@ export default async function BallotOpenGraphImage({
                 >
                   <div
                     style={{
-                      width: "52px",
-                      height: "52px",
-                      borderRadius: "8px",
+                      width: "60px",
+                      height: "60px",
+                      borderRadius: "10px",
                       background: badgeColor,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "26px",
+                      fontSize: "32px",
                       fontWeight: 700,
                       color: "#ffffff",
                     }}
