@@ -72,7 +72,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
 
   if (!text) {
     return (
-      <div className="text-sm text-[#f0ede0] min-w-0">
+      <div className="text-sm text-[#f0ede0] text-center min-w-0">
         <span className="italic text-white/40">—</span>
       </div>
     );
@@ -81,7 +81,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
   return (
     <div
       ref={ref}
-      className="text-sm leading-relaxed text-[#f0ede0] whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
+      className="text-sm leading-relaxed text-[#f0ede0] text-center whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
     >
       {text}
     </div>
@@ -585,7 +585,7 @@ export function BallotShareView({
             <div className="text-center">Change</div>
             <div className="md:pl-[92px]">Team</div>
             <div />
-            <div>Comments</div>
+            <div className="text-center">Comments</div>
           </div>
 
           <div className="divide-y divide-white/10">
