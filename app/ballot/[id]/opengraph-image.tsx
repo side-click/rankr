@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { createClient } from "@/utils/supabase/server";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
+import { loadOgFonts } from "@/utils/ogFonts";
 import type { DivisionTheme } from "@/types/database";
 
 export const alt = "Rankr — Published Power Rankings";
@@ -8,6 +11,31 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
+
+async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<string | null> {
+  if (!logoUrl) return null;
+  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://") || logoUrl.startsWith("data:")) {
+    return logoUrl;
+  }
+  if (logoUrl.startsWith("/")) {
+    try {
+      const relative = decodeURIComponent(logoUrl).replace(/^\/+/, "");
+      const filePath = path.join(process.cwd(), "public", relative);
+      const buffer = await readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const mime =
+        ext === ".jpg" || ext === ".jpeg"
+          ? "image/jpeg"
+          : ext === ".webp"
+          ? "image/webp"
+          : "image/png";
+      return `data:${mime};base64,${buffer.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export default async function BallotOpenGraphImage({
   params,
@@ -17,7 +45,7 @@ export default async function BallotOpenGraphImage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: ballot }, { data: themesData }] = await Promise.all([
+  const [{ data: ballot }, { data: themesData }, fonts] = await Promise.all([
     supabase
       .from("ballots")
       .select(
@@ -32,13 +60,14 @@ export default async function BallotOpenGraphImage({
         seasons ( name, leagues ( name ) ),
         divisions ( name, theme_key ),
         editions ( name ),
-        ballot_entries ( rank, team_name_snapshot, commentary, teams ( name ) )
+        ballot_entries ( rank, team_name_snapshot, team_logo_snapshot, commentary, teams ( name, logo_url ) )
       `
       )
       .eq("id", id)
       .eq("status", "published")
       .maybeSingle(),
     supabase.from("division_themes").select("*"),
+    loadOgFonts(),
   ]);
 
   if (!ballot) {
@@ -53,14 +82,15 @@ export default async function BallotOpenGraphImage({
             justifyContent: "center",
             background: "#121715",
             color: "#f0c020",
-            fontSize: "44px",
-            fontWeight: 800,
+            fontFamily: "WowHeading, serif",
+            fontSize: "48px",
+            fontWeight: 700,
           }}
         >
           Rankr — Power Rankings
         </div>
       ),
-      { ...size }
+      { ...size, fonts }
     );
   }
 
@@ -104,7 +134,17 @@ export default async function BallotOpenGraphImage({
   const { bannerGradient } = getThemeGradients(theme);
 
   const items = Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [];
-  const top3 = [...items].sort((a, b) => a.rank - b.rank).slice(0, 3);
+  const top3Raw = [...items].sort((a, b) => a.rank - b.rank).slice(0, 3);
+  const top3 = await Promise.all(
+    top3Raw.map(async (item) => {
+      const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
+      const teamName = team?.name ?? item.team_name_snapshot ?? "Team";
+      const logoSrc = await resolveLogoSrc(
+        item.team_logo_snapshot || team?.logo_url
+      );
+      return { ...item, teamName, logoSrc };
+    })
+  );
 
   return new ImageResponse(
     (
@@ -117,7 +157,7 @@ export default async function BallotOpenGraphImage({
           background: "#141917",
           border: `6px solid ${theme.primary_color}`,
           color: "#ffffff",
-          fontFamily: "sans-serif",
+          fontFamily: "SiteBody, sans-serif",
         }}
       >
         <div
@@ -134,7 +174,7 @@ export default async function BallotOpenGraphImage({
             <span
               style={{
                 fontSize: "20px",
-                fontWeight: 800,
+                fontWeight: 700,
                 color: "#f0c020",
                 letterSpacing: "2px",
                 textTransform: "uppercase",
@@ -144,10 +184,12 @@ export default async function BallotOpenGraphImage({
             </span>
             <span
               style={{
-                fontSize: "48px",
-                fontWeight: 900,
+                fontFamily: "WowHeading, serif",
+                fontSize: "52px",
+                fontWeight: 700,
                 color: "#ffffff",
                 lineHeight: 1.1,
+                textShadow: "0 2px 4px rgba(0,0,0,0.6)",
               }}
             >
               {displayTitle}
@@ -155,7 +197,7 @@ export default async function BallotOpenGraphImage({
             {ballot.author_notes && (
               <span
                 style={{
-                  fontSize: "22px",
+                  fontSize: "20px",
                   color: "#e8e6b8",
                   marginTop: "6px",
                 }}
@@ -173,8 +215,8 @@ export default async function BallotOpenGraphImage({
               borderRadius: "10px",
               background: "rgba(0, 0, 0, 0.45)",
               border: "2px solid rgba(255, 255, 255, 0.25)",
-              fontSize: "28px",
-              fontWeight: 800,
+              fontSize: "26px",
+              fontWeight: 700,
               color: "#ffffff",
             }}
           >
@@ -189,12 +231,10 @@ export default async function BallotOpenGraphImage({
             flex: 1,
             justifyContent: "center",
             padding: "28px 52px",
-            gap: "16px",
+            gap: "18px",
           }}
         >
           {top3.map((item, idx) => {
-            const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
-            const teamName = team?.name ?? item.team_name_snapshot ?? "Team";
             const badgeColor = RANK_COLORS[idx] ?? "#4a5568";
             return (
               <div
@@ -225,30 +265,39 @@ export default async function BallotOpenGraphImage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "28px",
-                      fontWeight: 900,
+                      fontSize: "26px",
+                      fontWeight: 700,
                       color: "#ffffff",
                     }}
                   >
                     #{item.rank}
                   </div>
+                  {item.logoSrc && (
+                    <img
+                      src={item.logoSrc}
+                      alt={item.teamName}
+                      width={56}
+                      height={56}
+                      style={{ objectFit: "contain" }}
+                    />
+                  )}
                   <span
                     style={{
                       fontSize: "32px",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       color: "#ffffff",
                     }}
                   >
-                    {teamName}
+                    {item.teamName}
                   </span>
                 </div>
 
                 {item.commentary && (
                   <span
                     style={{
-                      fontSize: "20px",
+                      fontSize: "19px",
                       color: "#b7c2bc",
-                      maxWidth: "480px",
+                      maxWidth: "460px",
                     }}
                   >
                     {item.commentary.length > 55
@@ -260,25 +309,8 @@ export default async function BallotOpenGraphImage({
             );
           })}
         </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 52px",
-            borderTop: "2px solid #2b3530",
-            fontSize: "18px",
-            color: "#9aa8a0",
-          }}
-        >
-          <span>league-rankr.vercel.app</span>
-          <span style={{ color: "#f0c020", fontWeight: 700 }}>
-            View full ranking &amp; roster notes
-          </span>
-        </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts }
   );
 }

@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { loadOgFonts } from "@/utils/ogFonts";
 
 export const alt = "Rankr — League Power Rankings";
 export const size = { width: 1200, height: 630 };
@@ -17,7 +18,10 @@ async function loadLogoDataUrl(): Promise<string | null> {
 }
 
 export default async function OpenGraphImage() {
-  const logoUrl = await loadLogoDataUrl();
+  const [logoUrl, fonts] = await Promise.all([
+    loadLogoDataUrl(),
+    loadOgFonts(),
+  ]);
 
   return new ImageResponse(
     (
@@ -28,12 +32,12 @@ export default async function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "56px 64px",
+          padding: "64px 72px",
           background:
             "linear-gradient(135deg, #0b110f 0%, #14221d 55%, #1d2b24 100%)",
           border: "8px solid #c89b3c",
           color: "#f4f2e8",
-          fontFamily: "sans-serif",
+          fontFamily: "SiteBody, sans-serif",
         }}
       >
         <div
@@ -47,7 +51,7 @@ export default async function OpenGraphImage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "20px",
+              gap: "24px",
             }}
           >
             {logoUrl && (
@@ -73,14 +77,16 @@ export default async function OpenGraphImage() {
               </span>
               <span
                 style={{
-                  fontSize: "58px",
-                  fontWeight: 900,
-                  letterSpacing: "-1px",
-                  color: "#ffffff",
+                  fontFamily: "WowHeading, serif",
+                  fontSize: "72px",
+                  fontWeight: 700,
+                  letterSpacing: "1px",
+                  color: "#f0c020",
                   lineHeight: 1.05,
+                  textShadow: "0 3px 6px rgba(0, 0, 0, 0.7)",
                 }}
               >
-                RANKR
+                Rankr
               </span>
             </div>
           </div>
@@ -89,14 +95,14 @@ export default async function OpenGraphImage() {
             style={{
               display: "flex",
               alignItems: "center",
-              padding: "10px 22px",
+              padding: "12px 24px",
               borderRadius: "8px",
               border: "2px solid #c89b3c",
               background: "rgba(200, 155, 60, 0.14)",
               color: "#f0c020",
               fontSize: "20px",
-              fontWeight: 800,
-              letterSpacing: "1px",
+              fontWeight: 700,
+              letterSpacing: "1.5px",
             }}
           >
             POWER RANKINGS
@@ -107,49 +113,28 @@ export default async function OpenGraphImage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
-            maxWidth: "920px",
+            maxWidth: "960px",
+            marginBottom: "16px",
           }}
         >
           <div
             style={{
-              fontSize: "40px",
-              fontWeight: 800,
+              fontFamily: "WowHeading, serif",
+              fontSize: "46px",
+              fontWeight: 700,
               color: "#ffffff",
-              lineHeight: 1.2,
+              lineHeight: 1.25,
             }}
           >
             Rank your division, drop your hot takes, and export shareable
             power rankings.
           </div>
-          <div
-            style={{
-              fontSize: "24px",
-              color: "#b7c2bc",
-            }}
-          >
-            Drag-and-drop team tiers • Roster snapshots • One-click PNG export
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "2px solid #2e3d36",
-            paddingTop: "20px",
-            fontSize: "20px",
-            color: "#9aa8a0",
-          }}
-        >
-          <span>league-rankr.vercel.app</span>
-          <span style={{ color: "#f0c020", fontWeight: 700 }}>
-            Sign in with Discord to publish
-          </span>
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts,
+    }
   );
 }
