@@ -244,7 +244,7 @@ function SortableTeamRow({
         </div>
 
         {/* Desktop-only Team Logo + Prominent Team Name */}
-        <div className="hidden md:flex items-center gap-3 md:flex-[1.35] min-w-0">
+        <div className="hidden md:flex items-center gap-3 md:flex-[0.95] min-w-0">
           <div className="w-20 h-20 shrink-0 flex items-center justify-center">
             {item.team.logo_url ? (
               <img
@@ -297,7 +297,7 @@ function SortableTeamRow({
         </div>
 
         {/* Commentary */}
-        <div className="md:flex-[1.2] min-w-0">
+        <div className="md:flex-[1.85] min-w-0">
           <label className="block text-[11px] font-bold uppercase tracking-wider text-white/70 mb-1">
             Commentary
           </label>
@@ -305,7 +305,7 @@ function SortableTeamRow({
             value={item.commentary}
             disabled={disabled}
             onChange={(e) => onCommentaryChange(item.team.id, e.target.value)}
-            rows={4}
+            rows={5}
             placeholder={`Thoughts on ${item.team.name}...`}
             className="w-full rounded-md bg-black/30 border border-white/15 p-2.5 text-xs text-[#f0ede0] placeholder:text-white/35 resize-y focus:outline-none focus:border-[#f0c020] disabled:opacity-60"
           />
