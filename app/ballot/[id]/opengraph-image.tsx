@@ -90,7 +90,7 @@ export default async function BallotOpenGraphImage({
           Rankr — Power Rankings
         </div>
       ),
-      { ...size, fonts }
+      { ...size, ...(fonts.length > 0 ? { fonts } : {}) }
     );
   }
 
@@ -311,6 +311,6 @@ export default async function BallotOpenGraphImage({
         </div>
       </div>
     ),
-    { ...size, fonts }
+    { ...size, ...(fonts.length > 0 ? { fonts } : {}) }
   );
 }

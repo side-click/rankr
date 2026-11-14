@@ -134,7 +134,7 @@ export default async function OpenGraphImage() {
     ),
     {
       ...size,
-      fonts,
+      ...(fonts.length > 0 ? { fonts } : {}),
     }
   );
 }
