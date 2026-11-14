@@ -121,7 +121,7 @@ function SortableTeamRow({
                 type="button"
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded-md text-white/55 hover:text-white hover:bg-white/10 transition-colors"
+                className="touch-none select-none cursor-grab active:cursor-grabbing p-1.5 -ml-1 rounded-md text-white/55 hover:text-white hover:bg-white/10 transition-colors"
                 title="Drag to reorder"
               >
                 <GripVertical className="w-5 h-5" />
@@ -194,7 +194,7 @@ function SortableTeamRow({
                 type="button"
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded-md text-white/55 hover:text-white hover:bg-white/10 transition-colors"
+                className="touch-none select-none cursor-grab active:cursor-grabbing p-1.5 -ml-1 rounded-md text-white/55 hover:text-white hover:bg-white/10 transition-colors"
                 title="Drag to reorder"
               >
                 <GripVertical className="w-6 h-6" />
