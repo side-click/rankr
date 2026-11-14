@@ -1,0 +1,2020 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import type {
+  AppSettings,
+  Division,
+  DivisionTheme,
+  Edition,
+  League,
+  Profile,
+  Season,
+  Team,
+} from "@/types/database";
+import { RetroWindow } from "@/components/RetroWindow";
+import { CAPTAIN_ICON, LEAGUE_ROLES, normalizeRoster } from "@/utils/roles";
+import { DEFAULT_DIVISION_THEMES } from "@/utils/themes";
+import {
+  ArrowDown,
+  ArrowUp,
+  Ban,
+  ExternalLink,
+  Plus,
+  Power,
+  Save,
+  ShieldAlert,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+interface AdminPublishedBallot {
+  id: string;
+  title: string | null;
+  status: string;
+  published_at: string | null;
+  user_id: string;
+  profiles?:
+    | Pick<Profile, "id" | "username" | "discord_id" | "is_banned">
+    | Pick<Profile, "id" | "username" | "discord_id" | "is_banned">[]
+    | null;
+}
+
+interface AdminDashboardProps {
+  currentUserId: string;
+  initialLeagues: League[];
+  initialSeasons: Season[];
+  initialDivisions: Division[];
+  initialThemes: DivisionTheme[];
+  initialEditions: Edition[];
+  initialTeams: Team[];
+  initialAppSettings: AppSettings;
+  initialProfiles: Profile[];
+  initialPublishedBallots: AdminPublishedBallot[];
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function AdminDashboard({
+  currentUserId,
+  initialLeagues,
+  initialSeasons,
+  initialDivisions,
+  initialThemes,
+  initialEditions,
+  initialTeams,
+  initialAppSettings,
+  initialProfiles,
+  initialPublishedBallots,
+}: AdminDashboardProps) {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+
+  const [tab, setTab] = useState<
+    "seasons" | "editions" | "teams" | "moderation"
+  >("seasons");
+  const [leagues, setLeagues] = useState<League[]>(initialLeagues);
+  const [seasons, setSeasons] = useState<Season[]>(initialSeasons);
+  const [divisions, setDivisions] = useState<Division[]>(initialDivisions);
+  const [themes, setThemes] = useState<DivisionTheme[]>(
+    initialThemes.length > 0
+      ? initialThemes
+      : Object.values(DEFAULT_DIVISION_THEMES)
+  );
+  const [editions, setEditions] = useState<Edition[]>(initialEditions);
+  const [teams, setTeams] = useState<Team[]>(initialTeams);
+  const [appSettings, setAppSettings] =
+    useState<AppSettings>(initialAppSettings);
+  const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
+  const [publishedBallots, setPublishedBallots] = useState<
+    AdminPublishedBallot[]
+  >(initialPublishedBallots);
+  const [userSearch, setUserSearch] = useState("");
+
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>(
+    initialSeasons.find((s) => s.is_active)?.id ?? initialSeasons[0]?.id ?? ""
+  );
+  const seasonDivisions = useMemo(
+    () => divisions.filter((d) => d.season_id === selectedSeasonId),
+    [divisions, selectedSeasonId]
+  );
+  const [selectedDivisionId, setSelectedDivisionId] = useState<string>(
+    divisionsForInit(initialDivisions, initialSeasons)
+  );
+
+  function divisionsForInit(divs: Division[], seas: Season[]) {
+    const firstSeasonId =
+      seas.find((s) => s.is_active)?.id ?? seas[0]?.id ?? "";
+    return divs.find((d) => d.season_id === firstSeasonId)?.id ?? "";
+  }
+
+  // Ensure selectedDivisionId never leaks from another season
+  useEffect(() => {
+    if (seasonDivisions.length === 0) {
+      if (selectedDivisionId !== "") setSelectedDivisionId("");
+    } else if (!seasonDivisions.some((d) => d.id === selectedDivisionId)) {
+      setSelectedDivisionId(seasonDivisions[0].id);
+    }
+  }, [selectedSeasonId, seasonDivisions, selectedDivisionId]);
+
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [newLeagueName, setNewLeagueName] = useState("");
+  const [newLeagueShortName, setNewLeagueShortName] = useState("");
+  const [newSeasonName, setNewSeasonName] = useState("");
+  const [newSeasonLeagueId, setNewSeasonLeagueId] = useState(
+    initialLeagues[0]?.id ?? ""
+  );
+  const [newDivName, setNewDivName] = useState("");
+  const [newDivTheme, setNewDivTheme] = useState<string>("baron");
+  const [newThemeName, setNewThemeName] = useState("");
+  const [newThemePrimary, setNewThemePrimary] = useState("#6b2d8b");
+  const [newThemeSecondary, setNewThemeSecondary] = useState("#00b8c9");
+  const [newThemeText, setNewThemeText] = useState("#c77dff");
+  const [newEditionName, setNewEditionName] = useState("");
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamCaptain, setNewTeamCaptain] = useState("");
+
+  async function refreshAll() {
+    const [l, s, d, th, e, t, cfg, prof, bal] = await Promise.all([
+      supabase.from("leagues").select("*").order("created_at", { ascending: true }),
+      supabase.from("seasons").select("*").order("created_at", { ascending: false }),
+      supabase.from("divisions").select("*").order("name"),
+      supabase.from("division_themes").select("*").order("name"),
+      supabase.from("editions").select("*").order("sort_order", { ascending: true }),
+      supabase.from("teams").select("*").order("default_order", { ascending: true }),
+      supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("ballots")
+        .select(
+          "id, title, status, published_at, user_id, profiles ( id, username, discord_id, is_banned )"
+        )
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(50),
+    ]);
+    if (l.data) setLeagues(l.data);
+    if (s.data) setSeasons(s.data);
+    if (d.data) setDivisions(d.data);
+    if (th.data && th.data.length > 0) setThemes(th.data);
+    if (e.data) setEditions(e.data);
+    if (t.data) setTeams(t.data);
+    if (cfg.data) setAppSettings(cfg.data);
+    if (prof.data) setProfiles(prof.data);
+    if (bal.data) setPublishedBallots(bal.data);
+    router.refresh();
+  }
+
+  async function handleAddLeague(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLeagueName.trim()) return;
+    setBusy(true);
+    const { error } = await supabase.from("leagues").insert({
+      name: newLeagueName.trim(),
+      short_name: newLeagueShortName.trim() || null,
+      slug: slugify(newLeagueName),
+      theme_key: "scdl",
+    });
+    if (!error) {
+      setNewLeagueName("");
+      setNewLeagueShortName("");
+      setStatusMsg("League created.");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleSaveLeague(league: League) {
+    if (!league.name.trim()) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("leagues")
+      .update({
+        name: league.name.trim(),
+        short_name: league.short_name?.trim() || null,
+        logo_url: league.logo_url?.trim() || null,
+        slug: slugify(league.name),
+      })
+      .eq("id", league.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Saved ${league.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleLeagueLogoUpload(leagueId: string, file: File) {
+    setBusy(true);
+    setStatusMsg(null);
+    const ext = file.name.split(".").pop() ?? "png";
+    const path = `league-${leagueId}-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("team-logos")
+      .upload(path, file, { upsert: true });
+
+    if (uploadErr) {
+      setStatusMsg(`Upload failed: ${uploadErr.message}`);
+      setBusy(false);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    setLeagues((prev) =>
+      prev.map((l) => (l.id === leagueId ? { ...l, logo_url: pub.publicUrl } : l))
+    );
+    setStatusMsg("League logo uploaded. Click Save.");
+    setBusy(false);
+  }
+
+  async function handleSaveTeam(team: Team) {
+    setBusy(true);
+    setStatusMsg(null);
+    const normalized = normalizeRoster(team.roster, team.captain);
+    const captainSlot = normalized.find((s) => s.is_captain);
+    const derivedCaptain = captainSlot?.name
+      ? captainSlot.name.split("#")[0].trim()
+      : team.captain;
+
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        name: team.name,
+        captain: derivedCaptain || null,
+        logo_url: team.logo_url,
+        roster: normalized,
+        default_order: team.default_order,
+        is_active: team.is_active,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", team.id);
+
+    setStatusMsg(error ? `Error: ${error.message}` : `Saved ${team.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleLogoUpload(teamId: string, file: File) {
+    setBusy(true);
+    setStatusMsg(null);
+    const ext = file.name.split(".").pop() ?? "png";
+    const path = `${teamId}-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("team-logos")
+      .upload(path, file, { upsert: true });
+
+    if (uploadErr) {
+      setStatusMsg(`Upload failed: ${uploadErr.message}`);
+      setBusy(false);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    setTeams((prev) =>
+      prev.map((t) => (t.id === teamId ? { ...t, logo_url: pub.publicUrl } : t))
+    );
+    setStatusMsg("Logo uploaded. Click Save Team.");
+    setBusy(false);
+  }
+
+  async function handleAddTeam(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedDivisionId || !newTeamName.trim()) return;
+    setBusy(true);
+    const divTeams = teams.filter((t) => t.division_id === selectedDivisionId);
+    const { error } = await supabase.from("teams").insert({
+      division_id: selectedDivisionId,
+      name: newTeamName.trim(),
+      captain: newTeamCaptain.trim() || null,
+      roster: LEAGUE_ROLES.map((r, i) => ({
+        role: r.key,
+        name: `Player ${i + 1}`,
+        is_captain: false,
+      })),
+      default_order: divTeams.length + 1,
+    });
+    if (!error) {
+      setNewTeamName("");
+      setNewTeamCaptain("");
+      setStatusMsg("Team added.");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleAddSeason(e: React.FormEvent) {
+    e.preventDefault();
+    const targetLeagueId = newSeasonLeagueId || leagues[0]?.id;
+    if (!newSeasonName.trim() || !targetLeagueId) return;
+    setBusy(true);
+    const { error } = await supabase.from("seasons").insert({
+      league_id: targetLeagueId,
+      name: newSeasonName.trim(),
+      slug: slugify(newSeasonName),
+      is_active: false,
+    });
+    if (!error) {
+      setNewSeasonName("");
+      setStatusMsg("Season created (inactive by default).");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleSaveSeason(season: Season) {
+    if (!season.name.trim()) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("seasons")
+      .update({
+        name: season.name.trim(),
+        slug: slugify(season.name),
+        is_active: season.is_active,
+      })
+      .eq("id", season.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Saved ${season.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleToggleSeasonActive(season: Season) {
+    setBusy(true);
+    await supabase
+      .from("seasons")
+      .update({ is_active: !season.is_active })
+      .eq("id", season.id);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleAddDivision(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedSeasonId || !newDivName.trim()) return;
+    setBusy(true);
+    const matchedTheme = themes.find((t) => t.key === newDivTheme);
+    const logoUrl = matchedTheme?.default_logo_url ?? null;
+    const { error } = await supabase.from("divisions").insert({
+      season_id: selectedSeasonId,
+      name: newDivName.trim(),
+      slug: slugify(newDivName),
+      logo_url: logoUrl,
+      theme_key: newDivTheme,
+    });
+    if (!error) {
+      setNewDivName("");
+      setStatusMsg("Division created.");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleSaveDivision(division: Division) {
+    if (!division.name.trim()) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("divisions")
+      .update({
+        name: division.name.trim(),
+        slug: slugify(division.name),
+        logo_url: division.logo_url?.trim() || null,
+        theme_key: division.theme_key,
+      })
+      .eq("id", division.id);
+    setStatusMsg(
+      error ? `Error: ${error.message}` : `Saved ${division.name}.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDivisionLogoUpload(divisionId: string, file: File) {
+    setBusy(true);
+    setStatusMsg(null);
+    const ext = file.name.split(".").pop() ?? "png";
+    const path = `division-${divisionId}-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("team-logos")
+      .upload(path, file, { upsert: true });
+
+    if (uploadErr) {
+      setStatusMsg(`Upload failed: ${uploadErr.message}`);
+      setBusy(false);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    setDivisions((prev) =>
+      prev.map((d) =>
+        d.id === divisionId ? { ...d, logo_url: pub.publicUrl } : d
+      )
+    );
+    setStatusMsg("Division logo uploaded. Click Save.");
+    setBusy(false);
+  }
+
+  async function handleSaveTheme(theme: DivisionTheme) {
+    if (!theme.name.trim()) return;
+    setBusy(true);
+    const { error } = await supabase.from("division_themes").upsert({
+      key: theme.key,
+      name: theme.name.trim(),
+      primary_color: theme.primary_color,
+      secondary_color: theme.secondary_color,
+      accent_text_color: theme.accent_text_color,
+      default_logo_url: theme.default_logo_url?.trim() || null,
+    });
+    setStatusMsg(
+      error ? `Error: ${error.message}` : `Saved ${theme.name}.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleThemeLogoUpload(themeKey: string, file: File) {
+    setBusy(true);
+    setStatusMsg(null);
+    const ext = file.name.split(".").pop() ?? "png";
+    const path = `theme-${themeKey}-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("team-logos")
+      .upload(path, file, { upsert: true });
+
+    if (uploadErr) {
+      setStatusMsg(`Upload failed: ${uploadErr.message}`);
+      setBusy(false);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    setThemes((prev) =>
+      prev.map((t) =>
+        t.key === themeKey ? { ...t, default_logo_url: pub.publicUrl } : t
+      )
+    );
+    setStatusMsg("Theme logo uploaded. Click Save.");
+    setBusy(false);
+  }
+
+  async function handleAddTheme(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newThemeName.trim()) return;
+    const key = slugify(newThemeName);
+    if (!key) return;
+    setBusy(true);
+    const { error } = await supabase.from("division_themes").insert({
+      key,
+      name: newThemeName.trim(),
+      primary_color: newThemePrimary,
+      secondary_color: newThemeSecondary,
+      accent_text_color: newThemeText,
+      default_logo_url: null,
+    });
+    if (!error) {
+      setNewThemeName("");
+      setStatusMsg("Theme created.");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleDeleteTheme(theme: DivisionTheme) {
+    if (theme.key === "baron" || theme.key === "dragon") return;
+    if (!confirm(`Delete theme "${theme.name}"?`)) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("division_themes")
+      .delete()
+      .eq("key", theme.key);
+    setStatusMsg(error ? `Error: ${error.message}` : "Theme deleted.");
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleToggleKillSwitch() {
+    const nextMode = !appSettings.maintenance_mode;
+    if (
+      nextMode &&
+      !confirm(
+        "Enable the Global Kill Switch? Non-admin users will see the offline maintenance screen and cannot publish."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("app_settings").upsert({
+      id: 1,
+      maintenance_mode: nextMode,
+      maintenance_message: appSettings.maintenance_message,
+      updated_at: new Date().toISOString(),
+    });
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : nextMode
+        ? "Kill switch ENABLED — App is offline for non-admins."
+        : "Kill switch DISABLED — App is back online."
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleSaveMaintenanceMessage() {
+    setBusy(true);
+    const { error } = await supabase.from("app_settings").upsert({
+      id: 1,
+      maintenance_mode: appSettings.maintenance_mode,
+      maintenance_message: appSettings.maintenance_message.trim(),
+      updated_at: new Date().toISOString(),
+    });
+    setStatusMsg(
+      error ? `Error: ${error.message}` : "Maintenance message saved."
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleToggleBanUser(target: Profile) {
+    if (target.id === currentUserId) return;
+    const nextBanned = !target.is_banned;
+    let reason: string | null = null;
+    if (nextBanned) {
+      const input = prompt(
+        `Ban "${target.username}"? Enter an optional reason (or leave blank):`,
+        target.ban_reason ?? ""
+      );
+      if (input === null) return;
+      reason = input.trim() || null;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        is_banned: nextBanned,
+        ban_reason: nextBanned ? reason : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", target.id);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : nextBanned
+        ? `Banned ${target.username}.`
+        : `Unbanned ${target.username}.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleAdminDeleteBallot(ballot: AdminPublishedBallot) {
+    if (
+      !confirm(
+        `Permanently delete "${ballot.title || "this ranking"}"? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("ballots")
+      .delete()
+      .eq("id", ballot.id);
+    setStatusMsg(
+      error ? `Error: ${error.message}` : "Published ranking deleted."
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleAddEdition(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedSeasonId || !newEditionName.trim()) return;
+    setBusy(true);
+    const seasonEds = editions.filter((ed) => ed.season_id === selectedSeasonId);
+    const nextOrder =
+      seasonEds.length > 0
+        ? Math.max(...seasonEds.map((ed) => ed.sort_order)) + 1
+        : 0;
+    const { error } = await supabase.from("editions").insert({
+      season_id: selectedSeasonId,
+      name: newEditionName.trim(),
+      slug: slugify(newEditionName),
+      sort_order: nextOrder,
+      is_open: true,
+    });
+    if (!error) {
+      setNewEditionName("");
+      setStatusMsg("Edition created.");
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleSaveEdition(ed: Edition) {
+    if (!ed.name.trim()) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("editions")
+      .update({
+        name: ed.name.trim(),
+        slug: slugify(ed.name),
+      })
+      .eq("id", ed.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Saved ${ed.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleMoveEdition(index: number, direction: -1 | 1) {
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= filteredEditions.length) return;
+    const a = filteredEditions[index];
+    const b = filteredEditions[targetIdx];
+
+    setBusy(true);
+    setStatusMsg(null);
+    const { error: e1 } = await supabase
+      .from("editions")
+      .update({ sort_order: -999999 })
+      .eq("id", a.id);
+    const { error: e2 } = !e1
+      ? await supabase
+          .from("editions")
+          .update({ sort_order: a.sort_order })
+          .eq("id", b.id)
+      : { error: e1 };
+    const { error: e3 } = !e2
+      ? await supabase
+          .from("editions")
+          .update({ sort_order: b.sort_order })
+          .eq("id", a.id)
+      : { error: e2 };
+
+    setStatusMsg(e3 ? `Error: ${e3.message}` : "Edition order updated.");
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDeleteLeague(league: League) {
+    if (
+      !window.confirm(
+        `Delete league "${league.name}" and its seasons/divisions/teams? Existing published rankings will be preserved.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("leagues").delete().eq("id", league.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Deleted ${league.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDeleteSeason(season: Season) {
+    if (
+      !window.confirm(
+        `Delete season "${season.name}" and its divisions/editions/teams? Existing published rankings will be preserved.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("seasons").delete().eq("id", season.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Deleted ${season.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDeleteDivision(division: Division) {
+    if (
+      !window.confirm(
+        `Delete division "${division.name}" and its teams? Existing published rankings will be preserved.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("divisions")
+      .delete()
+      .eq("id", division.id);
+    setStatusMsg(
+      error ? `Error: ${error.message}` : `Deleted ${division.name}.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDeleteTeam(team: Team) {
+    if (
+      !window.confirm(
+        `Delete team "${team.name}"? Existing published rankings will keep their snapshot.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("teams").delete().eq("id", team.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Deleted ${team.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleDeleteEdition(ed: Edition) {
+    if (
+      !window.confirm(
+        `Delete edition "${ed.name}"? Existing published rankings will be preserved.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("editions").delete().eq("id", ed.id);
+    setStatusMsg(error ? `Error: ${error.message}` : `Deleted ${ed.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleToggleEditionOpen(ed: Edition) {
+    setBusy(true);
+    await supabase
+      .from("editions")
+      .update({ is_open: !ed.is_open })
+      .eq("id", ed.id);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  const filteredTeams = selectedDivisionId
+    ? teams.filter((t) => t.division_id === selectedDivisionId)
+    : [];
+  const filteredEditions = editions
+    .filter((e) => e.season_id === selectedSeasonId)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  return (
+    <RetroWindow
+      title="Admin Console"
+      theme="scdl"
+      statusText={statusMsg ?? undefined}
+    >
+      <div className="flex flex-wrap gap-1.5 mb-4 pb-2 border-b border-white/10">
+        {(
+          [
+            ["seasons", "Setup Seasons"],
+            ["editions", "Setup Divisions and Editions"],
+            ["teams", "Setup Teams"],
+            ["moderation", "Moderation & Safety"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`xp-btn text-xs ${tab === key ? "xp-btn-primary" : ""}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {(tab === "editions" || tab === "teams") && (
+        <div className="xp-panel p-3 mb-4 flex flex-wrap items-center gap-3">
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
+              Season
+            </label>
+            <select
+              value={selectedSeasonId}
+              onChange={(e) => {
+                const nextSeasonId = e.target.value;
+                setSelectedSeasonId(nextSeasonId);
+                const firstDiv = divisions.find(
+                  (d) => d.season_id === nextSeasonId
+                );
+                setSelectedDivisionId(firstDiv?.id ?? "");
+              }}
+              className="xp-inset px-2 py-1 text-xs font-bold mt-0.5"
+            >
+              {seasons.map((s) => {
+                const league = leagues.find((l) => l.id === s.league_id);
+                const prefix =
+                  league?.short_name ||
+                  (league?.slug === "scdl" ? "SCDL" : league?.name);
+                return (
+                  <option key={s.id} value={s.id}>
+                    {prefix ? `${prefix}: ` : ""}
+                    {s.name} {!s.is_active ? "(Inactive)" : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {tab === "teams" && (
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
+                Division
+              </label>
+              <select
+                value={selectedDivisionId}
+                onChange={(e) => setSelectedDivisionId(e.target.value)}
+                disabled={seasonDivisions.length === 0}
+                className="xp-inset px-2 py-1 text-xs font-bold mt-0.5"
+              >
+                {seasonDivisions.length === 0 ? (
+                  <option value="">No divisions in this season</option>
+                ) : (
+                  seasonDivisions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 1: TEAMS */}
+      {tab === "teams" && (
+        <div className="space-y-4">
+          {!selectedDivisionId ? (
+            <div className="xp-inset p-6 text-center text-xs text-[#a6a89e]">
+              Create a division for this season under &quot;Setup Divisions and
+              Editions&quot; before adding teams.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredTeams.map((team) => (
+                  <div key={team.id} className="xp-panel p-3 space-y-2.5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-14 h-14 shrink-0 xp-inset p-1 flex items-center justify-center">
+                        {team.logo_url ? (
+                          <img
+                            src={team.logo_url}
+                            alt={team.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[10px] text-[#7e8781]">
+                            LOGO
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                            Team Name
+                          </label>
+                          <input
+                            type="text"
+                            value={team.name}
+                            onChange={(e) =>
+                              setTeams((prev) =>
+                                prev.map((t) =>
+                                  t.id === team.id
+                                    ? { ...t, name: e.target.value }
+                                    : t
+                                )
+                              )
+                            }
+                            className="w-full xp-inset px-2 py-1 text-xs font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                            Captain
+                          </label>
+                          <input
+                            type="text"
+                            value={team.captain ?? ""}
+                            onChange={(e) =>
+                              setTeams((prev) =>
+                                prev.map((t) =>
+                                  t.id === team.id
+                                    ? { ...t, captain: e.target.value }
+                                    : t
+                                )
+                              )
+                            }
+                            className="w-full xp-inset px-2 py-1 text-xs"
+                          />
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={team.logo_url ?? ""}
+                            onChange={(e) =>
+                              setTeams((prev) =>
+                                prev.map((t) =>
+                                  t.id === team.id
+                                    ? { ...t, logo_url: e.target.value }
+                                    : t
+                                )
+                              )
+                            }
+                            placeholder="Logo URL"
+                            className="flex-1 xp-inset px-2 py-1 text-[11px]"
+                          />
+                          <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer">
+                            <Upload className="w-3 h-3" />
+                            <span>Upload</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleLogoUpload(team.id, f);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#c7c5b8] mb-1.5">
+                        Roster (Top / Jungle / Mid / Bot / Support)
+                      </label>
+                      <div className="space-y-1.5">
+                        {normalizeRoster(team.roster, team.captain).map(
+                          (slot, sIdx) => {
+                            const roleMeta = LEAGUE_ROLES[sIdx];
+                            return (
+                              <div
+                                key={roleMeta.key}
+                                className="xp-inset px-2 py-1 flex items-center gap-2"
+                              >
+                                <img
+                                  src={roleMeta.icon}
+                                  alt={roleMeta.label}
+                                  title={roleMeta.label}
+                                  className="w-4 h-4 object-contain shrink-0"
+                                />
+                                <input
+                                  type="text"
+                                  value={slot.name}
+                                  onChange={(e) => {
+                                    const updatedName = e.target.value;
+                                    setTeams((prev) =>
+                                      prev.map((t) => {
+                                        if (t.id !== team.id) return t;
+                                        const nextRoster = normalizeRoster(
+                                          t.roster,
+                                          t.captain
+                                        ).map((r, idx) =>
+                                          idx === sIdx
+                                            ? { ...r, name: updatedName }
+                                            : r
+                                        );
+                                        return { ...t, roster: nextRoster };
+                                      })
+                                    );
+                                  }}
+                                  placeholder={roleMeta.label}
+                                  className="flex-1 min-w-0 bg-transparent text-xs font-mono focus:outline-none"
+                                />
+                                <label
+                                  className="inline-flex items-center gap-1 cursor-pointer shrink-0 text-[10px] text-[#c7c5b8]"
+                                  title="Set as Team Captain"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(slot.is_captain)}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setTeams((prev) =>
+                                        prev.map((t) => {
+                                          if (t.id !== team.id) return t;
+                                          const nextRoster = normalizeRoster(
+                                            t.roster,
+                                            t.captain
+                                          ).map((r, idx) => ({
+                                            ...r,
+                                            is_captain:
+                                              idx === sIdx ? checked : false,
+                                          }));
+                                          const capName = checked
+                                            ? slot.name.split("#")[0].trim()
+                                            : "";
+                                          return {
+                                            ...t,
+                                            captain: capName || null,
+                                            roster: nextRoster,
+                                          };
+                                        })
+                                      );
+                                    }}
+                                    className="accent-[#f0c020]"
+                                  />
+                                  <img
+                                    src={CAPTAIN_ICON}
+                                    alt="Captain"
+                                    className="w-3.5 h-3.5 object-contain"
+                                  />
+                                </label>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteTeam(team)}
+                        className="xp-btn xp-btn-danger text-xs"
+                        title="Delete Team"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSaveTeam(team)}
+                        className="xp-btn xp-btn-primary text-xs"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Team</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <form
+                onSubmit={handleAddTeam}
+                className="xp-panel p-3 flex flex-wrap items-end gap-2"
+              >
+                <div>
+                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                    New Team Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    placeholder="Team Name"
+                    className="xp-inset px-2 py-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                    Captain
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamCaptain}
+                    onChange={(e) => setNewTeamCaptain(e.target.value)}
+                    placeholder="Captain"
+                    className="xp-inset px-2 py-1 text-xs"
+                  />
+                </div>
+                <button type="submit" disabled={busy} className="xp-btn text-xs">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Team</span>
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: SETUP SEASONS (Leagues & Seasons) */}
+      {tab === "seasons" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Leagues */}
+          <div className="xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Leagues
+            </h2>
+            <div className="space-y-2">
+              {leagues.map((l) => (
+                <div
+                  key={l.id}
+                  className="xp-inset p-2 space-y-2 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 shrink-0 bg-black/30 border border-white/10 p-0.5 flex items-center justify-center">
+                      {l.logo_url ? (
+                        <img
+                          src={l.logo_url}
+                          alt={l.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-[9px] text-[#7e8781]">LOGO</span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={l.name}
+                      onChange={(e) =>
+                        setLeagues((prev) =>
+                          prev.map((item) =>
+                            item.id === l.id
+                              ? { ...item, name: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="League Name"
+                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                    />
+                    <input
+                      type="text"
+                      value={l.short_name ?? ""}
+                      onChange={(e) =>
+                        setLeagues((prev) =>
+                          prev.map((item) =>
+                            item.id === l.id
+                              ? { ...item, short_name: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="Abbr."
+                      className="w-16 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold uppercase focus:outline-none focus:border-[#c89b3c]"
+                      title="Short abbreviation (e.g. SCDL)"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleSaveLeague(l)}
+                      className="xp-btn text-[11px] px-2 py-1"
+                      title="Save League"
+                    >
+                      <Save className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleDeleteLeague(l)}
+                      className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                      title="Delete League"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={l.logo_url ?? ""}
+                      onChange={(e) =>
+                        setLeagues((prev) =>
+                          prev.map((item) =>
+                            item.id === l.id
+                              ? { ...item, logo_url: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="Logo URL"
+                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
+                    />
+                    <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
+                      <Upload className="w-3 h-3" />
+                      <span>Upload</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleLeagueLogoUpload(l.id, f);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <form onSubmit={handleAddLeague} className="flex flex-wrap gap-2 pt-2">
+              <input
+                type="text"
+                value={newLeagueName}
+                onChange={(e) => setNewLeagueName(e.target.value)}
+                placeholder="e.g. LCS Amateur"
+                className="flex-1 xp-inset px-2 py-1 text-xs"
+              />
+              <input
+                type="text"
+                value={newLeagueShortName}
+                onChange={(e) => setNewLeagueShortName(e.target.value)}
+                placeholder="Abbr. (e.g. LCSA)"
+                className="w-28 xp-inset px-2 py-1 text-xs uppercase"
+              />
+              <button type="submit" disabled={busy} className="xp-btn text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add League</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Seasons */}
+          <div className="xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Seasons
+            </h2>
+            <div className="space-y-2">
+              {seasons.map((s) => {
+                const league = leagues.find((l) => l.id === s.league_id);
+                return (
+                  <div
+                    key={s.id}
+                    className="xp-inset p-2 space-y-1.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] uppercase text-[#a6a89e]">
+                        {league?.name ?? "League"}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
+                          s.is_active
+                            ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                            : "bg-[#451717] text-[#ff857a] border-[#9e3535]"
+                        }`}
+                      >
+                        {s.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={s.name}
+                        onChange={(e) =>
+                          setSeasons((prev) =>
+                            prev.map((item) =>
+                              item.id === s.id
+                                ? { ...item, name: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="min-w-0 flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                      />
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSaveSeason(s)}
+                        className="xp-btn text-[11px] px-2 py-1"
+                        title="Save Season Name"
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleToggleSeasonActive(s)}
+                        className={`xp-btn text-[11px] py-1 ${
+                          s.is_active ? "xp-btn-danger" : "xp-btn-primary"
+                        }`}
+                      >
+                        {s.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteSeason(s)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                        title="Delete Season"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <form
+              onSubmit={handleAddSeason}
+              className="flex flex-wrap gap-2 pt-2"
+            >
+              <select
+                value={newSeasonLeagueId}
+                onChange={(e) => setNewSeasonLeagueId(e.target.value)}
+                className="xp-inset px-2 py-1 text-xs"
+              >
+                {leagues.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={newSeasonName}
+                onChange={(e) => setNewSeasonName(e.target.value)}
+                placeholder="e.g. Season 5"
+                className="flex-1 xp-inset px-2 py-1 text-xs"
+              />
+              <button type="submit" disabled={busy} className="xp-btn text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Season</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: SETUP DIVISIONS AND EDITIONS */}
+      {tab === "editions" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left: Divisions */}
+            <div className="lg:col-span-5 xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Divisions
+            </h2>
+            <div className="space-y-2">
+              {seasonDivisions.length === 0 ? (
+                <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                  No divisions in this season yet.
+                </div>
+              ) : (
+                seasonDivisions.map((d) => (
+                  <div
+                    key={d.id}
+                    className="xp-inset p-2 space-y-2 text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 shrink-0 bg-black/30 border border-white/10 p-0.5 flex items-center justify-center">
+                        {d.logo_url ? (
+                          <img
+                            src={d.logo_url}
+                            alt={d.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-[#7e8781]">LOGO</span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={d.name}
+                        onChange={(e) =>
+                          setDivisions((prev) =>
+                            prev.map((item) =>
+                              item.id === d.id
+                                ? { ...item, name: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="min-w-0 flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                      />
+                      <select
+                        value={d.theme_key}
+                        onChange={(e) =>
+                          setDivisions((prev) =>
+                            prev.map((item) =>
+                              item.id === d.id
+                                ? { ...item, theme_key: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="bg-[#1a201e] border border-white/10 px-1.5 py-1 text-[11px]"
+                      >
+                        {themes.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSaveDivision(d)}
+                        className="xp-btn xp-btn-primary text-[11px] px-2 py-1"
+                        title="Save Division"
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteDivision(d)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                        title="Delete Division"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={d.logo_url ?? ""}
+                        onChange={(e) =>
+                          setDivisions((prev) =>
+                            prev.map((item) =>
+                              item.id === d.id
+                                ? { ...item, logo_url: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        placeholder="Logo URL"
+                        className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
+                      />
+                      <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
+                        <Upload className="w-3 h-3" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleDivisionLogoUpload(d.id, f);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form
+              onSubmit={handleAddDivision}
+              className="flex flex-wrap gap-2 pt-2"
+            >
+              <input
+                type="text"
+                value={newDivName}
+                onChange={(e) => setNewDivName(e.target.value)}
+                placeholder="e.g. Baron Division"
+                className="flex-1 xp-inset px-2 py-1 text-xs"
+              />
+              <select
+                value={newDivTheme}
+                onChange={(e) => setNewDivTheme(e.target.value)}
+                className="xp-inset px-2 py-1 text-xs"
+              >
+                {themes.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" disabled={busy} className="xp-btn text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Division</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Right: Editions */}
+          <div className="lg:col-span-7 xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Editions
+            </h2>
+            <div className="space-y-2">
+              {filteredEditions.length === 0 ? (
+                <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                  No editions in this season yet.
+                </div>
+              ) : (
+                filteredEditions.map((ed, idx) => (
+                  <div
+                    key={ed.id}
+                    className="xp-inset p-2 flex items-center gap-1.5 text-xs"
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={busy || idx === 0}
+                        onClick={() => handleMoveEdition(idx, -1)}
+                        className="xp-btn px-1.5 py-1 text-[11px]"
+                        title="Move Up"
+                      >
+                        <ArrowUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy || idx === filteredEditions.length - 1}
+                        onClick={() => handleMoveEdition(idx, 1)}
+                        className="xp-btn px-1.5 py-1 text-[11px]"
+                        title="Move Down"
+                      >
+                        <ArrowDown className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={ed.name}
+                      onChange={(e) =>
+                        setEditions((prev) =>
+                          prev.map((item) =>
+                            item.id === ed.id
+                              ? { ...item, name: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      className="flex-1 min-w-[100px] bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleSaveEdition(ed)}
+                      className="xp-btn text-[11px] px-2 py-1 shrink-0"
+                      title="Rename Edition"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>Save</span>
+                    </button>
+
+                    <span
+                      className={`w-14 text-center shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
+                        ed.is_open
+                          ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                          : "bg-[#451717] text-[#ff857a] border-[#9e3535]"
+                      }`}
+                    >
+                      {ed.is_open ? "Open" : "Locked"}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleToggleEditionOpen(ed)}
+                      className={`xp-btn text-[11px] py-1 w-16 justify-center shrink-0 ${
+                        ed.is_open ? "xp-btn-danger" : "xp-btn-primary"
+                      }`}
+                    >
+                      {ed.is_open ? "Lock" : "Unlock"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleDeleteEdition(ed)}
+                      className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
+                      title="Delete Edition"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form
+              onSubmit={handleAddEdition}
+              className="flex flex-wrap gap-2 pt-2"
+            >
+              <input
+                type="text"
+                value={newEditionName}
+                onChange={(e) => setNewEditionName(e.target.value)}
+                placeholder="e.g. Week 9"
+                className="flex-1 xp-inset px-2 py-1 text-xs"
+              />
+              <button type="submit" disabled={busy} className="xp-btn text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Edition</span>
+              </button>
+            </form>
+          </div>
+          </div>
+
+          {/* Bottom: Division Themes */}
+          <div className="xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Division Themes
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {themes.map((th) => (
+                <div
+                  key={th.key}
+                  style={{
+                    borderLeftWidth: "4px",
+                    borderLeftColor: th.primary_color,
+                  }}
+                  className="xp-inset p-2.5 space-y-2 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    {th.default_logo_url ? (
+                      <img
+                        src={th.default_logo_url}
+                        alt={th.name}
+                        className="w-8 h-8 object-contain shrink-0"
+                      />
+                    ) : (
+                      <div
+                        style={{ backgroundColor: th.primary_color }}
+                        className="w-8 h-8 rounded-xs shrink-0 border border-white/20"
+                      />
+                    )}
+                    <input
+                      type="text"
+                      value={th.name}
+                      onChange={(e) =>
+                        setThemes((prev) =>
+                          prev.map((item) =>
+                            item.key === th.key
+                              ? { ...item, name: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      style={{ color: th.accent_text_color }}
+                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 font-bold focus:outline-none focus:border-[#c89b3c]"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleSaveTheme(th)}
+                      className="xp-btn xp-btn-primary text-[11px] px-2 py-1"
+                      title="Save Theme"
+                    >
+                      <Save className="w-3 h-3" />
+                    </button>
+                    {th.key !== "baron" && th.key !== "dragon" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteTheme(th)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                        title="Delete Theme"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#c7c5b8]">
+                      <span>Primary</span>
+                      <input
+                        type="color"
+                        value={th.primary_color}
+                        onChange={(e) =>
+                          setThemes((prev) =>
+                            prev.map((item) =>
+                              item.key === th.key
+                                ? { ...item, primary_color: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#c7c5b8]">
+                      <span>Secondary</span>
+                      <input
+                        type="color"
+                        value={th.secondary_color}
+                        onChange={(e) =>
+                          setThemes((prev) =>
+                            prev.map((item) =>
+                              item.key === th.key
+                                ? { ...item, secondary_color: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#c7c5b8]">
+                      <span>Text</span>
+                      <input
+                        type="color"
+                        value={th.accent_text_color}
+                        onChange={(e) =>
+                          setThemes((prev) =>
+                            prev.map((item) =>
+                              item.key === th.key
+                                ? { ...item, accent_text_color: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={th.default_logo_url ?? ""}
+                      onChange={(e) =>
+                        setThemes((prev) =>
+                          prev.map((item) =>
+                            item.key === th.key
+                              ? { ...item, default_logo_url: e.target.value }
+                              : item
+                          )
+                        )
+                      }
+                      placeholder="Default Logo URL"
+                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
+                    />
+                    <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
+                      <Upload className="w-3 h-3" />
+                      <span>Upload</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleThemeLogoUpload(th.key, f);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <form
+              onSubmit={handleAddTheme}
+              className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-white/10"
+            >
+              <input
+                type="text"
+                value={newThemeName}
+                onChange={(e) => setNewThemeName(e.target.value)}
+                placeholder="New Theme Name (e.g. Herald Theme)"
+                className="flex-1 min-w-[180px] xp-inset px-2 py-1 text-xs"
+              />
+              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                <span>Primary</span>
+                <input
+                  type="color"
+                  value={newThemePrimary}
+                  onChange={(e) => setNewThemePrimary(e.target.value)}
+                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                <span>Secondary</span>
+                <input
+                  type="color"
+                  value={newThemeSecondary}
+                  onChange={(e) => setNewThemeSecondary(e.target.value)}
+                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-[11px] text-[#c7c5b8]">
+                <span>Text</span>
+                <input
+                  type="color"
+                  value={newThemeText}
+                  onChange={(e) => setNewThemeText(e.target.value)}
+                  className="w-6 h-6 bg-transparent border border-white/20 rounded cursor-pointer"
+                />
+              </label>
+              <button type="submit" disabled={busy} className="xp-btn text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Theme</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: MODERATION & SAFETY */}
+      {tab === "moderation" && (
+        <div className="space-y-4">
+          {/* Global Kill Switch */}
+          <div className="xp-panel p-3 space-y-3 border border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert
+                  className={`w-5 h-5 ${
+                    appSettings.maintenance_mode
+                      ? "text-[#ff857a]"
+                      : "text-[#7cd438]"
+                  }`}
+                />
+                <div>
+                  <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                    Global Kill Switch
+                  </h2>
+                  <p className="text-[11px] text-[#a6a89e]">
+                    Temporarily take Rankr offline for all non-admin users while
+                    you adjust safety measures.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleToggleKillSwitch}
+                className={`xp-btn text-xs ${
+                  appSettings.maintenance_mode
+                    ? "xp-btn-primary"
+                    : "xp-btn-danger"
+                }`}
+              >
+                <Power className="w-3.5 h-3.5" />
+                <span>
+                  {appSettings.maintenance_mode
+                    ? "Disable Kill Switch (Go Online)"
+                    : "Enable Kill Switch (Go Offline)"}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+              <input
+                type="text"
+                value={appSettings.maintenance_message}
+                onChange={(e) =>
+                  setAppSettings((prev) => ({
+                    ...prev,
+                    maintenance_message: e.target.value,
+                  }))
+                }
+                placeholder="Maintenance message shown to users..."
+                className="flex-1 min-w-[220px] xp-inset px-2.5 py-1.5 text-xs"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleSaveMaintenanceMessage}
+                className="xp-btn text-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Message</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Published Rankings Moderation */}
+            <div className="lg:col-span-6 xp-panel p-3 space-y-2.5">
+              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                Published Rankings ({publishedBallots.length})
+              </h2>
+              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+                {publishedBallots.length === 0 ? (
+                  <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                    No published rankings found.
+                  </div>
+                ) : (
+                  publishedBallots.map((b) => {
+                    const author = Array.isArray(b.profiles)
+                      ? b.profiles[0]
+                      : b.profiles;
+                    return (
+                      <div
+                        key={b.id}
+                        className="xp-inset p-2 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-[#f0ede0] truncate">
+                            {b.title || "Untitled Ranking"}
+                          </div>
+                          <div className="text-[11px] text-[#a6a89e] truncate">
+                            By {author?.username ?? "Unknown"}
+                            {author?.is_banned ? " (BANNED)" : ""} •{" "}
+                            {b.published_at
+                              ? new Date(b.published_at).toLocaleDateString()
+                              : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Link
+                            href={`/ballot/${b.id}`}
+                            className="xp-btn text-[11px] px-2 py-1"
+                            title="View Ranking"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleAdminDeleteBallot(b)}
+                            className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                            title="Delete Published Ranking"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Discord User Moderation / Bans */}
+            <div className="lg:col-span-6 xp-panel p-3 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                  Users ({profiles.length})
+                </h2>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search user or Discord ID..."
+                  className="xp-inset px-2 py-1 text-xs w-48"
+                />
+              </div>
+              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+                {profiles
+                  .filter((p) => {
+                    const q = userSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      p.username.toLowerCase().includes(q) ||
+                      (p.discord_id ?? "").toLowerCase().includes(q)
+                    );
+                  })
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="xp-inset p-2 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {p.avatar_url && (
+                          <img
+                            src={p.avatar_url}
+                            alt={p.username}
+                            className="w-6 h-6 rounded-xs object-cover shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#f0ede0] truncate">
+                              {p.username}
+                            </span>
+                            {p.is_admin && (
+                              <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#2d5a3f] text-[#7cd438] rounded-xs">
+                                Admin
+                              </span>
+                            )}
+                            {p.is_banned && (
+                              <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#451717] text-[#ff857a] rounded-xs">
+                                Banned
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-[#a6a89e] truncate">
+                            Discord ID: {p.discord_id ?? "N/A"}
+                            {p.ban_reason ? ` • Reason: ${p.ban_reason}` : ""}
+                          </div>
+                        </div>
+                      </div>
+                      {p.id !== currentUserId && !p.is_admin && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleToggleBanUser(p)}
+                          className={`xp-btn text-[11px] px-2 py-1 shrink-0 ${
+                            p.is_banned ? "xp-btn-primary" : "xp-btn-danger"
+                          }`}
+                        >
+                          <Ban className="w-3 h-3" />
+                          <span>{p.is_banned ? "Unban" : "Ban"}</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </RetroWindow>
+  );
+}

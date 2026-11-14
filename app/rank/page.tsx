@@ -1,0 +1,115 @@
+import { createClient } from "@/utils/supabase/server";
+import { BallotEditor } from "@/components/BallotEditor";
+import { RetroWindow } from "@/components/RetroWindow";
+import { AuthButton } from "@/components/AuthButton";
+import { Lock } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+
+export default async function RankPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string; division?: string; edition?: string }>;
+}) {
+  const params = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <RetroWindow
+        title="Sign In Required — Power Rankings Editor"
+        theme="scdl"
+      >
+        <div className="py-8 px-4 text-center space-y-4">
+          <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
+            <Lock className="w-6 h-6 text-[#f0c020]" />
+          </div>
+          <h1 className="text-lg font-bold text-[#f0ede0]">
+            Sign in with Discord to Rank Teams
+          </h1>
+          <div className="flex justify-center">
+            <AuthButton user={null} />
+          </div>
+        </div>
+      </RetroWindow>
+    );
+  }
+
+  const [
+    { data: profile },
+    { data: seasons },
+    { data: divisions },
+    { data: divisionThemes },
+    { data: editions },
+    { data: teams },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("username, is_banned, ban_reason")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("seasons")
+      .select("*, leagues ( * )")
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase.from("divisions").select("*").order("name"),
+    supabase.from("division_themes").select("*").order("name"),
+    supabase
+      .from("editions")
+      .select("*")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("teams")
+      .select("*")
+      .eq("is_active", true)
+      .order("default_order", { ascending: true }),
+  ]);
+
+  if (profile?.is_banned) {
+    return (
+      <RetroWindow title="Account Suspended" theme="scdl">
+        <div className="py-8 px-4 text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
+            <Lock className="w-6 h-6 text-[#ff857a]" />
+          </div>
+          <h1 className="text-lg font-bold text-[#ff857a]">
+            Your account has been suspended
+          </h1>
+          <p className="text-xs text-[#c7c5b8] max-w-md mx-auto">
+            {profile.ban_reason
+              ? `Reason: ${profile.ban_reason}`
+              : "You are no longer permitted to create or publish rankings on Rankr."}
+          </p>
+        </div>
+      </RetroWindow>
+    );
+  }
+
+  const meta = user.user_metadata ?? {};
+  const discordDefaultName: string =
+    meta.full_name ||
+    meta.name ||
+    meta.user_name ||
+    meta.preferred_username ||
+    "Discord User";
+
+  return (
+    <BallotEditor
+      userId={user.id}
+      initialAuthorName={profile?.username ?? discordDefaultName}
+      discordDefaultName={discordDefaultName}
+      seasons={seasons ?? []}
+      divisions={divisions ?? []}
+      themes={divisionThemes ?? []}
+      editions={editions ?? []}
+      teams={teams ?? []}
+      initialSeasonSlug={params.season}
+      initialDivisionSlug={params.division}
+      initialEditionSlug={params.edition}
+    />
+  );
+}

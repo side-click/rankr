@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+:root {
+  --scdl-green: #2d5a3f;
+  --scdl-green-dark: #193624;
+  --scdl-cream: #e8e6b8;
+  --scdl-gold: #f0c020;
+  --scdl-lime: #7cd438;
+  --baron-purple: #6b2d8b;
+  --baron-teal: #00b8c9;
+  --baron-acid: #99d930;
+  --dragon-red: #e84a1b;
+  --dragon-amber: #f5a623;
+  --dragon-plum: #3b1c4a;
+  --surface-window: #1b211f;
+  --surface-panel: #232a27;
+  --surface-inset: #121615;
+  --text-main: #e8e5d8;
+  --text-muted: #a6a89e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Tahoma", "Verdana", "Segoe UI", sans-serif;
+  background-color: #0e1311;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(45, 90, 63, 0.28) 0%, transparent 45%),
+    radial-gradient(circle at 82% 85%, rgba(107, 45, 139, 0.18) 0%, transparent 45%),
+    linear-gradient(160deg, #0d1210 0%, #131917 55%, #11131a 100%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+/* 2000s Beveled Dark Window Chrome (SCDL / Baron / Dragon) */
+.xp-window {
+  background-color: var(--surface-window);
+  border: 2px solid #39443f;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.6),
+    0 6px 18px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.xp-window-scdl {
+  border-color: #2d5a3f;
+}
+
+.xp-window-baron {
+  border-color: #5b2878;
+}
+
+.xp-window-dragon {
+  border-color: #8f2d14;
+}
+
+.xp-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  color: #f5f2e6;
+  font-weight: 700;
+  font-size: 13px;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.9);
+  user-select: none;
+  background: linear-gradient(180deg, #353f3c 0%, #222927 100%);
+  border-bottom: 2px solid #596661;
+}
+
+.xp-titlebar-scdl {
+  background: linear-gradient(180deg, #376e4d 0%, #244a33 55%, #193624 100%);
+  border-bottom: 2px solid #c89b3c;
+}
+
+.xp-titlebar-baron {
+  background: linear-gradient(180deg, #6b2d8b 0%, #471c61 55%, #2c103d 100%);
+  border-bottom: 2px solid #00b8c9;
+}
+
+.xp-titlebar-dragon {
+  background: linear-gradient(180deg, #a83316 0%, #6b1d1c 55%, #3b1c4a 100%);
+  border-bottom: 2px solid #f5a623;
+}
+
+.xp-titlebar-btn {
+  width: 19px;
+  height: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+  border-right: 1px solid rgba(0, 0, 0, 0.65);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.65);
+  background: linear-gradient(180deg, #3c4542 0%, #252b29 100%);
+  color: #dcd9cc;
+}
+
+.xp-titlebar-btn-close {
+  background: linear-gradient(180deg, #a63221 0%, #6e1c11 100%);
+  color: #ffece8;
+}
+
+/* Classic 3D Bevel Panels & Inputs (Dark Mode Friendly) */
+.xp-inset {
+  background-color: var(--surface-inset);
+  color: var(--text-main);
+  border-top: 2px solid #0a0c0b;
+  border-left: 2px solid #0a0c0b;
+  border-right: 2px solid #353d3a;
+  border-bottom: 2px solid #353d3a;
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.65);
+}
+
+.xp-inset option {
+  background-color: #161b19;
+  color: #e8e5d8;
+}
+
+.xp-panel {
+  background-color: var(--surface-panel);
+  color: var(--text-main);
+  border-top: 2px solid #3a4440;
+  border-left: 2px solid #3a4440;
+  border-right: 2px solid #0f1312;
+  border-bottom: 2px solid #0f1312;
+}
+
+.xp-statusbar {
+  background-color: #161b19;
+  border-top: 1px solid #333c38;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Classic 2000s Tactile Push Buttons */
+.xp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #eae7da;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.75);
+  background: linear-gradient(180deg, #3c4541 0%, #2b322f 55%, #202624 100%);
+  border-top: 2px solid #58635e;
+  border-left: 2px solid #58635e;
+  border-right: 2px solid #0e1211;
+  border-bottom: 2px solid #0e1211;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.1s ease;
+}
+
+.xp-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+  box-shadow: inset 0 0 0 1px rgba(240, 192, 32, 0.55);
+}
+
+.xp-btn:active:not(:disabled) {
+  border-top: 2px solid #0e1211;
+  border-left: 2px solid #0e1211;
+  border-right: 2px solid #58635e;
+  border-bottom: 2px solid #58635e;
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
+
+.xp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.xp-btn-primary {
+  color: #f6f4ea;
+  background: linear-gradient(180deg, #3e7d57 0%, #2d5a3f 55%, #1d3c29 100%);
+  border-top-color: #63a87f;
+  border-left-color: #63a87f;
+  border-right-color: #112418;
+  border-bottom-color: #112418;
+}
+
+.xp-btn-discord {
+  color: #ffffff;
+  background: linear-gradient(180deg, #6d7ce8 0%, #5865f2 55%, #3d48c4 100%);
+  border-top-color: #93a0f7;
+  border-left-color: #93a0f7;
+  border-right-color: #242b82;
+  border-bottom-color: #242b82;
+}
+
+.xp-btn-gold {
+  color: #1f1500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, #f7d560 0%, #dfb022 55%, #b5870a 100%);
+  border-top-color: #ffea9c;
+  border-left-color: #ffea9c;
+  border-right-color: #664900;
+  border-bottom-color: #664900;
+}
+
+.xp-btn-danger {
+  color: #ffece8;
+  background: linear-gradient(180deg, #9e3121 0%, #782115 55%, #52140c 100%);
+  border-top-color: #cc5949;
+  border-left-color: #cc5949;
+  border-right-color: #300a05;
+  border-bottom-color: #300a05;
+}
+
+/* WoW Classic Ornate Frame */
+.wow-frame {
+  background: linear-gradient(180deg, #1b221e 0%, #121715 100%);
+  border: 2px solid #c89b3c;
+  box-shadow:
+    inset 0 0 0 2px #463714,
+    0 6px 18px rgba(0, 0, 0, 0.6);
+  color: #f0e6d2;
+}
+
+.wow-heading {
+  font-family: "Georgia", "Times New Roman", serif;
+  letter-spacing: 0.02em;
+  text-shadow: 1px 2px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* SCDL Top Navigation Bar */
+.xp-taskbar {
+  background: linear-gradient(180deg, #274d36 0%, #1b3625 60%, #13261a 100%);
+  border-bottom: 2px solid #c89b3c;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
