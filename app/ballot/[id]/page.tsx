@@ -18,13 +18,15 @@ export async function generateMetadata({
     .select(
       `
       title,
+      author_notes,
       season_name_snapshot,
       division_name_snapshot,
       edition_name_snapshot,
       profiles ( username ),
       seasons ( name ),
       divisions ( name ),
-      editions ( name )
+      editions ( name ),
+      ballot_entries ( rank, team_name_snapshot, teams ( name ) )
     `
     )
     .eq("id", id)
@@ -48,15 +50,49 @@ export async function generateMetadata({
     ? ballot.editions[0]
     : ballot.editions;
 
+  const divisionName = division?.name ?? ballot.division_name_snapshot ?? "";
+  const editionName = edition?.name ?? ballot.edition_name_snapshot ?? "";
+  const seasonName = season?.name ?? ballot.season_name_snapshot ?? "";
+  const authorName = profile?.username ?? "Voter";
+
   const title =
     ballot.title ||
-    `${season?.name ?? ballot.season_name_snapshot ?? ""} ${
-      division?.name ?? ballot.division_name_snapshot ?? ""
-    } — ${edition?.name ?? ballot.edition_name_snapshot ?? ""}`.trim();
+    `${seasonName} ${divisionName} — ${editionName}`.trim();
+
+  const items = Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [];
+  const top3 = [...items]
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 3)
+    .map((item) => {
+      const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
+      return `#${item.rank} ${team?.name ?? item.team_name_snapshot ?? "Team"}`;
+    });
+
+  const descriptionParts = [
+    top3.length > 0 ? `Top 3: ${top3.join(" • ")}` : null,
+    ballot.author_notes ? `"${ballot.author_notes}"` : null,
+  ].filter(Boolean);
+
+  const description =
+    descriptionParts.join(" — ") ||
+    `Team Power Rankings by ${authorName}`;
+
+  const fullTitle = `${title} | by ${authorName}`;
 
   return {
-    title: `${title} | by ${profile?.username ?? "Voter"}`,
-    description: `Team Power Rankings by ${profile?.username ?? "Voter"}`,
+    title: fullTitle,
+    description,
+    openGraph: {
+      type: "article",
+      siteName: "Rankr",
+      title: fullTitle,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+    },
   };
 }
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
@@ -6,9 +6,31 @@ import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { ShieldAlert } from "lucide-react";
 
+const siteTitle = "Rankr — League Power Rankings";
+const siteDescription =
+  "Rank your division, drop your hot takes, and export shareable power rankings.";
+
+export const viewport: Viewport = {
+  themeColor: "#c89b3c",
+};
+
 export const metadata: Metadata = {
-  title: "Rankr — Team Power Rankings",
-  description: "Create, publish, and share Team Power Rankings.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app"
+  ),
+  title: siteTitle,
+  description: siteDescription,
+  openGraph: {
+    type: "website",
+    siteName: "Rankr",
+    title: siteTitle,
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 export default async function RootLayout({
