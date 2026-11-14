@@ -45,13 +45,6 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
     if (!el) return;
 
     const fit = () => {
-      // On mobile stacked layout (< 768px), let comments breathe naturally
-      if (window.innerWidth < 768) {
-        el.style.fontSize = "14px";
-        el.style.lineHeight = "1.5";
-        return;
-      }
-
       let size = 14;
       const minSize = 9.5;
       el.style.fontSize = `${size}px`;
@@ -72,7 +65,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
 
   if (!text) {
     return (
-      <div className="text-sm text-[#f0ede0] text-left md:text-center min-w-0">
+      <div className="text-sm text-[#f0ede0] text-center min-w-0">
         <span className="italic text-white/40">—</span>
       </div>
     );
@@ -81,7 +74,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
   return (
     <div
       ref={ref}
-      className="text-sm leading-relaxed text-[#f0ede0] text-left md:text-center whitespace-pre-wrap break-words min-w-0 md:max-h-[90px] md:overflow-hidden"
+      className="text-sm leading-relaxed text-[#f0ede0] text-center whitespace-pre-wrap break-words min-w-0 max-h-[90px] overflow-hidden"
     >
       {text}
     </div>
@@ -501,56 +494,57 @@ export function BallotShareView({
           </div>
         )}
 
-        <div
-          ref={cardRef}
-          style={exporting ? { borderRadius: "44px", boxShadow: "none" } : undefined}
-          className={`relative bg-[#181e1c] border-2 border-[#39443f] overflow-hidden ${
-            exporting ? "" : "shadow-lg"
-          }`}
-        >
+        <div className="lg:hidden text-[11px] text-[#a6a89e] mb-1.5">
+          Swipe horizontally to view full graphic →
+        </div>
+
+        <div className="overflow-x-auto pb-1">
           <div
-            style={{
-              background: getThemeGradients(resolvedTheme).bannerGradient,
-            }}
-            className={`border-b border-[#39443f] text-white flex flex-col sm:flex-row items-center justify-between gap-4 ${
-              exporting ? "px-9 sm:px-11 py-5 sm:py-6" : "px-5 py-4 sm:py-5"
+            ref={cardRef}
+            style={exporting ? { borderRadius: "44px", boxShadow: "none" } : undefined}
+            className={`relative w-[1060px] mx-auto bg-[#181e1c] border-2 border-[#39443f] overflow-hidden ${
+              exporting ? "" : "shadow-lg"
             }`}
           >
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
-              {(leagueLogo || divisionLogo) && (
-                <div className="flex items-center justify-center gap-3 shrink-0">
-                  {leagueLogo && (
-                    <img
-                      src={leagueLogo}
-                      alt={leagueName}
-                      crossOrigin="anonymous"
-                      className="w-12 h-11 sm:w-20 sm:h-16 object-contain drop-shadow"
-                    />
-                  )}
-                  {divisionLogo && (
-                    <img
-                      src={divisionLogo}
-                      alt={divisionName}
-                      crossOrigin="anonymous"
-                      className="w-11 h-11 sm:w-16 sm:h-16 object-contain drop-shadow"
-                    />
-                  )}
-                </div>
-              )}
-              <div>
-                <div className="text-[11px] sm:text-sm uppercase tracking-wider font-bold text-[#f0c020]">
-                  {leagueName} ({seasonName})
-                </div>
-                <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-                  {displayTitle}
-                </h1>
-                {ballot.author_notes && (
-                  <p className="mt-1 text-xs sm:text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">
-                    {ballot.author_notes}
-                  </p>
+            <div
+              style={{
+                background: getThemeGradients(resolvedTheme).bannerGradient,
+              }}
+              className={`border-b border-[#39443f] text-white flex flex-row items-center justify-between gap-4 ${
+                exporting ? "px-11 py-6" : "px-5 py-5"
+              }`}
+            >
+              <div className="flex items-center gap-4 text-left">
+                {leagueLogo && (
+                  <img
+                    src={leagueLogo}
+                    alt={leagueName}
+                    crossOrigin="anonymous"
+                    className="w-20 h-16 object-contain drop-shadow shrink-0"
+                  />
                 )}
+                {divisionLogo && (
+                  <img
+                    src={divisionLogo}
+                    alt={divisionName}
+                    crossOrigin="anonymous"
+                    className="w-16 h-16 object-contain drop-shadow shrink-0"
+                  />
+                )}
+                <div>
+                  <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                    {leagueName} ({seasonName})
+                  </div>
+                  <h1 className="wow-heading text-3xl font-extrabold text-white leading-tight">
+                    {displayTitle}
+                  </h1>
+                  {ballot.author_notes && (
+                    <p className="mt-1 text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">
+                      {ballot.author_notes}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
             {profile?.username ? (
               <Link
@@ -563,16 +557,16 @@ export function BallotShareView({
                     src={profile.avatar_url}
                     alt={profile.username}
                     crossOrigin="anonymous"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-md object-cover border border-white/50"
+                    className="w-10 h-10 rounded-md object-cover border border-white/50"
                   />
                 )}
-                <div className="text-base sm:text-lg font-extrabold text-white tracking-wide">
+                <div className="text-lg font-extrabold text-white tracking-wide">
                   {profile.username}
                 </div>
               </Link>
             ) : (
               <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-lg border border-white/20 shrink-0">
-                <div className="text-base sm:text-lg font-extrabold text-white tracking-wide">
+                <div className="text-lg font-extrabold text-white tracking-wide">
                   Voter
                 </div>
               </div>
@@ -581,13 +575,13 @@ export function BallotShareView({
 
 
           <div
-            className={`hidden md:grid md:grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] md:gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
-              exporting ? "px-8 sm:px-10 py-2" : "px-3 py-1.5"
+            className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
+              exporting ? "px-10 py-2" : "px-3 py-1.5"
             }`}
           >
             <div className="text-center">Rank</div>
             <div className="text-center">Change</div>
-            <div className="md:pl-[92px]">Team</div>
+            <div className="pl-[92px]">Team</div>
             <div />
             <div className="text-center">Comments</div>
           </div>
@@ -600,51 +594,13 @@ export function BallotShareView({
                 <div
                   key={entry.id}
                   style={{ background: rankColor.cardBg }}
-                  className={`grid grid-cols-1 md:grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-2 md:gap-y-0 md:gap-x-3 items-center ${
+                  className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 items-center ${
                     exporting
-                      ? `px-8 sm:px-10 ${isLast ? "pt-3.5 pb-6" : "py-3.5"}`
+                      ? `px-10 ${isLast ? "pt-3.5 pb-6" : "py-3.5"}`
                       : "px-3 py-3"
                   }`}
                 >
-                  {/* Compact mobile header: Rank + Logo + Team + Change */}
-                  <div className="flex items-center justify-between gap-2.5 md:hidden">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        style={{
-                          backgroundColor: rankColor.badgeBg,
-                          borderColor: rankColor.borderColor,
-                          color: rankColor.badgeText,
-                        }}
-                        className="w-10 h-10 rounded-xl border font-black text-lg flex items-center justify-center shadow-sm shrink-0"
-                      >
-                        {entry.rank}
-                      </span>
-                      <div className="w-12 h-12 shrink-0 flex items-center justify-center">
-                        {entry.team_logo_snapshot ? (
-                          <img
-                            src={entry.team_logo_snapshot}
-                            alt={entry.team_name_snapshot}
-                            crossOrigin="anonymous"
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <span className="text-[9px] text-white/40">LOGO</span>
-                        )}
-                      </div>
-                      <div className="font-black text-lg text-[#f7f5eb] tracking-tight leading-tight truncate">
-                        {entry.team_name_snapshot}
-                      </div>
-                    </div>
-                    <div className="shrink-0">
-                      <RankChangeBadge
-                        previousRank={entry.previous_rank}
-                        rankChange={entry.rank_change}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Desktop columns: Rank, Change, Team */}
-                  <div className="hidden md:flex items-center justify-center">
+                  <div className="flex items-center justify-center">
                     <span
                       style={{
                         backgroundColor: rankColor.badgeBg,
@@ -657,14 +613,14 @@ export function BallotShareView({
                     </span>
                   </div>
 
-                  <div className="hidden md:flex justify-center">
+                  <div className="flex justify-center">
                     <RankChangeBadge
                       previousRank={entry.previous_rank}
                       rankChange={entry.rank_change}
                     />
                   </div>
 
-                  <div className="hidden md:flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-20 h-20 shrink-0 flex items-center justify-center">
                       {entry.team_logo_snapshot ? (
                         <img
@@ -683,7 +639,7 @@ export function BallotShareView({
                   </div>
 
                   <div className="min-w-0">
-                    <ul className="grid grid-cols-2 sm:grid-cols-3 md:block gap-x-3 gap-y-0.5 md:space-y-0.5 text-[11px] font-mono text-[#e5e3d8]">
+                    <ul className="space-y-0.5 text-[11px] font-mono text-[#e5e3d8]">
                       {normalizeRoster(entry.roster_snapshot).map(
                         (slot, pIdx) => {
                           const roleMeta = getRoleMeta(slot.role);
@@ -771,6 +727,7 @@ export function BallotShareView({
               ))}
             </div>
           )}
+          </div>
         </div>
       </RetroWindow>
     </div>
