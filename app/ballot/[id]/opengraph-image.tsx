@@ -263,12 +263,20 @@ export default async function BallotOpenGraphImage({
             flexDirection: "column",
             flex: 1,
             justifyContent: "center",
-            padding: "28px 52px",
-            gap: "18px",
+            padding: "20px 36px",
+            gap: "16px",
           }}
         >
           {top3.map((item, idx) => {
             const badgeColor = RANK_COLORS[idx] ?? "#4a5568";
+            const cleanComment = item.commentary
+              ? item.commentary.replace(/\s+/g, " ").trim()
+              : "";
+            const commentPreview =
+              cleanComment.length > 92
+                ? `${cleanComment.slice(0, 89)}...`
+                : cleanComment;
+
             return (
               <div
                 key={item.rank}
@@ -276,29 +284,31 @@ export default async function BallotOpenGraphImage({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "18px 26px",
-                  borderRadius: "10px",
+                  padding: "16px 24px",
+                  borderRadius: "12px",
                   background: "#1c2421",
                   border: "2px solid #303b36",
+                  gap: "24px",
                 }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "20px",
+                    gap: "18px",
+                    flexShrink: 0,
                   }}
                 >
                   <div
                     style={{
-                      width: "64px",
-                      height: "64px",
-                      borderRadius: "10px",
+                      width: "76px",
+                      height: "76px",
+                      borderRadius: "12px",
                       background: badgeColor,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "34px",
+                      fontSize: "40px",
                       fontWeight: 700,
                       color: "#ffffff",
                     }}
@@ -309,34 +319,42 @@ export default async function BallotOpenGraphImage({
                     <img
                       src={item.logoSrc}
                       alt={item.teamName}
-                      width={56}
-                      height={56}
+                      width={72}
+                      height={72}
                       style={{ objectFit: "contain" }}
                     />
                   )}
                   <span
                     style={{
-                      fontSize: "32px",
+                      fontSize: "38px",
                       fontWeight: 700,
                       color: "#ffffff",
+                      maxWidth: "340px",
                     }}
                   >
                     {item.teamName}
                   </span>
                 </div>
 
-                {item.commentary && (
-                  <span
+                {commentPreview && (
+                  <div
                     style={{
-                      fontSize: "19px",
-                      color: "#b7c2bc",
-                      maxWidth: "460px",
+                      display: "flex",
+                      flex: 1,
+                      justifyContent: "flex-end",
                     }}
                   >
-                    {item.commentary.length > 55
-                      ? `${item.commentary.slice(0, 52)}...`
-                      : item.commentary}
-                  </span>
+                    <span
+                      style={{
+                        fontSize: "24px",
+                        lineHeight: 1.25,
+                        color: "#d4ddd8",
+                        textAlign: "right",
+                      }}
+                    >
+                      {commentPreview}
+                    </span>
+                  </div>
                 )}
               </div>
             );
