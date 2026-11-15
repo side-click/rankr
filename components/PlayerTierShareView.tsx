@@ -333,6 +333,7 @@ export function PlayerTierShareView({
       width: 18,
     };
     setOverlays((prev) => [...prev, newItem]);
+    setEditingOverlays(true);
     setUploadingOverlay(false);
   }
 
@@ -466,17 +467,37 @@ export function PlayerTierShareView({
               </Link>
             )}
             {canEditOverlays && !editingOverlays && (
-              <button
-                type="button"
-                onClick={() => {
-                  setOverlayError(null);
-                  setEditingOverlays(true);
-                }}
-                className="xp-btn text-xs"
-              >
-                <ImagePlus className="w-3.5 h-3.5" />
-                <span>Edit Overlays</span>
-              </button>
+              overlays.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOverlayError(null);
+                    setEditingOverlays(true);
+                  }}
+                  className="xp-btn text-xs"
+                >
+                  <ImagePlus className="w-3.5 h-3.5" />
+                  <span>Edit Overlays</span>
+                </button>
+              ) : (
+                <label className="xp-btn text-xs cursor-pointer">
+                  <ImagePlus className="w-3.5 h-3.5" />
+                  <span>
+                    {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    disabled={uploadingOverlay}
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleUploadOverlay(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )
             )}
             <button
               type="button"
@@ -552,6 +573,12 @@ export function PlayerTierShareView({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {overlayError && !editingOverlays && (
+          <div className="mb-4 xp-panel p-2.5 text-xs text-[#ff857a] font-bold border border-[#9e3535]">
+            {overlayError}
           </div>
         )}
 
