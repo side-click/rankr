@@ -4,7 +4,7 @@ import path from "node:path";
 type OgFont = {
   name: string;
   data: ArrayBuffer;
-  weight: 400 | 700;
+  weight: 400 | 700 | 900;
   style: "normal";
 };
 
@@ -13,7 +13,7 @@ let cachedFonts: OgFont[] | null = null;
 async function readLocalOrRemoteFont(
   filename: string,
   name: string,
-  weight: 400 | 700
+  weight: 400 | 700 | 900
 ): Promise<OgFont | null> {
   try {
     const filePath = path.join(process.cwd(), "public/fonts", filename);
@@ -42,8 +42,9 @@ export async function loadOgFonts(): Promise<OgFont[]> {
 
   const results = await Promise.all([
     readLocalOrRemoteFont("PTSerif-Bold.ttf", "WowHeading", 700),
-    readLocalOrRemoteFont("PTSans-Regular.ttf", "SiteBody", 400),
-    readLocalOrRemoteFont("PTSans-Bold.ttf", "SiteBody", 700),
+    readLocalOrRemoteFont("Inter-Regular.ttf", "SiteBody", 400),
+    readLocalOrRemoteFont("Inter-Bold.ttf", "SiteBody", 700),
+    readLocalOrRemoteFont("Inter-Black.ttf", "SiteBody", 900),
   ]);
 
   const fonts = results.filter((f): f is OgFont => f !== null);

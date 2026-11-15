@@ -156,9 +156,10 @@ export default async function BallotOpenGraphImage({
   const editionName = edition?.name ?? ballot.edition_name_snapshot ?? "";
   const authorName = profile?.username ?? "Voter";
 
-  const displayTitle = editionName
-    ? `${divisionName} — ${editionName}`
-    : ballot.title || divisionName;
+  const headlineTitle = editionName || ballot.title || divisionName;
+  const subTitle = editionName
+    ? `${divisionName} Power Rankings`
+    : "Power Rankings";
 
   const theme = resolveDivisionTheme(
     division?.theme_key,
@@ -203,10 +204,10 @@ export default async function BallotOpenGraphImage({
             borderBottom: "3px solid #39443f",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <span
               style={{
-                fontSize: "20px",
+                fontSize: "19px",
                 fontWeight: 700,
                 color: "#f0c020",
                 letterSpacing: "2px",
@@ -218,19 +219,29 @@ export default async function BallotOpenGraphImage({
             <span
               style={{
                 fontFamily: "WowHeading, serif",
-                fontSize: "52px",
+                fontSize: "50px",
                 fontWeight: 700,
                 color: "#ffffff",
                 lineHeight: 1.1,
                 textShadow: "0 2px 4px rgba(0,0,0,0.6)",
               }}
             >
-              {displayTitle}
+              {headlineTitle}
+            </span>
+            <span
+              style={{
+                fontSize: "24px",
+                fontWeight: 700,
+                color: "rgba(255, 255, 255, 0.9)",
+                lineHeight: 1.2,
+              }}
+            >
+              {subTitle}
             </span>
             {ballot.author_notes && (
               <span
                 style={{
-                  fontSize: "20px",
+                  fontSize: "18px",
                   color: "#e8e6b8",
                   marginTop: "6px",
                 }}
@@ -296,7 +307,9 @@ export default async function BallotOpenGraphImage({
                     display: "flex",
                     alignItems: "center",
                     gap: "18px",
+                    width: "490px",
                     flexShrink: 0,
+                    overflow: "hidden",
                   }}
                 >
                   <div
@@ -308,12 +321,13 @@ export default async function BallotOpenGraphImage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "40px",
-                      fontWeight: 700,
+                      fontSize: "42px",
+                      fontWeight: 900,
                       color: "#ffffff",
+                      flexShrink: 0,
                     }}
                   >
-                    #{item.rank}
+                    {item.rank}
                   </div>
                   {item.logoSrc && (
                     <img
@@ -321,15 +335,15 @@ export default async function BallotOpenGraphImage({
                       alt={item.teamName}
                       width={72}
                       height={72}
-                      style={{ objectFit: "contain" }}
+                      style={{ objectFit: "contain", flexShrink: 0 }}
                     />
                   )}
                   <span
                     style={{
-                      fontSize: "38px",
+                      fontSize: "34px",
                       fontWeight: 700,
                       color: "#ffffff",
-                      maxWidth: "340px",
+                      lineHeight: 1.15,
                     }}
                   >
                     {item.teamName}
@@ -341,15 +355,19 @@ export default async function BallotOpenGraphImage({
                     style={{
                       display: "flex",
                       flex: 1,
-                      justifyContent: "flex-end",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      borderLeft: "2px solid #303b36",
+                      paddingLeft: "24px",
+                      minHeight: "64px",
                     }}
                   >
                     <span
                       style={{
-                        fontSize: "24px",
-                        lineHeight: 1.25,
+                        fontSize: "22px",
+                        lineHeight: 1.3,
                         color: "#d4ddd8",
-                        textAlign: "right",
+                        textAlign: "left",
                       }}
                     >
                       {commentPreview}
