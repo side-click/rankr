@@ -165,6 +165,8 @@ export function BallotShareView({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        width: 1060,
+        style: { margin: "0" },
       });
       const link = document.createElement("a");
       const safeName = `${season?.slug ?? "rankr"}-${
