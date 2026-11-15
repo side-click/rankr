@@ -763,6 +763,11 @@ export function PlayerTierEditor({
       return teamRosterPlayers;
     }
 
+    // Teamed edition with teams assigned: use only team rosters (never duplicate with season_players)
+    if (!currentEdition?.is_players_only && teamRosterPlayers.length > 0) {
+      return teamRosterPlayers;
+    }
+
     // Division scope = "all": pre-draft season_players + post-draft team players (unless Players-Only edition when season_players exists)
     const poolFromSeason = seasonPlayers.filter(
       (sp) => sp.season_id === seasonId && sp.is_active
