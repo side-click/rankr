@@ -502,7 +502,8 @@ export default async function BallotOpenGraphImage({
               display: "flex",
               alignItems: "center",
               gap: "14px",
-              maxWidth: "360px",
+              maxWidth: "400px",
+              overflow: "hidden",
               flexShrink: 0,
               padding: "12px 22px",
               borderRadius: "10px",
@@ -526,7 +527,7 @@ export default async function BallotOpenGraphImage({
             )}
             <span
               style={{
-                fontSize: "32px",
+                fontSize: "28px",
                 fontWeight: 700,
                 color: "#ffffff",
               }}
