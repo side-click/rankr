@@ -18,6 +18,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   CheckCircle2,
@@ -1044,6 +1045,21 @@ export function PlayerTierEditor({
     [tierPayload]
   );
 
+  const hasTierWork = useMemo(() => {
+    if (totalPlacedPlayers > 0) return true;
+    if (authorNotes.trim().length > 0) return true;
+    return tierPayload.sections.some((sec) =>
+      sec.tiers.some((t) => Boolean(t.commentary?.trim()))
+    );
+  }, [totalPlacedPlayers, authorNotes, tierPayload]);
+
+  function confirmSwitchScope(): boolean {
+    if (!hasTierWork) return true;
+    return window.confirm(
+      "Changing this will clear any unsaved or unpublished tier assignments and commentary. Continue?"
+    );
+  }
+
   function getPoolPlayersForSection(sectionRole: LeagueRole | "all") {
     return availablePlayers.filter((p) => {
       if (sectionRole !== "all" && p.role !== sectionRole) return false;
@@ -1061,10 +1077,14 @@ export function PlayerTierEditor({
 
   // Tier Manipulation Handlers
   function handleApplyPreset(presetKey: Exclude<TierPresetKey, "custom">) {
+    if (presetKey === selectedPreset) return;
+    if (!confirmSwitchScope()) return;
     setSelectedPreset(presetKey);
   }
 
   function handleToggleSplitMode(nextSplit: boolean) {
+    if (nextSplit === selectedSplitByRole) return;
+    if (!confirmSwitchScope()) return;
     setSelectedSplitByRole(nextSplit);
   }
 
@@ -1503,6 +1523,8 @@ export function PlayerTierEditor({
               value={seasonId}
               onChange={(e) => {
                 const newId = e.target.value;
+                if (newId === seasonId) return;
+                if (!confirmSwitchScope()) return;
                 setSeasonId(newId);
                 const nextSeason = seasons.find((s) => s.id === newId);
                 if (nextSeason?.slug) {
@@ -1542,7 +1564,12 @@ export function PlayerTierEditor({
             <select
               value={divisionScope}
               disabled={!seasonId}
-              onChange={(e) => setDivisionScope(e.target.value)}
+              onChange={(e) => {
+                const nextScope = e.target.value;
+                if (nextScope === divisionScope) return;
+                if (!confirmSwitchScope()) return;
+                setDivisionScope(nextScope);
+              }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
               <option value="all">
@@ -1565,6 +1592,8 @@ export function PlayerTierEditor({
               disabled={!seasonId}
               onChange={(e) => {
                 const nextEdId = e.target.value;
+                if (nextEdId === editionId) return;
+                if (!confirmSwitchScope()) return;
                 setEditionId(nextEdId);
                 const nextEd = seasonEditions.find((ed) => ed.id === nextEdId);
                 setSelectedPreset(
@@ -1787,7 +1816,7 @@ export function PlayerTierEditor({
 
         {/* Action Bar */}
         <div className="mb-4 pb-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-h-[28px]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-[28px]">
             {message?.type === "success" ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-[#173b24] border border-[#3a804d] text-[#7cd438] rounded">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -1805,6 +1834,14 @@ export function PlayerTierEditor({
               <span className="text-xs text-[#a6a89e]">
                 {totalPlacedPlayers} of {availablePlayers.length} players tiered
                 (partial tiers allowed)
+              </span>
+            )}
+            {hasTierWork && !isEditDisabled && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] italic text-[#f0c020]">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Changing dropdowns or toggles will clear unsaved/unpublished work.
+                </span>
               </span>
             )}
           </div>
