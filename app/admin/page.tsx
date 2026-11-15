@@ -61,7 +61,7 @@ export default async function AdminPage() {
     supabase
       .from("ballots")
       .select(
-        "id, title, status, published_at, user_id, profiles ( id, username, discord_id, is_banned )"
+        "id, title, status, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
       )
       .eq("status", "published")
       .order("published_at", { ascending: false })

@@ -544,8 +544,11 @@ export function BallotShareView({
                     {leagueName} ({seasonName})
                   </div>
                   <h1 className="wow-heading text-3xl font-extrabold text-white leading-tight">
-                    {displayTitle}
+                    {editionName}
                   </h1>
+                  <div className="text-base font-bold text-white/90 leading-snug">
+                    {divisionName} Power Rankings
+                  </div>
                   {ballot.author_notes && (
                     <p className="mt-1 text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">
                       {ballot.author_notes}

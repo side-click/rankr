@@ -331,10 +331,9 @@ export function BallotEditor({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
-  const defaultSeason =
-    seasons.find((s) => s.slug === initialSeasonSlug) ??
-    seasons.find((s) => s.is_active) ??
-    seasons[0];
+  const defaultSeason = initialSeasonSlug
+    ? seasons.find((s) => s.slug === initialSeasonSlug)
+    : undefined;
 
   const [seasonId, setSeasonId] = useState<string>(defaultSeason?.id ?? "");
 
@@ -417,6 +416,8 @@ export function BallotEditor({
       if (matched) {
         setSeasonId(matched.id);
       }
+    } else {
+      setSeasonId("");
     }
   }, [initialSeasonSlug, seasons]);
 
@@ -430,8 +431,9 @@ export function BallotEditor({
     if (seasonEditions.length === 0) {
       if (editionId !== "") setEditionId("");
     } else if (!seasonEditions.some((e) => e.id === editionId)) {
-      const firstOpen = seasonEditions.find((e) => e.is_open);
-      setEditionId((firstOpen ?? seasonEditions[0]).id);
+      const firstOpen = seasonEditions.find((e) => e.is_open && !e.is_archived);
+      const firstActive = seasonEditions.find((e) => !e.is_archived);
+      setEditionId((firstOpen ?? firstActive ?? seasonEditions[0]).id);
     }
   }, [seasonId, seasonDivisions, seasonEditions, divisionId, editionId]);
 
@@ -536,13 +538,19 @@ export function BallotEditor({
           setBallotStatus(null);
           setAuthorNotes("");
           setShowGeneralNotes(false);
-          setRankedItems(
-            divisionTeams.map((team) => ({
-              team,
-              commentary: "",
-              previousRank: prevRankMap.get(team.id) ?? null,
-            }))
-          );
+          const editionUnavailable =
+            Boolean(currentEd?.is_archived) || !currentEd?.is_open;
+          if (editionUnavailable) {
+            setRankedItems([]);
+          } else {
+            setRankedItems(
+              divisionTeams.map((team) => ({
+                team,
+                commentary: "",
+                previousRank: prevRankMap.get(team.id) ?? null,
+              }))
+            );
+          }
         }
 
         lastLoadedKeyRef.current = selectionKey;
@@ -587,6 +595,13 @@ export function BallotEditor({
 
   async function saveBallot(targetStatus: "draft" | "published") {
     if (!seasonId || !divisionId || !editionId) return;
+    if (isEditionArchived) {
+      setMessage({
+        type: "error",
+        text: "This edition is archived and can no longer be edited.",
+      });
+      return;
+    }
     setSaving(true);
     setMessage(null);
 
@@ -703,12 +718,18 @@ export function BallotEditor({
   }
 
   const isSeasonInactive = currentSeason ? !currentSeason.is_active : false;
+  const isEditionArchived = Boolean(currentEdition?.is_archived);
   const isEditionLocked = currentEdition ? !currentEdition.is_open : false;
   const isEditDisabled =
-    isSeasonInactive || (isEditionLocked && ballotStatus === "published");
-  const isPublishDisabled = isSeasonInactive || isEditionLocked;
+    isSeasonInactive || isEditionArchived || isEditionLocked;
+  const isPublishDisabled =
+    isSeasonInactive || isEditionArchived || isEditionLocked;
   const windowTheme =
-    currentDivision?.theme_key === "dragon" ? "dragon" : "baron";
+    currentDivision?.theme_key === "dragon"
+      ? "dragon"
+      : currentDivision
+      ? "baron"
+      : "scdl";
   const activeTheme = resolveDivisionTheme(currentDivision?.theme_key, themes);
 
   return (
@@ -716,9 +737,11 @@ export function BallotEditor({
       <RetroWindow
         title="Power Rankings Editor"
         theme={windowTheme}
-        customTheme={activeTheme}
+        customTheme={currentDivision ? activeTheme : undefined}
         iconSrc={
-          currentDivision?.logo_url ?? activeTheme.default_logo_url ?? undefined
+          currentDivision
+            ? currentDivision.logo_url ?? activeTheme.default_logo_url ?? undefined
+            : undefined
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 xp-panel p-3">
@@ -736,10 +759,13 @@ export function BallotEditor({
                   router.replace(
                     `/rank?season=${encodeURIComponent(nextSeason.slug)}`
                   );
+                } else {
+                  router.replace("/rank");
                 }
               }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
             >
+              <option value="">Select a season...</option>
               {seasons.map((s) => {
                 const league = Array.isArray(s.leagues)
                   ? s.leagues[0]
@@ -763,9 +789,11 @@ export function BallotEditor({
             </label>
             <select
               value={divisionId}
+              disabled={!seasonId}
               onChange={(e) => setDivisionId(e.target.value)}
-              className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
+              className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
+              <option value="">Select a division...</option>
               {seasonDivisions.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -780,12 +808,19 @@ export function BallotEditor({
             </label>
             <select
               value={editionId}
+              disabled={!seasonId}
               onChange={(e) => setEditionId(e.target.value)}
-              className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
+              className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
+              <option value="">Select an edition...</option>
               {seasonEditions.map((ed) => (
                 <option key={ed.id} value={ed.id}>
-                  {ed.name} {!ed.is_open ? "(Locked)" : ""}
+                  {ed.name}{" "}
+                  {ed.is_archived
+                    ? "(Archived)"
+                    : !ed.is_open
+                    ? "(Locked)"
+                    : ""}
                 </option>
               ))}
             </select>
@@ -883,12 +918,14 @@ export function BallotEditor({
           </div>
         </div>
 
-        {(isSeasonInactive || isEditionLocked) && (
+        {(isSeasonInactive || isEditionArchived || isEditionLocked) && (
           <div className="mb-4 p-2.5 bg-[#3d3012] border border-[#8c6b16] text-[#f7d560] text-xs flex items-center gap-2">
             <Lock className="w-4 h-4 shrink-0" />
             <span>
               {isSeasonInactive
                 ? "This season is currently inactive. Rankings cannot be created or edited."
+                : isEditionArchived
+                ? "This edition is archived. Drafts and rankings can no longer be created or edited."
                 : ballotStatus === "published"
                 ? "This edition is locked and your ranking has already been published."
                 : "This edition is locked — you can still arrange teams, write comments, and save drafts, but publishing is disabled."}
@@ -962,7 +999,13 @@ export function BallotEditor({
           </div>
         ) : rankedItems.length === 0 ? (
           <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
-            No teams in this division.
+            {!seasonId || !divisionId || !editionId
+              ? "Select a season, division, and edition above to start ranking."
+              : isEditionArchived
+              ? "This edition is archived and you have no saved ranking for it."
+              : isEditionLocked
+              ? "This edition is locked and you have no saved ranking for it."
+              : "No teams in this division."}
           </div>
         ) : (
           <DndContext

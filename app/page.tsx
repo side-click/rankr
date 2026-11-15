@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { ArrowRight, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +24,15 @@ export default async function HomePage() {
     .order("is_active", { ascending: false })
     .order("created_at", { ascending: false });
 
-  const [{ data: divisions }, { data: divisionThemes }] = await Promise.all([
-    supabase
-      .from("divisions")
-      .select("id, season_id, name, slug, logo_url, theme_key")
-      .order("name"),
-    supabase.from("division_themes").select("*").order("name"),
-  ]);
+  const [{ data: divisions }, { data: divisionThemes }, { data: activeTeams }] =
+    await Promise.all([
+      supabase
+        .from("divisions")
+        .select("id, season_id, name, slug, logo_url, theme_key")
+        .order("name"),
+      supabase.from("division_themes").select("*").order("name"),
+      supabase.from("teams").select("id, division_id").eq("is_active", true),
+    ]);
 
   const { data: recentBallots } = await supabase
     .from("ballots")
@@ -136,6 +138,9 @@ export default async function HomePage() {
                             );
                             const logoSrc =
                               div.logo_url ?? divTheme.default_logo_url;
+                            const teamCount = (activeTeams ?? []).filter(
+                              (t) => t.division_id === div.id
+                            ).length;
                             return (
                               <div
                                 key={div.id}
@@ -159,14 +164,11 @@ export default async function HomePage() {
                                   >
                                     {div.name}
                                   </div>
+                                  <div className="text-[11px] text-[#a6a89e] mt-0.5">
+                                    {teamCount}{" "}
+                                    {teamCount === 1 ? "team" : "teams"}
+                                  </div>
                                   <div className="mt-2 flex flex-wrap gap-2">
-                                    <Link
-                                      href={`/rank?season=${season.slug}&division=${div.slug}`}
-                                      className="xp-btn xp-btn-primary text-[11px]"
-                                    >
-                                      <span>Rank</span>
-                                      <ArrowRight className="w-3 h-3" />
-                                    </Link>
                                     <Link
                                       href={`/browse?season=${season.slug}&division=${div.slug}`}
                                       className="xp-btn text-[11px]"

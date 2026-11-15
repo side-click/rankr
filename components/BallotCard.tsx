@@ -79,9 +79,12 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
         )}
         <div className="min-w-0 flex-1">
           <div className="text-sm font-extrabold text-[#f0ede0] truncate">
-            {ballot.title || `${divName} — ${edName}`}
+            {edName}
           </div>
-          <div className="text-xs text-[#a6a89e] truncate">
+          <div className="text-xs font-bold text-[#d6d3c4] truncate">
+            {divName}
+          </div>
+          <div className="text-[11px] text-[#a6a89e] truncate">
             {leaguePrefix ? `${leaguePrefix}: ` : ""}
             {sName}
           </div>

@@ -27,10 +27,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
 
   const urlSeasonSlug = searchParams.get("season") ?? "";
   const selectedSeasonSlug =
-    seasons.find((s) => s.slug === urlSeasonSlug)?.slug ??
-    seasons.find((s) => s.is_active)?.slug ??
-    seasons[0]?.slug ??
-    "";
+    seasons.find((s) => s.slug === urlSeasonSlug)?.slug ?? "";
 
   function handleSeasonChange(newSlug: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -76,6 +73,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           onChange={(e) => handleSeasonChange(e.target.value)}
           className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[170px] lg:w-[195px] shrink-0 truncate"
         >
+          <option value="">All Seasons</option>
           {seasons.map((s) => (
             <option key={s.id} value={s.slug}>
               {s.leagueName ? `${s.leagueName}: ` : ""}
@@ -147,6 +145,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
                 }}
                 className="w-full xp-inset px-2.5 py-2 text-xs font-bold"
               >
+                <option value="">All Seasons</option>
                 {seasons.map((s) => (
                   <option key={s.id} value={s.slug}>
                     {s.leagueName ? `${s.leagueName}: ` : ""}

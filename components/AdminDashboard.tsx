@@ -19,7 +19,9 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { CAPTAIN_ICON, LEAGUE_ROLES, normalizeRoster } from "@/utils/roles";
 import { DEFAULT_DIVISION_THEMES } from "@/utils/themes";
 import {
+  Archive,
   ArrowDown,
+  ArrowRightLeft,
   ArrowUp,
   Ban,
   Check,
@@ -41,10 +43,23 @@ interface AdminPublishedBallot {
   status: string;
   published_at: string | null;
   user_id: string;
+  season_id: string | null;
+  division_id: string | null;
+  edition_id: string | null;
+  division_name_snapshot: string | null;
+  edition_name_snapshot: string | null;
   profiles?:
     | Pick<Profile, "id" | "username" | "discord_id" | "is_banned">
     | Pick<Profile, "id" | "username" | "discord_id" | "is_banned">[]
     | null;
+}
+
+interface ConflictingBallotInfo {
+  id: string;
+  title: string | null;
+  status: "draft" | "published";
+  updated_at: string;
+  published_at: string | null;
 }
 
 interface AdminDashboardProps {
@@ -109,6 +124,15 @@ export function AdminDashboard({
   const [newAllowedDiscordId, setNewAllowedDiscordId] = useState("");
   const [newAllowedLabel, setNewAllowedLabel] = useState("");
   const [userSearch, setUserSearch] = useState("");
+  const [movingBallot, setMovingBallot] = useState<AdminPublishedBallot | null>(
+    null
+  );
+  const [targetEditionId, setTargetEditionId] = useState("");
+  const [moveTitle, setMoveTitle] = useState("");
+  const [conflictBallot, setConflictBallot] =
+    useState<ConflictingBallotInfo | null>(null);
+  const [checkingConflict, setCheckingConflict] = useState(false);
+  const [confirmOverwriteChecked, setConfirmOverwriteChecked] = useState(false);
 
   const allowedIdSet = useMemo(
     () => new Set(allowedUsers.map((u) => u.discord_id)),
@@ -173,7 +197,7 @@ export function AdminDashboard({
       supabase
         .from("ballots")
         .select(
-          "id, title, status, published_at, user_id, profiles ( id, username, discord_id, is_banned )"
+          "id, title, status, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
         )
         .eq("status", "published")
         .order("published_at", { ascending: false })
@@ -234,6 +258,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleLeagueLogoUpload(leagueId: string, file: File) {
     setBusy(true);
     setStatusMsg(null);
@@ -284,6 +309,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleLogoUpload(teamId: string, file: File) {
     setBusy(true);
@@ -373,6 +399,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleToggleSeasonActive(season: Season) {
     setBusy(true);
     await supabase
@@ -382,6 +409,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleAddDivision(e: React.FormEvent) {
     e.preventDefault();
@@ -424,6 +452,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleDivisionLogoUpload(divisionId: string, file: File) {
     setBusy(true);
@@ -468,6 +497,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleThemeLogoUpload(themeKey: string, file: File) {
     setBusy(true);
@@ -532,6 +562,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleToggleKillSwitch() {
     const nextMode = !appSettings.maintenance_mode;
     if (
@@ -560,6 +591,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleSaveMaintenanceMessage() {
     setBusy(true);
     const { error } = await supabase.from("app_settings").upsert({
@@ -574,6 +606,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleToggleAllowlistMode() {
     const nextRequire = !appSettings.require_allowlist;
@@ -595,6 +628,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleAddAllowedUser(discordId: string, label?: string | null) {
     const trimmed = discordId.trim();
@@ -631,6 +665,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleToggleBanUser(target: Profile) {
     if (target.id === currentUserId) return;
     const nextBanned = !target.is_banned;
@@ -663,6 +698,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleAdminDeleteBallot(ballot: AdminPublishedBallot) {
     if (
       !confirm(
@@ -681,6 +717,128 @@ export function AdminDashboard({
     );
     await refreshAll();
     setBusy(false);
+  }
+
+  async function checkTargetEditionConflict(
+    ballot: AdminPublishedBallot,
+    nextEditionId: string
+  ) {
+    if (!nextEditionId || !ballot.division_id) {
+      setConflictBallot(null);
+      return;
+    }
+    setCheckingConflict(true);
+    const { data } = await supabase
+      .from("ballots")
+      .select("id, title, status, updated_at, published_at")
+      .eq("user_id", ballot.user_id)
+      .eq("division_id", ballot.division_id)
+      .eq("edition_id", nextEditionId)
+      .neq("id", ballot.id)
+      .maybeSingle();
+    setConflictBallot((data as ConflictingBallotInfo | null) ?? null);
+    setCheckingConflict(false);
+  }
+
+  function buildMovedTitle(
+    ballot: AdminPublishedBallot,
+    nextEdition: Edition | undefined
+  ) {
+    if (!nextEdition) return ballot.title ?? "";
+    const oldEd = ballot.edition_name_snapshot;
+    if (ballot.title && oldEd && ballot.title.includes(oldEd)) {
+      return ballot.title.replace(oldEd, nextEdition.name);
+    }
+    if (ballot.division_name_snapshot) {
+      return `${ballot.division_name_snapshot} Power Rankings — ${nextEdition.name}`;
+    }
+    return ballot.title ?? nextEdition.name;
+  }
+
+  async function openMoveEditionModal(ballot: AdminPublishedBallot) {
+    const seasonEds = editions
+      .filter(
+        (e) => e.season_id === ballot.season_id && e.id !== ballot.edition_id
+      )
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const firstTarget = seasonEds[0];
+    setMovingBallot(ballot);
+    setTargetEditionId(firstTarget?.id ?? "");
+    setMoveTitle(buildMovedTitle(ballot, firstTarget));
+    setConflictBallot(null);
+    setConfirmOverwriteChecked(false);
+    if (firstTarget) {
+      await checkTargetEditionConflict(ballot, firstTarget.id);
+    }
+  }
+
+  async function handleTargetEditionChange(nextEditionId: string) {
+    setTargetEditionId(nextEditionId);
+    setConfirmOverwriteChecked(false);
+    if (!movingBallot) return;
+    const nextEd = editions.find((e) => e.id === nextEditionId);
+    setMoveTitle(buildMovedTitle(movingBallot, nextEd));
+    await checkTargetEditionConflict(movingBallot, nextEditionId);
+  }
+
+  async function handleConfirmMoveEdition() {
+    if (!movingBallot || !targetEditionId) return;
+    const targetEd = editions.find((e) => e.id === targetEditionId);
+    if (!targetEd) return;
+
+    if (conflictBallot) {
+      if (!confirmOverwriteChecked) return;
+      const author = Array.isArray(movingBallot.profiles)
+        ? movingBallot.profiles[0]
+        : movingBallot.profiles;
+      const confirmedSecond = confirm(
+        `FINAL WARNING: Permanently DELETE ${
+          author?.username ?? "this user"
+        }'s existing ${conflictBallot.status.toUpperCase()} ranking "${
+          conflictBallot.title || targetEd.name
+        }" in ${targetEd.name} and replace it with this ranking? This cannot be undone.`
+      );
+      if (!confirmedSecond) return;
+    }
+
+    setBusy(true);
+    try {
+      if (conflictBallot) {
+        const { error: delErr } = await supabase
+          .from("ballots")
+          .delete()
+          .eq("id", conflictBallot.id);
+        if (delErr) {
+          setStatusMsg(`Error removing conflicting ranking: ${delErr.message}`);
+          setBusy(false);
+          return;
+        }
+      }
+
+      const { error: updErr } = await supabase
+        .from("ballots")
+        .update({
+          edition_id: targetEd.id,
+          edition_name_snapshot: targetEd.name,
+          title: moveTitle.trim() || movingBallot.title,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", movingBallot.id);
+
+      if (updErr) {
+        setStatusMsg(`Error moving ranking: ${updErr.message}`);
+      } else {
+        setStatusMsg(
+          `Moved ranking to ${targetEd.name}${
+            conflictBallot ? " (overwrote existing version)" : ""
+          }.`
+        );
+        setMovingBallot(null);
+        await refreshAll();
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleAddEdition(e: React.FormEvent) {
@@ -724,6 +882,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleMoveEdition(index: number, direction: -1 | 1) {
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= filteredEditions.length) return;
@@ -754,6 +913,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleDeleteLeague(league: League) {
     if (
       !window.confirm(
@@ -769,6 +929,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleDeleteSeason(season: Season) {
     if (
       !window.confirm(
@@ -783,6 +944,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleDeleteDivision(division: Division) {
     if (
@@ -804,6 +966,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleDeleteTeam(team: Team) {
     if (
       !window.confirm(
@@ -818,6 +981,7 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
 
   async function handleDeleteEdition(ed: Edition) {
     if (
@@ -834,6 +998,7 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+
   async function handleToggleEditionOpen(ed: Edition) {
     setBusy(true);
     await supabase
@@ -843,6 +1008,29 @@ export function AdminDashboard({
     await refreshAll();
     setBusy(false);
   }
+
+
+  async function handleToggleEditionArchived(ed: Edition) {
+    const nextArchived = !ed.is_archived;
+    setBusy(true);
+    const { error } = await supabase
+      .from("editions")
+      .update({
+        is_archived: nextArchived,
+        ...(nextArchived ? { is_open: false } : {}),
+      })
+      .eq("id", ed.id);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : nextArchived
+        ? `Archived ${ed.name} (drafts & edits disabled).`
+        : `Unarchived ${ed.name} (remains locked until unlocked).`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
 
   const filteredTeams = selectedDivisionId
     ? teams.filter((t) => t.division_id === selectedDivisionId)
@@ -1634,24 +1822,52 @@ export function AdminDashboard({
                     </button>
 
                     <span
-                      className={`w-14 text-center shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
-                        ed.is_open
+                      className={`w-20 text-center shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
+                        ed.is_archived
+                          ? "bg-[#2b322f] text-[#a6a89e] border-[#4a5450]"
+                          : ed.is_open
                           ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
                           : "bg-[#451717] text-[#ff857a] border-[#9e3535]"
                       }`}
                     >
-                      {ed.is_open ? "Open" : "Locked"}
+                      {ed.is_archived ? "Archived" : ed.is_open ? "Open" : "Locked"}
                     </span>
 
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={busy || Boolean(ed.is_archived)}
                       onClick={() => handleToggleEditionOpen(ed)}
                       className={`xp-btn text-[11px] py-1 w-16 justify-center shrink-0 ${
-                        ed.is_open ? "xp-btn-danger" : "xp-btn-primary"
-                      }`}
+                        ed.is_open && !ed.is_archived
+                          ? "xp-btn-danger"
+                          : "xp-btn-primary"
+                      } disabled:opacity-40`}
+                      title={
+                        ed.is_archived
+                          ? "Unarchive first to unlock"
+                          : ed.is_open
+                          ? "Lock publishing (drafts still allowed)"
+                          : "Unlock publishing"
+                      }
                     >
-                      {ed.is_open ? "Lock" : "Unlock"}
+                      {ed.is_open && !ed.is_archived ? "Lock" : "Unlock"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleToggleEditionArchived(ed)}
+                      className={`xp-btn text-[11px] py-1 w-[96px] justify-center shrink-0 ${
+                        ed.is_archived ? "xp-btn-primary" : ""
+                      }`}
+                      title={
+                        ed.is_archived
+                          ? "Unarchive edition"
+                          : "Archive past edition (disables drafts & edits)"
+                      }
+                    >
+                      <Archive className="w-3 h-3" />
+                      <span>{ed.is_archived ? "Unarchive" : "Archive"}</span>
                     </button>
 
                     <button
@@ -2094,6 +2310,17 @@ export function AdminDashboard({
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {b.season_id && b.division_id && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void openMoveEditionModal(b)}
+                              className="xp-btn text-[11px] px-2 py-1"
+                              title="Move / Force-Overwrite to Different Edition"
+                            >
+                              <ArrowRightLeft className="w-3 h-3" />
+                            </button>
+                          )}
                           <Link
                             href={`/ballot/${b.id}`}
                             className="xp-btn text-[11px] px-2 py-1"
@@ -2229,6 +2456,173 @@ export function AdminDashboard({
                       )}
                     </div>
                   ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {movingBallot && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4"
+          onClick={() => !busy && setMovingBallot(null)}
+        >
+          <div
+            className="w-full max-w-md xp-window overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-white">
+                <ArrowRightLeft className="w-3.5 h-3.5 text-[#f0c020]" />
+                <span>Move / Overwrite Edition</span>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setMovingBallot(null)}
+                className="text-white/80 hover:text-white"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3.5 bg-[#1a1c23] text-xs text-[#d6d3c4]">
+              <div className="xp-inset p-2.5 space-y-1">
+                <div className="font-bold text-[#f0ede0] truncate">
+                  {movingBallot.title || "Untitled Ranking"}
+                </div>
+                <div className="text-[11px] text-[#a6a89e]">
+                  Current Edition:{" "}
+                  <strong className="text-[#f0c020]">
+                    {movingBallot.edition_name_snapshot || "Unknown"}
+                  </strong>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+                  Target Edition
+                </label>
+                <select
+                  value={targetEditionId}
+                  disabled={busy}
+                  onChange={(e) => void handleTargetEditionChange(e.target.value)}
+                  className="w-full xp-inset px-2.5 py-1.5 text-xs font-bold"
+                >
+                  {editions
+                    .filter(
+                      (e) =>
+                        e.season_id === movingBallot.season_id &&
+                        e.id !== movingBallot.edition_id
+                    )
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((ed) => (
+                      <option key={ed.id} value={ed.id}>
+                        {ed.name}{" "}
+                        {ed.is_archived
+                          ? "(Archived)"
+                          : !ed.is_open
+                          ? "(Locked)"
+                          : "(Open)"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+                  Updated Title
+                </label>
+                <input
+                  type="text"
+                  value={moveTitle}
+                  disabled={busy}
+                  onChange={(e) => setMoveTitle(e.target.value)}
+                  className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                />
+              </div>
+
+              {checkingConflict ? (
+                <div className="xp-inset p-2.5 text-[11px] text-[#a6a89e]">
+                  Checking target edition for existing rankings...
+                </div>
+              ) : conflictBallot ? (
+                <div className="p-3 bg-[#451717] border border-[#ff857a] text-[#ffdeda] space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-[#ff857a]">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <span>
+                      OVERWRITE WARNING — Existing{" "}
+                      {conflictBallot.status.toUpperCase()} Ranking Found!
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    This user already has a{" "}
+                    <strong>{conflictBallot.status}</strong> ranking in the
+                    target edition:{" "}
+                    <strong className="text-white">
+                      {conflictBallot.title || "Untitled Ranking"}
+                    </strong>{" "}
+                    (updated{" "}
+                    {new Date(
+                      conflictBallot.published_at ?? conflictBallot.updated_at
+                    ).toLocaleDateString()}
+                    ). Moving this ranking will{" "}
+                    <strong>permanently delete</strong> that existing version.
+                  </p>
+                  <label className="flex items-start gap-2 pt-1 cursor-pointer text-[11px] font-bold text-white">
+                    <input
+                      type="checkbox"
+                      checked={confirmOverwriteChecked}
+                      onChange={(e) =>
+                        setConfirmOverwriteChecked(e.target.checked)
+                      }
+                      className="mt-0.5"
+                    />
+                    <span>
+                      I understand this will permanently overwrite and delete
+                      the existing {conflictBallot.status} ranking.
+                    </span>
+                  </label>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-[#3d3012] border border-[#8c6b16] text-[#f7d560] text-[11px]">
+                  This will move the ranking to the selected edition (even if
+                  that edition is locked or archived) and update its edition
+                  snapshot.
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setMovingBallot(null)}
+                  className="xp-btn text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    busy ||
+                    checkingConflict ||
+                    !targetEditionId ||
+                    (Boolean(conflictBallot) && !confirmOverwriteChecked)
+                  }
+                  onClick={() => void handleConfirmMoveEdition()}
+                  className={`xp-btn text-xs ${
+                    conflictBallot ? "xp-btn-danger" : "xp-btn-primary"
+                  } disabled:opacity-40`}
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>
+                    {busy
+                      ? "Moving..."
+                      : conflictBallot
+                      ? "Force Overwrite Edition"
+                      : "Move to Edition"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>

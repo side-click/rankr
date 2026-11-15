@@ -77,6 +77,7 @@ export interface Edition {
   slug: string;
   sort_order: number;
   is_open: boolean;
+  is_archived?: boolean;
   created_at: string;
 }
 

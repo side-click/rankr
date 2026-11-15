@@ -4,6 +4,7 @@ import { checkUserAllowlisted } from "@/utils/allowlist";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
+import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 import { getLeaguePrefix } from "@/components/BallotCard";
 import { Edit3, ExternalLink, Lock } from "lucide-react";
 
@@ -79,7 +80,7 @@ export default async function MyRankingsPage() {
       edition_name_snapshot,
       seasons ( name, slug, leagues ( name, short_name, slug ) ),
       divisions ( name, slug, logo_url ),
-      editions ( name, slug, sort_order, is_open )
+      editions ( name, slug, sort_order, is_open, is_archived )
     `
     )
     .eq("user_id", user.id)
@@ -161,19 +162,26 @@ export default async function MyRankingsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {(edition?.is_open || b.status === "draft") && (
-                    <Link
-                      href={`/rank?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
-                      className="xp-btn text-xs"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </Link>
+                  {!edition?.is_archived &&
+                    (edition?.is_open || b.status === "draft") && (
+                      <Link
+                        href={`/rank?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
+                        className="xp-btn text-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </Link>
+                    )}
+                  {b.status === "draft" && (
+                    <DeleteDraftButton
+                      ballotId={b.id}
+                      title={b.title || `${divName} — ${edName}`}
+                    />
                   )}
                   {b.status === "published" && (
                     <Link
                       href={`/ballot/${b.id}`}
-                      className="xp-btn xp-btn-primary text-xs"
+                      className="xp-btn xp-btn-primary text-xs min-w-[82px] justify-center"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>View</span>
