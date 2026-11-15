@@ -854,14 +854,6 @@ export function PlayerTierShareView({
                                                 {pl.name.split("#")[0].trim() ||
                                                   pl.name}
                                               </span>
-                                              {pl.is_captain && (
-                                                <img
-                                                  src={CAPTAIN_ICON}
-                                                  alt="Captain"
-                                                  crossOrigin="anonymous"
-                                                  className="w-3.5 h-3.5 object-contain shrink-0"
-                                                />
-                                              )}
                                               {pl.team_logo_url ? (
                                                 <img
                                                   src={pl.team_logo_url}
@@ -878,6 +870,14 @@ export function PlayerTierShareView({
                                                     {pl.team_name}
                                                   </span>
                                                 )
+                                              )}
+                                              {pl.is_captain && (
+                                                <img
+                                                  src={CAPTAIN_ICON}
+                                                  alt="Captain"
+                                                  crossOrigin="anonymous"
+                                                  className="w-3.5 h-3.5 object-contain shrink-0"
+                                                />
                                               )}
                                             </div>
                                           ))}
@@ -897,14 +897,6 @@ export function PlayerTierShareView({
                                         {pl.name.split("#")[0].trim() ||
                                           pl.name}
                                       </span>
-                                      {pl.is_captain && (
-                                        <img
-                                          src={CAPTAIN_ICON}
-                                          alt="Captain"
-                                          crossOrigin="anonymous"
-                                          className="w-3.5 h-3.5 object-contain shrink-0"
-                                        />
-                                      )}
                                       {pl.team_logo_url ? (
                                         <img
                                           src={pl.team_logo_url}
@@ -919,6 +911,14 @@ export function PlayerTierShareView({
                                             {pl.team_name}
                                           </span>
                                         )
+                                      )}
+                                      {pl.is_captain && (
+                                        <img
+                                          src={CAPTAIN_ICON}
+                                          alt="Captain"
+                                          crossOrigin="anonymous"
+                                          className="w-3.5 h-3.5 object-contain shrink-0"
+                                        />
                                       )}
                                     </div>
                                   ))}

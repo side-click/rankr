@@ -128,14 +128,6 @@ function PlayerTileVisual({
       <span className="font-bold leading-none whitespace-nowrap">
         {player.name.split("#")[0].trim() || player.name}
       </span>
-      {player.is_captain && (
-        <img
-          src={CAPTAIN_ICON}
-          alt="Captain"
-          title="Team Captain"
-          className="w-3 h-3 object-contain shrink-0 pointer-events-none"
-        />
-      )}
       {player.team_logo_url ? (
         <img
           src={player.team_logo_url}
@@ -149,6 +141,14 @@ function PlayerTileVisual({
             {player.team_name}
           </span>
         )
+      )}
+      {player.is_captain && (
+        <img
+          src={CAPTAIN_ICON}
+          alt="Captain"
+          title="Team Captain"
+          className="w-3 h-3 object-contain shrink-0 pointer-events-none"
+        />
       )}
       {showRemoveButton && !disabled && onRemove && (
         <button
