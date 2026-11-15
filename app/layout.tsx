@@ -14,9 +14,9 @@ import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { ShieldAlert } from "lucide-react";
 
-const siteTitle = "Rankr — League Power Rankings";
+const siteTitle = "Rankr — League Rankings & Tier Lists";
 const siteDescription =
-  "Rank your division, drop your hot takes, and export shareable power rankings.";
+  "Rank teams or players, drop your hot takes, and share them with the world.";
 
 export const viewport: Viewport = {
   themeColor: "#c89b3c",

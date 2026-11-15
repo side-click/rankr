@@ -1,4 +1,4 @@
-import type { RosterSlot } from "@/utils/roles";
+import type { LeagueRole, RosterSlot } from "@/utils/roles";
 
 export interface Profile {
   id: string;
@@ -78,7 +78,59 @@ export interface Edition {
   sort_order: number;
   is_open: boolean;
   is_archived?: boolean;
+  is_players_only?: boolean;
   created_at: string;
+}
+
+export type RankingType = "team" | "player";
+
+export type TierPresetKey = "standard" | "draft_day" | "custom";
+
+export type TierVariant =
+  | "standard_overall"
+  | "standard_split"
+  | "draft_day_overall"
+  | "draft_day_split";
+
+export interface SeasonPlayer {
+  id: string;
+  season_id: string;
+  division_id: string | null;
+  team_id: string | null;
+  role: LeagueRole;
+  name: string;
+  is_captain: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PlayerTierItem {
+  id: string;
+  name: string;
+  role: LeagueRole;
+  division_id?: string | null;
+  team_name?: string | null;
+  team_logo_url?: string | null;
+  is_captain?: boolean;
+}
+
+export interface TierRowData {
+  id: string;
+  label: string;
+  color: string;
+  commentary: string;
+  players: PlayerTierItem[];
+}
+
+export interface TierSectionData {
+  role: LeagueRole | "all";
+  tiers: TierRowData[];
+}
+
+export interface PlayerTierListPayload {
+  preset: TierPresetKey;
+  splitByRole: boolean;
+  sections: TierSectionData[];
 }
 
 export interface Team {
@@ -108,6 +160,9 @@ export interface Ballot {
   season_id: string | null;
   division_id: string | null;
   edition_id: string | null;
+  ranking_type?: RankingType;
+  tier_variant?: TierVariant | null;
+  tier_data?: PlayerTierListPayload | null;
   title: string | null;
   author_notes: string;
   overlays?: BallotOverlay[];

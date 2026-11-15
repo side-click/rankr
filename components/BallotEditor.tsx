@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -298,13 +298,21 @@ function SortableTeamRow({
 
         {/* Commentary */}
         <div className="md:flex-[1.6] min-w-0">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-white/70 mb-1">
-            Commentary
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/70">
+              Commentary
+            </label>
+            <span className="text-[10px] text-white/40 font-mono">
+              {item.commentary.length}/400
+            </span>
+          </div>
           <textarea
             value={item.commentary}
+            maxLength={400}
             disabled={disabled}
-            onChange={(e) => onCommentaryChange(item.team.id, e.target.value)}
+            onChange={(e) =>
+              onCommentaryChange(item.team.id, e.target.value.slice(0, 400))
+            }
             rows={5}
             placeholder={`Thoughts on ${item.team.name}...`}
             className="w-full rounded-md bg-black/30 border border-white/15 p-2.5 text-xs text-[#f0ede0] placeholder:text-white/35 resize-y focus:outline-none focus:border-[#f0c020] disabled:opacity-60"
@@ -344,7 +352,7 @@ export function BallotEditor({
   const seasonEditions = useMemo(
     () =>
       editions
-        .filter((e) => e.season_id === seasonId)
+        .filter((e) => e.season_id === seasonId && !e.is_players_only)
         .sort((a, b) => a.sort_order - b.sort_order),
     [editions, seasonId]
   );
@@ -362,7 +370,7 @@ export function BallotEditor({
 
   const [editionId, setEditionId] = useState<string>(() => {
     const seasonEds = editions
-      .filter((e) => e.season_id === defaultSeason?.id)
+      .filter((e) => e.season_id === defaultSeason?.id && !e.is_players_only)
       .sort((a, b) => a.sort_order - b.sort_order);
     const match = seasonEds.find((e) => e.slug === initialEditionSlug);
     return (
@@ -376,6 +384,30 @@ export function BallotEditor({
   const currentDivision = seasonDivisions.find((d) => d.id === divisionId);
   const currentEdition = seasonEditions.find((e) => e.id === editionId);
   const currentSeason = seasons.find((s) => s.id === seasonId);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!currentSeason) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("season", currentSeason.slug);
+    if (currentDivision) {
+      params.set("division", currentDivision.slug);
+    } else {
+      params.delete("division");
+    }
+    if (currentEdition) {
+      params.set("edition", currentEdition.slug);
+    } else {
+      params.delete("edition");
+    }
+    const qs = params.toString();
+    const nextUrl = qs ? `${pathname}?${qs}` : pathname;
+    const currentUrl = `${pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [currentSeason, currentDivision, currentEdition, pathname, searchParams]);
 
   const divisionTeams = useMemo(
     () =>
@@ -474,6 +506,7 @@ export function BallotEditor({
             .eq("user_id", userId)
             .eq("division_id", divisionId)
             .eq("edition_id", prevEd.id)
+            .eq("ranking_type", "team")
             .maybeSingle();
 
           if (prevBallot) {
@@ -496,6 +529,7 @@ export function BallotEditor({
           .eq("user_id", userId)
           .eq("division_id", divisionId)
           .eq("edition_id", editionId)
+          .eq("ranking_type", "team")
           .maybeSingle();
 
         if (cancelled) return;
@@ -633,6 +667,7 @@ export function BallotEditor({
         season_id: seasonId,
         division_id: divisionId,
         edition_id: editionId,
+        ranking_type: "team" as const,
         title: defaultTitle,
         author_notes: authorNotes.trim(),
         status: targetStatus,
@@ -646,11 +681,36 @@ export function BallotEditor({
         updated_at: now,
       };
 
-      const { data: savedBallot, error: ballotErr } = await supabase
-        .from("ballots")
-        .upsert(payload, { onConflict: "user_id,division_id,edition_id" })
-        .select("id, status")
-        .single();
+      let targetBallotId = existingBallotId;
+      if (!targetBallotId) {
+        const { data: existingRow } = await supabase
+          .from("ballots")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("season_id", seasonId)
+          .eq("division_id", divisionId)
+          .eq("edition_id", editionId)
+          .eq("ranking_type", "team")
+          .maybeSingle();
+        if (existingRow?.id) {
+          targetBallotId = existingRow.id;
+        }
+      }
+
+      const ballotQuery = targetBallotId
+        ? supabase
+            .from("ballots")
+            .update(payload)
+            .eq("id", targetBallotId)
+            .select("id, status")
+            .single()
+        : supabase
+            .from("ballots")
+            .insert(payload)
+            .select("id, status")
+            .single();
+
+      const { data: savedBallot, error: ballotErr } = await ballotQuery;
 
       if (ballotErr || !savedBallot) {
         throw new Error(ballotErr?.message ?? "Failed to save ranking.");
@@ -720,10 +780,17 @@ export function BallotEditor({
   const isSeasonInactive = currentSeason ? !currentSeason.is_active : false;
   const isEditionArchived = Boolean(currentEdition?.is_archived);
   const isEditionLocked = currentEdition ? !currentEdition.is_open : false;
+  const isEditionPlayersOnly = Boolean(currentEdition?.is_players_only);
   const isEditDisabled =
-    isSeasonInactive || isEditionArchived || isEditionLocked;
+    isSeasonInactive ||
+    isEditionArchived ||
+    isEditionLocked ||
+    isEditionPlayersOnly;
   const isPublishDisabled =
-    isSeasonInactive || isEditionArchived || isEditionLocked;
+    isSeasonInactive ||
+    isEditionArchived ||
+    isEditionLocked ||
+    isEditionPlayersOnly;
   const windowTheme =
     currentDivision?.theme_key === "dragon"
       ? "dragon"
@@ -735,7 +802,7 @@ export function BallotEditor({
   return (
     <div className="space-y-4">
       <RetroWindow
-        title="Power Rankings Editor"
+        title="Team Power Rankings Editor"
         theme={windowTheme}
         customTheme={currentDivision ? activeTheme : undefined}
         iconSrc={

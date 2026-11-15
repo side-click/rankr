@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadOgFonts } from "@/utils/ogFonts";
 
-export const alt = "Rankr — League Power Rankings";
+export const alt = "Rankr — Team Power Rankings & Player Tier Lists";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -99,7 +99,7 @@ export default async function OpenGraphImage() {
               maxWidth: "660px",
             }}
           >
-            Rank the teams, drop your hot takes, and share them with the world.
+            Rank teams or players, drop your hot takes, and share them with the world.
           </div>
         </div>
 

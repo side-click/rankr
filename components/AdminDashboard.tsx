@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type {
   AllowedDiscordUser,
@@ -12,11 +12,19 @@ import type {
   Edition,
   League,
   Profile,
+  RankingType,
   Season,
+  SeasonPlayer,
   Team,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
-import { CAPTAIN_ICON, LEAGUE_ROLES, normalizeRoster } from "@/utils/roles";
+import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import {
+  CAPTAIN_ICON,
+  LEAGUE_ROLES,
+  normalizeRoster,
+  type LeagueRole,
+} from "@/utils/roles";
 import { DEFAULT_DIVISION_THEMES } from "@/utils/themes";
 import {
   Archive,
@@ -33,7 +41,9 @@ import {
   ShieldAlert,
   Trash2,
   Upload,
+  User,
   UserCheck,
+  Users,
   X,
 } from "lucide-react";
 
@@ -41,6 +51,8 @@ interface AdminPublishedBallot {
   id: string;
   title: string | null;
   status: string;
+  ranking_type?: RankingType;
+  tier_variant?: string | null;
   published_at: string | null;
   user_id: string;
   season_id: string | null;
@@ -70,6 +82,7 @@ interface AdminDashboardProps {
   initialThemes: DivisionTheme[];
   initialEditions: Edition[];
   initialTeams: Team[];
+  initialSeasonPlayers: SeasonPlayer[];
   initialAppSettings: AppSettings;
   initialProfiles: Profile[];
   initialPublishedBallots: AdminPublishedBallot[];
@@ -92,6 +105,7 @@ export function AdminDashboard({
   initialThemes,
   initialEditions,
   initialTeams,
+  initialSeasonPlayers,
   initialAppSettings,
   initialProfiles,
   initialPublishedBallots,
@@ -99,10 +113,29 @@ export function AdminDashboard({
 }: AdminDashboardProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<
-    "seasons" | "editions" | "teams" | "moderation"
-  >("seasons");
+  const validTabs = ["seasons", "editions", "teams", "players", "moderation"] as const;
+  type AdminTab = (typeof validTabs)[number];
+  const initialTabParam = searchParams.get("tab");
+  const [tab, setTab] = useState<AdminTab>(
+    validTabs.includes(initialTabParam as AdminTab)
+      ? (initialTabParam as AdminTab)
+      : "seasons"
+  );
+
+  function handleSelectTab(nextTab: AdminTab) {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === "seasons") {
+      params.delete("tab");
+    } else {
+      params.set("tab", nextTab);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
   const [leagues, setLeagues] = useState<League[]>(initialLeagues);
   const [seasons, setSeasons] = useState<Season[]>(initialSeasons);
   const [divisions, setDivisions] = useState<Division[]>(initialDivisions);
@@ -113,6 +146,8 @@ export function AdminDashboard({
   );
   const [editions, setEditions] = useState<Edition[]>(initialEditions);
   const [teams, setTeams] = useState<Team[]>(initialTeams);
+  const [seasonPlayers, setSeasonPlayers] =
+    useState<SeasonPlayer[]>(initialSeasonPlayers);
   const [appSettings, setAppSettings] =
     useState<AppSettings>(initialAppSettings);
   const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
@@ -124,6 +159,8 @@ export function AdminDashboard({
   const [newAllowedDiscordId, setNewAllowedDiscordId] = useState("");
   const [newAllowedLabel, setNewAllowedLabel] = useState("");
   const [userSearch, setUserSearch] = useState("");
+  const [showAllowlist, setShowAllowlist] = useState(false);
+  const [allowlistSearch, setAllowlistSearch] = useState("");
   const [movingBallot, setMovingBallot] = useState<AdminPublishedBallot | null>(
     null
   );
@@ -181,23 +218,36 @@ export function AdminDashboard({
   const [newThemeSecondary, setNewThemeSecondary] = useState("#00b8c9");
   const [newThemeText, setNewThemeText] = useState("#c77dff");
   const [newEditionName, setNewEditionName] = useState("");
+  const [newEditionPlayersOnly, setNewEditionPlayersOnly] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamCaptain, setNewTeamCaptain] = useState("");
+  const [newSinglePlayerName, setNewSinglePlayerName] = useState("");
+  const [newSinglePlayerRole, setNewSinglePlayerRole] = useState<LeagueRole>("top");
+  const [bulkPasteByRole, setBulkPasteByRole] = useState<Record<LeagueRole, string>>({
+    top: "",
+    jungle: "",
+    mid: "",
+    bot: "",
+    support: "",
+  });
 
   async function refreshAll() {
-    const [l, s, d, th, e, t, cfg, prof, bal, allow] = await Promise.all([
+    const [l, s, d, th, e, t, sp, cfg, prof, bal, allow] = await Promise.all([
       supabase.from("leagues").select("*").order("created_at", { ascending: true }),
       supabase.from("seasons").select("*").order("created_at", { ascending: false }),
       supabase.from("divisions").select("*").order("name"),
       supabase.from("division_themes").select("*").order("name"),
       supabase.from("editions").select("*").order("sort_order", { ascending: true }),
       supabase.from("teams").select("*").order("default_order", { ascending: true }),
+      supabase
+        .from("season_players")
+        .select("*")
+        .order("name", { ascending: true }),
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase
         .from("ballots")
         .select(
-          "id, title, status, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
+          "id, title, status, ranking_type, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
         )
         .eq("status", "published")
         .order("published_at", { ascending: false })
@@ -213,6 +263,7 @@ export function AdminDashboard({
     if (th.data && th.data.length > 0) setThemes(th.data);
     if (e.data) setEditions(e.data);
     if (t.data) setTeams(t.data);
+    if (sp.data) setSeasonPlayers(sp.data);
     if (cfg.data) setAppSettings(cfg.data);
     if (prof.data) setProfiles(prof.data);
     if (bal.data) setPublishedBallots(bal.data);
@@ -343,7 +394,7 @@ export function AdminDashboard({
     const { error } = await supabase.from("teams").insert({
       division_id: selectedDivisionId,
       name: newTeamName.trim(),
-      captain: newTeamCaptain.trim() || null,
+      captain: null,
       roster: LEAGUE_ROLES.map((r, i) => ({
         role: r.key,
         name: `Player ${i + 1}`,
@@ -353,7 +404,6 @@ export function AdminDashboard({
     });
     if (!error) {
       setNewTeamName("");
-      setNewTeamCaptain("");
       setStatusMsg("Team added.");
       await refreshAll();
     } else {
@@ -723,19 +773,30 @@ export function AdminDashboard({
     ballot: AdminPublishedBallot,
     nextEditionId: string
   ) {
-    if (!nextEditionId || !ballot.division_id) {
+    if (!nextEditionId) {
       setConflictBallot(null);
       return;
     }
+    const rankingType = ballot.ranking_type ?? "team";
     setCheckingConflict(true);
-    const { data } = await supabase
+    let query = supabase
       .from("ballots")
       .select("id, title, status, updated_at, published_at")
       .eq("user_id", ballot.user_id)
-      .eq("division_id", ballot.division_id)
       .eq("edition_id", nextEditionId)
-      .neq("id", ballot.id)
-      .maybeSingle();
+      .eq("ranking_type", rankingType)
+      .neq("id", ballot.id);
+
+    if (ballot.division_id) {
+      query = query.eq("division_id", ballot.division_id);
+    } else {
+      query = query.is("division_id", null);
+    }
+    if (rankingType === "player" && ballot.tier_variant) {
+      query = query.eq("tier_variant", ballot.tier_variant);
+    }
+
+    const { data } = await query.maybeSingle();
     setConflictBallot((data as ConflictingBallotInfo | null) ?? null);
     setCheckingConflict(false);
   }
@@ -749,18 +810,31 @@ export function AdminDashboard({
     if (ballot.title && oldEd && ballot.title.includes(oldEd)) {
       return ballot.title.replace(oldEd, nextEdition.name);
     }
+    if (ballot.ranking_type === "player") {
+      return `${
+        ballot.division_name_snapshot || "All Divisions"
+      } Player Tier List — ${nextEdition.name}`;
+    }
     if (ballot.division_name_snapshot) {
-      return `${ballot.division_name_snapshot} Power Rankings — ${nextEdition.name}`;
+      return `${ballot.division_name_snapshot} Team Power Rankings — ${nextEdition.name}`;
     }
     return ballot.title ?? nextEdition.name;
   }
 
-  async function openMoveEditionModal(ballot: AdminPublishedBallot) {
-    const seasonEds = editions
+  function getEligibleTargetEditions(ballot: AdminPublishedBallot) {
+    const rankingType = ballot.ranking_type ?? "team";
+    return editions
       .filter(
-        (e) => e.season_id === ballot.season_id && e.id !== ballot.edition_id
+        (e) =>
+          e.season_id === ballot.season_id &&
+          e.id !== ballot.edition_id &&
+          (rankingType === "player" || !e.is_players_only)
       )
       .sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  async function openMoveEditionModal(ballot: AdminPublishedBallot) {
+    const seasonEds = getEligibleTargetEditions(ballot);
     const firstTarget = seasonEds[0];
     setMovingBallot(ballot);
     setTargetEditionId(firstTarget?.id ?? "");
@@ -785,6 +859,12 @@ export function AdminDashboard({
     if (!movingBallot || !targetEditionId) return;
     const targetEd = editions.find((e) => e.id === targetEditionId);
     if (!targetEd) return;
+    if ((movingBallot.ranking_type ?? "team") === "team" && targetEd.is_players_only) {
+      setStatusMsg(
+        `Cannot move a Team Power Ranking into Players-Only edition "${targetEd.name}".`
+      );
+      return;
+    }
 
     if (conflictBallot) {
       if (!confirmOverwriteChecked) return;
@@ -856,14 +936,282 @@ export function AdminDashboard({
       slug: slugify(newEditionName),
       sort_order: nextOrder,
       is_open: true,
+      is_players_only: newEditionPlayersOnly,
     });
     if (!error) {
       setNewEditionName("");
+      setNewEditionPlayersOnly(false);
       setStatusMsg("Edition created.");
       await refreshAll();
     } else {
       setStatusMsg(`Error: ${error.message}`);
     }
+    setBusy(false);
+  }
+
+  async function handleToggleEditionPlayersOnly(ed: Edition) {
+    const nextVal = !Boolean(ed.is_players_only);
+    setBusy(true);
+    const { error } = await supabase
+      .from("editions")
+      .update({ is_players_only: nextVal })
+      .eq("id", ed.id);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : nextVal
+        ? `Set ${ed.name} to Players-Only (Draft Day / pre-team player tier lists only).`
+        : `Set ${ed.name} to allow both Team Power Rankings and Player Tier Lists.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleAddSinglePlayer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedSeasonId || !newSinglePlayerName.trim()) return;
+    const trimmed = newSinglePlayerName.trim();
+    const existingForSeason = seasonPlayers.filter(
+      (p) => p.season_id === selectedSeasonId
+    );
+    if (
+      existingForSeason.some(
+        (p) => p.name.trim().toLowerCase() === trimmed.toLowerCase()
+      )
+    ) {
+      setStatusMsg(`"${trimmed}" is already in this season's player pool.`);
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("season_players").insert({
+      season_id: selectedSeasonId,
+      name: trimmed,
+      role: newSinglePlayerRole,
+    });
+    if (!error) {
+      setNewSinglePlayerName("");
+      setStatusMsg(`Added ${trimmed} (${newSinglePlayerRole}).`);
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleBulkAddRolePlayers(role: LeagueRole) {
+    if (!selectedSeasonId) return;
+    const raw = bulkPasteByRole[role] ?? "";
+    const parsed = raw
+      .split(/[\r\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parsed.length === 0) return;
+
+    const existingForSeason = seasonPlayers.filter(
+      (p) => p.season_id === selectedSeasonId
+    );
+    const seen = new Set(
+      existingForSeason.map((p) => p.name.trim().toLowerCase())
+    );
+
+    const toInsert: {
+      season_id: string;
+      name: string;
+      role: LeagueRole;
+    }[] = [];
+    let skipped = 0;
+
+    for (const name of parsed) {
+      const key = name.toLowerCase();
+      if (seen.has(key)) {
+        skipped++;
+        continue;
+      }
+      seen.add(key);
+      toInsert.push({
+        season_id: selectedSeasonId,
+        name,
+        role,
+      });
+    }
+
+    if (toInsert.length === 0) {
+      setStatusMsg(
+        `No new players added (${skipped} already existed in this season pool).`
+      );
+      return;
+    }
+
+    setBusy(true);
+    const { error } = await supabase.from("season_players").insert(toInsert);
+    if (!error) {
+      setBulkPasteByRole((prev) => ({ ...prev, [role]: "" }));
+      setStatusMsg(
+        `Added ${toInsert.length} ${role} player${
+          toInsert.length === 1 ? "" : "s"
+        }${skipped > 0 ? ` (${skipped} duplicates skipped)` : ""}.`
+      );
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleDeleteSeasonPlayer(player: SeasonPlayer) {
+    setBusy(true);
+    const { error } = await supabase
+      .from("season_players")
+      .delete()
+      .eq("id", player.id);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : `Removed ${player.name} from pool.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleClearRolePlayers(role: LeagueRole, roleLabel: string) {
+    if (!selectedSeasonId) return;
+    const count = seasonPlayers.filter(
+      (p) => p.season_id === selectedSeasonId && p.role === role
+    ).length;
+    if (count === 0) return;
+    if (
+      !window.confirm(
+        `Remove all ${count} ${roleLabel} players from this season's pool?`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("season_players")
+      .delete()
+      .eq("season_id", selectedSeasonId)
+      .eq("role", role);
+    setStatusMsg(
+      error
+        ? `Error: ${error.message}`
+        : `Cleared ${count} ${roleLabel} players from season pool.`
+    );
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handlePullPlayersFromTeams() {
+    if (!selectedSeasonId) return;
+    const divIds = new Set(
+      divisions
+        .filter((d) => d.season_id === selectedSeasonId)
+        .map((d) => d.id)
+    );
+    const seasonTeams = teams.filter((t) => divIds.has(t.division_id));
+    if (seasonTeams.length === 0) {
+      setStatusMsg("No assigned teams found in this season.");
+      return;
+    }
+
+    const existingForSeason = seasonPlayers.filter(
+      (p) => p.season_id === selectedSeasonId
+    );
+    const seen = new Set(
+      existingForSeason.map((p) => p.name.trim().toLowerCase())
+    );
+
+    const toInsert: {
+      season_id: string;
+      division_id: string;
+      team_id: string;
+      name: string;
+      role: LeagueRole;
+      is_captain: boolean;
+    }[] = [];
+
+    for (const team of seasonTeams) {
+      const roster = normalizeRoster(team.roster, team.captain);
+      for (const slot of roster) {
+        const name = slot.name.trim();
+        if (!name) continue;
+        const key = name.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        toInsert.push({
+          season_id: selectedSeasonId,
+          division_id: team.division_id,
+          team_id: team.id,
+          name,
+          role: slot.role,
+          is_captain: Boolean(slot.is_captain),
+        });
+      }
+    }
+
+    if (toInsert.length === 0) {
+      setStatusMsg("All assigned team players are already in the season pool.");
+      return;
+    }
+
+    setBusy(true);
+    const { error } = await supabase.from("season_players").insert(toInsert);
+    if (!error) {
+      setStatusMsg(
+        `Pulled ${toInsert.length} assigned team player${
+          toInsert.length === 1 ? "" : "s"
+        } into the season pool.`
+      );
+      await refreshAll();
+    } else {
+      setStatusMsg(`Error: ${error.message}`);
+    }
+    setBusy(false);
+  }
+
+  async function handleStripPlayerTaglines() {
+    if (!selectedSeasonId) return;
+    const toUpdate = filteredSeasonPlayers
+      .map((p) => ({
+        id: p.id,
+        oldName: p.name,
+        newName: p.name.replace(/\s*#.*$/, "").trim(),
+      }))
+      .filter((item) => item.newName.length > 0 && item.newName !== item.oldName);
+
+    if (toUpdate.length === 0) {
+      setStatusMsg("No player names contain #taglines to strip.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Strip #taglines from ${toUpdate.length} player${
+          toUpdate.length === 1 ? "" : "s"
+        } in this season's pool?`
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    const results = await Promise.all(
+      toUpdate.map((item) =>
+        supabase
+          .from("season_players")
+          .update({ name: item.newName })
+          .eq("id", item.id)
+      )
+    );
+    const firstErr = results.find((r) => r.error)?.error;
+    setStatusMsg(
+      firstErr
+        ? `Error: ${firstErr.message}`
+        : `Stripped #taglines from ${toUpdate.length} player${
+            toUpdate.length === 1 ? "" : "s"
+          }.`
+    );
+    await refreshAll();
     setBusy(false);
   }
 
@@ -1038,6 +1386,9 @@ export function AdminDashboard({
   const filteredEditions = editions
     .filter((e) => e.season_id === selectedSeasonId)
     .sort((a, b) => a.sort_order - b.sort_order);
+  const filteredSeasonPlayers = selectedSeasonId
+    ? seasonPlayers.filter((p) => p.season_id === selectedSeasonId)
+    : [];
 
   return (
     <RetroWindow
@@ -1051,13 +1402,14 @@ export function AdminDashboard({
             ["seasons", "Setup Seasons"],
             ["editions", "Setup Divisions and Editions"],
             ["teams", "Setup Teams"],
+            ["players", "Setup Players"],
             ["moderation", "Moderation & Safety"],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => handleSelectTab(key)}
             className={`xp-btn text-xs ${tab === key ? "xp-btn-primary" : ""}`}
           >
             {label}
@@ -1065,7 +1417,7 @@ export function AdminDashboard({
         ))}
       </div>
 
-      {(tab === "editions" || tab === "teams") && (
+      {(tab === "editions" || tab === "teams" || tab === "players") && (
         <div className="xp-panel p-3 mb-4 flex flex-wrap items-center gap-3">
           <div>
             <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
@@ -1352,23 +1704,205 @@ export function AdminDashboard({
                     className="xp-inset px-2 py-1 text-xs"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                    Captain
-                  </label>
-                  <input
-                    type="text"
-                    value={newTeamCaptain}
-                    onChange={(e) => setNewTeamCaptain(e.target.value)}
-                    placeholder="Captain"
-                    className="xp-inset px-2 py-1 text-xs"
-                  />
-                </div>
                 <button type="submit" disabled={busy} className="xp-btn text-xs">
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Team</span>
                 </button>
               </form>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* TAB: SETUP PLAYERS (Season-wide Pre-Draft / Draft Pool) */}
+      {tab === "players" && (
+        <div className="space-y-4">
+          {!selectedSeasonId ? (
+            <div className="xp-inset p-6 text-center text-xs text-[#a6a89e]">
+              Create or select a season before adding players.
+            </div>
+          ) : (
+            <>
+              <div className="xp-panel p-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                    Season Player Pool ({filteredSeasonPlayers.length} players)
+                  </h2>
+                  <p className="text-[11px] text-[#a6a89e] mt-0.5">
+                    Pre-draft &amp; season-wide player pool organized by role
+                    (used for Draft Day / All-Divisions Player Tier Lists before
+                    teams exist).
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handlePullPlayersFromTeams()}
+                    className="xp-btn xp-btn-primary text-xs"
+                    title="Copy roster players from all divisions/teams in this season into this pool (skips duplicates)"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Pull from Assigned Teams</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || filteredSeasonPlayers.length === 0}
+                    onClick={() => void handleStripPlayerTaglines()}
+                    className="xp-btn xp-btn-danger text-xs"
+                    title="Remove #tagline suffixes (e.g. #NA1) from all players in this season's pool"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Strip #Taglines</span>
+                  </button>
+                </div>
+              </div>
+
+              <form
+                onSubmit={handleAddSinglePlayer}
+                className="xp-panel p-3 flex flex-wrap items-end gap-2"
+              >
+                <div>
+                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                    Player Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newSinglePlayerName}
+                    onChange={(e) => setNewSinglePlayerName(e.target.value)}
+                    placeholder="Summoner#NA1"
+                    className="xp-inset px-2 py-1 text-xs w-48"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                    Role
+                  </label>
+                  <select
+                    value={newSinglePlayerRole}
+                    onChange={(e) =>
+                      setNewSinglePlayerRole(e.target.value as LeagueRole)
+                    }
+                    className="xp-inset px-2 py-1 text-xs"
+                  >
+                    {LEAGUE_ROLES.map((r) => (
+                      <option key={r.key} value={r.key}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={busy || !newSinglePlayerName.trim()}
+                  className="xp-btn text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Player</span>
+                </button>
+              </form>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {LEAGUE_ROLES.map((role) => {
+                  const rolePlayers = filteredSeasonPlayers.filter(
+                    (p) => p.role === role.key
+                  );
+                  return (
+                    <div
+                      key={role.key}
+                      className="xp-panel p-3 space-y-2.5 flex flex-col"
+                    >
+                      <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={role.icon}
+                            alt={role.label}
+                            className="w-4 h-4 object-contain"
+                          />
+                          <h3 className="font-bold text-xs uppercase text-[#f0c020]">
+                            {role.label}
+                          </h3>
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#14171d] border border-white/15 rounded-xs text-[#d6d3c4]">
+                            {rolePlayers.length}
+                          </span>
+                        </div>
+                        {rolePlayers.length > 0 && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void handleClearRolePlayers(role.key, role.label)
+                            }
+                            className="xp-btn xp-btn-danger text-[10px] px-1.5 py-0.5"
+                            title={`Clear all ${role.label} players`}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="xp-inset p-2 min-h-[96px] max-h-48 overflow-y-auto flex flex-wrap content-start gap-1.5">
+                        {rolePlayers.length === 0 ? (
+                          <span className="text-[11px] text-[#7e8781] italic">
+                            No {role.label} players added yet.
+                          </span>
+                        ) : (
+                          rolePlayers.map((pl) => (
+                            <span
+                              key={pl.id}
+                              className="inline-flex items-center gap-1 bg-[#1e232d] border border-[#3a4149] rounded-xs px-2 py-0.5 text-[11px] font-bold text-[#f0ede0]"
+                            >
+                              {pl.is_captain && (
+                                <img
+                                  src={CAPTAIN_ICON}
+                                  alt="Captain"
+                                  className="w-3 h-3 object-contain"
+                                />
+                              )}
+                              <span>{pl.name}</span>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void handleDeleteSeasonPlayer(pl)}
+                                className="text-[#a6a89e] hover:text-[#ff857a]"
+                                title={`Remove ${pl.name}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 pt-1 mt-auto">
+                        <textarea
+                          rows={3}
+                          value={bulkPasteByRole[role.key] ?? ""}
+                          onChange={(e) =>
+                            setBulkPasteByRole((prev) => ({
+                              ...prev,
+                              [role.key]: e.target.value,
+                            }))
+                          }
+                          placeholder={`Bulk paste ${role.label} players (one per line or comma-separated)...`}
+                          className="w-full xp-inset px-2 py-1.5 text-[11px] resize-y"
+                        />
+                        <button
+                          type="button"
+                          disabled={
+                            busy || !(bulkPasteByRole[role.key] ?? "").trim()
+                          }
+                          onClick={() => void handleBulkAddRolePlayers(role.key)}
+                          className="xp-btn text-[11px] w-full justify-center"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add to {role.label}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </div>
@@ -1388,7 +1922,7 @@ export function AdminDashboard({
                   key={l.id}
                   className="xp-inset p-2 space-y-2 text-xs"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="w-8 h-8 shrink-0 bg-black/30 border border-white/10 p-0.5 flex items-center justify-center">
                       {l.logo_url ? (
                         <img
@@ -1413,7 +1947,7 @@ export function AdminDashboard({
                         )
                       }
                       placeholder="League Name"
-                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                      className="flex-1 min-w-[120px] bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
                     />
                     <input
                       type="text"
@@ -1428,27 +1962,29 @@ export function AdminDashboard({
                         )
                       }
                       placeholder="Abbr."
-                      className="w-16 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold uppercase focus:outline-none focus:border-[#c89b3c]"
+                      className="w-16 shrink-0 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold uppercase focus:outline-none focus:border-[#c89b3c]"
                       title="Short abbreviation (e.g. SCDL)"
                     />
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleSaveLeague(l)}
-                      className="xp-btn text-[11px] px-2 py-1"
-                      title="Save League"
-                    >
-                      <Save className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleDeleteLeague(l)}
-                      className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
-                      title="Delete League"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSaveLeague(l)}
+                        className="xp-btn text-[11px] px-2 py-1"
+                        title="Save League"
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteLeague(l)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                        title="Delete League"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -1464,7 +2000,7 @@ export function AdminDashboard({
                         )
                       }
                       placeholder="Logo URL"
-                      className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
+                      className="flex-1 min-w-0 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
                     />
                     <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
                       <Upload className="w-3 h-3" />
@@ -1489,7 +2025,7 @@ export function AdminDashboard({
                 value={newLeagueName}
                 onChange={(e) => setNewLeagueName(e.target.value)}
                 placeholder="e.g. LCS Amateur"
-                className="flex-1 xp-inset px-2 py-1 text-xs"
+                className="flex-1 min-w-[140px] xp-inset px-2 py-1 text-xs"
               />
               <input
                 type="text"
@@ -1507,87 +2043,15 @@ export function AdminDashboard({
 
           {/* Seasons */}
           <div className="xp-panel p-3 space-y-3">
-            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-              Seasons
-            </h2>
-            <div className="space-y-2">
-              {seasons.map((s) => {
-                const league = leagues.find((l) => l.id === s.league_id);
-                return (
-                  <div
-                    key={s.id}
-                    className="xp-inset p-2 space-y-1.5 text-xs"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] uppercase text-[#a6a89e]">
-                        {league?.name ?? "League"}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
-                          s.is_active
-                            ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
-                            : "bg-[#451717] text-[#ff857a] border-[#9e3535]"
-                        }`}
-                      >
-                        {s.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={s.name}
-                        onChange={(e) =>
-                          setSeasons((prev) =>
-                            prev.map((item) =>
-                              item.id === s.id
-                                ? { ...item, name: e.target.value }
-                                : item
-                            )
-                          )
-                        }
-                        className="min-w-0 flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
-                      />
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleSaveSeason(s)}
-                        className="xp-btn text-[11px] px-2 py-1"
-                        title="Save Season Name"
-                      >
-                        <Save className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleToggleSeasonActive(s)}
-                        className={`xp-btn text-[11px] py-1 ${
-                          s.is_active ? "xp-btn-danger" : "xp-btn-primary"
-                        }`}
-                      >
-                        {s.is_active ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleDeleteSeason(s)}
-                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
-                        title="Delete Season"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <form
-              onSubmit={handleAddSeason}
-              className="flex flex-wrap gap-2 pt-2"
-            >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                Seasons
+              </h2>
               <select
-                value={newSeasonLeagueId}
+                value={newSeasonLeagueId || leagues[0]?.id || ""}
                 onChange={(e) => setNewSeasonLeagueId(e.target.value)}
-                className="xp-inset px-2 py-1 text-xs"
+                className="xp-inset px-2 py-1 text-xs font-bold"
+                aria-label="Filter seasons by league"
               >
                 {leagues.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -1595,6 +2059,94 @@ export function AdminDashboard({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-2">
+              {(() => {
+                const activeLeagueId = newSeasonLeagueId || leagues[0]?.id || "";
+                const leagueSeasons = seasons.filter(
+                  (s) => s.league_id === activeLeagueId
+                );
+                if (leagueSeasons.length === 0) {
+                  return (
+                    <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                      No seasons in this league yet.
+                    </div>
+                  );
+                }
+                return leagueSeasons.map((s) => {
+                  const league = leagues.find((l) => l.id === s.league_id);
+                  return (
+                    <div
+                      key={s.id}
+                      className="xp-inset p-2 space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] uppercase text-[#a6a89e]">
+                          {league?.name ?? "League"}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
+                            s.is_active
+                              ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                              : "bg-[#451717] text-[#ff857a] border-[#9e3535]"
+                          }`}
+                        >
+                          {s.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={s.name}
+                          onChange={(e) =>
+                            setSeasons((prev) =>
+                              prev.map((item) =>
+                                item.id === s.id
+                                  ? { ...item, name: e.target.value }
+                                  : item
+                              )
+                            )
+                          }
+                          className="min-w-0 flex-1 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                        />
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleSaveSeason(s)}
+                          className="xp-btn text-[11px] px-2 py-1"
+                          title="Save Season Name"
+                        >
+                          <Save className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleToggleSeasonActive(s)}
+                          className={`xp-btn text-[11px] py-1 ${
+                            s.is_active ? "xp-btn-danger" : "xp-btn-primary"
+                          }`}
+                        >
+                          {s.is_active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleDeleteSeason(s)}
+                          className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                          title="Delete Season"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <form
+              onSubmit={handleAddSeason}
+              className="flex flex-wrap gap-2 pt-2"
+            >
               <input
                 type="text"
                 value={newSeasonName}
@@ -1668,7 +2220,7 @@ export function AdminDashboard({
                             )
                           )
                         }
-                        className="bg-[#1a201e] border border-white/10 px-1.5 py-1 text-[11px]"
+                        className="bg-[#1a201e] border border-white/10 px-1.5 py-1 text-[11px] shrink-0"
                       >
                         {themes.map((t) => (
                           <option key={t.key} value={t.key}>
@@ -1676,24 +2228,6 @@ export function AdminDashboard({
                           </option>
                         ))}
                       </select>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleSaveDivision(d)}
-                        className="xp-btn xp-btn-primary text-[11px] px-2 py-1"
-                        title="Save Division"
-                      >
-                        <Save className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleDeleteDivision(d)}
-                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
-                        title="Delete Division"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -1709,7 +2243,7 @@ export function AdminDashboard({
                           )
                         }
                         placeholder="Logo URL"
-                        className="flex-1 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
+                        className="flex-1 min-w-0 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
                       />
                       <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
                         <Upload className="w-3 h-3" />
@@ -1724,6 +2258,24 @@ export function AdminDashboard({
                           }}
                         />
                       </label>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSaveDivision(d)}
+                        className="xp-btn xp-btn-primary text-[11px] px-2 py-1 shrink-0"
+                        title="Save Division"
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDeleteDivision(d)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
+                        title="Delete Division"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 ))
@@ -1772,26 +2324,26 @@ export function AdminDashboard({
                 filteredEditions.map((ed, idx) => (
                   <div
                     key={ed.id}
-                    className="xp-inset p-2 flex flex-wrap sm:flex-nowrap items-center gap-1.5 text-xs"
+                    className="xp-inset p-1.5 flex flex-wrap sm:flex-nowrap items-center gap-1 text-xs"
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-col gap-0.5 shrink-0 order-1 sm:order-1">
                       <button
                         type="button"
                         disabled={busy || idx === 0}
                         onClick={() => handleMoveEdition(idx, -1)}
-                        className="xp-btn px-1.5 py-1 text-[11px]"
+                        className="xp-btn !px-1 !py-0.5 text-[10px] leading-none"
                         title="Move Up"
                       >
-                        <ArrowUp className="w-3 h-3" />
+                        <ArrowUp className="w-2.5 h-2.5 shrink-0" />
                       </button>
                       <button
                         type="button"
                         disabled={busy || idx === filteredEditions.length - 1}
                         onClick={() => handleMoveEdition(idx, 1)}
-                        className="xp-btn px-1.5 py-1 text-[11px]"
+                        className="xp-btn !px-1 !py-0.5 text-[10px] leading-none"
                         title="Move Down"
                       >
-                        <ArrowDown className="w-3 h-3" />
+                        <ArrowDown className="w-2.5 h-2.5 shrink-0" />
                       </button>
                     </div>
 
@@ -1807,22 +2359,43 @@ export function AdminDashboard({
                           )
                         )
                       }
-                      className="flex-1 min-w-[100px] bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c]"
+                      className="flex-1 min-w-0 bg-transparent border border-white/10 px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#c89b3c] order-2 sm:order-2"
                     />
 
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => handleSaveEdition(ed)}
-                      className="xp-btn text-[11px] px-2 py-1 shrink-0"
-                      title="Rename Edition"
+                      onClick={() => void handleToggleEditionPlayersOnly(ed)}
+                      className={`xp-btn !px-1.5 !py-1 justify-center shrink-0 order-5 sm:order-3 ml-auto sm:ml-0 ${
+                        ed.is_players_only
+                          ? "!border-[#c89b3c] !bg-[#2a2210] text-[#f0c020]"
+                          : "text-[#a6a89e]"
+                      }`}
+                      title={
+                        ed.is_players_only
+                          ? "Players-Only Edition (Draft Day / Team Rankings Disabled). Click to allow Teams & Players."
+                          : "All Rankings Edition (Teams & Players). Click to mark Players-Only."
+                      }
                     >
-                      <Save className="w-3 h-3" />
-                      <span>Save</span>
+                      {ed.is_players_only ? (
+                        <User className="w-3.5 h-3.5 shrink-0 text-[#f0c020]" />
+                      ) : (
+                        <Users className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleSaveEdition(ed)}
+                      className="xp-btn !px-1.5 !py-1 shrink-0 order-6 sm:order-4"
+                      title="Save Edition Name"
+                    >
+                      <Save className="w-3.5 h-3.5 shrink-0" />
                     </button>
 
                     <span
-                      className={`w-20 text-center shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
+                      className={`w-16 text-center shrink-0 px-1 py-0.5 text-[9px] font-bold uppercase rounded-xs border order-3 sm:order-5 ${
                         ed.is_archived
                           ? "bg-[#2b322f] text-[#a6a89e] border-[#4a5450]"
                           : ed.is_open
@@ -1833,11 +2406,13 @@ export function AdminDashboard({
                       {ed.is_archived ? "Archived" : ed.is_open ? "Open" : "Locked"}
                     </span>
 
+                    <div className="basis-full h-0 sm:hidden order-4" />
+
                     <button
                       type="button"
                       disabled={busy || Boolean(ed.is_archived)}
                       onClick={() => handleToggleEditionOpen(ed)}
-                      className={`xp-btn text-[11px] py-1 w-16 justify-center shrink-0 ${
+                      className={`xp-btn text-[11px] !px-2 !py-1 w-14 justify-center shrink-0 order-7 sm:order-6 ${
                         ed.is_open && !ed.is_archived
                           ? "xp-btn-danger"
                           : "xp-btn-primary"
@@ -1857,7 +2432,7 @@ export function AdminDashboard({
                       type="button"
                       disabled={busy}
                       onClick={() => handleToggleEditionArchived(ed)}
-                      className={`xp-btn text-[11px] py-1 w-[96px] justify-center shrink-0 ${
+                      className={`xp-btn text-[11px] !px-2 !py-1 w-[92px] justify-center shrink-0 order-8 sm:order-7 ${
                         ed.is_archived ? "xp-btn-primary" : ""
                       }`}
                       title={
@@ -1866,7 +2441,7 @@ export function AdminDashboard({
                           : "Archive past edition (disables drafts & edits)"
                       }
                     >
-                      <Archive className="w-3 h-3" />
+                      <Archive className="w-3 h-3 shrink-0" />
                       <span>{ed.is_archived ? "Unarchive" : "Archive"}</span>
                     </button>
 
@@ -1874,10 +2449,10 @@ export function AdminDashboard({
                       type="button"
                       disabled={busy}
                       onClick={() => handleDeleteEdition(ed)}
-                      className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
+                      className="xp-btn xp-btn-danger !px-1.5 !py-1 shrink-0 order-9 sm:order-8"
                       title="Delete Edition"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
                     </button>
                   </div>
                 ))
@@ -1886,15 +2461,27 @@ export function AdminDashboard({
 
             <form
               onSubmit={handleAddEdition}
-              className="flex flex-wrap gap-2 pt-2"
+              className="flex flex-wrap items-center gap-2 pt-2"
             >
               <input
                 type="text"
                 value={newEditionName}
                 onChange={(e) => setNewEditionName(e.target.value)}
-                placeholder="e.g. Week 9"
-                className="flex-1 xp-inset px-2 py-1 text-xs"
+                placeholder="e.g. Draft Day or Week 1"
+                className="flex-1 min-w-[140px] xp-inset px-2 py-1 text-xs"
               />
+              <label
+                className="flex items-center gap-1.5 text-[11px] text-[#c7c5b8] cursor-pointer px-1.5 py-1 xp-inset select-none"
+                title="Restrict this edition to Player Tier Lists only (e.g. pre-draft before teams exist)"
+              >
+                <input
+                  type="checkbox"
+                  checked={newEditionPlayersOnly}
+                  onChange={(e) => setNewEditionPlayersOnly(e.target.checked)}
+                />
+                <User className="w-3 h-3 text-[#f0c020]" />
+                <span>Players-Only</span>
+              </label>
               <button type="submit" disabled={busy} className="xp-btn text-xs">
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Edition</span>
@@ -2244,51 +2831,112 @@ export function AdminDashboard({
             </form>
 
             {allowedUsers.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {allowedUsers.map((entry) => {
-                  const matchedProfile = profiles.find(
-                    (p) => p.discord_id === entry.discord_id
-                  );
-                  return (
-                    <div
-                      key={entry.discord_id}
-                      className="xp-inset px-2 py-1 text-[11px] flex items-center gap-1.5"
-                    >
-                      <span className="font-bold text-[#f0ede0]">
-                        {entry.label || matchedProfile?.username || "Approved"}
-                      </span>
-                      <code className="text-[10px] text-[#a6a89e] font-mono">
-                        {entry.discord_id}
-                      </code>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleRemoveAllowedUser(entry.discord_id)}
-                        className="text-[#ff857a] hover:text-white ml-0.5"
-                        title="Remove from allowlist"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+              <div className="pt-1 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllowlist((prev) => !prev)}
+                    className="xp-btn text-xs"
+                  >
+                    <span>
+                      {showAllowlist
+                        ? `Hide Allowlisted IDs (${allowedUsers.length})`
+                        : `Show Allowlisted IDs (${allowedUsers.length})`}
+                    </span>
+                  </button>
+                  <Link href="/admin/users" className="xp-btn text-xs">
+                    <span>Manage on Users Log →</span>
+                  </Link>
+                </div>
+
+                {showAllowlist && (
+                  <div className="xp-inset p-2 space-y-2">
+                    <input
+                      type="text"
+                      value={allowlistSearch}
+                      onChange={(e) => setAllowlistSearch(e.target.value)}
+                      placeholder="Filter allowlist by name or Discord ID..."
+                      className="w-full xp-inset px-2.5 py-1 text-xs"
+                    />
+                    <div className="flex flex-wrap gap-1.5 max-h-[180px] overflow-y-auto pr-1">
+                      {allowedUsers
+                        .filter((entry) => {
+                          const q = allowlistSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          const matchedProfile = profiles.find(
+                            (p) => p.discord_id === entry.discord_id
+                          );
+                          const displayName = (
+                            entry.label ||
+                            matchedProfile?.username ||
+                            ""
+                          ).toLowerCase();
+                          return (
+                            displayName.includes(q) ||
+                            entry.discord_id.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((entry) => {
+                          const matchedProfile = profiles.find(
+                            (p) => p.discord_id === entry.discord_id
+                          );
+                          const displayName =
+                            entry.label ||
+                            matchedProfile?.username ||
+                            "Approved";
+                          const shortId =
+                            entry.discord_id.length > 4
+                              ? `#${entry.discord_id.slice(-4)}`
+                              : entry.discord_id;
+                          return (
+                            <div
+                              key={entry.discord_id}
+                              title={`Discord ID: ${entry.discord_id}`}
+                              className="xp-panel px-2 py-1 text-[11px] flex items-center gap-1.5"
+                            >
+                              <span className="font-bold text-[#f0ede0]">
+                                {displayName}
+                              </span>
+                              <code className="text-[10px] text-[#a6a89e] font-mono">
+                                {shortId}
+                              </code>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleRemoveAllowedUser(entry.discord_id)
+                                }
+                                className="text-[#ff857a] hover:text-white ml-0.5"
+                                title={`Remove ${entry.discord_id} from allowlist`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
             {/* Published Rankings Moderation */}
-            <div className="lg:col-span-6 xp-panel p-3 space-y-2.5">
-              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                Published Rankings ({publishedBallots.length})
-              </h2>
-              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+            <div className="lg:col-span-6 xp-panel p-3 flex flex-col justify-between gap-2.5">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                    Recent Published Rankings ({Math.min(publishedBallots.length, 4)} of {publishedBallots.length})
+                  </h2>
+                </div>
+                <div className="space-y-1.5">
                 {publishedBallots.length === 0 ? (
                   <div className="xp-inset p-3 text-xs text-[#a6a89e]">
                     No published rankings found.
                   </div>
                 ) : (
-                  publishedBallots.map((b) => {
+                  publishedBallots.slice(0, 4).map((b) => {
                     const author = Array.isArray(b.profiles)
                       ? b.profiles[0]
                       : b.profiles;
@@ -2298,8 +2946,24 @@ export function AdminDashboard({
                         className="xp-inset p-2 flex items-center justify-between gap-2 text-xs"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="font-bold text-[#f0ede0] truncate">
-                            {b.title || "Untitled Ranking"}
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              title={
+                                b.ranking_type === "player"
+                                  ? "Player Tier List"
+                                  : "Team Power Rankings"
+                              }
+                              className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                            >
+                              {b.ranking_type === "player" ? (
+                                <User className="w-3 h-3 text-[#f0c020]" />
+                              ) : (
+                                <TeamGroupIcon className="w-3 h-3 text-[#f0c020]" />
+                              )}
+                            </span>
+                            <span className="font-bold text-[#f0ede0] truncate">
+                              {b.title || "Untitled Ranking"}
+                            </span>
                           </div>
                           <div className="text-[11px] text-[#a6a89e] truncate">
                             By {author?.username ?? "Unknown"}
@@ -2310,7 +2974,7 @@ export function AdminDashboard({
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {b.season_id && b.division_id && (
+                          {b.season_id && (
                             <button
                               type="button"
                               disabled={busy}
@@ -2342,34 +3006,43 @@ export function AdminDashboard({
                     );
                   })
                 )}
+                </div>
               </div>
+              <Link
+                href="/admin/publishings"
+                className="xp-btn text-xs w-full justify-center"
+              >
+                <span>View All Publishings Log ({publishedBallots.length}) →</span>
+              </Link>
             </div>
 
             {/* Discord User Moderation / Bans */}
-            <div className="lg:col-span-6 xp-panel p-3 space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                  Users ({profiles.length})
-                </h2>
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search user or Discord ID..."
-                  className="xp-inset px-2 py-1 text-xs w-48"
-                />
-              </div>
-              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
-                {profiles
-                  .filter((p) => {
-                    const q = userSearch.trim().toLowerCase();
-                    if (!q) return true;
-                    return (
-                      p.username.toLowerCase().includes(q) ||
-                      (p.discord_id ?? "").toLowerCase().includes(q)
-                    );
-                  })
-                  .map((p) => (
+            <div className="lg:col-span-6 xp-panel p-3 flex flex-col justify-between gap-2.5">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                    Users ({Math.min(profiles.length, 4)} of {profiles.length})
+                  </h2>
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Search user or Discord ID..."
+                    className="xp-inset px-2 py-1 text-xs w-48"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  {profiles
+                    .filter((p) => {
+                      const q = userSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return (
+                        p.username.toLowerCase().includes(q) ||
+                        (p.discord_id ?? "").toLowerCase().includes(q)
+                      );
+                    })
+                    .slice(0, 4)
+                    .map((p) => (
                     <div
                       key={p.id}
                       className="xp-inset p-2 flex items-center justify-between gap-2 text-xs"
@@ -2456,7 +3129,16 @@ export function AdminDashboard({
                       )}
                     </div>
                   ))}
+                </div>
               </div>
+              {profiles.length > 4 && (
+                <Link
+                  href="/admin/users"
+                  className="xp-btn text-xs w-full justify-center"
+                >
+                  <span>View All Users Log ({profiles.length}) →</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -2509,23 +3191,17 @@ export function AdminDashboard({
                   onChange={(e) => void handleTargetEditionChange(e.target.value)}
                   className="w-full xp-inset px-2.5 py-1.5 text-xs font-bold"
                 >
-                  {editions
-                    .filter(
-                      (e) =>
-                        e.season_id === movingBallot.season_id &&
-                        e.id !== movingBallot.edition_id
-                    )
-                    .sort((a, b) => a.sort_order - b.sort_order)
-                    .map((ed) => (
-                      <option key={ed.id} value={ed.id}>
-                        {ed.name}{" "}
-                        {ed.is_archived
-                          ? "(Archived)"
-                          : !ed.is_open
-                          ? "(Locked)"
-                          : "(Open)"}
-                      </option>
-                    ))}
+                  {getEligibleTargetEditions(movingBallot).map((ed) => (
+                    <option key={ed.id} value={ed.id}>
+                      {ed.name}{" "}
+                      {ed.is_archived
+                        ? "(Archived)"
+                        : !ed.is_open
+                        ? "(Locked)"
+                        : "(Open)"}
+                      {ed.is_players_only ? " [Players-Only]" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
 

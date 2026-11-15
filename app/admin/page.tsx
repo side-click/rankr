@@ -45,6 +45,7 @@ export default async function AdminPage() {
     { data: divisionThemes },
     { data: editions },
     { data: teams },
+    { data: seasonPlayers },
     { data: appSettings },
     { data: profiles },
     { data: recentBallots },
@@ -56,12 +57,16 @@ export default async function AdminPage() {
     supabase.from("division_themes").select("*").order("name"),
     supabase.from("editions").select("*").order("sort_order", { ascending: true }),
     supabase.from("teams").select("*").order("default_order", { ascending: true }),
+    supabase
+      .from("season_players")
+      .select("*")
+      .order("name", { ascending: true }),
     supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("profiles").select("*").order("created_at", { ascending: false }),
     supabase
       .from("ballots")
       .select(
-        "id, title, status, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
+        "id, title, status, ranking_type, tier_variant, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
       )
       .eq("status", "published")
       .order("published_at", { ascending: false })
@@ -81,6 +86,7 @@ export default async function AdminPage() {
       initialThemes={divisionThemes ?? []}
       initialEditions={editions ?? []}
       initialTeams={teams ?? []}
+      initialSeasonPlayers={seasonPlayers ?? []}
       initialAppSettings={
         appSettings ?? {
           id: 1,

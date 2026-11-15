@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import type { PlayerTierListPayload } from "@/types/database";
 
 const FLAGGED_TERMS = [
   "nigger",
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
       supabase
         .from("ballots")
         .select(
-          "id, title, status, user_id, author_notes, overlays, league_name_snapshot, season_name_snapshot"
+          "id, title, status, ranking_type, tier_data, user_id, author_notes, overlays, league_name_snapshot, season_name_snapshot"
         )
         .eq("id", ballotId)
         .eq("user_id", user.id)
@@ -79,10 +80,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const tierData = ballot.tier_data as PlayerTierListPayload | null;
+  const tierTexts =
+    tierData?.sections?.flatMap((sec) =>
+      sec.tiers.flatMap((t) => [t.label, t.commentary])
+    ) ?? [];
+
   const flagged = findFlaggedTerms([
     profile?.username,
+    ballot.title,
     ballot.author_notes,
     ...(entries ?? []).map((e) => e.commentary),
+    ...tierTexts,
   ]);
 
   const origin = new URL(request.url).origin;
@@ -108,7 +117,12 @@ export async function POST(request: Request) {
             : "📢 Ranking Published",
           url: ballotUrl,
           color: isFlagged ? 0xe84a1b : 0x2d5a3f,
-          description: `**${ballot.title || "Power Rankings"}**\n${
+          description: `**${
+            ballot.title ||
+            (ballot.ranking_type === "player"
+              ? "Player Tier List"
+              : "Team Power Rankings")
+          }**\n${
             ballot.league_name_snapshot ? `${ballot.league_name_snapshot} — ` : ""
           }${ballot.season_name_snapshot ?? ""}`,
           fields: [

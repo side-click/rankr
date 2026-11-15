@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { ShieldAlert } from "lucide-react";
+import { Eye, ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +24,20 @@ export default async function HomePage() {
     .order("is_active", { ascending: false })
     .order("created_at", { ascending: false });
 
-  const [{ data: divisions }, { data: divisionThemes }, { data: activeTeams }] =
-    await Promise.all([
-      supabase
-        .from("divisions")
-        .select("id, season_id, name, slug, logo_url, theme_key")
-        .order("name"),
-      supabase.from("division_themes").select("*").order("name"),
-      supabase.from("teams").select("id, division_id").eq("is_active", true),
-    ]);
+  const [
+    { data: divisions },
+    { data: divisionThemes },
+    { data: activeTeams },
+    { data: seasonPlayers },
+  ] = await Promise.all([
+    supabase
+      .from("divisions")
+      .select("id, season_id, name, slug, logo_url, theme_key")
+      .order("name"),
+    supabase.from("division_themes").select("*").order("name"),
+    supabase.from("teams").select("id, division_id").eq("is_active", true),
+    supabase.from("season_players").select("id, season_id"),
+  ]);
 
   const { data: recentBallots } = await supabase
     .from("ballots")
@@ -40,6 +45,8 @@ export default async function HomePage() {
       `
       id,
       title,
+      ranking_type,
+      tier_variant,
       published_at,
       season_id,
       division_id,
@@ -49,14 +56,14 @@ export default async function HomePage() {
       division_logo_snapshot,
       edition_name_snapshot,
       profiles ( username, avatar_url ),
-      seasons ( name, slug, leagues ( name, short_name, slug ) ),
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, theme_key, logo_url ),
       editions ( name )
     `
     )
     .eq("status", "published")
     .order("published_at", { ascending: false })
-    .limit(50);
+    .limit(9);
 
   const needsSetup = Boolean(seasonsError) || !seasons || seasons.length === 0;
   const activeSeasons = (seasons ?? []).filter((s) => s.is_active);
@@ -104,23 +111,39 @@ export default async function HomePage() {
                   const seasonDivisions = (divisions ?? []).filter(
                     (d) => d.season_id === season.id
                   );
+                  const playerCount = (seasonPlayers ?? []).filter(
+                    (p) => p.season_id === season.id
+                  ).length;
 
                   return (
-                    <div key={season.id} className="xp-panel p-3 space-y-3">
+                    <div key={season.id} className="xp-panel p-3 space-y-2.5">
                       <div className="flex flex-wrap items-center gap-2.5 pb-2 border-b border-white/10">
                         {league?.logo_url && (
                           <img
                             src={league.logo_url}
                             alt={league.name}
-                            className="w-7 h-7 object-contain"
+                            className="w-11 h-11 object-contain shrink-0"
                           />
                         )}
-                        <div>
+                        <div className="min-w-0">
                           <div className="text-[10px] uppercase font-bold text-[#a6a89e]">
                             {league?.name ?? "League"}
                           </div>
-                          <div className="text-sm font-bold text-[#f0ede0]">
-                            {season.name}
+                          <div className="text-sm font-bold text-[#f0ede0] flex flex-wrap items-baseline gap-1.5">
+                            <span>{season.name}</span>
+                            <span className="text-xs font-normal text-[#a6a89e]">
+                              ({playerCount}{" "}
+                              {playerCount === 1 ? "player" : "players"})
+                            </span>
+                          </div>
+                          <div className="mt-1.5">
+                            <Link
+                              href={`/browse?season=${season.slug}`}
+                              className="xp-btn text-[11px]"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+                              <span>Browse Season</span>
+                            </Link>
                           </div>
                         </div>
                       </div>
@@ -148,32 +171,35 @@ export default async function HomePage() {
                                   borderLeftWidth: "3px",
                                   borderLeftColor: divTheme.primary_color,
                                 }}
-                                className="xp-inset p-3 flex items-center gap-3"
+                                className="xp-inset p-2.5 flex items-center gap-3"
                               >
                                 {logoSrc && (
                                   <img
                                     src={logoSrc}
                                     alt={div.name}
-                                    className="w-12 h-12 object-contain shrink-0"
+                                    className="w-11 h-11 object-contain shrink-0"
                                   />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div
-                                    style={{ color: divTheme.accent_text_color }}
-                                    className="font-bold text-sm"
-                                  >
-                                    {div.name}
+                                  <div className="flex flex-wrap items-baseline gap-1.5">
+                                    <span
+                                      style={{ color: divTheme.accent_text_color }}
+                                      className="font-bold text-sm"
+                                    >
+                                      {div.name}
+                                    </span>
+                                    <span className="text-[11px] font-normal text-[#a6a89e]">
+                                      ({teamCount}{" "}
+                                      {teamCount === 1 ? "team" : "teams"})
+                                    </span>
                                   </div>
-                                  <div className="text-[11px] text-[#a6a89e] mt-0.5">
-                                    {teamCount}{" "}
-                                    {teamCount === 1 ? "team" : "teams"}
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-2">
+                                  <div className="mt-1.5 flex flex-wrap gap-2">
                                     <Link
                                       href={`/browse?season=${season.slug}&division=${div.slug}`}
                                       className="xp-btn text-[11px]"
                                     >
-                                      <span>View Rankings</span>
+                                      <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+                                      <span>Browse Division</span>
                                     </Link>
                                   </div>
                                 </div>
@@ -237,11 +263,7 @@ export default async function HomePage() {
             No published rankings yet.
           </div>
         ) : (
-          <RecentBallotsPanel
-            ballots={recentBallots}
-            seasons={seasons ?? []}
-            divisions={divisions ?? []}
-          />
+          <RecentBallotsPanel ballots={recentBallots} />
         )}
       </RetroWindow>
     </div>

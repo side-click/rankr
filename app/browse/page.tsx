@@ -10,6 +10,7 @@ export default async function BrowsePage({
   searchParams,
 }: {
   searchParams: Promise<{
+    type?: string;
     season?: string;
     division?: string;
     edition?: string;
@@ -35,6 +36,8 @@ export default async function BrowsePage({
       `
       id,
       title,
+      ranking_type,
+      tier_variant,
       published_at,
       season_id,
       division_id,
@@ -45,7 +48,7 @@ export default async function BrowsePage({
       division_logo_snapshot,
       edition_name_snapshot,
       profiles ( username, avatar_url ),
-      seasons ( name, slug, leagues ( name, short_name, slug ) ),
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug )
     `
@@ -53,6 +56,9 @@ export default async function BrowsePage({
     .eq("status", "published")
     .order("published_at", { ascending: false });
 
+  if (params.type === "team" || params.type === "player") {
+    query = query.eq("ranking_type", params.type);
+  }
   if (params.season) {
     const s = seasons?.find((x) => x.slug === params.season);
     if (s) query = query.eq("season_id", s.id);
@@ -91,11 +97,26 @@ export default async function BrowsePage({
   );
 
   return (
-    <RetroWindow title="Browse Published Power Rankings" theme="scdl">
+    <RetroWindow title="Browse Published Rankings" theme="scdl">
       <form
         method="GET"
-        className="xp-panel p-3 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-end"
+        className="xp-panel p-3 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end"
       >
+        <div>
+          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
+            Type
+          </label>
+          <select
+            name="type"
+            defaultValue={params.type ?? ""}
+            className="w-full xp-inset px-2 py-1.5 text-xs"
+          >
+            <option value="">All Types</option>
+            <option value="team">Team Power Rankings</option>
+            <option value="player">Player Tier Lists</option>
+          </select>
+        </div>
+
         <div>
           <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
             Season

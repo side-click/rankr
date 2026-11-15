@@ -54,14 +54,14 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
     <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
       <Link
         href="/"
-        className="flex items-center gap-2 shrink-0 hover:brightness-110 transition"
+        className="flex items-center gap-2.5 shrink-0 hover:brightness-110 transition"
       >
         <img
           src="/images/rankr_crop.png"
           alt="Rankr"
-          className="w-7 h-7 object-contain drop-shadow"
+          className="w-10 h-10 sm:w-11 sm:h-11 object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,0.95)] drop-shadow-[0_6px_12px_rgba(0,0,0,0.75)]"
         />
-        <span className="wow-heading text-xl sm:text-2xl font-bold text-[#f0c020] tracking-wide">
+        <span className="wow-heading text-2xl sm:text-3xl font-bold text-[#f0c020] tracking-wide">
           Rankr
         </span>
       </Link>
@@ -73,7 +73,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           onChange={(e) => handleSeasonChange(e.target.value)}
           className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[170px] lg:w-[195px] shrink-0 truncate"
         >
-          <option value="">All Seasons</option>
+          <option value="">Select a Season</option>
           {seasons.map((s) => (
             <option key={s.id} value={s.slug}>
               {s.leagueName ? `${s.leagueName}: ` : ""}
@@ -97,7 +97,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
         >
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
-          <span>Published Rankings</span>
+          <span>Browse Rankings</span>
         </Link>
         {isLoggedIn && (
           <Link
@@ -145,7 +145,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
                 }}
                 className="w-full xp-inset px-2.5 py-2 text-xs font-bold"
               >
-                <option value="">All Seasons</option>
+                <option value="">Select a Season</option>
                 {seasons.map((s) => (
                   <option key={s.id} value={s.slug}>
                     {s.leagueName ? `${s.leagueName}: ` : ""}
@@ -172,7 +172,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
               className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
             >
               <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
-              <span>Published Rankings</span>
+              <span>Browse Rankings</span>
             </Link>
             {isLoggedIn && (
               <Link

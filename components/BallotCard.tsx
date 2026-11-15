@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Award } from "lucide-react";
+import { Award, User } from "lucide-react";
+import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import type { RankingType, TierVariant } from "@/types/database";
 
 type MaybeArray<T> = T | T[] | null | undefined;
 
@@ -11,6 +13,9 @@ function unwrap<T>(val: MaybeArray<T>): T | null {
 export interface BallotCardData {
   id: string;
   title: string | null;
+  ranking_type?: RankingType;
+  tier_variant?: TierVariant | string | null;
+  division_id?: string | null;
   published_at: string | null;
   league_name_snapshot?: string | null;
   season_name_snapshot?: string | null;
@@ -25,6 +30,7 @@ export interface BallotCardData {
       name?: string;
       short_name?: string | null;
       slug?: string;
+      logo_url?: string | null;
     }>;
   }>;
   divisions?: MaybeArray<{
@@ -53,11 +59,17 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
   const division = unwrap(ballot.divisions);
   const edition = unwrap(ballot.editions);
 
+  const isPlayer = ballot.ranking_type === "player";
+  const hasDivision = Boolean(
+    ballot.division_id || division?.name || ballot.division_name_snapshot
+  );
   const divLogo = division?.logo_url ?? ballot.division_logo_snapshot;
+  const displayLogo = hasDivision ? divLogo : league?.logo_url ?? null;
   const divName = division?.name ?? ballot.division_name_snapshot ?? "Division";
   const edName = edition?.name ?? ballot.edition_name_snapshot ?? "Edition";
   const sName = season?.name ?? ballot.season_name_snapshot ?? "";
   const leaguePrefix = getLeaguePrefix(league, ballot.league_name_snapshot);
+  const leagueSeasonLabel = `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`;
   const publishedDate = ballot.published_at
     ? new Date(ballot.published_at).toLocaleDateString()
     : null;
@@ -67,28 +79,43 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
       href={`/ballot/${ballot.id}`}
       className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-3"
     >
-      <div className="flex items-center gap-3">
-        {divLogo ? (
-          <img
-            src={divLogo}
-            alt={divName}
-            className="w-10 h-10 object-contain shrink-0"
-          />
-        ) : (
-          <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-extrabold text-[#f0ede0] truncate">
-            {edName}
-          </div>
-          <div className="text-xs font-bold text-[#d6d3c4] truncate">
-            {divName}
-          </div>
-          <div className="text-[11px] text-[#a6a89e] truncate">
-            {leaguePrefix ? `${leaguePrefix}: ` : ""}
-            {sName}
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {displayLogo ? (
+            <img
+              src={displayLogo}
+              alt={hasDivision ? divName : league?.name ?? sName}
+              className="w-10 h-10 object-contain shrink-0"
+            />
+          ) : (
+            <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-extrabold text-[#f0ede0] truncate">
+              {edName}
+            </div>
+            <div className="text-xs font-bold text-[#d6d3c4] truncate">
+              {hasDivision ? divName : "All Divisions"}
+            </div>
+            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            </div>
+            <div className="text-[11px] text-[#a6a89e] truncate">
+              {leagueSeasonLabel}
+            </div>
           </div>
         </div>
+
+        <span
+          title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+          className="w-7 h-7 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
+        >
+          {isPlayer ? (
+            <User className="w-4 h-4 text-[#f0c020]" />
+          ) : (
+            <TeamGroupIcon className="w-4 h-4 text-[#f0c020]" />
+          )}
+        </span>
       </div>
 
       <div className="flex items-center gap-2.5 px-2.5 py-2 rounded bg-black/25 border border-white/10">

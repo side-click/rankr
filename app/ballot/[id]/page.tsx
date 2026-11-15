@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { checkUserAllowlisted } from "@/utils/allowlist";
 import { BallotShareView } from "@/components/BallotShareView";
+import { PlayerTierShareView } from "@/components/PlayerTierShareView";
+import type { PlayerTierListPayload } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,10 @@ export async function generateMetadata({
     .select(
       `
       title,
+      ranking_type,
+      tier_data,
       author_notes,
+      league_name_snapshot,
       season_name_snapshot,
       division_name_snapshot,
       edition_name_snapshot,
@@ -35,7 +40,7 @@ export async function generateMetadata({
     .maybeSingle();
 
   if (!ballot) {
-    return { title: "Rankr — Power Rankings" };
+    return { title: "Rankr — Rankings" };
   }
 
   const profile = Array.isArray(ballot.profiles)
@@ -55,28 +60,49 @@ export async function generateMetadata({
   const editionName = edition?.name ?? ballot.edition_name_snapshot ?? "";
   const seasonName = season?.name ?? ballot.season_name_snapshot ?? "";
   const authorName = profile?.username ?? "Voter";
+  const isPlayerTierList = ballot.ranking_type === "player";
 
   const title =
     ballot.title ||
     `${seasonName} ${divisionName} — ${editionName}`.trim();
 
-  const items = Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [];
-  const top3 = [...items]
-    .sort((a, b) => a.rank - b.rank)
-    .slice(0, 3)
-    .map((item) => {
-      const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
-      return `#${item.rank} ${team?.name ?? item.team_name_snapshot ?? "Team"}`;
-    });
+  let topSummary: string | null = null;
+  if (isPlayerTierList) {
+    const tierData = ballot.tier_data as PlayerTierListPayload | null;
+    const firstSection = tierData?.sections?.[0];
+    const firstTierWithPlayers = firstSection?.tiers?.find(
+      (t) => t.players.length > 0
+    );
+    if (firstTierWithPlayers) {
+      const topNames = firstTierWithPlayers.players
+        .slice(0, 4)
+        .map((p) => p.name);
+      topSummary = `${firstTierWithPlayers.label}: ${topNames.join(" • ")}`;
+    }
+  } else {
+    const items = Array.isArray(ballot.ballot_entries)
+      ? ballot.ballot_entries
+      : [];
+    const top3 = [...items]
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 3)
+      .map((item) => {
+        const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
+        return `#${item.rank} ${team?.name ?? item.team_name_snapshot ?? "Team"}`;
+      });
+    if (top3.length > 0) {
+      topSummary = `Top 3: ${top3.join(" • ")}`;
+    }
+  }
 
   const descriptionParts = [
-    top3.length > 0 ? `Top 3: ${top3.join(" • ")}` : null,
+    topSummary,
     ballot.author_notes ? `"${ballot.author_notes}"` : null,
   ].filter(Boolean);
 
   const description =
     descriptionParts.join(" — ") ||
-    `Team Power Rankings by ${authorName}`;
+    `${isPlayerTierList ? "Player Tier List" : "Team Power Rankings"} by ${authorName}`;
 
   const fullTitle = `${title} | by ${authorName}`;
 
@@ -139,25 +165,34 @@ export default async function BallotPage({
         ? ballot.editions[0]
         : ballot.editions;
       const params = new URLSearchParams();
+      if (ballot.ranking_type === "player") params.set("type", "player");
       if (season?.slug) params.set("season", season.slug);
-      if (division?.slug) params.set("division", division.slug);
+      if (ballot.ranking_type === "player") {
+        params.set("division", division?.slug ?? "all");
+      } else if (division?.slug) {
+        params.set("division", division.slug);
+      }
       if (edition?.slug) params.set("edition", edition.slug);
       redirect(`/rank?${params.toString()}`);
     }
     notFound();
   }
 
+  const isPlayerTierList = ballot.ranking_type === "player";
+
   const [
-    { data: entries },
+    entriesResult,
     { data: divisionThemes },
     { data: viewerProfile },
     isAllowlisted,
   ] = await Promise.all([
-    supabase
-      .from("ballot_entries")
-      .select("*")
-      .eq("ballot_id", ballot.id)
-      .order("rank", { ascending: true }),
+    isPlayerTierList
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from("ballot_entries")
+          .select("*")
+          .eq("ballot_id", ballot.id)
+          .order("rank", { ascending: true }),
     supabase.from("division_themes").select("*").order("name"),
     user
       ? supabase
@@ -169,13 +204,27 @@ export default async function BallotPage({
     user ? checkUserAllowlisted(supabase) : Promise.resolve(false),
   ]);
 
+  const isOwner = user?.id === ballot.user_id && isAllowlisted;
+  const isAdmin = Boolean(viewerProfile?.is_admin);
+
+  if (isPlayerTierList) {
+    return (
+      <PlayerTierShareView
+        ballot={ballot}
+        themes={divisionThemes ?? []}
+        isOwner={isOwner}
+        isAdmin={isAdmin}
+      />
+    );
+  }
+
   return (
     <BallotShareView
       ballot={ballot}
-      entries={entries ?? []}
+      entries={entriesResult.data ?? []}
       themes={divisionThemes ?? []}
-      isOwner={user?.id === ballot.user_id && isAllowlisted}
-      isAdmin={Boolean(viewerProfile?.is_admin)}
+      isOwner={isOwner}
+      isAdmin={isAdmin}
     />
   );
 }

@@ -46,7 +46,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
 
     const fit = () => {
       let size = 14;
-      const minSize = 9.5;
+      const minSize = 10;
       el.style.fontSize = `${size}px`;
       el.style.lineHeight = "1.45";
 
@@ -74,7 +74,7 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
   return (
     <div
       ref={ref}
-      className="text-sm leading-relaxed text-[#f0ede0] text-center whitespace-pre-wrap break-words min-w-0 max-h-[90px] overflow-hidden"
+      className="text-sm leading-relaxed text-[#f0ede0] text-center whitespace-pre-wrap break-words [overflow-wrap:anywhere] min-w-0 max-h-[90px] overflow-hidden"
     >
       {text}
     </div>
@@ -549,7 +549,7 @@ export function BallotShareView({
                     {editionName}
                   </h1>
                   <div className="text-base font-bold text-white/90 leading-snug">
-                    {divisionName} Power Rankings
+                    {divisionName} Team Power Rankings
                   </div>
                   {ballot.author_notes && (
                     <p className="mt-1 text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">

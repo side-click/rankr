@@ -1,9 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { checkUserAllowlisted } from "@/utils/allowlist";
-import { BallotEditor } from "@/components/BallotEditor";
+import { RankWorkspace } from "@/components/RankWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
+import type { RankingType } from "@/types/database";
 import { Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,12 @@ export const dynamic = "force-dynamic";
 export default async function RankPage({
   searchParams,
 }: {
-  searchParams: Promise<{ season?: string; division?: string; edition?: string }>;
+  searchParams: Promise<{
+    type?: string;
+    season?: string;
+    division?: string;
+    edition?: string;
+  }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -27,16 +33,13 @@ export default async function RankPage({
       .maybeSingle();
 
     return (
-      <RetroWindow
-        title="Sign In Required — Power Rankings Editor"
-        theme="scdl"
-      >
+      <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
         <div className="py-8 px-4 text-center space-y-4">
           <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
             <Lock className="w-6 h-6 text-[#f0c020]" />
           </div>
           <h1 className="text-lg font-bold text-[#f0ede0]">
-            Sign in with Discord to Rank Teams
+            Sign in with Discord to Create Rankings
           </h1>
           <div className="flex justify-center">
             <AuthButton
@@ -57,6 +60,7 @@ export default async function RankPage({
     { data: divisionThemes },
     { data: editions },
     { data: teams },
+    { data: seasonPlayers },
   ] = await Promise.all([
     checkUserAllowlisted(supabase),
     supabase
@@ -80,12 +84,16 @@ export default async function RankPage({
       .select("*")
       .eq("is_active", true)
       .order("default_order", { ascending: true }),
+    supabase
+      .from("season_players")
+      .select("*")
+      .order("name", { ascending: true }),
   ]);
 
   if (!isAllowlisted) {
     return (
       <AllowlistBlockedWindow
-        title="Power Rankings Editor — Invite Only"
+        title="Rankings Editor — Invite Only"
         user={{
           id: user.id,
           username: profile?.username ?? "Discord User",
@@ -124,8 +132,27 @@ export default async function RankPage({
     meta.preferred_username ||
     "Discord User";
 
+  const matchedSeason = params.season
+    ? (seasons ?? []).find((s) => s.slug === params.season)
+    : undefined;
+  const matchedEdition =
+    matchedSeason && params.edition
+      ? (editions ?? []).find(
+          (e) => e.season_id === matchedSeason.id && e.slug === params.edition
+        )
+      : undefined;
+
+  const initialType: RankingType =
+    params.type === "player"
+      ? "player"
+      : params.type === "team"
+      ? "team"
+      : matchedEdition?.is_players_only
+      ? "player"
+      : "team";
+
   return (
-    <BallotEditor
+    <RankWorkspace
       userId={user.id}
       initialAuthorName={profile?.username ?? discordDefaultName}
       discordDefaultName={discordDefaultName}
@@ -134,6 +161,8 @@ export default async function RankPage({
       themes={divisionThemes ?? []}
       editions={editions ?? []}
       teams={teams ?? []}
+      seasonPlayers={seasonPlayers ?? []}
+      initialType={initialType}
       initialSeasonSlug={params.season}
       initialDivisionSlug={params.division}
       initialEditionSlug={params.edition}
