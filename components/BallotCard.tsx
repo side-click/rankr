@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Award, User } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import { resolveDivisionTheme } from "@/utils/themes";
 import type { RankingType, TierVariant } from "@/types/database";
 
 type MaybeArray<T> = T | T[] | null | undefined;
@@ -21,6 +22,7 @@ export interface BallotCardData {
   season_name_snapshot?: string | null;
   division_name_snapshot?: string | null;
   division_logo_snapshot?: string | null;
+  division_theme_snapshot?: string | null;
   edition_name_snapshot?: string | null;
   profiles?: MaybeArray<{ username: string; avatar_url: string | null }>;
   seasons?: MaybeArray<{
@@ -37,6 +39,7 @@ export interface BallotCardData {
     name: string;
     slug?: string;
     logo_url: string | null;
+    theme_key?: string | null;
   }>;
   editions?: MaybeArray<{ name: string }>;
 }
@@ -74,9 +77,26 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
     ? new Date(ballot.published_at).toLocaleDateString()
     : null;
 
+  const resolvedTheme = hasDivision
+    ? resolveDivisionTheme(
+        division?.theme_key ?? ballot.division_theme_snapshot
+      )
+    : {
+        primary_color: "#1b5e36",
+        secondary_color: "#0f2e1f",
+        accent_text_color: "#7cd438",
+      };
+
+  const cardStyle: React.CSSProperties = {
+    borderLeftWidth: "3px",
+    borderLeftColor: resolvedTheme.primary_color,
+    backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}22 0%, rgba(20, 25, 23, 0.94) 55%, ${resolvedTheme.secondary_color}1c 100%)`,
+  };
+
   return (
     <Link
       href={`/ballot/${ballot.id}`}
+      style={cardStyle}
       className="xp-panel relative p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
       <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
@@ -123,7 +143,10 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
           <div className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate pr-14">
             {edName}
           </div>
-          <div className="text-xs font-bold text-[#d6d3c4] truncate">
+          <div
+            style={{ color: resolvedTheme.accent_text_color }}
+            className="text-xs font-bold truncate"
+          >
             {hasDivision ? divName : "All Divisions"}
           </div>
           <div className="text-xs font-semibold text-[#c7c5b8] truncate">
