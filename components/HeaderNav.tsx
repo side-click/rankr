@@ -28,7 +28,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         </span>
       </Link>
 
-      <nav className="hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-2 text-xs font-bold min-w-0">
+      <nav className="hidden min-[840px]:flex flex-1 items-center justify-center gap-1 lg:gap-2 text-xs font-bold min-w-0">
         <Link
           href="/rank"
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
@@ -75,13 +75,13 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         onClick={() => setMobileMenuOpen((prev) => !prev)}
         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={mobileMenuOpen}
-        className="md:hidden ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0"
+        className="min-[840px]:hidden ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0"
       >
         {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
       </button>
 
       {mobileMenuOpen && (
-        <div className="md:hidden fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-1 text-xs font-bold">
+        <div className="min-[840px]:hidden fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-1 text-xs font-bold">
           <Link
             href="/rank"
             onClick={() => setMobileMenuOpen(false)}
