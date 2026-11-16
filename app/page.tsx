@@ -142,7 +142,7 @@ export default async function HomePage() {
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0">
+                        <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0 whitespace-nowrap">
                           Browse →
                         </span>
                       </Link>
@@ -194,7 +194,7 @@ export default async function HomePage() {
                                     </div>
                                   </div>
                                 </div>
-                                <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0">
+                                <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0 whitespace-nowrap">
                                   Browse →
                                 </span>
                               </Link>
