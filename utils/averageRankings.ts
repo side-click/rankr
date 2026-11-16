@@ -36,6 +36,8 @@ export interface AverageTeamRow {
   ballotCount: number;
   stdDev: number;
   voterRanks: VoterRankPoint[];
+  previousRank?: number | null;
+  rankChange?: number | null;
 }
 
 export function computeAverageTeamRankings(
@@ -152,4 +154,36 @@ export function computeAverageTeamRankings(
     ...row,
     consensusRank: index + 1,
   }));
+}
+
+export function attachConsensusChanges(
+  currentRows: AverageTeamRow[],
+  previousRows: AverageTeamRow[]
+): AverageTeamRow[] {
+  if (previousRows.length === 0) {
+    return currentRows.map((r) => ({
+      ...r,
+      previousRank: null,
+      rankChange: null,
+    }));
+  }
+
+  const prevByKey = new Map<string, number>();
+  const prevByName = new Map<string, number>();
+  for (const prev of previousRows) {
+    prevByKey.set(prev.teamKey, prev.consensusRank);
+    prevByName.set(prev.teamName.trim().toLowerCase(), prev.consensusRank);
+  }
+
+  return currentRows.map((row) => {
+    const prevRank =
+      prevByKey.get(row.teamKey) ??
+      prevByName.get(row.teamName.trim().toLowerCase()) ??
+      null;
+    return {
+      ...row,
+      previousRank: prevRank,
+      rankChange: prevRank !== null ? prevRank - row.consensusRank : null,
+    };
+  });
 }

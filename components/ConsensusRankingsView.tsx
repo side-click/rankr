@@ -16,6 +16,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { RankChangeBadge } from "@/components/RankChangeBadge";
 import { getRankColor } from "@/utils/rankColors";
 import { getThemeGradients } from "@/utils/themes";
 import type { AverageTeamRow } from "@/utils/averageRankings";
@@ -641,11 +642,12 @@ export function ConsensusRankingsView({
 
                 {/* Column Header */}
                 <div
-                  className={`grid grid-cols-[120px_1fr_150px_130px] gap-x-8 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
+                  className={`grid grid-cols-[100px_88px_1fr_140px_120px] gap-x-6 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
                     exporting ? "px-10 py-2" : "px-8 py-2"
                   }`}
                 >
                   <div className="text-center">Rank</div>
+                  <div className="text-center">Change</div>
                   <div className="pl-[104px]">Team</div>
                   <div className="text-center">Avg Rank</div>
                   <div className="text-center">#1 Votes</div>
@@ -666,7 +668,7 @@ export function ConsensusRankingsView({
                             : "px-8 py-4"
                         }
                       >
-                        <div className="grid grid-cols-[120px_1fr_150px_130px] gap-x-8 items-center">
+                        <div className="grid grid-cols-[100px_88px_1fr_140px_120px] gap-x-6 items-center">
                           <div className="flex items-center justify-center">
                             <span
                               style={{
@@ -678,6 +680,13 @@ export function ConsensusRankingsView({
                             >
                               {row.consensusRank}
                             </span>
+                          </div>
+
+                          <div className="flex justify-center">
+                            <RankChangeBadge
+                              previousRank={row.previousRank ?? null}
+                              rankChange={row.rankChange ?? null}
+                            />
                           </div>
 
                           <div className="flex items-center gap-6 min-w-0">
@@ -727,7 +736,7 @@ export function ConsensusRankingsView({
                         </div>
 
                         {showBreakdown && !exporting && (
-                          <div className="mt-3 pl-[152px] flex flex-wrap items-center gap-1.5">
+                          <div className="mt-3 pl-[236px] flex flex-wrap items-center gap-1.5">
                             {row.voterRanks.map((vr) => (
                               <Link
                                 key={`${row.teamKey}-${vr.ballotId}`}

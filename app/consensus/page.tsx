@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import {
+  attachConsensusChanges,
   computeAverageTeamRankings,
   type ConsensusBallotInput,
 } from "@/utils/averageRankings";
@@ -138,33 +139,60 @@ export default async function ConsensusPage({
       latestEditionCount < 2
   );
 
+  const selectedIdx = selectedEdition
+    ? seasonEditionsDesc.findIndex((ed) => ed.id === selectedEdition.id)
+    : -1;
+  const previousEdition =
+    selectedIdx >= 0
+      ? seasonEditionsDesc
+          .slice(selectedIdx + 1)
+          .find((ed) => (ballotCountByEditionId.get(ed.id) ?? 0) >= 1) ?? null
+      : null;
+
+  const ballotSelectQuery = `
+    id,
+    profiles ( username, avatar_url ),
+    ballot_entries (
+      rank,
+      team_id,
+      team_name_snapshot,
+      teams ( id, name, logo_url )
+    )
+  `;
+
   let ballots: ConsensusBallotInput[] = [];
+  let prevBallots: ConsensusBallotInput[] = [];
   if (selectedSeason && selectedDivision && selectedEdition) {
-    const { data: ballotRows } = await supabase
-      .from("ballots")
-      .select(
-        `
-        id,
-        profiles ( username, avatar_url ),
-        ballot_entries (
-          rank,
-          team_id,
-          team_name_snapshot,
-          teams ( id, name, logo_url )
-        )
-      `
-      )
-      .eq("status", "published")
-      .eq("ranking_type", "team")
-      .eq("season_id", selectedSeason.id)
-      .eq("division_id", selectedDivision.id)
-      .eq("edition_id", selectedEdition.id)
-      .order("published_at", { ascending: false });
+    const [{ data: ballotRows }, prevRes] = await Promise.all([
+      supabase
+        .from("ballots")
+        .select(ballotSelectQuery)
+        .eq("status", "published")
+        .eq("ranking_type", "team")
+        .eq("season_id", selectedSeason.id)
+        .eq("division_id", selectedDivision.id)
+        .eq("edition_id", selectedEdition.id)
+        .order("published_at", { ascending: false }),
+      previousEdition
+        ? supabase
+            .from("ballots")
+            .select(ballotSelectQuery)
+            .eq("status", "published")
+            .eq("ranking_type", "team")
+            .eq("season_id", selectedSeason.id)
+            .eq("division_id", selectedDivision.id)
+            .eq("edition_id", previousEdition.id)
+        : Promise.resolve({ data: [] }),
+    ]);
 
     ballots = (ballotRows ?? []) as ConsensusBallotInput[];
+    prevBallots = (prevRes.data ?? []) as ConsensusBallotInput[];
   }
 
-  const averageRows = computeAverageTeamRankings(ballots);
+  const averageRows = attachConsensusChanges(
+    computeAverageTeamRankings(ballots),
+    computeAverageTeamRankings(prevBallots)
+  );
 
   const contributors = ballots.map((b) => {
     const prof = unwrap(b.profiles);
