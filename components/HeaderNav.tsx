@@ -28,7 +28,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         </span>
       </Link>
 
-      <nav className="hidden md:flex items-center gap-1 text-xs font-bold min-w-0">
+      <nav className="hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-2 text-xs font-bold min-w-0">
         <Link
           href="/rank"
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
