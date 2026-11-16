@@ -117,35 +117,35 @@ export default async function HomePage() {
 
                   return (
                     <div key={season.id} className="xp-panel p-3 space-y-2.5">
-                      <div className="flex items-center gap-3 pb-2 border-b border-white/10">
-                        {league?.logo_url && (
-                          <img
-                            src={league.logo_url}
-                            alt={league.name}
-                            className="w-11 h-11 object-contain shrink-0"
-                          />
-                        )}
-                        <Link
-                          href={`/browse?season=${season.slug}`}
-                          title={`Browse ${season.name}`}
-                          aria-label={`Browse ${season.name}`}
-                          className="xp-btn !p-0 w-9 h-9 justify-center shrink-0"
-                        >
-                          <Eye className="w-4 h-4 text-[#f0c020]" />
-                        </Link>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
-                            {league?.name ?? "League"}
-                          </div>
-                          <div className="text-sm font-bold text-[#f0ede0] flex flex-wrap items-baseline gap-1.5">
-                            <span>{season.name}</span>
-                            <span className="text-xs font-normal text-[#a6a89e]">
-                              ({playerCount}{" "}
-                              {playerCount === 1 ? "player" : "players"})
-                            </span>
+                      <Link
+                        href={`/browse?season=${season.slug}`}
+                        className="flex items-center justify-between gap-3 pb-2.5 px-1.5 -mx-1.5 py-1 rounded border-b border-white/10 hover:bg-white/5 transition group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {league?.logo_url && (
+                            <img
+                              src={league.logo_url}
+                              alt={league.name}
+                              className="w-11 h-11 object-contain shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                              {league?.name ?? "League"}
+                            </div>
+                            <div className="text-sm font-bold text-[#f0ede0] flex flex-wrap items-baseline gap-1.5">
+                              <span>{season.name}</span>
+                              <span className="text-xs font-normal text-[#a6a89e]">
+                                ({playerCount}{" "}
+                                {playerCount === 1 ? "player" : "players"})
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                        <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0">
+                          Browse →
+                        </span>
+                      </Link>
 
                       {seasonDivisions.length === 0 ? (
                         <div className="text-xs text-[#a6a89e]">
@@ -164,44 +164,40 @@ export default async function HomePage() {
                               (t) => t.division_id === div.id
                             ).length;
                             return (
-                              <div
+                              <Link
                                 key={div.id}
+                                href={`/browse?season=${season.slug}&division=${div.slug}`}
                                 style={{
                                   borderLeftWidth: "3px",
                                   borderLeftColor: divTheme.primary_color,
                                 }}
-                                className="xp-inset p-2.5 flex items-center gap-3"
+                                className="xp-inset p-3 flex items-center justify-between gap-3 hover:brightness-115 transition group"
                               >
-                                {logoSrc && (
-                                  <img
-                                    src={logoSrc}
-                                    alt={div.name}
-                                    className="w-11 h-11 object-contain shrink-0"
-                                  />
-                                )}
-                                <Link
-                                  href={`/browse?season=${season.slug}&division=${div.slug}`}
-                                  title={`Browse ${div.name}`}
-                                  aria-label={`Browse ${div.name}`}
-                                  className="xp-btn !p-0 w-9 h-9 justify-center shrink-0"
-                                >
-                                  <Eye className="w-4 h-4 text-[#f0c020]" />
-                                </Link>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-baseline gap-1.5">
-                                    <span
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {logoSrc && (
+                                    <img
+                                      src={logoSrc}
+                                      alt={div.name}
+                                      className="w-11 h-11 object-contain shrink-0"
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <div
                                       style={{ color: divTheme.accent_text_color }}
-                                      className="font-bold text-base sm:text-lg leading-tight"
+                                      className="font-bold text-base leading-tight truncate"
                                     >
                                       {div.name}
-                                    </span>
-                                    <span className="text-xs font-normal text-[#a6a89e]">
-                                      ({teamCount}{" "}
-                                      {teamCount === 1 ? "team" : "teams"})
-                                    </span>
+                                    </div>
+                                    <div className="text-xs font-normal text-[#a6a89e]">
+                                      {teamCount}{" "}
+                                      {teamCount === 1 ? "team" : "teams"}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
+                                <span className="text-xs font-bold text-[#7cd438] group-hover:underline shrink-0">
+                                  Browse →
+                                </span>
+                              </Link>
                             );
                           })}
                         </div>
