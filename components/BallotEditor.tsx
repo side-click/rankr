@@ -609,7 +609,15 @@ export function BallotEditor({
             loadedSnapshotRef.current = "";
             setRankedItems([]);
           } else {
-            const freshItems = divisionTeams.map((team) => ({
+            const initialTeams =
+              prevRankMap.size > 0
+                ? [...divisionTeams].sort((a, b) => {
+                    const ra = prevRankMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+                    const rb = prevRankMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+                    return ra - rb;
+                  })
+                : divisionTeams;
+            const freshItems = initialTeams.map((team) => ({
               team,
               commentary: "",
               previousRank: prevRankMap.get(team.id) ?? null,
