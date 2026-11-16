@@ -79,18 +79,29 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
       href={`/ballot/${ballot.id}`}
       className="xp-panel relative p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
-      <span
-        title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-        className="absolute top-3.5 right-3.5 w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center"
-      >
-        {isPlayer ? (
-          <User className="w-3.5 h-3.5 text-[#f0c020]" />
+      <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+        {displayLogo ? (
+          <img
+            src={displayLogo}
+            alt={hasDivision ? divName : league?.name ?? sName}
+            className="w-6 h-6 object-contain shrink-0"
+          />
         ) : (
-          <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+          <Award className="w-5 h-5 text-[#7cd438] shrink-0" />
         )}
-      </span>
+        <span
+          title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+          className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
+        >
+          {isPlayer ? (
+            <User className="w-3.5 h-3.5 text-[#f0c020]" />
+          ) : (
+            <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+          )}
+        </span>
+      </div>
 
-      <div className="flex items-stretch gap-2.5 min-w-0">
+      <div className="flex items-stretch gap-3 min-w-0">
         <div className="w-[116px] sm:w-[128px] shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-1.5 py-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
@@ -108,29 +119,18 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 py-0.5">
-          {displayLogo ? (
-            <img
-              src={displayLogo}
-              alt={hasDivision ? divName : league?.name ?? sName}
-              className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
-            />
-          ) : (
-            <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate pr-8">
-              {edName}
-            </div>
-            <div className="text-xs font-bold text-[#d6d3c4] truncate">
-              {hasDivision ? divName : "All Divisions"}
-            </div>
-            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
-            </div>
-            <div className="text-[11px] text-[#a6a89e] truncate">
-              {leagueSeasonLabel}
-            </div>
+        <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
+          <div className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate pr-14">
+            {edName}
+          </div>
+          <div className="text-xs font-bold text-[#d6d3c4] truncate">
+            {hasDivision ? divName : "All Divisions"}
+          </div>
+          <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+            {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+          </div>
+          <div className="text-[11px] text-[#a6a89e] truncate">
+            {leagueSeasonLabel}
           </div>
         </div>
       </div>
