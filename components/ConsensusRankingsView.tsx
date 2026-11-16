@@ -167,7 +167,15 @@ export function ConsensusRankingsView({
 
   async function handleCopyLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const params = new URLSearchParams();
+      if (selectedSeasonSlug) params.set("season", selectedSeasonSlug);
+      if (selectedDivisionSlug) params.set("division", selectedDivisionSlug);
+      if (selectedEditionSlug) params.set("edition", selectedEditionSlug);
+      const qs = params.toString();
+      const shareUrl = `${window.location.origin}/consensus${
+        qs ? `?${qs}` : ""
+      }`;
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

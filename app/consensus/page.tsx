@@ -1,25 +1,80 @@
 import type { Metadata } from "next";
-import { createClient } from "@/utils/supabase/server";
-import {
-  attachConsensusChanges,
-  computeAverageTeamRankings,
-  type ConsensusBallotInput,
-} from "@/utils/averageRankings";
-import { resolveDivisionTheme } from "@/utils/themes";
-import type { DivisionTheme } from "@/types/database";
+import { loadConsensusPageData } from "@/utils/consensusData";
 import { ConsensusRankingsView } from "@/components/ConsensusRankingsView";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Consensus Rankings | Rankr",
-  description:
-    "Official aggregated team power rankings averaged across all published submissions.",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    season?: string;
+    division?: string;
+    edition?: string;
+  }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const data = await loadConsensusPageData(params);
 
-function unwrap<T>(val: T | T[] | null | undefined): T | null {
-  if (!val) return null;
-  return Array.isArray(val) ? val[0] ?? null : val;
+  const title = data.divisionName && data.editionName
+    ? `${data.divisionName} — ${data.editionName} Consensus`
+    : "Consensus Power Rankings | Rankr";
+
+  const top3 = data.rows.slice(0, 3);
+  const topSummary =
+    top3.length > 0
+      ? `Top 3: ${top3
+          .map(
+            (r) =>
+              `#${r.consensusRank} ${r.teamName} (${r.averageRank.toFixed(2)} avg)`
+          )
+          .join(" • ")}`
+      : null;
+
+  const description = topSummary
+    ? `${topSummary} — Average of ${data.submissionCount} published ${
+        data.submissionCount === 1 ? "ranking" : "rankings"
+      }`
+    : "Aggregated team power rankings averaged across all published submissions.";
+
+  const ogParams = new URLSearchParams();
+  if (data.selectedSeasonSlug) ogParams.set("season", data.selectedSeasonSlug);
+  if (data.selectedDivisionSlug) {
+    ogParams.set("division", data.selectedDivisionSlug);
+  }
+  if (data.selectedEditionSlug) {
+    ogParams.set("edition", data.selectedEditionSlug);
+  }
+  ogParams.set(
+    "v",
+    `${data.submissionCount}-${top3.map((r) => r.teamKey).join(",")}`
+  );
+  const ogImageUrl = `/api/og/consensus?${ogParams.toString()}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "article",
+      siteName: "Rankr",
+      title,
+      description,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 export default async function ConsensusPage({
@@ -32,270 +87,29 @@ export default async function ConsensusPage({
   }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-
-  const [
-    { data: seasons },
-    { data: divisions },
-    { data: editions },
-    { data: themesData },
-  ] = await Promise.all([
-    supabase
-      .from("seasons")
-      .select("*, leagues ( * )")
-      .order("is_active", { ascending: false })
-      .order("created_at", { ascending: false }),
-    supabase.from("divisions").select("*").order("name"),
-    supabase
-      .from("editions")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }),
-    supabase.from("division_themes").select("*"),
-  ]);
-
-  const divisionThemes = (themesData ?? []) as DivisionTheme[];
-  const allSeasons = seasons ?? [];
-  const allDivisions = divisions ?? [];
-  const allEditions = editions ?? [];
-
-  const selectedSeason =
-    (params.season ? allSeasons.find((s) => s.slug === params.season) : null) ??
-    allSeasons.find((s) => s.is_active) ??
-    allSeasons[0] ??
-    null;
-
-  const seasonDivisions = selectedSeason
-    ? allDivisions.filter((d) => d.season_id === selectedSeason.id)
-    : [];
-
-  const selectedDivision =
-    (params.division
-      ? seasonDivisions.find((d) => d.slug === params.division)
-      : null) ??
-    seasonDivisions[0] ??
-    null;
-
-  const seasonEditionsAsc = selectedSeason
-    ? allEditions
-        .filter((e) => e.season_id === selectedSeason.id && !e.is_players_only)
-        .sort(
-          (a, b) =>
-            a.sort_order - b.sort_order ||
-            a.created_at.localeCompare(b.created_at)
-        )
-    : [];
-
-  const seasonEditionsDesc = [...seasonEditionsAsc].reverse();
-
-  // Count published team ballots per edition for the selected season + division
-  const ballotCountByEditionId = new Map<string, number>();
-  if (selectedSeason && selectedDivision) {
-    const { data: countRows } = await supabase
-      .from("ballots")
-      .select("edition_id")
-      .eq("status", "published")
-      .eq("ranking_type", "team")
-      .eq("season_id", selectedSeason.id)
-      .eq("division_id", selectedDivision.id);
-
-    for (const row of countRows ?? []) {
-      if (!row.edition_id) continue;
-      ballotCountByEditionId.set(
-        row.edition_id,
-        (ballotCountByEditionId.get(row.edition_id) ?? 0) + 1
-      );
-    }
-  }
-
-  const latestOpenEdition =
-    seasonEditionsDesc.find((ed) => ed.is_open && !ed.is_archived) ?? null;
-
-  const explicitEdition = params.edition
-    ? seasonEditionsDesc.find((ed) => ed.slug === params.edition) ?? null
-    : null;
-
-  const mostRecentWithMin2 =
-    seasonEditionsDesc.find(
-      (ed) => (ballotCountByEditionId.get(ed.id) ?? 0) >= 2
-    ) ?? null;
-
-  const selectedEdition =
-    explicitEdition ??
-    mostRecentWithMin2 ??
-    latestOpenEdition ??
-    seasonEditionsDesc.find((ed) => !ed.is_archived) ??
-    seasonEditionsDesc[0] ??
-    null;
-
-  const latestEditionCount = latestOpenEdition
-    ? ballotCountByEditionId.get(latestOpenEdition.id) ?? 0
-    : 0;
-
-  const isFallbackOutdated = Boolean(
-    latestOpenEdition &&
-      selectedEdition &&
-      selectedEdition.id !== latestOpenEdition.id &&
-      latestEditionCount < 2
-  );
-
-  const selectedIdx = selectedEdition
-    ? seasonEditionsDesc.findIndex((ed) => ed.id === selectedEdition.id)
-    : -1;
-  const previousEdition =
-    selectedIdx >= 0
-      ? seasonEditionsDesc
-          .slice(selectedIdx + 1)
-          .find((ed) => (ballotCountByEditionId.get(ed.id) ?? 0) >= 1) ?? null
-      : null;
-
-  const ballotSelectQuery = `
-    id,
-    profiles ( username, avatar_url ),
-    ballot_entries (
-      rank,
-      team_id,
-      team_name_snapshot,
-      teams ( id, name, logo_url )
-    )
-  `;
-
-  let ballots: ConsensusBallotInput[] = [];
-  let prevBallots: ConsensusBallotInput[] = [];
-  if (selectedSeason && selectedDivision && selectedEdition) {
-    const [{ data: ballotRows }, prevRes] = await Promise.all([
-      supabase
-        .from("ballots")
-        .select(ballotSelectQuery)
-        .eq("status", "published")
-        .eq("ranking_type", "team")
-        .eq("season_id", selectedSeason.id)
-        .eq("division_id", selectedDivision.id)
-        .eq("edition_id", selectedEdition.id)
-        .order("published_at", { ascending: false }),
-      previousEdition
-        ? supabase
-            .from("ballots")
-            .select(ballotSelectQuery)
-            .eq("status", "published")
-            .eq("ranking_type", "team")
-            .eq("season_id", selectedSeason.id)
-            .eq("division_id", selectedDivision.id)
-            .eq("edition_id", previousEdition.id)
-        : Promise.resolve({ data: [] }),
-    ]);
-
-    ballots = (ballotRows ?? []) as ConsensusBallotInput[];
-    prevBallots = (prevRes.data ?? []) as ConsensusBallotInput[];
-  }
-
-  const averageRows = attachConsensusChanges(
-    computeAverageTeamRankings(ballots),
-    computeAverageTeamRankings(prevBallots)
-  );
-
-  const contributors = ballots.map((b) => {
-    const prof = unwrap(b.profiles);
-    return {
-      ballotId: b.id,
-      username: prof?.username ?? "Voter",
-      avatarUrl: prof?.avatar_url ?? null,
-    };
-  });
-
-  const seasonOptions = allSeasons.map((s) => {
-    const league = unwrap(
-      s.leagues as
-        | {
-            name?: string;
-            short_name?: string | null;
-            slug?: string;
-            logo_url?: string | null;
-          }
-        | {
-            name?: string;
-            short_name?: string | null;
-            slug?: string;
-            logo_url?: string | null;
-          }[]
-        | null
-    );
-    return {
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      isActive: s.is_active,
-      leagueName: league?.name ?? "League",
-      leagueShortName:
-        league?.short_name ||
-        (league?.slug === "scdl" ? "SCDL" : league?.name ?? ""),
-      leagueLogoUrl: league?.logo_url ?? null,
-    };
-  });
-
-  const divisionOptions = seasonDivisions.map((d) => {
-    const theme = resolveDivisionTheme(d.theme_key, divisionThemes);
-    return {
-      id: d.id,
-      name: d.name,
-      slug: d.slug,
-      logoUrl: d.logo_url ?? theme.default_logo_url ?? null,
-      accentColor: theme.accent_text_color,
-      primaryColor: theme.primary_color,
-      themeKey: d.theme_key,
-    };
-  });
-
-  const editionOptions = seasonEditionsAsc.map((ed) => ({
-    id: ed.id,
-    name: ed.name,
-    slug: ed.slug,
-    isOpen: ed.is_open,
-    isArchived: Boolean(ed.is_archived),
-    ballotCount: ballotCountByEditionId.get(ed.id) ?? 0,
-  }));
-
-  const selectedSeasonLeague = selectedSeason
-    ? unwrap(
-        selectedSeason.leagues as
-          | {
-              name?: string;
-              short_name?: string | null;
-              slug?: string;
-              logo_url?: string | null;
-            }
-          | null
-      )
-    : null;
-
-  const selectedDivTheme = resolveDivisionTheme(
-    selectedDivision?.theme_key ?? "scdl",
-    divisionThemes
-  );
+  const data = await loadConsensusPageData(params);
 
   return (
     <ConsensusRankingsView
-      seasons={seasonOptions}
-      divisions={divisionOptions}
-      editions={editionOptions}
-      selectedSeasonSlug={selectedSeason?.slug ?? ""}
-      selectedDivisionSlug={selectedDivision?.slug ?? ""}
-      selectedEditionSlug={selectedEdition?.slug ?? ""}
-      leagueName={selectedSeasonLeague?.name ?? "Scuttle Crab Draft League"}
-      leagueLogoUrl={selectedSeasonLeague?.logo_url ?? null}
-      seasonName={selectedSeason?.name ?? ""}
-      divisionName={selectedDivision?.name ?? ""}
-      divisionLogoUrl={
-        selectedDivision?.logo_url ?? selectedDivTheme.default_logo_url ?? null
-      }
-      divisionTheme={selectedDivTheme}
-      editionName={selectedEdition?.name ?? ""}
-      submissionCount={ballots.length}
-      isFallbackOutdated={isFallbackOutdated}
-      latestEditionName={latestOpenEdition?.name ?? null}
-      latestEditionCount={latestEditionCount}
-      rows={averageRows}
-      contributors={contributors}
+      seasons={data.seasons}
+      divisions={data.divisions}
+      editions={data.editions}
+      selectedSeasonSlug={data.selectedSeasonSlug}
+      selectedDivisionSlug={data.selectedDivisionSlug}
+      selectedEditionSlug={data.selectedEditionSlug}
+      leagueName={data.leagueName}
+      leagueLogoUrl={data.leagueLogoUrl}
+      seasonName={data.seasonName}
+      divisionName={data.divisionName}
+      divisionLogoUrl={data.divisionLogoUrl}
+      divisionTheme={data.divisionTheme}
+      editionName={data.editionName}
+      submissionCount={data.submissionCount}
+      isFallbackOutdated={data.isFallbackOutdated}
+      latestEditionName={data.latestEditionName}
+      latestEditionCount={data.latestEditionCount}
+      rows={data.rows}
+      contributors={data.contributors}
     />
   );
 }
