@@ -247,10 +247,14 @@ export function PlayerTierShareView({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
+      const exportHeight = Math.ceil(
+        cardRef.current.getBoundingClientRect().height
+      );
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         width: 1060,
+        height: exportHeight,
         style: { margin: "0" },
       });
       const link = document.createElement("a");
