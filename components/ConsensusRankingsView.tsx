@@ -446,8 +446,7 @@ export function ConsensusRankingsView({
                   </span>
                   {currentEdition && (
                     <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#2a2210] border border-[#c89b3c]/60 text-[#f0c020] shrink-0">
-                      {currentEdition.ballotCount}{" "}
-                      {currentEdition.ballotCount === 1 ? "ballot" : "ballots"}
+                      {currentEdition.ballotCount} published
                     </span>
                   )}
                 </div>
@@ -524,7 +523,7 @@ export function ConsensusRankingsView({
                 <Link
                   key={c.ballotId}
                   href={`/ballot/${c.ballotId}`}
-                  title={`Open ${c.username}'s ballot`}
+                  title={`Open ${c.username}'s ranking`}
                   className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c89b3c]/60 text-[11px] font-bold text-[#e8e6dc] transition"
                 >
                   {c.avatarUrl ? (
@@ -701,7 +700,7 @@ export function ConsensusRankingsView({
                               {row.ballotCount < submissionCount && (
                                 <div className="text-[11px] text-[#a6a89e]">
                                   Ranked on {row.ballotCount} of{" "}
-                                  {submissionCount} ballots
+                                  {submissionCount} submissions
                                 </div>
                               )}
                             </div>

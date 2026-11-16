@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Consensus Rankings | Rankr",
   description:
-    "Official aggregated team power rankings averaged across all published ballots.",
+    "Official aggregated team power rankings averaged across all published submissions.",
 };
 
 function unwrap<T>(val: T | T[] | null | undefined): T | null {
