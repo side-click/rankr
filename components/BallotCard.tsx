@@ -65,7 +65,7 @@ export function getLeaguePrefix(
   return fallbackName ?? "";
 }
 
-export type BallotCardLayout = "grid" | "list" | "test1" | "test2" | "test3";
+export type BallotCardLayout = "grid" | "list";
 
 export function BallotCard({
   ballot,
@@ -111,7 +111,7 @@ export function BallotCard({
     backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
   };
 
-  if (layout === "list" || layout === "test1" || layout === "test2") {
+  if (layout === "list") {
     const top3Teams = !isPlayer
       ? [...(Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [])]
           .sort((a, b) => a.rank - b.rank)
@@ -142,18 +142,21 @@ export function BallotCard({
         })()
       : null;
 
+    const hasPreview = top3Teams.length > 0 || Boolean(topTierPreview);
+
     return (
       <Link
         href={`/ballot/${ballot.id}`}
         style={cardStyle}
-        className="xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4"
+        className={`xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 md:grid ${
+          hasPreview
+            ? "md:grid-cols-[164px_minmax(130px,1fr)_auto_auto] xl:grid-cols-[164px_minmax(130px,1fr)_auto_auto_auto]"
+            : "md:grid-cols-[164px_minmax(130px,1fr)_auto_auto]"
+        } md:items-center md:gap-4`}
       >
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div
-            className={`${
-              layout === "test2" ? "w-36" : "w-40 sm:w-44"
-            } shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10`}
-          >
+        {/* Mobile top row / Desktop Col 1 + Col 2 */}
+        <div className="flex items-center gap-3 min-w-0 md:contents">
+          <div className="w-36 sm:w-40 md:w-full shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -179,14 +182,14 @@ export function BallotCard({
                 <img
                   src={displayLogo}
                   alt={hasDivision ? divName : league?.name ?? sName}
-                  className="w-5 h-5 object-contain shrink-0"
+                  className="md:hidden w-5 h-5 object-contain shrink-0"
                 />
               ) : (
-                <Award className="w-4 h-4 text-[#7cd438] shrink-0" />
+                <Award className="md:hidden w-4 h-4 text-[#7cd438] shrink-0" />
               )}
               <span
                 title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-                className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                className="md:hidden w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
               >
                 {isPlayer ? (
                   <User className="w-3 h-3 text-[#f0c020]" />
@@ -195,107 +198,21 @@ export function BallotCard({
                 )}
               </span>
             </div>
-            <div className="text-xs truncate flex flex-wrap items-center gap-x-1.5">
-              <span
-                style={{ color: resolvedTheme.accent_text_color }}
-                className="font-bold"
-              >
-                {hasDivision ? divName : "All Divisions"}
-              </span>
-              <span className="text-[#6e7572]">•</span>
-              <span className="font-semibold text-[#c7c5b8]">
-                {isPlayer ? "Player Tier List" : "Team Power Rankings"}
-              </span>
-              {layout !== "test2" && (
-                <>
-                  <span className="text-[#6e7572]">•</span>
-                  <span className="text-[11px] text-[#a6a89e]">
-                    {leagueSeasonLabel}
-                  </span>
-                </>
-              )}
+            <div
+              style={{ color: resolvedTheme.accent_text_color }}
+              className="text-xs font-bold truncate"
+            >
+              {hasDivision ? divName : "All Divisions"}
+            </div>
+            <div className="md:hidden text-[11px] text-[#c7c5b8] truncate">
+              {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
+              <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
             </div>
           </div>
-
-          {layout === "test1" && (top3Teams.length > 0 || topTierPreview) && (
-            <div className="hidden lg:flex items-center gap-2 shrink-0">
-              {top3Teams.map((t) => (
-                <span
-                  key={t.rank}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
-                >
-                  <span className="text-[#f0c020]">#{t.rank}</span>
-                  {t.logoUrl && (
-                    <img
-                      src={t.logoUrl}
-                      alt={t.name}
-                      className="w-4 h-4 object-contain shrink-0"
-                    />
-                  )}
-                  <span className="max-w-[90px] truncate">{t.name}</span>
-                </span>
-              ))}
-              {topTierPreview && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
-                  <span className="font-bold text-[#f0c020]">
-                    {topTierPreview.label}:
-                  </span>
-                  <span className="max-w-[240px] truncate">
-                    {topTierPreview.players.join(", ")}
-                  </span>
-                </span>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 text-[11px] shrink-0">
-          <span className="text-[#a6a89e]">
-            {publishedDate ? `Published ${publishedDate}` : ""}
-          </span>
-          <span className="text-[#7cd438] font-bold shrink-0">Open →</span>
-        </div>
-      </Link>
-    );
-  }
-
-  if (layout === "test3") {
-    return (
-      <Link
-        href={`/ballot/${ballot.id}`}
-        style={cardStyle}
-        className="xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col md:grid md:grid-cols-[176px_1.2fr_1fr_auto] md:items-center gap-2.5 md:gap-4"
-      >
-        <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.username}
-              className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
-            />
-          ) : (
-            <span className="w-8 h-8 rounded-md bg-[#5865f2] text-white text-sm font-bold inline-flex items-center justify-center shrink-0">
-              {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
-            </span>
-          )}
-          <span className="text-xs font-bold text-[#f0c020] truncate">
-            {profile?.username ?? "Unknown"}
-          </span>
-        </div>
-
-        <div className="min-w-0">
-          <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-            {edName}
-          </div>
-          <div
-            style={{ color: resolvedTheme.accent_text_color }}
-            className="text-xs font-bold truncate"
-          >
-            {hasDivision ? divName : "All Divisions"}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 min-w-0">
+        {/* Desktop Col 3: Logo + Type + Season (auto width, never truncates) */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           {displayLogo ? (
             <img
               src={displayLogo}
@@ -315,21 +232,56 @@ export function BallotCard({
               <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
             )}
           </span>
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+          <div className="whitespace-nowrap">
+            <div className="text-xs font-semibold text-[#c7c5b8]">
               {isPlayer ? "Player Tier List" : "Team Power Rankings"}
             </div>
-            <div className="text-[11px] text-[#a6a89e] truncate">
+            <div className="text-[11px] text-[#a6a89e]">
               {leagueSeasonLabel}
             </div>
           </div>
         </div>
 
+        {/* Wide Desktop Col 4: Top 3 / Top Tier Preview (xl+ only) */}
+        {hasPreview && (
+          <div className="hidden xl:flex items-center gap-1.5 shrink-0">
+            {top3Teams.map((t) => (
+              <span
+                key={t.rank}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
+              >
+                <span className="text-[#f0c020]">#{t.rank}</span>
+                {t.logoUrl && (
+                  <img
+                    src={t.logoUrl}
+                    alt={t.name}
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
+                )}
+                <span className="max-w-[88px] truncate">{t.name}</span>
+              </span>
+            ))}
+            {topTierPreview && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
+                <span className="font-bold text-[#f0c020]">
+                  {topTierPreview.label}:
+                </span>
+                <span className="max-w-[220px] truncate">
+                  {topTierPreview.players.join(", ")}
+                </span>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Footer / Right Column */}
         <div className="flex items-center justify-between md:justify-end gap-4 pt-2 md:pt-0 border-t md:border-t-0 border-white/10 text-[11px] shrink-0">
-          <span className="text-[#a6a89e]">
+          <span className="text-[#a6a89e] whitespace-nowrap">
             {publishedDate ? `Published ${publishedDate}` : ""}
           </span>
-          <span className="text-[#7cd438] font-bold shrink-0">Open →</span>
+          <span className="text-[#7cd438] font-bold shrink-0 whitespace-nowrap">
+            Open →
+          </span>
         </div>
       </Link>
     );
