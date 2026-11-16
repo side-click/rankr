@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   CheckCircle2,
@@ -360,6 +361,11 @@ export function BallotEditor({
     [editions, seasonId]
   );
 
+  const currentOpenEditionId = useMemo(() => {
+    const reversed = [...seasonEditions].reverse();
+    return reversed.find((ed) => ed.is_open && !ed.is_archived)?.id ?? null;
+  }, [seasonEditions]);
+
   const [divisionId, setDivisionId] = useState<string>(() => {
     if (!initialDivisionSlug) return "";
     const match = divisions.find(
@@ -503,22 +509,30 @@ export function BallotEditor({
 
       try {
         const currentEd = seasonEditions.find((e) => e.id === editionId);
-        const prevEd = currentEd
+        const earlierEds = currentEd
           ? [...seasonEditions]
               .filter((e) => e.sort_order < currentEd.sort_order)
-              .sort((a, b) => b.sort_order - a.sort_order)[0]
-          : undefined;
+              .sort((a, b) => b.sort_order - a.sort_order)
+          : [];
 
         const prevRankMap = new Map<string, number>();
-        if (prevEd) {
-          const { data: prevBallot } = await supabase
+        if (earlierEds.length > 0) {
+          const { data: earlierBallots } = await supabase
             .from("ballots")
-            .select("id")
+            .select("id, edition_id")
             .eq("user_id", userId)
             .eq("division_id", divisionId)
-            .eq("edition_id", prevEd.id)
-            .eq("ranking_type", "team")
-            .maybeSingle();
+            .in(
+              "edition_id",
+              earlierEds.map((e) => e.id)
+            )
+            .eq("ranking_type", "team");
+
+          const prevBallot = earlierEds
+            .map((ed) =>
+              (earlierBallots ?? []).find((b) => b.edition_id === ed.id)
+            )
+            .find(Boolean);
 
           if (prevBallot) {
             const { data: prevEntries } = await supabase
@@ -571,30 +585,39 @@ export function BallotEditor({
             return rankA - rankB;
           });
 
-          setRankedItems(
-            orderedTeams.map((team) => ({
-              team,
-              commentary: entryByTeamId.get(team.id)?.commentary ?? "",
-              previousRank: prevRankMap.get(team.id) ?? null,
-            }))
-          );
+          const loadedItems = orderedTeams.map((team) => ({
+            team,
+            commentary: entryByTeamId.get(team.id)?.commentary ?? "",
+            previousRank: prevRankMap.get(team.id) ?? null,
+          }));
+          loadedSnapshotRef.current = JSON.stringify({
+            order: loadedItems.map((i) => i.team.id),
+            comments: loadedItems.map((i) => i.commentary),
+            authorNotes: currentBallot.author_notes ?? "",
+          });
+          setRankedItems(loadedItems);
         } else {
           setExistingBallotId(null);
           setBallotStatus(null);
           setAuthorNotes("");
           setShowGeneralNotes(false);
           const editionUnavailable =
-            Boolean(currentEd?.is_archived) || !currentEd?.is_open;
+            Boolean(currentEd?.is_archived) || isSeasonInactive;
           if (editionUnavailable) {
+            loadedSnapshotRef.current = "";
             setRankedItems([]);
           } else {
-            setRankedItems(
-              divisionTeams.map((team) => ({
-                team,
-                commentary: "",
-                previousRank: prevRankMap.get(team.id) ?? null,
-              }))
-            );
+            const freshItems = divisionTeams.map((team) => ({
+              team,
+              commentary: "",
+              previousRank: prevRankMap.get(team.id) ?? null,
+            }));
+            loadedSnapshotRef.current = JSON.stringify({
+              order: freshItems.map((i) => i.team.id),
+              comments: freshItems.map((i) => i.commentary),
+              authorNotes: "",
+            });
+            setRankedItems(freshItems);
           }
         }
 
@@ -763,6 +786,11 @@ export function BallotEditor({
 
       setExistingBallotId(savedBallot.id);
       setBallotStatus(savedBallot.status as "draft" | "published");
+      loadedSnapshotRef.current = JSON.stringify({
+        order: rankedItems.map((i) => i.team.id),
+        comments: rankedItems.map((i) => i.commentary),
+        authorNotes,
+      });
       if (targetStatus === "published") {
         fetch("/api/notify-publish", {
           method: "POST",
@@ -795,13 +823,40 @@ export function BallotEditor({
   const isEditDisabled =
     isSeasonInactive ||
     isEditionArchived ||
-    isEditionLocked ||
-    isEditionPlayersOnly;
+    isEditionPlayersOnly ||
+    (isEditionLocked && ballotStatus === "published");
   const isPublishDisabled =
     isSeasonInactive ||
     isEditionArchived ||
     isEditionLocked ||
     isEditionPlayersOnly;
+
+  const loadedSnapshotRef = useRef<string>("");
+  const currentSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        order: rankedItems.map((i) => i.team.id),
+        comments: rankedItems.map((i) => i.commentary),
+        authorNotes,
+      }),
+    [rankedItems, authorNotes]
+  );
+  const hasUnsavedChanges = Boolean(
+    !isEditDisabled &&
+      seasonId &&
+      divisionId &&
+      editionId &&
+      rankedItems.length > 0 &&
+      loadedSnapshotRef.current &&
+      currentSnapshot !== loadedSnapshotRef.current
+  );
+
+  function confirmSwitchScope(): boolean {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(
+      "Changing Season, Division, or Edition will clear unsaved changes. Continue?"
+    );
+  }
   const windowTheme =
     currentDivision?.theme_key === "dragon"
       ? "dragon"
@@ -831,6 +886,8 @@ export function BallotEditor({
               value={seasonId}
               onChange={(e) => {
                 const newId = e.target.value;
+                if (newId === seasonId) return;
+                if (!confirmSwitchScope()) return;
                 setSeasonId(newId);
                 const nextSeason = seasons.find((s) => s.id === newId);
                 if (nextSeason?.slug) {
@@ -870,6 +927,8 @@ export function BallotEditor({
               disabled={!seasonId}
               onChange={(e) => {
                 const nextDivId = e.target.value;
+                if (nextDivId === divisionId) return;
+                if (!confirmSwitchScope()) return;
                 setDivisionId(nextDivId);
                 if (nextDivId && !editionId && seasonEditions.length > 0) {
                   const reversedEds = [...seasonEditions].reverse();
@@ -902,18 +961,19 @@ export function BallotEditor({
             <select
               value={editionId}
               disabled={!seasonId}
-              onChange={(e) => setEditionId(e.target.value)}
+              onChange={(e) => {
+                const nextEdId = e.target.value;
+                if (nextEdId === editionId) return;
+                if (!confirmSwitchScope()) return;
+                setEditionId(nextEdId);
+              }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
               <option value="">Select an edition...</option>
               {seasonEditions.map((ed) => (
                 <option key={ed.id} value={ed.id}>
-                  {ed.name}{" "}
-                  {ed.is_archived
-                    ? "(Archived)"
-                    : !ed.is_open
-                    ? "(Locked)"
-                    : ""}
+                  {ed.name}
+                  {ed.id === currentOpenEditionId ? " (Current)" : ""}
                 </option>
               ))}
             </select>
@@ -1034,7 +1094,7 @@ export function BallotEditor({
         )}
 
         <div className="mb-3 pb-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-h-[28px]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-[28px]">
             {message?.type === "success" ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-[#173b24] border border-[#3a804d] text-[#7cd438] rounded">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -1047,6 +1107,14 @@ export function BallotEditor({
             ) : ballotStatus === "draft" ? (
               <span className="text-xs text-[#a6a89e]">● Draft saved</span>
             ) : null}
+            {hasUnsavedChanges && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] italic text-[#f0c020]">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Changing Season, Division, or Edition will clear unsaved work.
+                </span>
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

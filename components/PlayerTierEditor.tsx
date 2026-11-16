@@ -659,6 +659,11 @@ export function PlayerTierEditor({
     [editions, seasonId]
   );
 
+  const currentOpenEditionId = useMemo(() => {
+    const reversed = [...seasonEditions].reverse();
+    return reversed.find((ed) => ed.is_open && !ed.is_archived)?.id ?? null;
+  }, [seasonEditions]);
+
   // "all" means division_id = null ("All Divisions" / Pre-draft / SCDL theme)
   const [divisionScope, setDivisionScope] = useState<string>(() => {
     if (!initialDivisionSlug || initialDivisionSlug === "all") return "all";
@@ -1484,7 +1489,9 @@ export function PlayerTierEditor({
   const isEditionArchived = Boolean(currentEdition?.is_archived);
   const isEditionLocked = currentEdition ? !currentEdition.is_open : false;
   const isEditDisabled =
-    isSeasonInactive || isEditionArchived || isEditionLocked;
+    isSeasonInactive ||
+    isEditionArchived ||
+    (isEditionLocked && ballotStatus === "published");
   const isPublishDisabled =
     isSeasonInactive || isEditionArchived || isEditionLocked;
 
@@ -1605,12 +1612,8 @@ export function PlayerTierEditor({
               <option value="">Select an edition...</option>
               {seasonEditions.map((ed) => (
                 <option key={ed.id} value={ed.id}>
-                  {ed.name}{" "}
-                  {ed.is_archived
-                    ? "(Archived)"
-                    : !ed.is_open
-                    ? "(Locked)"
-                    : ""}
+                  {ed.name}
+                  {ed.id === currentOpenEditionId ? " (Current)" : ""}
                 </option>
               ))}
             </select>
