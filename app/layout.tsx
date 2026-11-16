@@ -67,6 +67,18 @@ export default async function RootLayout({
   }
 
   const maintenanceMode = Boolean(settings?.maintenance_mode);
+  const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
+  const shortSha = commitSha?.slice(0, 7) ?? "local";
+  const buildTimeIso = process.env.NEXT_PUBLIC_BUILD_TIME;
+  const buildTimeLabel = buildTimeIso
+    ? new Date(buildTimeIso).toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
 
   return (
     <html lang="en" className={inter.variable}>
@@ -102,13 +114,49 @@ export default async function RootLayout({
           )}
         </main>
         <footer className="text-center text-[11px] text-[#9aa39d] px-4 py-4 border-t border-white/10 bg-black/35 space-y-2">
-          <div className="flex items-center justify-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
             <Link
               href="/terms"
               className="text-[#c7c5b8] hover:text-[#f0c020] underline"
             >
               Terms of Service
             </Link>
+            <span className="text-white/20">•</span>
+            <a
+              href="https://github.com/side-click/rankr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 hover:border-[#c89b3c]/60 text-[#d6d3c4] hover:text-[#f0c020] transition"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-3.5 h-3.5 shrink-0"
+                aria-hidden="true"
+              >
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+              </svg>
+              <span>GitHub</span>
+            </a>
+            <a
+              href={
+                commitSha
+                  ? `https://github.com/side-click/rankr/commit/${commitSha}`
+                  : "https://github.com/side-click/rankr"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Deployed commit & build time"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 text-[11px] font-mono text-[#9aa39d] hover:text-[#f0c020] hover:border-[#c89b3c]/50 transition"
+            >
+              <span className="text-[#f0c020] font-semibold">{shortSha}</span>
+              {buildTimeLabel && (
+                <>
+                  <span className="text-white/25">•</span>
+                  <span>{buildTimeLabel}</span>
+                </>
+              )}
+            </a>
           </div>
           <div className="max-w-3xl mx-auto text-[10px] text-[#7e8781] leading-relaxed">
             Rankr is an independent platform and is not affiliated with or
