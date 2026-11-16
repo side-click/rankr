@@ -203,6 +203,10 @@ export function ConsensusRankingsView({
   }
 
   const themeGradients = getThemeGradients(divisionTheme);
+  const publishedPillTone = (count: number) =>
+    count < 2
+      ? "bg-[#451717] border-[#9e3535] text-[#ff857a]"
+      : "bg-[#2a2210] border-[#c89b3c]/60 text-[#f0c020]";
 
   return (
     <div className="relative rounded-2xl border border-[#c89b3c]/50 bg-[#0d1412] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.65)]">
@@ -462,7 +466,11 @@ export function ConsensusRankingsView({
                     {currentEdition?.name ?? "No Editions"}
                   </span>
                   {currentEdition && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#2a2210] border border-[#c89b3c]/60 text-[#f0c020] shrink-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${publishedPillTone(
+                        currentEdition.ballotCount
+                      )}`}
+                    >
                       {currentEdition.ballotCount} published
                     </span>
                   )}
@@ -487,7 +495,11 @@ export function ConsensusRankingsView({
                     <span className="text-xs font-bold truncate">
                       {ed.name}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#2a2210] border border-[#c89b3c]/60 text-[#f0c020] shrink-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${publishedPillTone(
+                        ed.ballotCount
+                      )}`}
+                    >
                       {ed.ballotCount} published
                     </span>
                   </button>
@@ -513,7 +525,7 @@ export function ConsensusRankingsView({
 
         {/* Voting Panel Strip */}
         {contributors.length > 0 && (
-          <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 flex flex-wrap items-center justify-start gap-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-[#c89b3c]">
               Voting Panel ({contributors.length}{" "}
               {contributors.length === 1 ? "Submission" : "Submissions"})
