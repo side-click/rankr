@@ -125,8 +125,9 @@ export async function generateMetadata({
     `${isPlayerTierList ? "Player Tier List" : "Team Power Rankings"} by ${authorName}`;
 
   const fullTitle = `${title} | by ${authorName}`;
+  const deploySha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
   const ogVersion = encodeURIComponent(
-    `${editionName}-${divisionName}-${ballot.updated_at ?? ""}`
+    `${deploySha}-${editionName}-${divisionName}-${ballot.updated_at ?? ""}`
   );
   const ogImageUrl = `/ballot/${id}/opengraph-image?v=${ogVersion}`;
 

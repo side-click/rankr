@@ -45,9 +45,10 @@ export async function generateMetadata({
   if (data.selectedEditionSlug) {
     ogParams.set("edition", data.selectedEditionSlug);
   }
+  const deploySha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
   ogParams.set(
     "v",
-    `${data.submissionCount}-${top3.map((r) => r.teamKey).join(",")}`
+    `${deploySha}-${data.submissionCount}-${top3.map((r) => r.teamKey).join(",")}`
   );
   const ogImageUrl = `/api/og/consensus?${ogParams.toString()}`;
 
