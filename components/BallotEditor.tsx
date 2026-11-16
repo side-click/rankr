@@ -439,32 +439,46 @@ export function BallotEditor({
   );
 
   useEffect(() => {
+    const active = seasons.filter((s) => s.is_active);
     if (initialSeasonSlug) {
       const matched = seasons.find((s) => s.slug === initialSeasonSlug);
       if (matched) {
         setSeasonId(matched.id);
       }
     } else {
-      setSeasonId("");
+      setSeasonId(active.length === 1 ? active[0].id : "");
     }
   }, [initialSeasonSlug, seasons]);
 
   useEffect(() => {
-    if (seasonDivisions.length === 0) {
-      if (divisionId !== "") setDivisionId("");
-    } else if (!seasonDivisions.some((d) => d.id === divisionId)) {
-      setDivisionId(seasonDivisions[0].id);
+    if (divisionId !== "" && !seasonDivisions.some((d) => d.id === divisionId)) {
+      setDivisionId("");
     }
 
-    if (seasonEditions.length === 0) {
-      if (editionId !== "") setEditionId("");
-    } else if (!seasonEditions.some((e) => e.id === editionId)) {
-      const reversedEds = [...seasonEditions].reverse();
-      const latestOpen = reversedEds.find((e) => e.is_open && !e.is_archived);
-      const latestActive = reversedEds.find((e) => !e.is_archived);
-      setEditionId((latestOpen ?? latestActive ?? reversedEds[0]).id);
+    if (
+      !divisionId ||
+      seasonEditions.length === 0 ||
+      !seasonEditions.some((e) => e.id === editionId)
+    ) {
+      if (!divisionId && !initialEditionSlug) {
+        if (editionId !== "") setEditionId("");
+      } else if (seasonEditions.length === 0) {
+        if (editionId !== "") setEditionId("");
+      } else if (divisionId && !seasonEditions.some((e) => e.id === editionId)) {
+        const reversedEds = [...seasonEditions].reverse();
+        const latestOpen = reversedEds.find((e) => e.is_open && !e.is_archived);
+        const latestActive = reversedEds.find((e) => !e.is_archived);
+        setEditionId((latestOpen ?? latestActive ?? reversedEds[0]).id);
+      }
     }
-  }, [seasonId, seasonDivisions, seasonEditions, divisionId, editionId]);
+  }, [
+    seasonId,
+    seasonDivisions,
+    seasonEditions,
+    divisionId,
+    editionId,
+    initialEditionSlug,
+  ]);
 
   useEffect(() => {
     if (!seasonId || !divisionId || !editionId) {
@@ -854,7 +868,22 @@ export function BallotEditor({
             <select
               value={divisionId}
               disabled={!seasonId}
-              onChange={(e) => setDivisionId(e.target.value)}
+              onChange={(e) => {
+                const nextDivId = e.target.value;
+                setDivisionId(nextDivId);
+                if (nextDivId && !editionId && seasonEditions.length > 0) {
+                  const reversedEds = [...seasonEditions].reverse();
+                  const latestOpen = reversedEds.find(
+                    (ed) => ed.is_open && !ed.is_archived
+                  );
+                  const latestActive = reversedEds.find(
+                    (ed) => !ed.is_archived
+                  );
+                  setEditionId(
+                    (latestOpen ?? latestActive ?? reversedEds[0]).id
+                  );
+                }
+              }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
               <option value="">Select a division...</option>

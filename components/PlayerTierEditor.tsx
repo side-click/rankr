@@ -685,11 +685,12 @@ export function PlayerTierEditor({
 
   // Sync season slug changes & validate divisionScope/editionId
   useEffect(() => {
+    const active = seasons.filter((s) => s.is_active);
     if (initialSeasonSlug) {
       const matched = seasons.find((s) => s.slug === initialSeasonSlug);
       if (matched) setSeasonId(matched.id);
     } else {
-      setSeasonId("");
+      setSeasonId(active.length === 1 ? active[0].id : "");
     }
   }, [initialSeasonSlug, seasons]);
 
