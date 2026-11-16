@@ -19,9 +19,11 @@ export async function generateMetadata({
   );
 
   if (!hasSpecificScope) {
-    const genericTitle = "Consensus Power Rankings | Rankr";
+    const genericTitle = "Consensus Rankings | Rankr";
     const genericDescription =
       "Aggregated team power rankings averaged across all published submissions.";
+    const deploySha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
+    const genericOgUrl = `/consensus/opengraph-image?v=${deploySha}`;
     return {
       title: genericTitle,
       description: genericDescription,
@@ -32,7 +34,7 @@ export async function generateMetadata({
         description: genericDescription,
         images: [
           {
-            url: "/opengraph-image",
+            url: genericOgUrl,
             width: 1200,
             height: 630,
             alt: genericTitle,
@@ -43,7 +45,7 @@ export async function generateMetadata({
         card: "summary_large_image",
         title: genericTitle,
         description: genericDescription,
-        images: ["/opengraph-image"],
+        images: [genericOgUrl],
       },
     };
   }
