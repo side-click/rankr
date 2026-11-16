@@ -14,6 +14,40 @@ export async function generateMetadata({
   }>;
 }): Promise<Metadata> {
   const params = await searchParams;
+  const hasSpecificScope = Boolean(
+    params.season || params.division || params.edition
+  );
+
+  if (!hasSpecificScope) {
+    const genericTitle = "Consensus Power Rankings | Rankr";
+    const genericDescription =
+      "Aggregated team power rankings averaged across all published submissions.";
+    return {
+      title: genericTitle,
+      description: genericDescription,
+      openGraph: {
+        type: "website",
+        siteName: "Rankr",
+        title: genericTitle,
+        description: genericDescription,
+        images: [
+          {
+            url: "/opengraph-image",
+            width: 1200,
+            height: 630,
+            alt: genericTitle,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: genericTitle,
+        description: genericDescription,
+        images: ["/opengraph-image"],
+      },
+    };
+  }
+
   const data = await loadConsensusPageData(params);
 
   const title = data.divisionName && data.editionName
