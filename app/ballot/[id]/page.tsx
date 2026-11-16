@@ -29,7 +29,7 @@ export async function generateMetadata({
       division_name_snapshot,
       edition_name_snapshot,
       profiles ( username ),
-      seasons ( name ),
+      seasons ( name, leagues ( name, short_name ) ),
       divisions ( name ),
       editions ( name ),
       ballot_entries ( rank, team_name_snapshot, teams ( name ) )
@@ -59,12 +59,31 @@ export async function generateMetadata({
   const divisionName = division?.name ?? ballot.division_name_snapshot ?? "";
   const editionName = edition?.name ?? ballot.edition_name_snapshot ?? "";
   const seasonName = season?.name ?? ballot.season_name_snapshot ?? "";
+  const seasonLeague = season && "leagues" in season
+    ? (Array.isArray(season.leagues) ? season.leagues[0] : season.leagues)
+    : null;
+  const leagueShortName =
+    seasonLeague?.short_name ||
+    seasonLeague?.name ||
+    ballot.league_name_snapshot ||
+    "";
   const authorName = profile?.username ?? "Voter";
   const isPlayerTierList = ballot.ranking_type === "player";
 
-  const title =
-    ballot.title ||
-    `${seasonName} ${divisionName} — ${editionName}`.trim();
+  let title: string;
+  if (isPlayerTierList) {
+    const scopeTitle = divisionName
+      ? `${divisionName} Player Tier List`
+      : `${leagueShortName || seasonName || "League"} Player Tier List`;
+    title = editionName
+      ? `${scopeTitle} — ${editionName}`
+      : ballot.title || scopeTitle;
+  } else {
+    title =
+      divisionName && editionName
+        ? `${divisionName} — ${editionName}`
+        : ballot.title || `${seasonName} ${divisionName} — ${editionName}`.trim();
+  }
 
   let topSummary: string | null = null;
   if (isPlayerTierList) {

@@ -134,7 +134,7 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
             {user.username.slice(0, 1).toUpperCase()}
           </span>
         )}
-        <span className="max-w-[96px] truncate hidden sm:inline">
+        <span className="max-w-[76px] lg:max-w-[96px] truncate hidden sm:inline">
           {user.username}
         </span>
       </div>
@@ -146,7 +146,7 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
         title="Sign out"
       >
         <LogOut className="w-3.5 h-3.5" />
-        <span className="hidden md:inline">Sign Out</span>
+        <span className="hidden lg:inline">Sign Out</span>
       </button>
     </div>
   );

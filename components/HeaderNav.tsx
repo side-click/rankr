@@ -71,7 +71,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           aria-label="Select Season"
           value={selectedSeasonSlug}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[170px] lg:w-[195px] shrink-0 truncate"
+          className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[130px] lg:w-[195px] shrink-0 truncate"
         >
           <option value="">Select a Season</option>
           {seasons.map((s) => (
@@ -84,17 +84,17 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         </select>
       )}
 
-      <nav className="hidden lg:flex items-center gap-1 text-xs font-bold min-w-0">
+      <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[11px] lg:text-xs font-bold min-w-0">
         <Link
           href={`/rank${seasonQuery}`}
-          className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+          className="inline-flex items-center gap-1 lg:gap-1.5 px-1.5 lg:px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
         >
           <ListOrdered className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Create Ranking</span>
         </Link>
         <Link
           href={`/browse${seasonQuery}`}
-          className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+          className="inline-flex items-center gap-1 lg:gap-1.5 px-1.5 lg:px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
         >
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Browse Rankings</span>
@@ -102,7 +102,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         {isLoggedIn && (
           <Link
             href="/my-rankings"
-            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+            className="inline-flex items-center gap-1 lg:gap-1.5 px-1.5 lg:px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
           >
             <History className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
             <span>My History</span>
@@ -111,7 +111,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         {isAdmin && (
           <Link
             href="/admin"
-            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-[#ffe57f] bg-black/25 hover:bg-black/40 border border-[#f0c020]/60 whitespace-nowrap"
+            className="inline-flex items-center gap-1 lg:gap-1.5 px-1.5 lg:px-2 py-1.5 rounded text-[#ffe57f] bg-black/25 hover:bg-black/40 border border-[#f0c020]/60 whitespace-nowrap"
           >
             <Shield className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
             <span>Admin</span>
@@ -124,13 +124,13 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         onClick={() => setMobileMenuOpen((prev) => !prev)}
         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={mobileMenuOpen}
-        className="lg:hidden ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0"
+        className="md:hidden ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0"
       >
         {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
       </button>
 
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-2.5">
+        <div className="md:hidden fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-2.5">
           {seasons.length > 0 && (
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1">
