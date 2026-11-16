@@ -24,6 +24,7 @@ export async function generateMetadata({
       ranking_type,
       tier_data,
       author_notes,
+      updated_at,
       league_name_snapshot,
       season_name_snapshot,
       division_name_snapshot,
@@ -124,6 +125,10 @@ export async function generateMetadata({
     `${isPlayerTierList ? "Player Tier List" : "Team Power Rankings"} by ${authorName}`;
 
   const fullTitle = `${title} | by ${authorName}`;
+  const ogVersion = encodeURIComponent(
+    `${editionName}-${divisionName}-${ballot.updated_at ?? ""}`
+  );
+  const ogImageUrl = `/ballot/${id}/opengraph-image?v=${ogVersion}`;
 
   return {
     title: fullTitle,
@@ -133,11 +138,20 @@ export async function generateMetadata({
       siteName: "Rankr",
       title: fullTitle,
       description,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: fullTitle,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
       description,
+      images: [ogImageUrl],
     },
   };
 }
