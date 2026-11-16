@@ -246,7 +246,7 @@ export default async function ConsensusPage({
     };
   });
 
-  const editionOptions = seasonEditionsDesc.map((ed) => ({
+  const editionOptions = seasonEditionsAsc.map((ed) => ({
     id: ed.id,
     name: ed.name,
     slug: ed.slug,

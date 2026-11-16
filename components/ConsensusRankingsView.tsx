@@ -478,34 +478,17 @@ export function ConsensusRankingsView({
                     key={ed.id}
                     type="button"
                     onClick={() => navigateScope({ edition: ed.slug })}
-                    className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between gap-2 transition cursor-pointer ${
+                    className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-2 transition cursor-pointer ${
                       ed.slug === selectedEditionSlug
                         ? "bg-[#2a2210] border border-[#c89b3c]/70 text-[#f0c020]"
                         : "hover:bg-white/5 text-[#e8e6dc]"
                     }`}
                   >
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span className="text-xs font-bold truncate">
-                        {ed.name}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                          ed.isArchived
-                            ? "bg-white/10 text-[#a6a89e]"
-                            : ed.isOpen
-                            ? "bg-[#173b24] text-[#7cd438]"
-                            : "bg-[#451717] text-[#ff857a]"
-                        }`}
-                      >
-                        {ed.isArchived
-                          ? "Archived"
-                          : ed.isOpen
-                          ? "Open"
-                          : "Locked"}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-[#a6a89e] shrink-0">
-                      {ed.ballotCount}
+                    <span className="text-xs font-bold truncate">
+                      {ed.name}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#2a2210] border border-[#c89b3c]/60 text-[#f0c020] shrink-0">
+                      {ed.ballotCount} published
                     </span>
                   </button>
                 ))}
