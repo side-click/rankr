@@ -78,7 +78,13 @@ export async function GET(request: Request) {
   ]);
 
   const gradient = getThemeGradients(data.divisionTheme).bannerGradient;
-  const countLabel = `${data.submissionCount} Published`;
+  const countLabel = `${data.submissionCount} ${
+    data.submissionCount === 1 ? "Ranking" : "Rankings"
+  }`;
+  const maxFirstPlaceVotes = Math.max(
+    0,
+    ...data.rows.map((r) => r.firstPlaceVotes)
+  );
 
   return new ImageResponse(
     (
@@ -171,8 +177,8 @@ export async function GET(request: Request) {
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
+              alignItems: "center",
+              gap: "14px",
               flexShrink: 0,
               padding: "12px 22px",
               borderRadius: "10px",
@@ -180,26 +186,51 @@ export async function GET(request: Request) {
               border: "2px solid rgba(240, 192, 32, 0.55)",
             }}
           >
-            <span
+            <div
               style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                color: "#f0c020",
-                letterSpacing: "1.5px",
-                textTransform: "uppercase",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
               }}
             >
-              Average Of
-            </span>
-            <span
-              style={{
-                fontSize: "26px",
-                fontWeight: 700,
-                color: "#ffffff",
-              }}
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: "#f0c020",
+                  letterSpacing: "1.5px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Average Of
+              </span>
+              <span
+                style={{
+                  fontSize: "26px",
+                  fontWeight: 700,
+                  color: "#ffffff",
+                }}
+              >
+                {countLabel}
+              </span>
+            </div>
+            <svg
+              width="34"
+              height="34"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#f0c020"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {countLabel}
-            </span>
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+              <path d="M4 22h16" />
+              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+            </svg>
           </div>
         </div>
 
@@ -301,33 +332,33 @@ export async function GET(request: Request) {
                       flexShrink: 0,
                     }}
                   >
-                    {row.firstPlaceVotes > 0 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "8px 16px",
-                          borderRadius: "999px",
-                          background: "rgba(240, 192, 32, 0.16)",
-                          border: "2px solid rgba(240, 192, 32, 0.7)",
-                          fontSize: "20px",
-                          fontWeight: 700,
-                          color: "#f0c020",
-                        }}
-                      >
-                        {row.firstPlaceVotes} #1{" "}
-                        {row.firstPlaceVotes === 1 ? "Vote" : "Votes"}
-                      </div>
-                    )}
+                    {maxFirstPlaceVotes > 0 &&
+                      row.firstPlaceVotes === maxFirstPlaceVotes && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "10px 18px",
+                            borderRadius: "999px",
+                            background: "rgba(240, 192, 32, 0.16)",
+                            border: "2px solid rgba(240, 192, 32, 0.7)",
+                            fontSize: "22px",
+                            fontWeight: 700,
+                            color: "#f0c020",
+                          }}
+                        >
+                          Most #1 Votes
+                        </div>
+                      )}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        padding: "8px 18px",
+                        padding: "10px 20px",
                         borderRadius: "10px",
                         background: "rgba(0, 0, 0, 0.45)",
                         border: "1px solid rgba(255, 255, 255, 0.2)",
-                        fontSize: "24px",
+                        fontSize: "26px",
                         fontWeight: 700,
                         color: "#f0ede0",
                       }}

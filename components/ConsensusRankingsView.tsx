@@ -650,9 +650,7 @@ export function ConsensusRankingsView({
                       </div>
                       <div className="text-base font-extrabold text-white leading-tight">
                         {submissionCount}{" "}
-                        {submissionCount === 1
-                          ? "Published Ranking"
-                          : "Published Rankings"}
+                        {submissionCount === 1 ? "Ranking" : "Rankings"}
                       </div>
                     </div>
                     <Trophy className="w-7 h-7 text-[#f0c020] shrink-0" />
