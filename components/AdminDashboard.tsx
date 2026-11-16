@@ -2317,9 +2317,9 @@ export function AdminDashboard({
                 Editions
               </h2>
               <p className="text-[11px] text-[#a6a89e] mt-0.5">
-                Order editions chronologically from earliest (top) to latest
-                (bottom) — editors and Consensus use this order to detect the
-                latest open edition and rank changes.
+                <strong className="text-[#f0c020]">IMPORTANT:</strong> Order
+                editions chronologically from earliest (top) to latest (bottom)
+                for accurate change tracking.
               </p>
             </div>
             <div className="space-y-2">
