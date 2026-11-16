@@ -29,7 +29,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         </span>
       </Link>
 
-      <nav className="hidden sm:flex flex-1 items-center justify-center gap-1 lg:gap-2 text-xs font-bold min-w-0">
+      <nav className="hidden min-[740px]:flex flex-1 items-center justify-center gap-1 lg:gap-2 text-xs font-bold min-w-0 overflow-hidden">
         <Link
           href="/rank"
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
@@ -77,7 +77,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={mobileMenuOpen}
         className={`${
-          hasSecondaryItems ? "min-[880px]:hidden" : "sm:hidden"
+          hasSecondaryItems ? "min-[880px]:hidden" : "min-[740px]:hidden"
         } ml-auto inline-flex items-center justify-center p-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white shrink-0`}
       >
         {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -86,13 +86,13 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
       {mobileMenuOpen && (
         <div
           className={`${
-            hasSecondaryItems ? "min-[880px]:hidden" : "sm:hidden"
+            hasSecondaryItems ? "min-[880px]:hidden" : "min-[740px]:hidden"
           } fixed left-0 right-0 top-[52px] z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-1 text-xs font-bold`}
         >
           <Link
             href="/rank"
             onClick={() => setMobileMenuOpen(false)}
-            className="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            className="min-[740px]:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
           >
             <ListOrdered className="w-4 h-4 text-[#f0c020] shrink-0" />
             <span>Create New</span>
@@ -100,7 +100,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           <Link
             href="/browse"
             onClick={() => setMobileMenuOpen(false)}
-            className="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            className="min-[740px]:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
           >
             <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
             <span>Browse Rankings</span>
@@ -108,7 +108,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           <Link
             href="/consensus"
             onClick={() => setMobileMenuOpen(false)}
-            className="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            className="min-[740px]:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
           >
             <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
             <span>Consensus</span>
