@@ -77,62 +77,64 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
   return (
     <Link
       href={`/ballot/${ballot.id}`}
-      className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-3"
+      className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
-      <div className="flex items-start justify-between gap-2.5">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {displayLogo ? (
+      <div className="flex items-stretch gap-3 min-w-0">
+        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-2 py-2 rounded bg-black/25 border border-white/10">
+          {profile?.avatar_url ? (
             <img
-              src={displayLogo}
-              alt={hasDivision ? divName : league?.name ?? sName}
-              className="w-10 h-10 object-contain shrink-0"
+              src={profile.avatar_url}
+              alt={profile.username}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (
-            <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
+            <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-md bg-[#5865f2] text-white text-lg font-bold inline-flex items-center justify-center shrink-0">
+              {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
+            </span>
           )}
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-extrabold text-[#f0ede0] truncate">
-              {edName}
-            </div>
-            <div className="text-xs font-bold text-[#d6d3c4] truncate">
-              {hasDivision ? divName : "All Divisions"}
-            </div>
-            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
-            </div>
-            <div className="text-[11px] text-[#a6a89e] truncate">
-              {leagueSeasonLabel}
-            </div>
-          </div>
+          <span className="w-full text-xs sm:text-[13px] font-bold text-[#f0c020] truncate">
+            {profile?.username ?? "Unknown"}
+          </span>
         </div>
 
-        <span
-          title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-          className="w-7 h-7 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
-        >
-          {isPlayer ? (
-            <User className="w-4 h-4 text-[#f0c020]" />
-          ) : (
-            <TeamGroupIcon className="w-4 h-4 text-[#f0c020]" />
-          )}
-        </span>
-      </div>
+        <div className="flex items-start justify-between gap-2 min-w-0 flex-1 py-0.5">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 my-auto">
+            {displayLogo ? (
+              <img
+                src={displayLogo}
+                alt={hasDivision ? divName : league?.name ?? sName}
+                className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
+              />
+            ) : (
+              <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-extrabold text-[#f0ede0] truncate">
+                {edName}
+              </div>
+              <div className="text-xs font-bold text-[#d6d3c4] truncate">
+                {hasDivision ? divName : "All Divisions"}
+              </div>
+              <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+                {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+              </div>
+              <div className="text-[11px] text-[#a6a89e] truncate">
+                {leagueSeasonLabel}
+              </div>
+            </div>
+          </div>
 
-      <div className="flex items-center gap-2.5 px-2.5 py-2 rounded bg-black/25 border border-white/10">
-        {profile?.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.username}
-            className="w-6 h-6 rounded-sm object-cover border border-white/30 shrink-0"
-          />
-        ) : (
-          <span className="w-6 h-6 rounded-sm bg-[#5865f2] text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
-            {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
+          <span
+            title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            className="w-7 h-7 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
+          >
+            {isPlayer ? (
+              <User className="w-4 h-4 text-[#f0c020]" />
+            ) : (
+              <TeamGroupIcon className="w-4 h-4 text-[#f0c020]" />
+            )}
           </span>
-        )}
-        <span className="text-sm font-bold text-[#f0c020] truncate">
-          {profile?.username ?? "Unknown"}
-        </span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[11px]">
