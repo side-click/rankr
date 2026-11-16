@@ -115,7 +115,7 @@ export default async function OpenGraphImage() {
             background: "rgba(12, 18, 16, 0.72)",
             border: "3px solid rgba(240, 192, 32, 0.45)",
             boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45)",
-            width: "370px",
+            width: "390px",
             flexShrink: 0,
           }}
         >
@@ -131,12 +131,14 @@ export default async function OpenGraphImage() {
             >
               <span
                 style={{
+                  display: "flex",
                   fontFamily: "WowHeading, serif",
                   fontSize: "52px",
                   fontWeight: 700,
                   color: "#f0c020",
                   lineHeight: 1,
-                  width: "52px",
+                  width: "60px",
+                  flexShrink: 0,
                 }}
               >
                 {row.num}
@@ -145,6 +147,7 @@ export default async function OpenGraphImage() {
                 style={{
                   height: "18px",
                   width: `${row.barWidth}px`,
+                  flexShrink: 0,
                   borderRadius: "9px",
                   background:
                     "linear-gradient(90deg, #f0c020 0%, #c89b3c 100%)",
