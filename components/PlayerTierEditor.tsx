@@ -637,8 +637,11 @@ export function PlayerTierEditor({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
+  const activeSeasons = seasons.filter((s) => s.is_active);
   const defaultSeason = initialSeasonSlug
     ? seasons.find((s) => s.slug === initialSeasonSlug)
+    : activeSeasons.length === 1
+    ? activeSeasons[0]
     : undefined;
 
   const [seasonId, setSeasonId] = useState<string>(defaultSeason?.id ?? "");
@@ -667,16 +670,10 @@ export function PlayerTierEditor({
   });
 
   const [editionId, setEditionId] = useState<string>(() => {
-    const seasonEds = editions
-      .filter((e) => e.season_id === defaultSeason?.id)
-      .sort((a, b) => a.sort_order - b.sort_order);
+    if (!initialEditionSlug) return "";
+    const seasonEds = editions.filter((e) => e.season_id === defaultSeason?.id);
     const match = seasonEds.find((e) => e.slug === initialEditionSlug);
-    return (
-      match?.id ??
-      seasonEds.find((e) => e.is_open && !e.is_archived)?.id ??
-      seasonEds[0]?.id ??
-      ""
-    );
+    return match?.id ?? "";
   });
 
   const currentDivision =

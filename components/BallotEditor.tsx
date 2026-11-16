@@ -339,8 +339,11 @@ export function BallotEditor({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
+  const activeSeasons = seasons.filter((s) => s.is_active);
   const defaultSeason = initialSeasonSlug
     ? seasons.find((s) => s.slug === initialSeasonSlug)
+    : activeSeasons.length === 1
+    ? activeSeasons[0]
     : undefined;
 
   const [seasonId, setSeasonId] = useState<string>(defaultSeason?.id ?? "");
@@ -358,27 +361,20 @@ export function BallotEditor({
   );
 
   const [divisionId, setDivisionId] = useState<string>(() => {
+    if (!initialDivisionSlug) return "";
     const match = divisions.find(
       (d) => d.season_id === defaultSeason?.id && d.slug === initialDivisionSlug
     );
-    return (
-      match?.id ??
-      divisions.find((d) => d.season_id === defaultSeason?.id)?.id ??
-      ""
-    );
+    return match?.id ?? "";
   });
 
   const [editionId, setEditionId] = useState<string>(() => {
-    const seasonEds = editions
-      .filter((e) => e.season_id === defaultSeason?.id && !e.is_players_only)
-      .sort((a, b) => a.sort_order - b.sort_order);
-    const match = seasonEds.find((e) => e.slug === initialEditionSlug);
-    return (
-      match?.id ??
-      seasonEds.find((e) => e.is_open)?.id ??
-      seasonEds[0]?.id ??
-      ""
+    if (!initialEditionSlug) return "";
+    const seasonEds = editions.filter(
+      (e) => e.season_id === defaultSeason?.id && !e.is_players_only
     );
+    const match = seasonEds.find((e) => e.slug === initialEditionSlug);
+    return match?.id ?? "";
   });
 
   const currentDivision = seasonDivisions.find((d) => d.id === divisionId);
