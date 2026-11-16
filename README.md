@@ -1,6 +1,8 @@
 # Rankr
 
-Power rankings and player tier lists for amateur League of Legends draft leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
+Power rankings and player tier lists for amateur esports leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
+
+<img width="400" alt="season-4-5-baron-preseason-consensus" src="https://github.com/user-attachments/assets/1d50f727-22fc-4807-b923-5e3ce3291dfd" />
 
 ## Features
 - **Team Power Rankings**: Drag-and-drop weekly division rankings with commentary, automatic edition-to-edition rank change tracking, and shareable PNG / Discord OpenGraph cards.
