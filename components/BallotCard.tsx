@@ -90,7 +90,7 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
   const cardStyle: React.CSSProperties = {
     borderLeftWidth: "3px",
     borderLeftColor: resolvedTheme.primary_color,
-    backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}22 0%, rgba(20, 25, 23, 0.94) 55%, ${resolvedTheme.secondary_color}1c 100%)`,
+    backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
   };
 
   return (
