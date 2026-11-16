@@ -20,14 +20,8 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
 
   async function startDiscordOAuth() {
     setLoading(true);
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-      window.location.pathname + window.location.search
-    )}`;
-
-    await supabase.auth.signInWithOAuth({
-      provider: "discord",
-      options: { redirectTo },
-    });
+    const next = window.location.pathname + window.location.search;
+    window.location.href = `/api/auth/discord?next=${encodeURIComponent(next)}`;
   }
 
   function handleSignInClick() {
