@@ -77,10 +77,21 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
   return (
     <Link
       href={`/ballot/${ballot.id}`}
-      className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
+      className="xp-panel relative p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
+      <span
+        title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+        className="absolute top-3.5 right-3.5 w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center"
+      >
+        {isPlayer ? (
+          <User className="w-3.5 h-3.5 text-[#f0c020]" />
+        ) : (
+          <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+        )}
+      </span>
+
       <div className="flex items-stretch gap-2.5 min-w-0">
-        <div className="w-[104px] sm:w-[116px] shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-1.5 py-2 rounded bg-black/25 border border-white/10">
+        <div className="w-[116px] sm:w-[128px] shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-1.5 py-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
@@ -108,20 +119,8 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
             <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1.5">
-              <div className="text-sm font-extrabold text-[#f0ede0] truncate">
-                {edName}
-              </div>
-              <span
-                title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-                className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
-              >
-                {isPlayer ? (
-                  <User className="w-3.5 h-3.5 text-[#f0c020]" />
-                ) : (
-                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
-                )}
-              </span>
+            <div className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate pr-8">
+              {edName}
             </div>
             <div className="text-xs font-bold text-[#d6d3c4] truncate">
               {hasDivision ? divName : "All Divisions"}
