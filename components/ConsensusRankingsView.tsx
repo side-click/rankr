@@ -745,19 +745,19 @@ export function ConsensusRankingsView({
                           </div>
 
                           <div className="flex items-center justify-center">
-                            <span className="px-4 py-2 rounded-lg bg-black/40 border border-white/15 text-xl font-extrabold text-[#f0ede0] tabular-nums">
+                            <span className="h-14 px-5 rounded-xl bg-black/40 border border-white/15 text-2xl font-black text-[#f0ede0] tabular-nums inline-flex items-center justify-center">
                               {row.averageRank.toFixed(2)}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-center">
                             {row.firstPlaceVotes > 0 ? (
-                              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2a2210] border border-[#f0c020]/70 text-sm font-extrabold text-[#f0c020]">
-                                <Crown className="w-4 h-4" />
+                              <span className="h-14 inline-flex items-center justify-center gap-2 px-5 rounded-full bg-[#2a2210] border border-[#f0c020]/70 text-2xl font-black text-[#f0c020] tabular-nums">
+                                <Crown className="w-6 h-6" />
                                 <span>{row.firstPlaceVotes}</span>
                               </span>
                             ) : (
-                              <span className="text-xs font-semibold text-[#6e7572]">
+                              <span className="text-lg font-semibold text-[#6e7572]">
                                 —
                               </span>
                             )}
