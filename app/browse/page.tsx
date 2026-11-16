@@ -99,6 +99,7 @@ export default async function BrowsePage({
   return (
     <RetroWindow title="Browse Published Rankings" theme="scdl">
       <form
+        key={`${params.type ?? ""}|${params.season ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
         method="GET"
         className="xp-panel p-3 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end"
       >
