@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import {
   AlertTriangle,
+  ArrowUpDown,
   Award,
   Check,
   ChevronDown,
@@ -110,6 +111,7 @@ export function ConsensusRankingsView({
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showChange, setShowChange] = useState(true);
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -226,23 +228,37 @@ export function ConsensusRankingsView({
 
           <div className="flex flex-wrap items-center gap-2">
             {rows.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowBreakdown((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
-                  showBreakdown
-                    ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
-                    : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>{showBreakdown ? "Hide Voter Ranks" : "Show Voter Ranks"}</span>
-                {showBreakdown ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowChange((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                    showChange
+                      ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
+                      : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                  }`}
+                >
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  <span>{showChange ? "Hide Change" : "Show Change"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdown((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                    showBreakdown
+                      ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
+                      : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>{showBreakdown ? "Hide Voter Ranks" : "Show Voter Ranks"}</span>
+                  {showBreakdown ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -642,12 +658,16 @@ export function ConsensusRankingsView({
 
                 {/* Column Header */}
                 <div
-                  className={`grid grid-cols-[100px_88px_1fr_140px_120px] gap-x-6 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
+                  className={`grid ${
+                    showChange
+                      ? "grid-cols-[100px_88px_1fr_140px_120px] gap-x-6"
+                      : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
+                  } bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
                     exporting ? "px-10 py-2" : "px-8 py-2"
                   }`}
                 >
                   <div className="text-center">Rank</div>
-                  <div className="text-center">Change</div>
+                  {showChange && <div className="text-center">Change</div>}
                   <div className="pl-[104px]">Team</div>
                   <div className="text-center">Avg Rank</div>
                   <div className="text-center">#1 Votes</div>
@@ -668,7 +688,13 @@ export function ConsensusRankingsView({
                             : "px-8 py-4"
                         }
                       >
-                        <div className="grid grid-cols-[100px_88px_1fr_140px_120px] gap-x-6 items-center">
+                        <div
+                          className={`grid ${
+                            showChange
+                              ? "grid-cols-[100px_88px_1fr_140px_120px] gap-x-6"
+                              : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
+                          } items-center`}
+                        >
                           <div className="flex items-center justify-center">
                             <span
                               style={{
@@ -682,12 +708,14 @@ export function ConsensusRankingsView({
                             </span>
                           </div>
 
-                          <div className="flex justify-center">
-                            <RankChangeBadge
-                              previousRank={row.previousRank ?? null}
-                              rankChange={row.rankChange ?? null}
-                            />
-                          </div>
+                          {showChange && (
+                            <div className="flex justify-center">
+                              <RankChangeBadge
+                                previousRank={row.previousRank ?? null}
+                                rankChange={row.rankChange ?? null}
+                              />
+                            </div>
+                          )}
 
                           <div className="flex items-center gap-6 min-w-0">
                             {row.logoUrl ? (
@@ -736,7 +764,11 @@ export function ConsensusRankingsView({
                         </div>
 
                         {showBreakdown && !exporting && (
-                          <div className="mt-3 pl-[236px] flex flex-wrap items-center gap-1.5">
+                          <div
+                            className={`mt-3 ${
+                              showChange ? "pl-[236px]" : "pl-[152px]"
+                            } flex flex-wrap items-center gap-1.5`}
+                          >
                             {row.voterRanks.map((vr) => (
                               <Link
                                 key={`${row.teamKey}-${vr.ballotId}`}
