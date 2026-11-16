@@ -2312,9 +2312,16 @@ export function AdminDashboard({
 
           {/* Right: Editions */}
           <div className="lg:col-span-7 xp-panel p-3 space-y-3">
-            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-              Editions
-            </h2>
+            <div>
+              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                Editions
+              </h2>
+              <p className="text-[11px] text-[#a6a89e] mt-0.5">
+                Order editions chronologically from earliest (top) to latest
+                (bottom) — editors and Consensus use this order to detect the
+                latest open edition and rank changes.
+              </p>
+            </div>
             <div className="space-y-2">
               {filteredEditions.length === 0 ? (
                 <div className="xp-inset p-3 text-xs text-[#a6a89e]">

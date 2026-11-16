@@ -459,9 +459,10 @@ export function BallotEditor({
     if (seasonEditions.length === 0) {
       if (editionId !== "") setEditionId("");
     } else if (!seasonEditions.some((e) => e.id === editionId)) {
-      const firstOpen = seasonEditions.find((e) => e.is_open && !e.is_archived);
-      const firstActive = seasonEditions.find((e) => !e.is_archived);
-      setEditionId((firstOpen ?? firstActive ?? seasonEditions[0]).id);
+      const reversedEds = [...seasonEditions].reverse();
+      const latestOpen = reversedEds.find((e) => e.is_open && !e.is_archived);
+      const latestActive = reversedEds.find((e) => !e.is_archived);
+      setEditionId((latestOpen ?? latestActive ?? reversedEds[0]).id);
     }
   }, [seasonId, seasonDivisions, seasonEditions, divisionId, editionId]);
 
