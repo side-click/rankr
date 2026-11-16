@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, History, ListOrdered, Menu, Shield, X } from "lucide-react";
+import { Eye, History, ListOrdered, Menu, Shield, Trophy, X } from "lucide-react";
 
 interface HeaderSeasonOption {
   id: string;
@@ -37,7 +37,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
       params.delete("season");
     }
 
-    if (pathname === "/rank" || pathname === "/browse") {
+    if (pathname === "/rank" || pathname === "/browse" || pathname === "/consensus") {
       // Clear division/edition when switching seasons so stale slugs don't persist
       params.delete("division");
       params.delete("edition");
@@ -98,6 +98,14 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
         >
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Browse Rankings</span>
+        </Link>
+        <Link
+          href={`/consensus${seasonQuery}`}
+          className="inline-flex items-center gap-1 lg:gap-1.5 px-1.5 lg:px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+        >
+          <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+          <span className="lg:hidden">Consensus</span>
+          <span className="hidden lg:inline">Consensus Rankings</span>
         </Link>
         {isLoggedIn && (
           <Link
@@ -173,6 +181,14 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
             >
               <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
               <span>Browse Rankings</span>
+            </Link>
+            <Link
+              href={`/consensus${seasonQuery}`}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            >
+              <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Consensus Rankings</span>
             </Link>
             {isLoggedIn && (
               <Link
