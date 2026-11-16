@@ -110,7 +110,7 @@ export function ConsensusRankingsView({
   >(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(true);
   const [showChange, setShowChange] = useState(true);
 
   useEffect(() => {
