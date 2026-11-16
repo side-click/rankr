@@ -365,7 +365,8 @@ export function BallotShareView({
     window.addEventListener("pointerup", onUp);
   }
 
-  const canEditOverlays = (isOwner && Boolean(edition?.is_open)) || isAdmin;
+  const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
+  const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
 
   const headerAccentBg =
     theme === "dragon"
@@ -385,7 +386,7 @@ export function BallotShareView({
               : "Draft Preview"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isOwner && edition?.is_open && (
+            {isOwner && isEditionEditable && (
               <Link
                 href={`/rank?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
                 className="xp-btn text-xs"

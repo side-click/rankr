@@ -3,67 +3,70 @@ import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { Eye, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const supabase = await createClient();
 
-  const { data: seasons, error: seasonsError } = await supabase
-    .from("seasons")
-    .select(
-      `
-      id,
-      name,
-      slug,
-      is_active,
-      leagues ( * )
-    `
-    )
-    .order("is_active", { ascending: false })
-    .order("created_at", { ascending: false });
-
   const [
+    { data: seasons, error: seasonsError },
     { data: divisions },
     { data: divisionThemes },
     { data: activeTeams },
     { data: seasonPlayers },
+    { data: recentBallots },
   ] = await Promise.all([
+    supabase
+      .from("seasons")
+      .select(
+        `
+        id,
+        name,
+        slug,
+        is_active,
+        leagues ( * )
+      `
+      )
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase
       .from("divisions")
       .select("id, season_id, name, slug, logo_url, theme_key")
       .order("name"),
     supabase.from("division_themes").select("*").order("name"),
     supabase.from("teams").select("id, division_id").eq("is_active", true),
-    supabase.from("season_players").select("id, season_id"),
-  ]);
-
-  const { data: recentBallots } = await supabase
-    .from("ballots")
-    .select(
+    supabase
+      .from("season_players")
+      .select("id, season_id")
+      .eq("is_active", true),
+    supabase
+      .from("ballots")
+      .select(
+        `
+        id,
+        title,
+        ranking_type,
+        tier_variant,
+        published_at,
+        season_id,
+        division_id,
+        league_name_snapshot,
+        season_name_snapshot,
+        division_name_snapshot,
+        division_logo_snapshot,
+        edition_name_snapshot,
+        profiles ( username, avatar_url ),
+        seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
+        divisions ( name, slug, theme_key, logo_url ),
+        editions ( name )
       `
-      id,
-      title,
-      ranking_type,
-      tier_variant,
-      published_at,
-      season_id,
-      division_id,
-      league_name_snapshot,
-      season_name_snapshot,
-      division_name_snapshot,
-      division_logo_snapshot,
-      edition_name_snapshot,
-      profiles ( username, avatar_url ),
-      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
-      divisions ( name, slug, theme_key, logo_url ),
-      editions ( name )
-    `
-    )
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(9);
+      )
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(9),
+  ]);
 
   const needsSetup = Boolean(seasonsError) || !seasons || seasons.length === 0;
   const activeSeasons = (seasons ?? []).filter((s) => s.is_active);

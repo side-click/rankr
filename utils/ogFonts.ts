@@ -53,3 +53,63 @@ export async function loadOgFonts(): Promise<OgFont[]> {
   }
   return fonts;
 }
+
+const SUPPORTED_OG_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+]);
+
+async function fetchImageAsDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const contentTypeHeader = res.headers.get("content-type") || "";
+    const mime = contentTypeHeader.split(";")[0].trim().toLowerCase();
+    if (!SUPPORTED_OG_MIMES.has(mime)) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return `data:${mime};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveOgImageSrc(
+  logoUrl: string | null | undefined
+): Promise<string | null> {
+  if (!logoUrl) return null;
+  if (logoUrl.startsWith("data:image/")) {
+    return logoUrl;
+  }
+  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
+    return fetchImageAsDataUri(logoUrl);
+  }
+  if (logoUrl.startsWith("/")) {
+    try {
+      const relative = decodeURIComponent(logoUrl).replace(/^\/+/, "");
+      const filePath = path.join(process.cwd(), "public", relative);
+      const buffer = await readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const mime =
+        ext === ".jpg" || ext === ".jpeg"
+          ? "image/jpeg"
+          : ext === ".gif"
+          ? "image/gif"
+          : ext === ".png"
+          ? "image/png"
+          : null;
+      if (!mime) return null;
+      return `data:${mime};base64,${buffer.toString("base64")}`;
+    } catch {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
+      const absoluteUrl = new URL(
+        encodeURI(decodeURI(logoUrl)),
+        baseUrl
+      ).toString();
+      return fetchImageAsDataUri(absoluteUrl);
+    }
+  }
+  return null;
+}

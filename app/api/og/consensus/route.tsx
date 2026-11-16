@@ -1,64 +1,11 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { loadConsensusPageData } from "@/utils/consensusData";
-import { loadOgFonts } from "@/utils/ogFonts";
+import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
 import { getThemeGradients } from "@/utils/themes";
 
 export const runtime = "nodejs";
 
 const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
-const SUPPORTED_OG_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-]);
-
-async function fetchImageAsDataUri(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const contentTypeHeader = res.headers.get("content-type") || "";
-    const mime = contentTypeHeader.split(";")[0].trim().toLowerCase();
-    if (!SUPPORTED_OG_MIMES.has(mime)) return null;
-    const buffer = Buffer.from(await res.arrayBuffer());
-    return `data:${mime};base64,${buffer.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
-async function resolveLogoSrc(
-  logoUrl: string | null | undefined
-): Promise<string | null> {
-  if (!logoUrl) return null;
-  if (logoUrl.startsWith("data:image/")) return logoUrl;
-  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
-    return fetchImageAsDataUri(logoUrl);
-  }
-  if (logoUrl.startsWith("/")) {
-    try {
-      const relative = decodeURIComponent(logoUrl).replace(/^\/+/, "");
-      const filePath = path.join(process.cwd(), "public", relative);
-      const buffer = await readFile(filePath);
-      const ext = path.extname(filePath).toLowerCase();
-      const mime =
-        ext === ".jpg" || ext === ".jpeg"
-          ? "image/jpeg"
-          : ext === ".gif"
-          ? "image/gif"
-          : ext === ".png"
-          ? "image/png"
-          : null;
-      if (!mime) return null;
-      return `data:${mime};base64,${buffer.toString("base64")}`;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -73,8 +20,8 @@ export async function GET(request: Request) {
 
   const top3 = data.rows.slice(0, 3);
   const [leagueLogoSrc, ...teamLogoSrcs] = await Promise.all([
-    resolveLogoSrc(data.leagueLogoUrl),
-    ...top3.map((r) => resolveLogoSrc(r.logoUrl)),
+    resolveOgImageSrc(data.leagueLogoUrl),
+    ...top3.map((r) => resolveOgImageSrc(r.logoUrl)),
   ]);
 
   const gradient = getThemeGradients(data.divisionTheme).bannerGradient;

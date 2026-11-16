@@ -905,6 +905,32 @@ export function PlayerTierEditor({
   const [authorNotes, setAuthorNotes] = useState("");
   const [showCustomAuthor, setShowCustomAuthor] = useState(false);
   const [showGeneralNotes, setShowGeneralNotes] = useState(false);
+  const popoverContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCustomAuthor && !showGeneralNotes) return;
+    function handleOutside(e: MouseEvent) {
+      if (
+        popoverContainerRef.current &&
+        !popoverContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowCustomAuthor(false);
+        setShowGeneralNotes(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowCustomAuthor(false);
+        setShowGeneralNotes(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showCustomAuthor, showGeneralNotes]);
   const [existingBallotId, setExistingBallotId] = useState<string | null>(null);
   const [ballotStatus, setBallotStatus] = useState<"draft" | "published" | null>(
     null
@@ -1623,7 +1649,10 @@ export function PlayerTierEditor({
         {/* Author + Notes + Reset (Row 1) and Tier Presets + Split Mode (Row 2) */}
         <div className="mb-4 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+            <div
+              ref={popoverContainerRef}
+              className="flex flex-wrap items-center gap-2"
+            >
               <div className="relative">
                 <button
                   type="button"

@@ -1,25 +1,13 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { loadOgFonts } from "@/utils/ogFonts";
+import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
 
 export const alt = "Rankr — Team Power Rankings & Player Tier Lists";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-async function loadLogoDataUrl(): Promise<string | null> {
-  try {
-    const filePath = path.join(process.cwd(), "public/images/rankr_crop.png");
-    const buffer = await readFile(filePath);
-    return `data:image/png;base64,${buffer.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
 export default async function OpenGraphImage() {
   const [logoUrl, fonts] = await Promise.all([
-    loadLogoDataUrl(),
+    resolveOgImageSrc("/images/rankr_crop.png"),
     loadOgFonts(),
   ]);
 

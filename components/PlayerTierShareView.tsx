@@ -445,7 +445,8 @@ export function PlayerTierShareView({
     window.addEventListener("pointerup", onUp);
   }
 
-  const canEditOverlays = (isOwner && Boolean(edition?.is_open)) || isAdmin;
+  const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
+  const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
 
   const editParams = new URLSearchParams();
   editParams.set("type", "player");
@@ -464,7 +465,7 @@ export function PlayerTierShareView({
               : "Draft Preview"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isOwner && edition?.is_open && (
+            {isOwner && isEditionEditable && (
               <Link href={`/rank?${editParams.toString()}`} className="xp-btn text-xs">
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Tier List</span>

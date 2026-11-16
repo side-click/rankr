@@ -177,7 +177,7 @@ export default async function BallotPage({
       profiles ( id, username, avatar_url ),
       seasons ( id, name, slug, leagues ( id, name, short_name, slug, logo_url, theme_key ) ),
       divisions ( id, name, slug, logo_url, theme_key ),
-      editions ( id, name, slug, sort_order, is_open )
+      editions ( id, name, slug, sort_order, is_open, is_archived )
     `
     )
     .eq("id", id)
@@ -207,6 +207,9 @@ export default async function BallotPage({
         params.set("division", division.slug);
       }
       if (edition?.slug) params.set("edition", edition.slug);
+      if (ballot.ranking_type === "player" && ballot.tier_variant) {
+        params.set("variant", ballot.tier_variant);
+      }
       redirect(`/rank?${params.toString()}`);
     }
     notFound();

@@ -1,9 +1,7 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { createClient } from "@/utils/supabase/server";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
-import { loadOgFonts } from "@/utils/ogFonts";
+import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
 import type { LeagueRole } from "@/utils/roles";
 import type { DivisionTheme, PlayerTierListPayload } from "@/types/database";
 
@@ -32,64 +30,6 @@ function getTierContrastText(hex: string): string {
 }
 
 const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
-
-const SUPPORTED_OG_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-]);
-
-async function fetchImageAsDataUri(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const contentTypeHeader = res.headers.get("content-type") || "";
-    const mime = contentTypeHeader.split(";")[0].trim().toLowerCase();
-    if (!SUPPORTED_OG_MIMES.has(mime)) return null;
-    const buffer = Buffer.from(await res.arrayBuffer());
-    return `data:${mime};base64,${buffer.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
-async function resolveLogoSrc(logoUrl: string | null | undefined): Promise<string | null> {
-  if (!logoUrl) return null;
-  if (logoUrl.startsWith("data:image/")) {
-    return logoUrl;
-  }
-  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
-    return fetchImageAsDataUri(logoUrl);
-  }
-  if (logoUrl.startsWith("/")) {
-    try {
-      const relative = decodeURIComponent(logoUrl).replace(/^\/+/, "");
-      const filePath = path.join(process.cwd(), "public", relative);
-      const buffer = await readFile(filePath);
-      const ext = path.extname(filePath).toLowerCase();
-      const mime =
-        ext === ".jpg" || ext === ".jpeg"
-          ? "image/jpeg"
-          : ext === ".gif"
-          ? "image/gif"
-          : ext === ".png"
-          ? "image/png"
-          : null;
-      if (!mime) return null;
-      return `data:${mime};base64,${buffer.toString("base64")}`;
-    } catch {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
-      const absoluteUrl = new URL(
-        encodeURI(decodeURI(logoUrl)),
-        baseUrl
-      ).toString();
-      return fetchImageAsDataUri(absoluteUrl);
-    }
-  }
-  return null;
-}
 
 export default async function BallotOpenGraphImage({
   params,
@@ -265,13 +205,13 @@ export default async function BallotOpenGraphImage({
 
   const [avatarSrc, leagueLogoSrc, topIconSrc, jglIconSrc, midIconSrc, botIconSrc, supIconSrc] =
     await Promise.all([
-      resolveLogoSrc(profile?.avatar_url),
-      resolveLogoSrc(leagueObj?.logo_url),
-      resolveLogoSrc(ROLE_PNG_ICONS.top),
-      resolveLogoSrc(ROLE_PNG_ICONS.jungle),
-      resolveLogoSrc(ROLE_PNG_ICONS.mid),
-      resolveLogoSrc(ROLE_PNG_ICONS.bot),
-      resolveLogoSrc(ROLE_PNG_ICONS.support),
+      resolveOgImageSrc(profile?.avatar_url),
+      resolveOgImageSrc(leagueObj?.logo_url),
+      resolveOgImageSrc(ROLE_PNG_ICONS.top),
+      resolveOgImageSrc(ROLE_PNG_ICONS.jungle),
+      resolveOgImageSrc(ROLE_PNG_ICONS.mid),
+      resolveOgImageSrc(ROLE_PNG_ICONS.bot),
+      resolveOgImageSrc(ROLE_PNG_ICONS.support),
     ]);
 
   const roleIconMap: Record<LeagueRole, string | null> = {
@@ -290,7 +230,7 @@ export default async function BallotOpenGraphImage({
     top3Raw.map(async (item) => {
       const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
       const teamName = team?.name ?? item.team_name_snapshot ?? "Team";
-      const logoSrc = await resolveLogoSrc(
+      const logoSrc = await resolveOgImageSrc(
         item.team_logo_snapshot || team?.logo_url
       );
       return { ...item, teamName, logoSrc };

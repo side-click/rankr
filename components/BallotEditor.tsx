@@ -431,14 +431,40 @@ export function BallotEditor({
   );
   const [loadingBallot, setLoadingBallot] = useState(false);
   const lastLoadedKeyRef = useRef<string>("");
+  const popoverContainerRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
+  useEffect(() => {
+    if (!showCustomAuthor && !showGeneralNotes) return;
+    function handleOutside(e: MouseEvent) {
+      if (
+        popoverContainerRef.current &&
+        !popoverContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowCustomAuthor(false);
+        setShowGeneralNotes(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowCustomAuthor(false);
+        setShowGeneralNotes(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showCustomAuthor, showGeneralNotes]);
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -990,7 +1016,10 @@ export function BallotEditor({
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div
+          ref={popoverContainerRef}
+          className="mb-4 flex flex-wrap items-center gap-2"
+        >
           <div className="relative">
             <button
               type="button"

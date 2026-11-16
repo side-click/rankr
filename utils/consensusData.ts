@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/utils/supabase/server";
 import {
   attachConsensusChanges,
@@ -62,12 +63,14 @@ export interface ConsensusDataResult {
   }[];
 }
 
-export async function loadConsensusPageData(params: {
-  season?: string;
-  division?: string;
-  edition?: string;
-}): Promise<ConsensusDataResult> {
-  const supabase = await createClient();
+const loadConsensusPageDataCached = cache(
+  async (
+    season?: string,
+    division?: string,
+    edition?: string
+  ): Promise<ConsensusDataResult> => {
+    const params = { season, division, edition };
+    const supabase = await createClient();
 
   const [
     { data: seasons },
@@ -329,4 +332,16 @@ export async function loadConsensusPageData(params: {
     rows: averageRows,
     contributors,
   };
+});
+
+export function loadConsensusPageData(params: {
+  season?: string;
+  division?: string;
+  edition?: string;
+}): Promise<ConsensusDataResult> {
+  return loadConsensusPageDataCached(
+    params.season,
+    params.division,
+    params.edition
+  );
 }

@@ -56,17 +56,23 @@ export default async function RootLayout({
     supabase.auth.getUser(),
   ]);
 
-  let isAdmin = false;
+  let profile: {
+    username: string;
+    avatar_url: string | null;
+    is_admin: boolean;
+  } | null = null;
   if (authData.user) {
-    const { data: profile } = await supabase
+    const { data } = await supabase
       .from("profiles")
-      .select("is_admin")
+      .select("username, avatar_url, is_admin")
       .eq("id", authData.user.id)
       .maybeSingle();
-    isAdmin = Boolean(profile?.is_admin);
+    profile = data;
   }
+  const isAdmin = Boolean(profile?.is_admin);
 
   const maintenanceMode = Boolean(settings?.maintenance_mode);
+  const requireAllowlist = Boolean(settings?.require_allowlist);
   const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
   const shortSha = commitSha?.slice(0, 7) ?? "local";
   const buildTimeIso = process.env.NEXT_PUBLIC_BUILD_TIME;
@@ -83,7 +89,26 @@ export default async function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen flex flex-col antialiased">
-        <Navbar />
+        <Navbar
+          requireAllowlist={requireAllowlist}
+          isAdmin={isAdmin}
+          user={
+            authData.user
+              ? {
+                  id: authData.user.id,
+                  username:
+                    profile?.username ??
+                    authData.user.user_metadata?.full_name ??
+                    authData.user.user_metadata?.name ??
+                    "Discord User",
+                  avatarUrl:
+                    profile?.avatar_url ??
+                    authData.user.user_metadata?.avatar_url ??
+                    null,
+                }
+              : null
+          }
+        />
         <Suspense fallback={null}>
           <AuthNoticeBanner />
         </Suspense>
