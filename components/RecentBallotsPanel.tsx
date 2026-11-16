@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { BallotCard, type BallotCardData } from "@/components/BallotCard";
+import type { BallotCardData } from "@/components/BallotCard";
+import { BallotListGrid } from "@/components/BallotListGrid";
 
 interface RecentBallotsPanelProps {
   ballots: BallotCardData[];
@@ -11,11 +12,7 @@ export function RecentBallotsPanel({ ballots }: RecentBallotsPanelProps) {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {recentBallots.map((b) => (
-          <BallotCard key={b.id} ballot={b} />
-        ))}
-      </div>
+      <BallotListGrid ballots={recentBallots} />
 
       <div className="flex justify-start">
         <Link href="/browse" className="xp-btn text-xs">

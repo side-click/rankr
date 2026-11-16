@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
-import { BallotCard } from "@/components/BallotCard";
+import { BallotListGrid } from "@/components/BallotListGrid";
 import { Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -206,17 +206,7 @@ export default async function BrowsePage({
         </div>
       </form>
 
-      {filteredBallots.length === 0 ? (
-        <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
-          No published rankings match your filters.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filteredBallots.map((b) => (
-            <BallotCard key={b.id} ballot={b} />
-          ))}
-        </div>
-      )}
+      <BallotListGrid ballots={filteredBallots} showCount />
     </RetroWindow>
   );
 }

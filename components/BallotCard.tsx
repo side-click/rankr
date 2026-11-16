@@ -55,7 +55,13 @@ export function getLeaguePrefix(
   return fallbackName ?? "";
 }
 
-export function BallotCard({ ballot }: { ballot: BallotCardData }) {
+export function BallotCard({
+  ballot,
+  layout = "grid",
+}: {
+  ballot: BallotCardData;
+  layout?: "grid" | "list";
+}) {
   const profile = unwrap(ballot.profiles);
   const season = unwrap(ballot.seasons);
   const league = unwrap(season?.leagues);
@@ -92,6 +98,85 @@ export function BallotCard({ ballot }: { ballot: BallotCardData }) {
     borderLeftColor: resolvedTheme.primary_color,
     backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
   };
+
+  if (layout === "list") {
+    return (
+      <Link
+        href={`/ballot/${ballot.id}`}
+        style={cardStyle}
+        className="xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-40 sm:w-44 shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.username}
+                className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-md bg-[#5865f2] text-white text-sm font-bold inline-flex items-center justify-center shrink-0">
+                {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="text-xs font-bold text-[#f0c020] truncate">
+              {profile?.username ?? "Unknown"}
+            </span>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                {edName}
+              </span>
+              {displayLogo ? (
+                <img
+                  src={displayLogo}
+                  alt={hasDivision ? divName : league?.name ?? sName}
+                  className="w-5 h-5 object-contain shrink-0"
+                />
+              ) : (
+                <Award className="w-4 h-4 text-[#7cd438] shrink-0" />
+              )}
+              <span
+                title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+              >
+                {isPlayer ? (
+                  <User className="w-3 h-3 text-[#f0c020]" />
+                ) : (
+                  <TeamGroupIcon className="w-3 h-3 text-[#f0c020]" />
+                )}
+              </span>
+            </div>
+            <div className="text-xs truncate flex flex-wrap items-center gap-x-1.5">
+              <span
+                style={{ color: resolvedTheme.accent_text_color }}
+                className="font-bold"
+              >
+                {hasDivision ? divName : "All Divisions"}
+              </span>
+              <span className="text-[#6e7572]">•</span>
+              <span className="font-semibold text-[#c7c5b8]">
+                {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+              </span>
+              <span className="text-[#6e7572]">•</span>
+              <span className="text-[11px] text-[#a6a89e]">
+                {leagueSeasonLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 text-[11px] shrink-0">
+          <span className="text-[#a6a89e]">
+            {publishedDate ? `Published ${publishedDate}` : ""}
+          </span>
+          <span className="text-[#7cd438] font-bold shrink-0">Open →</span>
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <Link
