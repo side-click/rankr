@@ -748,7 +748,7 @@ export function ConsensusRankingsView({
                                 )}
                               </div>
                             </div>
-                            {showBreakdown && !exporting && (
+                            {showBreakdown && (
                               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                                 {row.voterRanks.map((vr) => (
                                   <Link
