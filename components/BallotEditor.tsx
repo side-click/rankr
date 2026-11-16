@@ -505,6 +505,8 @@ export function BallotEditor({
 
     async function loadBallotState() {
       setLoadingBallot(true);
+      setBallotStatus(null);
+      setExistingBallotId(null);
       setMessage(null);
 
       try {
@@ -1079,7 +1081,7 @@ export function BallotEditor({
                 ? "This season is currently inactive. Rankings cannot be created or edited."
                 : isEditionArchived
                 ? "This edition is archived. Drafts and rankings can no longer be created or edited."
-                : ballotStatus === "published"
+                : !loadingBallot && ballotStatus === "published"
                 ? "This edition is locked and your ranking has already been published."
                 : "This edition is locked — you can still arrange teams, write comments, and save drafts, but publishing is disabled."}
             </span>
