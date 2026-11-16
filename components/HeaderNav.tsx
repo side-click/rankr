@@ -71,7 +71,7 @@ export function HeaderNav({ seasons, isLoggedIn, isAdmin }: HeaderNavProps) {
           aria-label="Select Season"
           value={selectedSeasonSlug}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          className="hidden sm:block xp-inset px-2 py-1 text-xs font-bold w-[130px] lg:w-[195px] shrink-0 truncate"
+          className="hidden md:block xp-inset px-2 py-1 text-xs font-bold w-[175px] lg:w-[195px] shrink-0 truncate"
         >
           <option value="">Select a Season</option>
           {seasons.map((s) => (
