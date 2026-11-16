@@ -773,14 +773,10 @@ export function ConsensusRankingsView({
                           </div>
 
                           <div className="flex items-center justify-center">
-                            {row.firstPlaceVotes > 0 ? (
+                            {row.firstPlaceVotes > 0 && (
                               <span className="h-14 inline-flex items-center justify-center gap-2 px-5 rounded-full bg-[#2a2210] border border-[#f0c020]/70 text-2xl font-black text-[#f0c020] tabular-nums">
                                 <Crown className="w-6 h-6" />
                                 <span>{row.firstPlaceVotes}</span>
-                              </span>
-                            ) : (
-                              <span className="text-lg font-semibold text-[#6e7572]">
-                                —
                               </span>
                             )}
                           </div>
