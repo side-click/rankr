@@ -8,12 +8,14 @@ interface BallotListGridProps {
   ballots: BallotCardData[];
   emptyMessage?: string;
   showCount?: boolean;
+  headerLeft?: React.ReactNode;
 }
 
 export function BallotListGrid({
   ballots,
   emptyMessage = "No published rankings match your filters.",
   showCount = false,
+  headerLeft,
 }: BallotListGridProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -29,7 +31,9 @@ export function BallotListGrid({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] text-[#a6a89e]">
-          {showCount
+          {headerLeft
+            ? headerLeft
+            : showCount
             ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
             : null}
         </div>

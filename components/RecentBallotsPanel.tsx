@@ -8,18 +8,17 @@ interface RecentBallotsPanelProps {
 }
 
 export function RecentBallotsPanel({ ballots }: RecentBallotsPanelProps) {
-  const recentBallots = ballots.slice(0, 9);
+  const recentBallots = ballots.slice(0, 6);
 
   return (
-    <div className="space-y-3">
-      <BallotListGrid ballots={recentBallots} />
-
-      <div className="flex justify-start">
+    <BallotListGrid
+      ballots={recentBallots}
+      headerLeft={
         <Link href="/browse" className="xp-btn text-xs">
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Browse All</span>
         </Link>
-      </div>
-    </div>
+      }
+    />
   );
 }

@@ -65,7 +65,7 @@ export default async function HomePage() {
       )
       .eq("status", "published")
       .order("published_at", { ascending: false })
-      .limit(9),
+      .limit(6),
   ]);
 
   const needsSetup = Boolean(seasonsError) || !seasons || seasons.length === 0;
