@@ -10,6 +10,7 @@ import {
 
 interface BallotListGridProps {
   ballots: BallotCardData[];
+  defaultView?: BallotCardLayout;
   emptyMessage?: string;
   showCount?: boolean;
   headerLeft?: React.ReactNode;
@@ -17,11 +18,12 @@ interface BallotListGridProps {
 
 export function BallotListGrid({
   ballots,
+  defaultView = "grid",
   emptyMessage = "No published rankings match your filters.",
   showCount = false,
   headerLeft,
 }: BallotListGridProps) {
-  const [viewMode, setViewMode] = useState<BallotCardLayout>("grid");
+  const [viewMode, setViewMode] = useState<BallotCardLayout>(defaultView);
 
   if (ballots.length === 0) {
     return (

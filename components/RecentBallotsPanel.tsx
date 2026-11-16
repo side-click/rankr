@@ -13,6 +13,7 @@ export function RecentBallotsPanel({ ballots }: RecentBallotsPanelProps) {
   return (
     <BallotListGrid
       ballots={recentBallots}
+      defaultView="list"
       headerLeft={
         <Link href="/browse" className="xp-btn text-xs">
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />

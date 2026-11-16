@@ -148,15 +148,15 @@ export function BallotCard({
       <Link
         href={`/ballot/${ballot.id}`}
         style={cardStyle}
-        className={`xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 md:grid ${
+        className={`xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid ${
           hasPreview
-            ? "md:grid-cols-[164px_minmax(130px,1fr)_auto_auto] xl:grid-cols-[164px_minmax(130px,1fr)_auto_auto_auto]"
-            : "md:grid-cols-[164px_minmax(130px,1fr)_auto_auto]"
-        } md:items-center md:gap-4`}
+            ? "lg:grid-cols-[148px_minmax(115px,1fr)_auto_auto] xl:grid-cols-[148px_minmax(115px,1fr)_auto_auto_auto]"
+            : "lg:grid-cols-[148px_minmax(115px,1fr)_auto_auto]"
+        } lg:items-center lg:gap-3`}
       >
-        {/* Mobile top row / Desktop Col 1 + Col 2 */}
-        <div className="flex items-center gap-3 min-w-0 md:contents">
-          <div className="w-36 sm:w-40 md:w-full shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
+        {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
+        <div className="flex items-center gap-3 min-w-0 lg:contents">
+          <div className="w-36 sm:w-40 lg:w-full shrink-0 flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -182,14 +182,14 @@ export function BallotCard({
                 <img
                   src={displayLogo}
                   alt={hasDivision ? divName : league?.name ?? sName}
-                  className="md:hidden w-5 h-5 object-contain shrink-0"
+                  className="lg:hidden w-5 h-5 object-contain shrink-0"
                 />
               ) : (
-                <Award className="md:hidden w-4 h-4 text-[#7cd438] shrink-0" />
+                <Award className="lg:hidden w-4 h-4 text-[#7cd438] shrink-0" />
               )}
               <span
                 title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-                className="md:hidden w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                className="lg:hidden w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
               >
                 {isPlayer ? (
                   <User className="w-3 h-3 text-[#f0c020]" />
@@ -204,7 +204,7 @@ export function BallotCard({
             >
               {hasDivision ? divName : "All Divisions"}
             </div>
-            <div className="md:hidden text-[11px] text-[#c7c5b8] truncate">
+            <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate">
               {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
               <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
             </div>
@@ -212,7 +212,7 @@ export function BallotCard({
         </div>
 
         {/* Desktop Col 3: Logo + Type + Season (auto width, never truncates) */}
-        <div className="hidden md:flex items-center gap-2 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           {displayLogo ? (
             <img
               src={displayLogo}
@@ -248,7 +248,7 @@ export function BallotCard({
             {top3Teams.map((t) => (
               <span
                 key={t.rank}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
+                className="inline-flex items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
               >
                 <span className="text-[#f0c020]">#{t.rank}</span>
                 {t.logoUrl && (
@@ -258,15 +258,15 @@ export function BallotCard({
                     className="w-4 h-4 object-contain shrink-0"
                   />
                 )}
-                <span className="max-w-[88px] truncate">{t.name}</span>
+                <span className="max-w-[64px] truncate">{t.name}</span>
               </span>
             ))}
             {topTierPreview && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
                 <span className="font-bold text-[#f0c020]">
                   {topTierPreview.label}:
                 </span>
-                <span className="max-w-[220px] truncate">
+                <span className="max-w-[190px] truncate">
                   {topTierPreview.players.join(", ")}
                 </span>
               </span>
@@ -275,7 +275,7 @@ export function BallotCard({
         )}
 
         {/* Footer / Right Column */}
-        <div className="flex items-center justify-between md:justify-end gap-4 pt-2 md:pt-0 border-t md:border-t-0 border-white/10 text-[11px] shrink-0">
+        <div className="flex items-center justify-between lg:justify-end gap-2.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
           <span className="text-[#a6a89e] whitespace-nowrap">
             {publishedDate ? `Published ${publishedDate}` : ""}
           </span>
