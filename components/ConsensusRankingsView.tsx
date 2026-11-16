@@ -718,30 +718,48 @@ export function ConsensusRankingsView({
                             </div>
                           )}
 
-                          <div className="flex items-center gap-6 min-w-0">
-                            {row.logoUrl ? (
-                              <img
-                                src={row.logoUrl}
-                                alt={row.teamName}
-                                crossOrigin="anonymous"
-                                className="w-20 h-20 object-contain drop-shadow shrink-0"
-                              />
-                            ) : (
-                              <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
-                                <Award className="w-9 h-9 text-[#c89b3c]" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <div className="text-4xl font-extrabold text-white truncate leading-tight">
-                                {row.teamName}
-                              </div>
-                              {row.ballotCount < submissionCount && (
-                                <div className="text-[11px] text-[#a6a89e]">
-                                  Ranked on {row.ballotCount} of{" "}
-                                  {submissionCount} submissions
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-6 min-w-0">
+                              {row.logoUrl ? (
+                                <img
+                                  src={row.logoUrl}
+                                  alt={row.teamName}
+                                  crossOrigin="anonymous"
+                                  className="w-20 h-20 object-contain drop-shadow shrink-0"
+                                />
+                              ) : (
+                                <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
+                                  <Award className="w-9 h-9 text-[#c89b3c]" />
                                 </div>
                               )}
+                              <div className="min-w-0">
+                                <div className="text-4xl font-extrabold text-white truncate leading-tight">
+                                  {row.teamName}
+                                </div>
+                                {row.ballotCount < submissionCount && (
+                                  <div className="text-[11px] text-[#a6a89e]">
+                                    Ranked on {row.ballotCount} of{" "}
+                                    {submissionCount} submissions
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                            {showBreakdown && !exporting && (
+                              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                {row.voterRanks.map((vr) => (
+                                  <Link
+                                    key={`${row.teamKey}-${vr.ballotId}`}
+                                    href={`/ballot/${vr.ballotId}`}
+                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 hover:bg-black/60 border border-white/10 text-[11px] text-[#d6d3c4] transition"
+                                  >
+                                    <span className="font-bold text-[#f0c020]">
+                                      #{vr.rank}
+                                    </span>
+                                    <span>{vr.username}</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center justify-center">
@@ -763,27 +781,6 @@ export function ConsensusRankingsView({
                             )}
                           </div>
                         </div>
-
-                        {showBreakdown && !exporting && (
-                          <div
-                            className={`mt-3 ${
-                              showChange ? "pl-[236px]" : "pl-[152px]"
-                            } flex flex-wrap items-center gap-1.5`}
-                          >
-                            {row.voterRanks.map((vr) => (
-                              <Link
-                                key={`${row.teamKey}-${vr.ballotId}`}
-                                href={`/ballot/${vr.ballotId}`}
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 hover:bg-black/60 border border-white/10 text-[11px] text-[#d6d3c4] transition"
-                              >
-                                <span className="font-bold text-[#f0c020]">
-                                  #{vr.rank}
-                                </span>
-                                <span>{vr.username}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
