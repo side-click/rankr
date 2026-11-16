@@ -38,6 +38,7 @@ export default async function BrowsePage({
       title,
       ranking_type,
       tier_variant,
+      tier_data,
       published_at,
       season_id,
       division_id,
@@ -50,7 +51,8 @@ export default async function BrowsePage({
       profiles ( username, avatar_url ),
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, logo_url, theme_key ),
-      editions ( name, slug )
+      editions ( name, slug ),
+      ballot_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
     `
     )
     .eq("status", "published")

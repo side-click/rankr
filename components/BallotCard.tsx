@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Award, User } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
-import type { RankingType, TierVariant } from "@/types/database";
+import type {
+  PlayerTierListPayload,
+  RankingType,
+  TierVariant,
+} from "@/types/database";
 
 type MaybeArray<T> = T | T[] | null | undefined;
 
@@ -16,6 +20,7 @@ export interface BallotCardData {
   title: string | null;
   ranking_type?: RankingType;
   tier_variant?: TierVariant | string | null;
+  tier_data?: PlayerTierListPayload | unknown;
   division_id?: string | null;
   published_at: string | null;
   league_name_snapshot?: string | null;
@@ -42,6 +47,11 @@ export interface BallotCardData {
     theme_key?: string | null;
   }>;
   editions?: MaybeArray<{ name: string }>;
+  ballot_entries?: MaybeArray<{
+    rank: number;
+    team_name_snapshot: string | null;
+    teams?: MaybeArray<{ name: string; logo_url: string | null }>;
+  }>;
 }
 
 export function getLeaguePrefix(
@@ -55,12 +65,14 @@ export function getLeaguePrefix(
   return fallbackName ?? "";
 }
 
+export type BallotCardLayout = "grid" | "list" | "test1" | "test2" | "test3";
+
 export function BallotCard({
   ballot,
   layout = "grid",
 }: {
   ballot: BallotCardData;
-  layout?: "grid" | "list";
+  layout?: BallotCardLayout;
 }) {
   const profile = unwrap(ballot.profiles);
   const season = unwrap(ballot.seasons);
@@ -99,7 +111,37 @@ export function BallotCard({
     backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
   };
 
-  if (layout === "list") {
+  if (layout === "list" || layout === "test1" || layout === "test2") {
+    const top3Teams = !isPlayer
+      ? [...(Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [])]
+          .sort((a, b) => a.rank - b.rank)
+          .slice(0, 3)
+          .map((e) => {
+            const t = unwrap(e.teams);
+            return {
+              rank: e.rank,
+              name: t?.name ?? e.team_name_snapshot ?? "Team",
+              logoUrl: t?.logo_url ?? null,
+            };
+          })
+      : [];
+
+    const topTierPreview = isPlayer
+      ? (() => {
+          const td = ballot.tier_data as PlayerTierListPayload | null | undefined;
+          const firstTier = td?.sections?.[0]?.tiers?.find(
+            (t) => t.players.length > 0
+          );
+          if (!firstTier) return null;
+          return {
+            label: firstTier.label,
+            players: firstTier.players
+              .slice(0, 3)
+              .map((p) => p.name.split("#")[0].trim() || p.name),
+          };
+        })()
+      : null;
+
     return (
       <Link
         href={`/ballot/${ballot.id}`}
@@ -107,7 +149,11 @@ export function BallotCard({
         className="xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4"
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-40 sm:w-44 shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10">
+          <div
+            className={`${
+              layout === "test2" ? "w-36" : "w-40 sm:w-44"
+            } shrink-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10`}
+          >
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -160,15 +206,126 @@ export function BallotCard({
               <span className="font-semibold text-[#c7c5b8]">
                 {isPlayer ? "Player Tier List" : "Team Power Rankings"}
               </span>
-              <span className="text-[#6e7572]">•</span>
-              <span className="text-[11px] text-[#a6a89e]">
-                {leagueSeasonLabel}
-              </span>
+              {layout !== "test2" && (
+                <>
+                  <span className="text-[#6e7572]">•</span>
+                  <span className="text-[11px] text-[#a6a89e]">
+                    {leagueSeasonLabel}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {layout === "test1" && (top3Teams.length > 0 || topTierPreview) && (
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
+              {top3Teams.map((t) => (
+                <span
+                  key={t.rank}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
+                >
+                  <span className="text-[#f0c020]">#{t.rank}</span>
+                  {t.logoUrl && (
+                    <img
+                      src={t.logoUrl}
+                      alt={t.name}
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                  <span className="max-w-[90px] truncate">{t.name}</span>
+                </span>
+              ))}
+              {topTierPreview && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
+                  <span className="font-bold text-[#f0c020]">
+                    {topTierPreview.label}:
+                  </span>
+                  <span className="max-w-[240px] truncate">
+                    {topTierPreview.players.join(", ")}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 text-[11px] shrink-0">
+          <span className="text-[#a6a89e]">
+            {publishedDate ? `Published ${publishedDate}` : ""}
+          </span>
+          <span className="text-[#7cd438] font-bold shrink-0">Open →</span>
+        </div>
+      </Link>
+    );
+  }
+
+  if (layout === "test3") {
+    return (
+      <Link
+        href={`/ballot/${ballot.id}`}
+        style={cardStyle}
+        className="xp-panel px-3.5 py-2.5 hover:brightness-110 transition flex flex-col md:grid md:grid-cols-[176px_1.2fr_1fr_auto] md:items-center gap-2.5 md:gap-4"
+      >
+        <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
+          {profile?.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.username}
+              className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
+            />
+          ) : (
+            <span className="w-8 h-8 rounded-md bg-[#5865f2] text-white text-sm font-bold inline-flex items-center justify-center shrink-0">
+              {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className="text-xs font-bold text-[#f0c020] truncate">
+            {profile?.username ?? "Unknown"}
+          </span>
+        </div>
+
+        <div className="min-w-0">
+          <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+            {edName}
+          </div>
+          <div
+            style={{ color: resolvedTheme.accent_text_color }}
+            className="text-xs font-bold truncate"
+          >
+            {hasDivision ? divName : "All Divisions"}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 min-w-0">
+          {displayLogo ? (
+            <img
+              src={displayLogo}
+              alt={hasDivision ? divName : league?.name ?? sName}
+              className="w-6 h-6 object-contain shrink-0"
+            />
+          ) : (
+            <Award className="w-5 h-5 text-[#7cd438] shrink-0" />
+          )}
+          <span
+            title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+          >
+            {isPlayer ? (
+              <User className="w-3.5 h-3.5 text-[#f0c020]" />
+            ) : (
+              <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            </div>
+            <div className="text-[11px] text-[#a6a89e] truncate">
+              {leagueSeasonLabel}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 text-[11px] shrink-0">
+        <div className="flex items-center justify-between md:justify-end gap-4 pt-2 md:pt-0 border-t md:border-t-0 border-white/10 text-[11px] shrink-0">
           <span className="text-[#a6a89e]">
             {publishedDate ? `Published ${publishedDate}` : ""}
           </span>

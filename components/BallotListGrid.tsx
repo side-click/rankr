@@ -2,7 +2,11 @@
 
 import React, { useState } from "react";
 import { LayoutGrid, List } from "lucide-react";
-import { BallotCard, type BallotCardData } from "@/components/BallotCard";
+import {
+  BallotCard,
+  type BallotCardData,
+  type BallotCardLayout,
+} from "@/components/BallotCard";
 
 interface BallotListGridProps {
   ballots: BallotCardData[];
@@ -17,7 +21,7 @@ export function BallotListGrid({
   showCount = false,
   headerLeft,
 }: BallotListGridProps) {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<BallotCardLayout>("grid");
 
   if (ballots.length === 0) {
     return (
@@ -27,9 +31,17 @@ export function BallotListGrid({
     );
   }
 
+  const options: { key: BallotCardLayout; label: string; icon?: "grid" | "list" }[] = [
+    { key: "grid", label: "Grid", icon: "grid" },
+    { key: "list", label: "List", icon: "list" },
+    { key: "test1", label: "Test1" },
+    { key: "test2", label: "Test2" },
+    { key: "test3", label: "Test3" },
+  ];
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-[11px] text-[#a6a89e]">
           {headerLeft
             ? headerLeft
@@ -37,33 +49,23 @@ export function BallotListGrid({
             ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
             : null}
         </div>
-        <div className="xp-inset p-0.5 inline-flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
-            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
-              viewMode === "grid"
-                ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
-                : "text-[#c7c5b8] hover:text-white"
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Grid</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
-              viewMode === "list"
-                ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
-                : "text-[#c7c5b8] hover:text-white"
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>List</span>
-          </button>
+        <div className="xp-inset p-0.5 inline-flex flex-wrap items-center gap-0.5">
+          {options.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setViewMode(opt.key)}
+              className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
+                viewMode === opt.key
+                  ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
+                  : "text-[#c7c5b8] hover:text-white"
+              }`}
+            >
+              {opt.icon === "grid" && <LayoutGrid className="w-3.5 h-3.5" />}
+              {opt.icon === "list" && <List className="w-3.5 h-3.5" />}
+              <span>{opt.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -73,10 +75,16 @@ export function BallotListGrid({
             <BallotCard key={b.id} ballot={b} layout="grid" />
           ))}
         </div>
+      ) : viewMode === "test2" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          {ballots.map((b) => (
+            <BallotCard key={b.id} ballot={b} layout="test2" />
+          ))}
+        </div>
       ) : (
         <div className="space-y-2.5">
           {ballots.map((b) => (
-            <BallotCard key={b.id} ballot={b} layout="list" />
+            <BallotCard key={b.id} ballot={b} layout={viewMode} />
           ))}
         </div>
       )}

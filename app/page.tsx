@@ -49,6 +49,7 @@ export default async function HomePage() {
         title,
         ranking_type,
         tier_variant,
+        tier_data,
         published_at,
         season_id,
         division_id,
@@ -60,7 +61,8 @@ export default async function HomePage() {
         profiles ( username, avatar_url ),
         seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
         divisions ( name, slug, theme_key, logo_url ),
-        editions ( name )
+        editions ( name ),
+        ballot_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
       `
       )
       .eq("status", "published")
