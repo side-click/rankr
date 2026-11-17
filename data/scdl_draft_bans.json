@@ -1,4 +1,21 @@
 {
+  "5680663535": {
+    "blueTeam": "Milk",
+    "redTeam": "Breadwinners",
+    "bans": [
+      "LeeSin",
+      "Galio",
+      "Veigar",
+      "Rakan",
+      "Ornn",
+      "Nocturne",
+      "Fizz",
+      "Zac",
+      "Yone",
+      "Kassadin"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/MG3FhflAVS"
+  },
   "5680632994": {
     "blueTeam": "Globetrotters",
     "redTeam": "Ticks",
