@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
@@ -117,7 +117,7 @@ export function AdminStatsDashboard({
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [showAllLeaderboards, setShowAllLeaderboards] = useState(false);
   const [matchCount, setMatchCount] = useState<number>(5);
-  const [dataSource, setDataSource] = useState<"riot" | "sheet">("riot");
+  const [dataSource, setDataSource] = useState<"riot" | "sheet">("sheet");
   const [sheetData, setSheetData] = useState<{
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
@@ -237,6 +237,11 @@ export function AdminStatsDashboard({
       setSheetLoading(false);
     }
   }
+
+  useEffect(() => {
+    void loadSheetStats(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const activePlayers = useMemo(
     () => (dataSource === "sheet" && sheetData ? sheetData.players : players),
@@ -642,15 +647,6 @@ export function AdminStatsDashboard({
         <div className="flex items-center gap-1 bg-black/40 p-1 rounded border border-white/15">
           <button
             type="button"
-            onClick={() => setDataSource("riot")}
-            className={`xp-btn text-xs ${
-              dataSource === "riot" ? "xp-btn-primary" : ""
-            }`}
-          >
-            SoloQ (Riot API)
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setDataSource("sheet");
               void loadSheetStats(false);
@@ -660,6 +656,15 @@ export function AdminStatsDashboard({
             }`}
           >
             SCDL League (Import)
+          </button>
+          <button
+            type="button"
+            onClick={() => setDataSource("riot")}
+            className={`xp-btn text-xs ${
+              dataSource === "riot" ? "xp-btn-primary" : ""
+            }`}
+          >
+            SoloQ (Riot API)
           </button>
         </div>
       </div>
