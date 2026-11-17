@@ -769,7 +769,7 @@ export function ConsensusRankingsView({
                           </div>
 
                           <div className="flex items-center justify-center">
-                            <span className="h-14 px-3.5 rounded-xl bg-black/40 border border-white/15 text-lg font-black text-[#f0ede0] tabular-nums inline-flex items-center justify-center whitespace-nowrap">
+                            <span className="text-lg font-bold text-[#d6d3c4] tabular-nums whitespace-nowrap">
                               {row.bestRank === row.worstRank
                                 ? `#${row.bestRank}`
                                 : `#${row.bestRank} – #${row.worstRank}`}
