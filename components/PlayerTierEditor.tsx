@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -955,6 +956,11 @@ export function PlayerTierEditor({
   const lastLoadedKeyRef = useRef<string>("");
   const lastScopeKeyRef = useRef<string>("");
   const [saving, setSaving] = useState(false);
+  const [overwriteConfirm, setOverwriteConfirm] = useState<{
+    targetStatus: "draft" | "published";
+    existingStatus: string;
+    existingVariant: string | null;
+  } | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -1401,11 +1407,29 @@ export function PlayerTierEditor({
     }));
   }
 
-  async function savePlayerTierList(targetStatus: "draft" | "published") {
-    if (!seasonId || !editionId) {
+  function formatVariantLabel(variant: string | null | undefined): string {
+    switch (variant) {
+      case "standard_overall":
+        return "Standard Tiers • Overall";
+      case "standard_split":
+        return "Standard Tiers • Split Roles";
+      case "draft_day_overall":
+        return "Draft Day Tiers • Overall";
+      case "draft_day_split":
+        return "Draft Day Tiers • Split Roles";
+      default:
+        return "another configuration";
+    }
+  }
+
+  async function savePlayerTierList(
+    targetStatus: "draft" | "published",
+    skipOverwriteConfirm = false
+  ) {
+    if (!seasonId || !divisionScope || !editionId) {
       setMessage({
         type: "error",
-        text: "Select a season and edition first.",
+        text: "Select a season, player pool, and edition first.",
       });
       return;
     }
@@ -1422,6 +1446,38 @@ export function PlayerTierEditor({
     setMessage(null);
 
     try {
+      const dbDivisionId = divisionScope === "all" ? null : divisionScope;
+
+      if (!skipOverwriteConfirm && !existingBallotId) {
+        let checkQuery = supabase
+          .from("ballots")
+          .select("id, status, tier_variant")
+          .eq("user_id", userId)
+          .eq("season_id", seasonId)
+          .eq("edition_id", editionId)
+          .eq("ranking_type", "player");
+
+        if (dbDivisionId) {
+          checkQuery = checkQuery.eq("division_id", dbDivisionId);
+        } else {
+          checkQuery = checkQuery.is("division_id", null);
+        }
+
+        const { data: existingRows } = await checkQuery;
+        const otherVariantRow = (existingRows ?? []).find(
+          (row) => row.tier_variant !== activeTierVariant
+        );
+
+        if (otherVariantRow) {
+          setOverwriteConfirm({
+            targetStatus,
+            existingStatus: otherVariantRow.status,
+            existingVariant: otherVariantRow.tier_variant,
+          });
+          setSaving(false);
+          return;
+        }
+      }
       const now = new Date().toISOString();
       const resolvedAuthor = authorName.trim() || discordDefaultName;
 
@@ -1452,8 +1508,6 @@ export function PlayerTierEditor({
       const defaultTitle = `${scopeTitle} — ${
         currentEdition?.name ?? "Edition"
       }`;
-
-      const dbDivisionId = divisionScope === "all" ? null : divisionScope;
 
       const payload = {
         user_id: userId,
@@ -2115,6 +2169,89 @@ export function PlayerTierEditor({
           </DndContext>
         )}
       </RetroWindow>
+
+      {overwriteConfirm &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4"
+            onClick={() => !saving && setOverwriteConfirm(null)}
+          >
+            <div
+              className="w-full max-w-md xp-window overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <span>Overwrite Existing Tier List?</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setOverwriteConfirm(null)}
+                  className="text-white/80 hover:text-white"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
+                <p className="leading-relaxed">
+                  You already have a{" "}
+                  <strong className="text-[#f0ede0]">
+                    {overwriteConfirm.existingStatus}
+                  </strong>{" "}
+                  Player Tier List for this edition under{" "}
+                  <strong className="text-[#f0c020]">
+                    {formatVariantLabel(overwriteConfirm.existingVariant)}
+                  </strong>
+                  .
+                </p>
+                <p className="leading-relaxed text-[#ff9f96]">
+                  {overwriteConfirm.targetStatus === "published"
+                    ? "Publishing"
+                    : "Saving a draft"}{" "}
+                  with{" "}
+                  <strong className="text-[#f0ede0]">
+                    {formatVariantLabel(activeTierVariant)}
+                  </strong>{" "}
+                  will permanently overwrite that existing{" "}
+                  {overwriteConfirm.existingStatus} tier list and cannot be
+                  undone.
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setOverwriteConfirm(null)}
+                    className="xp-btn text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => {
+                      const nextTarget = overwriteConfirm.targetStatus;
+                      setOverwriteConfirm(null);
+                      void savePlayerTierList(nextTarget, true);
+                    }}
+                    className="xp-btn xp-btn-danger text-xs"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>
+                      {overwriteConfirm.targetStatus === "published"
+                        ? "Overwrite & Publish"
+                        : "Overwrite & Save Draft"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
