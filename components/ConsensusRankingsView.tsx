@@ -235,7 +235,8 @@ export function ConsensusRankingsView({
           </div>
           <div>
             <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-              Consensus Power Rankings
+              Consensus{" "}
+              <span className="whitespace-nowrap">Power Rankings</span>
             </h1>
           </div>
         </div>
