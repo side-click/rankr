@@ -446,6 +446,21 @@ export async function fetchScdlSheetStats(
     const games = distinctMatches.length;
     const wins = distinctMatches.filter((m) => m.win).length;
 
+    const seriesBuckets = new Map<string, { w: number; l: number }>();
+    for (const m of distinctMatches) {
+      const sKey = m.matchLabel?.trim() || m.matchId;
+      const b = seriesBuckets.get(sKey) ?? { w: 0, l: 0 };
+      if (m.win) b.w += 1;
+      else b.l += 1;
+      seriesBuckets.set(sKey, b);
+    }
+    let seriesWins = 0;
+    let seriesLosses = 0;
+    for (const b of seriesBuckets.values()) {
+      if (b.w > b.l) seriesWins += 1;
+      else if (b.l > b.w) seriesLosses += 1;
+    }
+
     const totalKills = teamMatches.reduce((s, m) => s + m.kills, 0);
     const totalDeaths = teamMatches.reduce((s, m) => s + m.deaths, 0);
     const totalAssists = teamMatches.reduce((s, m) => s + m.assists, 0);
@@ -480,6 +495,8 @@ export async function fetchScdlSheetStats(
       players: teamPlayers,
       games,
       wins,
+      seriesWins,
+      seriesLosses,
       winRate: games > 0 ? (wins / games) * 100 : 0,
       avgKda:
         totalDeaths > 0

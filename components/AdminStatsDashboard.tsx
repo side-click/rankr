@@ -115,7 +115,9 @@ export function AdminStatsDashboard({
   teams,
 }: AdminStatsDashboardProps) {
   const router = useRouter();
-  const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const [divisionFilter, setDivisionFilter] = useState<string>(
+    divisions[0]?.id ?? "all"
+  );
   const [roleFilter, setRoleFilter] = useState<LeagueRole | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("leagueRating");
   const [sortAsc, setSortAsc] = useState(false);
@@ -287,7 +289,19 @@ export function AdminStatsDashboard({
       .filter((t) =>
         divisionFilter === "all" ? true : t.divisionId === divisionFilter
       )
-      .sort((a, b) => b.winRate - a.winRate || b.avgKda - a.avgKda);
+      .sort((a, b) => {
+        const aSeriesDiff =
+          (a.seriesWins ?? a.wins) -
+          (a.seriesLosses ?? Math.max(0, a.games - a.wins));
+        const bSeriesDiff =
+          (b.seriesWins ?? b.wins) -
+          (b.seriesLosses ?? Math.max(0, b.games - b.wins));
+        return (
+          bSeriesDiff - aSeriesDiff ||
+          b.winRate - a.winRate ||
+          b.avgKda - a.avgKda
+        );
+      });
   }, [activeTeams, divisionFilter]);
 
   const syncedCount = useMemo(
@@ -878,15 +892,6 @@ export function AdminStatsDashboard({
         {/* Division Toggle + Riot Sync Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 w-full lg:w-auto">
-            <button
-              type="button"
-              onClick={() => setDivisionFilter("all")}
-              className={`xp-btn text-xs justify-center col-span-2 sm:col-span-1 ${
-                divisionFilter === "all" ? "xp-btn-primary" : ""
-              }`}
-            >
-              All Divisions ({activePlayers.length})
-            </button>
             {divisions.map((div) => {
               const count = activePlayers.filter(
                 (p) => p.divisionId === div.id
@@ -913,6 +918,15 @@ export function AdminStatsDashboard({
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setDivisionFilter("all")}
+              className={`xp-btn text-xs justify-center col-span-2 sm:col-span-1 ${
+                divisionFilter === "all" ? "xp-btn-primary" : ""
+              }`}
+            >
+              All Divisions ({activePlayers.length})
+            </button>
           </div>
 
           {dataSource === "sheet" ? (
@@ -1836,6 +1850,7 @@ export function AdminStatsDashboard({
         )}
 
         {/* Teams Table (Click through to Team Page) */}
+        {showLeaderboards && (
         <div className="mb-6 xp-panel overflow-hidden">
           <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
@@ -1852,8 +1867,8 @@ export function AdminStatsDashboard({
                 <tr>
                   <th className="px-3 py-2">Team</th>
                   <th className="px-3 py-2">Division</th>
+                  <th className="px-3 py-2 text-right">Series</th>
                   <th className="px-3 py-2 text-right">Games</th>
-                  <th className="px-3 py-2 text-right">WR%</th>
                   <th className="px-3 py-2 text-right">KDA</th>
                   <th className="px-3 py-2 text-right">DPM</th>
                   <th className="px-3 py-2 text-right">GPM</th>
@@ -1861,7 +1876,12 @@ export function AdminStatsDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {filteredTeams.map((t) => (
+                {filteredTeams.map((t) => {
+                  const gWins = t.wins;
+                  const gLosses = Math.max(0, t.games - t.wins);
+                  const sWins = t.seriesWins ?? gWins;
+                  const sLosses = t.seriesLosses ?? gLosses;
+                  return (
                   <tr
                     key={t.teamId}
                     className="hover:bg-white/5 transition cursor-pointer"
@@ -1886,15 +1906,27 @@ export function AdminStatsDashboard({
                     <td className="px-3 py-2 text-[#c7c5b8]">
                       {t.divisionName}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {t.games}
+                    <td
+                      className={`px-3 py-2 text-right font-mono font-bold ${
+                        t.games <= 0
+                          ? "text-[#a6a89e]"
+                          : sWins >= sLosses
+                          ? "text-[#7cd438]"
+                          : "text-[#ff857a]"
+                      }`}
+                    >
+                      {t.games > 0 ? `${sWins}-${sLosses}` : "—"}
                     </td>
                     <td
                       className={`px-3 py-2 text-right font-mono font-bold ${
-                        t.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
+                        t.games <= 0
+                          ? "text-[#a6a89e]"
+                          : gWins >= gLosses
+                          ? "text-[#7cd438]"
+                          : "text-[#ff857a]"
                       }`}
                     >
-                      {t.games > 0 ? `${t.winRate.toFixed(1)}%` : "—"}
+                      {t.games > 0 ? `${gWins}-${gLosses}` : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
                       {t.games > 0 ? t.avgKda.toFixed(2) : "—"}
@@ -1911,13 +1943,16 @@ export function AdminStatsDashboard({
                         : "—"}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
+        )}
 
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
+        {showLeaderboards && (
         <div className="xp-panel overflow-hidden">
           <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
@@ -2170,6 +2205,7 @@ export function AdminStatsDashboard({
             </div>
           )}
         </div>
+        )}
         {showUnrosteredModal && sheetData && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <div className="xp-window xp-window-scdl w-full max-w-xl overflow-hidden shadow-2xl">

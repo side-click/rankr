@@ -72,6 +72,8 @@ export interface AggregatedTeamStats {
   players: AggregatedPlayerStats[];
   games: number;
   wins: number;
+  seriesWins?: number;
+  seriesLosses?: number;
   winRate: number;
   avgKda: number;
   avgDpm: number;
