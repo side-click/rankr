@@ -11,8 +11,15 @@ import {
   Award,
   BarChart3,
   Clock,
+  Coins,
+  Droplet,
+  Eye,
+  Flame,
   RefreshCw,
+  Shield,
+  Skull,
   Square,
+  Sword,
   Swords,
   Trophy,
   User,
@@ -1017,6 +1024,7 @@ export function AdminStatsDashboard({
         {leaderboardPlayers.length > 0 && (() => {
           type LeaderboardCard = {
             title: string;
+            icons?: React.ReactNode;
             rows: AggregatedPlayerStats[];
             fmt: (p: AggregatedPlayerStats) => string;
           };
@@ -1024,6 +1032,7 @@ export function AdminStatsDashboard({
           const primaryRow: LeaderboardCard[] = [
             {
               title: "League Rating (Role-Norm)",
+              icons: <Award className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topRating,
               fmt: (p) => p.leagueRating.toFixed(1),
             },
@@ -1037,16 +1046,34 @@ export function AdminStatsDashboard({
           const secondaryRow: LeaderboardCard[] = [
             {
               title: "Highest Vision / Min",
+              icons: (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
               rows: topVision,
               fmt: (p) => p.visionPerMin.toFixed(2),
             },
             {
               title: "Highest Damage / Min",
+              icons: (
+                <>
+                  <Flame className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
               rows: topDpm,
               fmt: (p) => Math.round(p.dpm).toString(),
             },
             {
               title: "Highest Gold / Min",
+              icons: (
+                <>
+                  <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
               rows: topGpm,
               fmt: (p) => Math.round(p.gpm).toString(),
             },
@@ -1054,6 +1081,7 @@ export function AdminStatsDashboard({
               ? [
                   {
                     title: "Highest Gold Diff / Game",
+                    icons: <Coins className="w-3.5 h-3.5 text-[#f0c020]" />,
                     rows: topGoldDiff,
                     fmt: (p: AggregatedPlayerStats) => {
                       const val = Math.round(p.avgGoldDiff ?? 0);
@@ -1067,11 +1095,23 @@ export function AdminStatsDashboard({
           const expandedRow1: LeaderboardCard[] = [
             {
               title: "Highest Kill Participation",
+              icons: (
+                <>
+                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
               rows: topKp,
               fmt: (p) => `${p.kpPct.toFixed(1)}%`,
             },
             {
               title: "Highest Team Damage %",
+              icons: (
+                <>
+                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Flame className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
               rows: topDmgShare,
               fmt: (p) => `${p.damageSharePct.toFixed(1)}%`,
             },
@@ -1079,6 +1119,12 @@ export function AdminStatsDashboard({
               ? [
                   {
                     title: "Most Solo Kills",
+                    icons: (
+                      <>
+                        <User className="w-3.5 h-3.5 text-[#f0c020]" />
+                        <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                      </>
+                    ),
                     rows: topSoloKills,
                     fmt: (p: AggregatedPlayerStats) => `${p.soloKills}`,
                   },
@@ -1088,6 +1134,7 @@ export function AdminStatsDashboard({
               ? [
                   {
                     title: "First Blood %",
+                    icons: <Droplet className="w-3.5 h-3.5 text-[#f0c020]" />,
                     rows: topFirstBlood,
                     fmt: (p: AggregatedPlayerStats) =>
                       `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
@@ -1099,16 +1146,19 @@ export function AdminStatsDashboard({
           const expandedRow2: LeaderboardCard[] = [
             {
               title: "Highest Kills / Game",
+              icons: <Sword className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topKills,
               fmt: (p) => p.killsPerGame.toFixed(1),
             },
             {
               title: "Lowest Deaths / Game",
+              icons: <Skull className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: lowestDeaths,
               fmt: (p) => p.deathsPerGame.toFixed(1),
             },
             {
               title: "Highest Assists / Game",
+              icons: <Shield className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topAssists,
               fmt: (p) => p.assistsPerGame.toFixed(1),
             },
@@ -1119,8 +1169,13 @@ export function AdminStatsDashboard({
               key={card.title}
               className="xp-panel overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
             >
-              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
-                {card.title}
+              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center gap-1.5">
+                <span>{card.title}</span>
+                {card.icons && (
+                  <span className="inline-flex items-center gap-1 shrink-0">
+                    {card.icons}
+                  </span>
+                )}
               </div>
               <div className="divide-y divide-white/10">
                 {card.rows.map((p, idx) => (
