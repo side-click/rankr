@@ -5,7 +5,7 @@
 
 Power rankings and player tier lists for amateur esports leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
 
-<img width="400" alt="season-4-5-baron-midseason-consensus" src="https://github.com/user-attachments/assets/92b06efe-8606-4c18-abdc-e316586e3489" />
+<img width="500" alt="season-4-5-baron-midseason-consensus" src="https://github.com/user-attachments/assets/c283905c-77ab-4c96-b23d-0a461a474a53" />
 
 ## Features
 - **Team Power Rankings**: Drag-and-drop weekly division rankings with commentary, automatic edition-to-edition rank change tracking, and shareable PNG / Discord OpenGraph cards.
