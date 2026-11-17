@@ -53,6 +53,9 @@ export interface AggregatedPlayerStats {
   soloKills: number;
   hasSoloKillsData: boolean;
   firstBloodPct: number | null;
+  turretDpm: number;
+  mitigatedPerMin: number;
+  objectiveDpm: number;
   leagueRating: number;
   topChampions: { name: string; games: number; wins: number }[];
   matches: CompactRiotMatch[];
@@ -162,6 +165,9 @@ export function aggregatePlayerStats(
   let soloKillsCount = 0;
   let firstBloodCount = 0;
   let firstBloodGames = 0;
+  let turretDmg = 0;
+  let mitigatedDmg = 0;
+  let objectiveDmg = 0;
 
   const champMap = new Map<string, { games: number; wins: number }>();
 
@@ -190,6 +196,15 @@ export function aggregatePlayerStats(
     if (typeof m.firstBlood === "boolean") {
       firstBloodGames += 1;
       if (m.firstBlood) firstBloodCount += 1;
+    }
+    if (typeof m.damageDealtToTurrets === "number") {
+      turretDmg += m.damageDealtToTurrets;
+    }
+    if (typeof m.damageSelfMitigated === "number") {
+      mitigatedDmg += m.damageSelfMitigated;
+    }
+    if (typeof m.damageDealtToObjectives === "number") {
+      objectiveDmg += m.damageDealtToObjectives;
     }
 
     const existing = champMap.get(m.championName) ?? { games: 0, wins: 0 };
@@ -248,6 +263,9 @@ export function aggregatePlayerStats(
     hasSoloKillsData: soloKillsCount > 0,
     firstBloodPct:
       firstBloodGames > 0 ? (firstBloodCount / firstBloodGames) * 100 : null,
+    turretDpm: totalMinutes > 0 ? turretDmg / totalMinutes : 0,
+    mitigatedPerMin: totalMinutes > 0 ? mitigatedDmg / totalMinutes : 0,
+    objectiveDpm: totalMinutes > 0 ? objectiveDmg / totalMinutes : 0,
     leagueRating: 0,
     topChampions,
     matches,
@@ -274,7 +292,8 @@ export function computeRoleNormalizedRatings(
       (p) => p.csPerMin,
       (p) => p.avgGoldDiff ?? 0,
       (p) => (p.games > 0 ? p.soloKills / p.games : 0),
-      (p) => p.firstBloodPct ?? 0,
+      (p) => p.turretDpm,
+      (p) => p.mitigatedPerMin,
     ],
     mid: [
       (p) => p.kda,
@@ -288,7 +307,7 @@ export function computeRoleNormalizedRatings(
     bot: [
       (p) => p.kda,
       (p) => p.kpPct,
-      (p) => p.dpm,
+      (p) => p.avgGoldDiff ?? 0,
       (p) => p.csPerMin,
       (p) => p.gpm,
       (p) => p.damageSharePct,
@@ -297,10 +316,10 @@ export function computeRoleNormalizedRatings(
     jungle: [
       (p) => p.kda,
       (p) => p.kpPct,
-      (p) => p.dpm,
       (p) => p.csPerMin,
       (p) => p.visionPerMin,
       (p) => p.assistsPerGame,
+      (p) => p.objectiveDpm,
       (p) => p.firstBloodPct ?? 0,
     ],
     support: [
@@ -342,7 +361,11 @@ export function computeRoleNormalizedRatings(
         sumZ += z;
       }
       const avgZ = sumZ / stats.length;
-      const rating = Math.round(Math.max(10, Math.min(99, 50 + 15 * avgZ)) * 10) / 10;
+      const confidence = Math.min(1, Math.sqrt(p.games / 3));
+      const rating =
+        Math.round(
+          Math.max(10, Math.min(99, 50 + 15 * avgZ * confidence)) * 10
+        ) / 10;
       ratingByKey.set(p.playerKey, rating);
     }
   }
