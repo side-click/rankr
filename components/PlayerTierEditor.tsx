@@ -1168,7 +1168,18 @@ export function PlayerTierEditor({
   }
 
   // Tier Manipulation Handlers
+  const isSpecificDivision = Boolean(
+    divisionScope && divisionScope !== "all"
+  );
+
+  useEffect(() => {
+    if (isSpecificDivision && selectedPreset === "draft_day") {
+      setSelectedPreset("standard");
+    }
+  }, [isSpecificDivision, selectedPreset]);
+
   function handleApplyPreset(presetKey: Exclude<TierPresetKey, "custom">) {
+    if (presetKey === "draft_day" && isSpecificDivision) return;
     if (presetKey === selectedPreset) return;
     if (!confirmSwitchScope()) return;
     setSelectedPreset(presetKey);
@@ -1711,6 +1722,9 @@ export function PlayerTierEditor({
                 if (nextScope === divisionScope) return;
                 if (!confirmSwitchScope()) return;
                 setDivisionScope(nextScope);
+                if (nextScope && nextScope !== "all") {
+                  setSelectedPreset("standard");
+                }
                 if (!nextScope) {
                   setEditionId("");
                 } else if (!editionId && seasonEditions.length > 0) {
@@ -1903,21 +1917,32 @@ export function PlayerTierEditor({
           {!isEditDisabled && seasonId && editionId && (
             <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <div className="xp-inset p-1 flex items-center gap-1">
-                {TIER_PRESETS.map((preset) => (
-                  <button
-                    key={preset.key}
-                    type="button"
-                    onClick={() => handleApplyPreset(preset.key)}
-                    title={preset.description}
-                    className={`px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
-                      selectedPreset === preset.key
-                        ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
-                        : "text-[#c7c5b8] hover:text-white"
-                    }`}
-                  >
-                    {preset.name}
-                  </button>
-                ))}
+                {TIER_PRESETS.map((preset) => {
+                  const isPresetDisabled =
+                    preset.key === "draft_day" && isSpecificDivision;
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      disabled={isPresetDisabled}
+                      onClick={() => handleApplyPreset(preset.key)}
+                      title={
+                        isPresetDisabled
+                          ? "Draft Day Tiers are only available for All Divisions (pre-draft pool)"
+                          : preset.description
+                      }
+                      className={`px-2 py-1 text-[11px] font-bold rounded-xs transition-colors ${
+                        isPresetDisabled
+                          ? "text-[#7a7d76] opacity-50 cursor-not-allowed"
+                          : selectedPreset === preset.key
+                          ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020] cursor-pointer"
+                          : "text-[#c7c5b8] hover:text-white cursor-pointer"
+                      }`}
+                    >
+                      {preset.name}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="xp-inset p-1 flex items-center gap-1 sm:w-[156px]">
