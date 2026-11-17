@@ -170,6 +170,18 @@ export function AdminStatsDashboard({
     [selectedDivision]
   );
 
+  const kpiCardStyle = useMemo<React.CSSProperties>(() => {
+    const theme = selectedDivisionTheme ?? {
+      primary_color: "#1b5e36",
+      secondary_color: "#0f2e1f",
+    };
+    return {
+      borderLeftWidth: "3px",
+      borderLeftColor: theme.primary_color,
+      backgroundImage: `linear-gradient(135deg, ${theme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${theme.secondary_color}3a 100%)`,
+    };
+  }, [selectedDivisionTheme]);
+
   const showLeaderboards =
     divisions.length <= 1 || selectedDivision !== null;
 
@@ -1534,7 +1546,10 @@ export function AdminStatsDashboard({
 
         {/* Top Overview KPI Strip (10 Cards) */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>Matches Analyzed</span>
@@ -1549,7 +1564,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>Side Win Rate</span>
@@ -1572,7 +1590,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>Flash on D vs F</span>
@@ -1601,7 +1622,10 @@ export function AdminStatsDashboard({
             )}
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Droplet className="w-3.5 h-3.5 text-[#ff857a]" />
               <span>First Blood WR</span>
@@ -1616,7 +1640,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>@15 Gold Lead WR</span>
@@ -1633,7 +1660,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#00b8c9]" />
               <span>Longest Game</span>
@@ -1654,7 +1684,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>? Ping Leader</span>
@@ -1669,7 +1702,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Crown className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>Most Pentakills</span>
@@ -1688,7 +1724,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
               <span>Most Objective Steals</span>
@@ -1705,7 +1744,10 @@ export function AdminStatsDashboard({
             </div>
           </div>
 
-          <div className="xp-panel p-3 flex flex-col justify-between">
+          <div
+            style={kpiCardStyle}
+            className="xp-panel p-3 flex flex-col justify-between"
+          >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-[#00b8c9]" />
               <span>Control Wards</span>
