@@ -48,6 +48,11 @@ export interface AggregatedPlayerStats {
   damageSharePct: number;
   goldSharePct: number;
   avgGameMinutes: number;
+  avgGoldDiff: number | null;
+  soloKills: number;
+  hasSoloKillsData: boolean;
+  firstBloodPct: number | null;
+  leagueRating: number;
   topChampions: { name: string; games: number; wins: number }[];
   matches: CompactRiotMatch[];
   syncedAt: string | null;
@@ -149,6 +154,12 @@ export function aggregatePlayerStats(
   let kpSum = 0;
   let dmgShareSum = 0;
   let goldShareSum = 0;
+  let goldDiffSum = 0;
+  let goldDiffCount = 0;
+  let soloKills = 0;
+  let soloKillsCount = 0;
+  let firstBloodCount = 0;
+  let firstBloodGames = 0;
 
   const champMap = new Map<string, { games: number; wins: number }>();
 
@@ -166,6 +177,18 @@ export function aggregatePlayerStats(
     if (m.teamDamage > 0)
       dmgShareSum += m.totalDamageDealtToChampions / m.teamDamage;
     if (m.teamGold > 0) goldShareSum += m.goldEarned / m.teamGold;
+    if (typeof m.goldDiff === "number" && Number.isFinite(m.goldDiff)) {
+      goldDiffSum += m.goldDiff;
+      goldDiffCount += 1;
+    }
+    if (typeof m.soloKills === "number" && Number.isFinite(m.soloKills)) {
+      soloKills += m.soloKills;
+      soloKillsCount += 1;
+    }
+    if (typeof m.firstBlood === "boolean") {
+      firstBloodGames += 1;
+      if (m.firstBlood) firstBloodCount += 1;
+    }
 
     const existing = champMap.get(m.championName) ?? { games: 0, wins: 0 };
     existing.games += 1;
@@ -215,11 +238,110 @@ export function aggregatePlayerStats(
     damageSharePct: games > 0 ? (dmgShareSum / games) * 100 : 0,
     goldSharePct: games > 0 ? (goldShareSum / games) * 100 : 0,
     avgGameMinutes: games > 0 ? totalMinutes / games : 0,
+    avgGoldDiff: goldDiffCount > 0 ? goldDiffSum / goldDiffCount : null,
+    soloKills,
+    hasSoloKillsData: soloKillsCount > 0,
+    firstBloodPct:
+      firstBloodGames > 0 ? (firstBloodCount / firstBloodGames) * 100 : null,
+    leagueRating: 0,
     topChampions,
     matches,
     syncedAt: row?.synced_at ?? null,
     syncError: row?.sync_error ?? null,
   };
+}
+
+/**
+ * Computes a role-normalized 0–100 composite rating ("Strand"-style Z-score)
+ * where each player is compared strictly against peers in the same role.
+ * This prevents Support/Vision score inflation and rewards role-appropriate impact.
+ */
+export function computeRoleNormalizedRatings(
+  players: AggregatedPlayerStats[]
+): AggregatedPlayerStats[] {
+  type MetricExtractor = (p: AggregatedPlayerStats) => number;
+
+  const ROLE_METRICS: Record<string, MetricExtractor[]> = {
+    top: [
+      (p) => p.kda,
+      (p) => p.kpPct,
+      (p) => p.dpm,
+      (p) => p.csPerMin,
+      (p) => p.gpm,
+      (p) => p.damageSharePct,
+    ],
+    mid: [
+      (p) => p.kda,
+      (p) => p.kpPct,
+      (p) => p.dpm,
+      (p) => p.csPerMin,
+      (p) => p.gpm,
+      (p) => p.damageSharePct,
+    ],
+    bot: [
+      (p) => p.kda,
+      (p) => p.kpPct,
+      (p) => p.dpm,
+      (p) => p.csPerMin,
+      (p) => p.gpm,
+      (p) => p.damageSharePct,
+    ],
+    jungle: [
+      (p) => p.kda,
+      (p) => p.kpPct,
+      (p) => p.dpm,
+      (p) => p.csPerMin,
+      (p) => p.visionPerMin,
+      (p) => p.assistsPerGame,
+    ],
+    support: [
+      (p) => p.kda,
+      (p) => p.kpPct,
+      (p) => p.assistsPerGame,
+      (p) => p.visionPerMin,
+      (p) => -p.deathsPerGame,
+    ],
+  };
+
+  const activeByRole = new Map<string, AggregatedPlayerStats[]>();
+  for (const p of players) {
+    if (p.games <= 0) continue;
+    const roleKey = (p.role || "").trim().toLowerCase();
+    const list = activeByRole.get(roleKey) ?? [];
+    list.push(p);
+    activeByRole.set(roleKey, list);
+  }
+
+  const ratingByKey = new Map<string, number>();
+
+  for (const [roleKey, group] of activeByRole.entries()) {
+    const metrics = ROLE_METRICS[roleKey] ?? ROLE_METRICS.mid;
+    const stats = metrics.map((fn) => {
+      const vals = group.map(fn);
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const variance =
+        vals.reduce((acc, v) => acc + (v - mean) ** 2, 0) / vals.length;
+      const stdDev = Math.sqrt(variance);
+      return { fn, mean, stdDev };
+    });
+
+    for (const p of group) {
+      let sumZ = 0;
+      for (const { fn, mean, stdDev } of stats) {
+        const z =
+          stdDev > 0 ? Math.max(-2.5, Math.min(2.5, (fn(p) - mean) / stdDev)) : 0;
+        sumZ += z;
+      }
+      const avgZ = sumZ / stats.length;
+      const rating = Math.round(Math.max(10, Math.min(99, 50 + 15 * avgZ)) * 10) / 10;
+      ratingByKey.set(p.playerKey, rating);
+    }
+  }
+
+  return players.map((p) => ({
+    ...p,
+    leagueRating: p.games > 0 ? ratingByKey.get(p.playerKey) ?? 50 : 0,
+  }));
 }
 
 export function formatMinutesSeconds(minutesDecimal: number): string {

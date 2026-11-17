@@ -14,12 +14,14 @@ import {
   RefreshCw,
   Square,
   Swords,
-  Users,
+  User,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
+import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import {
+  computeRoleNormalizedRatings,
   formatMinutesSeconds,
   formatSoloRank,
   type AggregatedPlayerStats,
@@ -47,6 +49,7 @@ interface AdminStatsDashboardProps {
 
 type SortKey =
   | "rankScore"
+  | "leagueRating"
   | "winRate"
   | "kda"
   | "dpm"
@@ -93,6 +96,7 @@ export function AdminStatsDashboard({
   const [roleFilter, setRoleFilter] = useState<LeagueRole | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("kda");
   const [sortAsc, setSortAsc] = useState(false);
+  const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [matchCount, setMatchCount] = useState<number>(5);
 
   const [syncing, setSyncing] = useState(false);
@@ -119,9 +123,10 @@ export function AdminStatsDashboard({
   }
 
   const filteredPlayers = useMemo(() => {
-    return players.filter((p) =>
+    const scoped = players.filter((p) =>
       divisionFilter === "all" ? true : p.divisionId === divisionFilter
     );
+    return computeRoleNormalizedRatings(scoped);
   }, [players, divisionFilter]);
 
   const filteredTeams = useMemo(() => {
@@ -162,11 +167,24 @@ export function AdminStatsDashboard({
         : 50;
 
     const champMap = new Map<string, { games: number; wins: number }>();
+    const banMap = new Map<string, number>();
+    const seenBanMatches = new Set<string>();
     for (const m of allMatches) {
       const c = champMap.get(m.championName) ?? { games: 0, wins: 0 };
       c.games += 1;
       if (m.win) c.wins += 1;
       champMap.set(m.championName, c);
+
+      if (
+        Array.isArray(m.bans) &&
+        m.bans.length > 0 &&
+        !seenBanMatches.has(m.matchId)
+      ) {
+        seenBanMatches.add(m.matchId);
+        for (const banned of m.bans) {
+          banMap.set(banned, (banMap.get(banned) ?? 0) + 1);
+        }
+      }
     }
 
     const champs = [...champMap.entries()]
@@ -178,6 +196,10 @@ export function AdminStatsDashboard({
       }))
       .sort((a, b) => b.games - a.games || b.winRate - a.winRate);
 
+    const bannedChamps = [...banMap.entries()]
+      .map(([name, bans]) => ({ name, bans }))
+      .sort((a, b) => b.bans - a.bans || a.name.localeCompare(b.name));
+
     return {
       totalGames,
       avgDurationMin,
@@ -186,6 +208,7 @@ export function AdminStatsDashboard({
       blueWr,
       redWr,
       champs,
+      bannedChamps,
     };
   }, [filteredPlayers]);
 
@@ -194,15 +217,22 @@ export function AdminStatsDashboard({
     [filteredPlayers]
   );
 
+  const topRating = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.leagueRating - a.leagueRating)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
   const topKda = useMemo(
     () =>
       [...leaderboardPlayers].sort((a, b) => b.kda - a.kda).slice(0, 5),
     [leaderboardPlayers]
   );
-  const topKills = useMemo(
+  const topAssists = useMemo(
     () =>
       [...leaderboardPlayers]
-        .sort((a, b) => b.killsPerGame - a.killsPerGame)
+        .sort((a, b) => b.assistsPerGame - a.assistsPerGame)
         .slice(0, 5),
     [leaderboardPlayers]
   );
@@ -249,6 +279,30 @@ export function AdminStatsDashboard({
         .slice(0, 5),
     [leaderboardPlayers]
   );
+  const topGoldDiff = useMemo(
+    () =>
+      leaderboardPlayers
+        .filter((p) => p.avgGoldDiff !== null)
+        .sort((a, b) => (b.avgGoldDiff ?? 0) - (a.avgGoldDiff ?? 0))
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topSoloKills = useMemo(
+    () =>
+      leaderboardPlayers
+        .filter((p) => p.hasSoloKillsData)
+        .sort((a, b) => b.soloKills - a.soloKills)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topFirstBlood = useMemo(
+    () =>
+      leaderboardPlayers
+        .filter((p) => p.firstBloodPct !== null)
+        .sort((a, b) => (b.firstBloodPct ?? 0) - (a.firstBloodPct ?? 0))
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
 
   const tablePlayers = useMemo(() => {
     const roleFiltered =
@@ -273,6 +327,7 @@ export function AdminStatsDashboard({
   }
 
   async function runBatchSync(onlyUnsynced: boolean) {
+    if (syncing) return;
     const queue = (
       onlyUnsynced
         ? filteredPlayers.filter((p) => p.syncedAt === null)
@@ -308,7 +363,7 @@ export function AdminStatsDashboard({
 
     const maxReqsPerPlayer = 4 + matchCount;
     const windowMs = 122_000;
-    const maxReqsPerWindow = 85;
+    const maxReqsPerWindow = 92;
     const reqTimestamps: number[] = [];
 
     async function waitForCountdown(seconds: number, reason: string) {
@@ -709,14 +764,14 @@ export function AdminStatsDashboard({
           <div className="mb-6 xp-panel p-3">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
-                Champions Picked ({overview.champs.length})
+                Champions Played ({overview.champs.length})
               </h2>
               <span className="text-[11px] text-[#a6a89e]">
-                Top 24 by pick count
+                Top 36 by pick count
               </span>
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {overview.champs.slice(0, 24).map((c) => (
+            <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
+              {overview.champs.slice(0, 36).map((c) => (
                 <div
                   key={c.name}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
@@ -729,7 +784,7 @@ export function AdminStatsDashboard({
                     alt={c.name}
                     className="w-full aspect-square object-cover block"
                   />
-                  <div className="px-1.5 py-1 border-t border-white/10 flex items-center justify-between text-[11px] font-bold leading-none tabular-nums">
+                  <div className="px-1 py-1 border-t border-white/10 flex items-center justify-between text-[11px] font-bold leading-none tabular-nums">
                     <span className="text-[#f0ede0]">{c.games}G</span>
                     <span
                       className={
@@ -742,6 +797,36 @@ export function AdminStatsDashboard({
                 </div>
               ))}
             </div>
+            {overview.bannedChamps.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#ff857a]">
+                    Most Banned Champions
+                  </span>
+                  <span className="text-[11px] text-[#a6a89e]">
+                    Top 12 by ban count
+                  </span>
+                </div>
+                <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
+                  {overview.bannedChamps.slice(0, 12).map((b) => (
+                    <div
+                      key={b.name}
+                      title={`${b.name} — ${b.bans} bans`}
+                      className="bg-black/40 border border-white/10 rounded overflow-hidden"
+                    >
+                      <img
+                        src={getChampionIconUrl(b.name, ddVersion)}
+                        alt={b.name}
+                        className="w-full aspect-square object-cover block grayscale-[25%]"
+                      />
+                      <div className="px-1 py-1 border-t border-white/10 flex items-center justify-center text-[11px] font-bold leading-none tabular-nums text-[#ff857a]">
+                        {b.bans}B
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -749,25 +834,31 @@ export function AdminStatsDashboard({
         {leaderboardPlayers.length > 0 && (
           <div className="mb-6 space-y-2.5">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
-              Player Stat Leaderboards
+              Leaderboards
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
+                {
+                  title: "League Rating (Role-Norm)",
+                  rows: topRating,
+                  fmt: (p: AggregatedPlayerStats) => p.leagueRating.toFixed(1),
+                },
                 {
                   title: "Highest KDA",
                   rows: topKda,
                   fmt: (p: AggregatedPlayerStats) => p.kda.toFixed(2),
                 },
                 {
-                  title: "Highest Kills / Game",
-                  rows: topKills,
-                  fmt: (p: AggregatedPlayerStats) => p.killsPerGame.toFixed(1),
-                },
-                {
                   title: "Lowest Deaths / Game",
                   rows: lowestDeaths,
                   fmt: (p: AggregatedPlayerStats) =>
                     p.deathsPerGame.toFixed(1),
+                },
+                {
+                  title: "Highest Assists / Game",
+                  rows: topAssists,
+                  fmt: (p: AggregatedPlayerStats) =>
+                    p.assistsPerGame.toFixed(1),
                 },
                 {
                   title: "Highest CS / Min",
@@ -800,6 +891,37 @@ export function AdminStatsDashboard({
                   fmt: (p: AggregatedPlayerStats) =>
                     `${p.damageSharePct.toFixed(1)}%`,
                 },
+                ...(topGoldDiff.length > 0
+                  ? [
+                      {
+                        title: "Highest Gold Diff / Game",
+                        rows: topGoldDiff,
+                        fmt: (p: AggregatedPlayerStats) => {
+                          const val = Math.round(p.avgGoldDiff ?? 0);
+                          return val >= 0 ? `+${val}` : `${val}`;
+                        },
+                      },
+                    ]
+                  : []),
+                ...(topSoloKills.length > 0
+                  ? [
+                      {
+                        title: "Most Solo Kills",
+                        rows: topSoloKills,
+                        fmt: (p: AggregatedPlayerStats) => `${p.soloKills}`,
+                      },
+                    ]
+                  : []),
+                ...(topFirstBlood.length > 0
+                  ? [
+                      {
+                        title: "First Blood %",
+                        rows: topFirstBlood,
+                        fmt: (p: AggregatedPlayerStats) =>
+                          `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
+                      },
+                    ]
+                  : []),
               ].map((card) => (
                 <div key={card.title} className="xp-panel overflow-hidden">
                   <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
@@ -845,7 +967,7 @@ export function AdminStatsDashboard({
         <div className="mb-6 xp-panel overflow-hidden">
           <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-              <Users className="w-4 h-4" />
+              <TeamGroupIcon className="w-4 h-4" />
               <span>Teams ({filteredTeams.length})</span>
             </h2>
             <span className="text-[10px] text-[#a6a89e]">
@@ -926,8 +1048,9 @@ export function AdminStatsDashboard({
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
         <div className="xp-panel overflow-hidden">
           <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
-              Top Players ({tablePlayers.length})
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
+              <User className="w-4 h-4" />
+              <span>Top Players ({tablePlayers.length})</span>
             </h2>
             <div className="flex flex-wrap items-center gap-1">
               <button
@@ -975,6 +1098,13 @@ export function AdminStatsDashboard({
                   </th>
                   <th
                     className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("leagueRating")}
+                    title="Role-normalized 0–100 League Rating"
+                  >
+                    Rating
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
                     onClick={() => handleSort("games")}
                   >
                     Games
@@ -1019,7 +1149,8 @@ export function AdminStatsDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {tablePlayers.map((p) => {
+                {(showAllPlayers ? tablePlayers : tablePlayers.slice(0, 15)).map(
+                  (p) => {
                   const roleMeta = getRoleMeta(p.role as LeagueRole);
                   return (
                     <tr
@@ -1067,6 +1198,19 @@ export function AdminStatsDashboard({
                           formatSoloRank(p.soloTier, p.soloRank, p.soloLp)
                         )}
                       </td>
+                      <td
+                        className={`px-2 py-2 text-right font-mono font-bold ${
+                          p.games <= 0
+                            ? "text-[#a6a89e]"
+                            : p.leagueRating >= 60
+                            ? "text-[#7cd438]"
+                            : p.leagueRating >= 45
+                            ? "text-[#f0c020]"
+                            : "text-[#ff857a]"
+                        }`}
+                      >
+                        {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
+                      </td>
                       <td className="px-2 py-2 text-right font-mono">
                         {p.games}
                       </td>
@@ -1111,6 +1255,26 @@ export function AdminStatsDashboard({
               </tbody>
             </table>
           </div>
+          {tablePlayers.length > 15 && (
+            <div className="bg-[#121615] border-t border-white/10 px-3 py-2 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-[#a6a89e]">
+                Showing{" "}
+                {showAllPlayers
+                  ? tablePlayers.length
+                  : Math.min(15, tablePlayers.length)}{" "}
+                of {tablePlayers.length} players
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllPlayers((prev) => !prev)}
+                className="xp-btn text-xs"
+              >
+                {showAllPlayers
+                  ? "Show Top 15 ▲"
+                  : `Show All ${tablePlayers.length} Players ▼`}
+              </button>
+            </div>
+          )}
         </div>
       </RetroWindow>
     </div>

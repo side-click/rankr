@@ -16,6 +16,10 @@ export interface CompactRiotMatch {
   teamKills: number;
   teamDamage: number;
   teamGold: number;
+  goldDiff?: number;
+  soloKills?: number;
+  firstBlood?: boolean;
+  bans?: string[];
 }
 
 export interface SyncedPlayerInput {
@@ -46,6 +50,40 @@ export interface SyncedPlayerResult {
 }
 
 let cachedDdVersion: { version: string; fetchedAt: number } | null = null;
+let cachedChampIdMap: {
+  version: string;
+  map: Map<number, string>;
+} | null = null;
+
+export async function getChampionIdToNameMap(
+  ddVersion: string
+): Promise<Map<number, string>> {
+  if (cachedChampIdMap && cachedChampIdMap.version === ddVersion) {
+    return cachedChampIdMap.map;
+  }
+  const map = new Map<number, string>();
+  try {
+    const res = await fetch(
+      `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`,
+      { next: { revalidate: 3600 } }
+    );
+    if (res.ok) {
+      const json = (await res.json()) as {
+        data: Record<string, { key: string; id: string }>;
+      };
+      for (const champ of Object.values(json.data ?? {})) {
+        const idNum = Number(champ.key);
+        if (Number.isFinite(idNum) && champ.id) {
+          map.set(idNum, champ.id);
+        }
+      }
+      cachedChampIdMap = { version: ddVersion, map };
+    }
+  } catch {
+    // ignore fallback
+  }
+  return map;
+}
 
 export async function getLatestDdragonVersion(): Promise<string> {
   const now = Date.now();
@@ -139,6 +177,7 @@ interface RiotLeagueEntry {
 interface RiotMatchParticipant {
   puuid: string;
   teamId: number;
+  teamPosition?: string;
   win: boolean;
   championName: string;
   kills: number;
@@ -149,6 +188,16 @@ interface RiotMatchParticipant {
   totalDamageDealtToChampions: number;
   goldEarned: number;
   visionScore: number;
+  firstBloodKill?: boolean;
+  firstBloodAssist?: boolean;
+  challenges?: {
+    soloKills?: number;
+  };
+}
+
+interface RiotMatchTeam {
+  teamId: number;
+  bans?: { championId: number; pickTurn: number }[];
 }
 
 interface RiotMatchResponse {
@@ -158,6 +207,7 @@ interface RiotMatchResponse {
     gameDuration: number;
     queueId: number;
     participants: RiotMatchParticipant[];
+    teams?: RiotMatchTeam[];
   };
 }
 
@@ -209,6 +259,9 @@ export async function syncPlayerFromRiot(
       );
     }
 
+    const ddVersion = await getLatestDdragonVersion();
+    const champIdMap = await getChampionIdToNameMap(ddVersion);
+
     const matches: CompactRiotMatch[] = [];
     for (const matchId of matchIds) {
       try {
@@ -231,6 +284,26 @@ export async function syncPlayerFromRiot(
         );
         const teamGold = allies.reduce((s, p) => s + p.goldEarned, 0);
 
+        const laneOpponent = me.teamPosition
+          ? matchData.info.participants.find(
+              (p) =>
+                p.teamId !== me.teamId && p.teamPosition === me.teamPosition
+            )
+          : undefined;
+        const goldDiff = laneOpponent
+          ? me.goldEarned - laneOpponent.goldEarned
+          : undefined;
+
+        const bans: string[] = [];
+        for (const t of matchData.info.teams ?? []) {
+          for (const b of t.bans ?? []) {
+            if (b.championId > 0) {
+              const name = champIdMap.get(b.championId);
+              if (name) bans.push(name);
+            }
+          }
+        }
+
         matches.push({
           matchId: matchData.metadata.matchId,
           gameCreation: matchData.info.gameCreation,
@@ -249,6 +322,10 @@ export async function syncPlayerFromRiot(
           teamKills,
           teamDamage,
           teamGold,
+          goldDiff,
+          soloKills: me.challenges?.soloKills,
+          firstBlood: Boolean(me.firstBloodKill || me.firstBloodAssist),
+          bans,
         });
       } catch (matchErr) {
         if (matchErr instanceof RiotRateLimitError) {
