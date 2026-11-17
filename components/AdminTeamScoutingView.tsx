@@ -335,7 +335,7 @@ export function AdminTeamScoutingView({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {team.players.map((soloPlayer: AggregatedPlayerStats) => {
               const lp = leaguePlayerByKey.get(soloPlayer.playerKey);
-              const statsSrc = lp && lp.games > 0 ? lp : soloPlayer;
+              const statsSrc = lp && lp.games > 0 ? lp : null;
               const roleMeta = getRoleMeta(soloPlayer.role as LeagueRole);
               const topMastery = soloPlayer.masteryTop4[0] ?? null;
 
@@ -409,48 +409,34 @@ export function AdminTeamScoutingView({
                     )}
                   </div>
 
-                  {/* Season Stats */}
+                  {/* Season Stats (League Only) */}
                   <div className="bg-black/35 border border-white/10 rounded px-2.5 py-2">
                     <div className="text-[9px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1">
-                      {lp && lp.games > 0
-                        ? `This Season (${lp.games}G)`
-                        : `SoloQ (${soloPlayer.games}G)`}
+                      This Season ({statsSrc ? `${statsSrc.games}G` : "0G"})
                     </div>
                     <div className="grid grid-cols-2 gap-y-1 text-[11px]">
                       <div>
                         KDA:{" "}
                         <strong className="text-[#f0c020]">
-                          {statsSrc.games > 0 ? statsSrc.kda.toFixed(2) : "—"}
+                          {statsSrc ? statsSrc.kda.toFixed(2) : "—"}
                         </strong>
                       </div>
                       <div>
-                        WR:{" "}
-                        <strong
-                          className={
-                            statsSrc.winRate >= 50
-                              ? "text-[#7cd438]"
-                              : "text-[#ff857a]"
-                          }
-                        >
-                          {statsSrc.games > 0
-                            ? `${statsSrc.winRate.toFixed(0)}%`
-                            : "—"}
+                        GP/m:{" "}
+                        <strong className="text-white">
+                          {statsSrc ? Math.round(statsSrc.gpm) : "—"}
                         </strong>
                       </div>
                       <div>
                         CS/m:{" "}
                         <strong className="text-white">
-                          {statsSrc.games > 0
-                            ? statsSrc.csPerMin.toFixed(1)
-                            : "—"}
+                          {statsSrc ? statsSrc.csPerMin.toFixed(1) : "—"}
                         </strong>
                       </div>
                       <div>
                         DPM:{" "}
                         <strong className="text-white">
-                          {statsSrc.games > 0
-                            ? Math.round(statsSrc.dpm)
-                            : "—"}
+                          {statsSrc ? Math.round(statsSrc.dpm) : "—"}
                         </strong>
                       </div>
                     </div>
