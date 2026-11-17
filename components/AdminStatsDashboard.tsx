@@ -197,8 +197,14 @@ export function AdminStatsDashboard({
       }))
       .sort((a, b) => b.games - a.games || b.winRate - a.winRate);
 
+    const banMatchCount = seenBanMatches.size;
     const bannedChamps = [...banMap.entries()]
-      .map(([name, bans]) => ({ name, bans }))
+      .map(([name, bans]) => ({
+        name,
+        bans,
+        banRate:
+          banMatchCount > 0 ? Math.min(100, (bans / banMatchCount) * 100) : 0,
+      }))
       .sort((a, b) => b.bans - a.bans || a.name.localeCompare(b.name));
 
     return {
@@ -801,7 +807,7 @@ export function AdminStatsDashboard({
                     className="w-full aspect-square object-cover block"
                   />
                   <div className="px-1 py-1 border-t border-white/10 flex items-center justify-between text-[11px] font-bold leading-none tabular-nums">
-                    <span className="text-[#f0ede0]">{c.games}G</span>
+                    <span className="text-[#f0ede0]">{c.games}</span>
                     <span
                       className={
                         c.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
@@ -827,7 +833,9 @@ export function AdminStatsDashboard({
                   {overview.bannedChamps.slice(0, 12).map((b) => (
                     <div
                       key={b.name}
-                      title={`${b.name} — ${b.bans} bans`}
+                      title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
+                        0
+                      )}% ban rate)`}
                       className="bg-black/40 border border-white/10 rounded overflow-hidden"
                     >
                       <img
@@ -835,8 +843,11 @@ export function AdminStatsDashboard({
                         alt={b.name}
                         className="w-full aspect-square object-cover block grayscale-[25%]"
                       />
-                      <div className="px-1 py-1 border-t border-white/10 flex items-center justify-center text-[11px] font-bold leading-none tabular-nums text-[#ff857a]">
-                        {b.bans}B
+                      <div className="px-1 py-1 border-t border-white/10 flex items-center justify-between text-[11px] font-bold leading-none tabular-nums">
+                        <span className="text-[#ff857a]">{b.bans}</span>
+                        <span className="text-white">
+                          {b.banRate.toFixed(0)}%
+                        </span>
                       </div>
                     </div>
                   ))}
