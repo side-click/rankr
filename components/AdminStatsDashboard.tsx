@@ -140,6 +140,7 @@ export function AdminStatsDashboard({
   >([]);
   const [showSyncLog, setShowSyncLog] = useState(true);
   const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
+  const [copiedRatingBlurb, setCopiedRatingBlurb] = useState(false);
   const cancelSyncRef = useRef(false);
   const leaderboardCardRef = useRef<HTMLDivElement>(null);
 
@@ -1017,22 +1018,42 @@ export function AdminStatsDashboard({
 
         {/* Stat Leaderboards Grid (Top 5 cards) */}
         {showLeaderboards && leaderboardPlayers.length > 0 && (() => {
+          const RANKR_RATING_BLURB = [
+            "Rankr Rating (0–100) is a role-normalized composite score.",
+            "Each player is compared strictly against peers in the same role within the current division using Z-scores across role-specific stats:",
+            "• Top / Mid / Bot: KDA, Kill Participation %, Damage/min, CS/min, Gold/min, Team Damage %",
+            "• Jungle: KDA, Kill Participation %, Damage/min, CS/min, Vision/min, Assists/game",
+            "• Support: KDA, Kill Participation %, Assists/game, Vision/min, and low Deaths/game",
+            "Each metric Z-score is clamped to [-2.5, 2.5], averaged, and scaled around 50 (50 + 15 × avgZ, bounded 10–99) so Supports aren't over-weighted by Vision Score and every role is judged on equal footing.",
+          ].join("\n");
+
           type LeaderboardCard = {
             title: string;
             icons?: React.ReactNode;
             rows: AggregatedPlayerStats[];
             fmt: (p: AggregatedPlayerStats) => string;
+            onHeaderClick?: () => void;
+            headerTooltip?: string;
+            copiedBadge?: boolean;
           };
 
           const primaryRow: LeaderboardCard[] = [
             {
-              title: "League Rating (Role-Norm)",
+              title: "Rankr Rating",
               icons: <Award className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topRating,
               fmt: (p) => p.leagueRating.toFixed(1),
+              headerTooltip: "Click to copy Rankr Rating algorithm summary",
+              copiedBadge: copiedRatingBlurb,
+              onHeaderClick: () => {
+                void navigator.clipboard.writeText(RANKR_RATING_BLURB).then(() => {
+                  setCopiedRatingBlurb(true);
+                  setTimeout(() => setCopiedRatingBlurb(false), 2000);
+                });
+              },
             },
             {
-              title: "Highest KDA",
+              title: "KDA",
               icons: <Swords className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topKda,
               fmt: (p) => p.kda.toFixed(2),
@@ -1041,7 +1062,7 @@ export function AdminStatsDashboard({
 
           const secondaryRow: LeaderboardCard[] = [
             {
-              title: "Highest Vision / Min",
+              title: "Vision / Min",
               icons: (
                 <>
                   <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1052,7 +1073,7 @@ export function AdminStatsDashboard({
               fmt: (p) => p.visionPerMin.toFixed(2),
             },
             {
-              title: "Highest Damage / Min",
+              title: "Damage / Min",
               icons: (
                 <>
                   <Flame className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1063,7 +1084,7 @@ export function AdminStatsDashboard({
               fmt: (p) => Math.round(p.dpm).toString(),
             },
             {
-              title: "Highest Gold / Min",
+              title: "Gold / Min",
               icons: (
                 <>
                   <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1076,7 +1097,7 @@ export function AdminStatsDashboard({
             ...(topGoldDiff.length > 0
               ? [
                   {
-                    title: "Highest Gold Diff / Game",
+                    title: "Gold Diff / Game",
                     icons: (
                       <>
                         <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1095,7 +1116,7 @@ export function AdminStatsDashboard({
 
           const expandedRow1: LeaderboardCard[] = [
             {
-              title: "Highest Kill Participation",
+              title: "Kill Participation",
               icons: (
                 <>
                   <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1106,7 +1127,7 @@ export function AdminStatsDashboard({
               fmt: (p) => `${p.kpPct.toFixed(1)}%`,
             },
             {
-              title: "Highest Team Damage %",
+              title: "Team Damage %",
               icons: (
                 <>
                   <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1119,7 +1140,7 @@ export function AdminStatsDashboard({
             ...(topSoloKills.length > 0
               ? [
                   {
-                    title: "Most Solo Kills",
+                    title: "Solo Kills",
                     icons: (
                       <>
                         <User className="w-3.5 h-3.5 text-[#f0c020]" />
@@ -1146,19 +1167,19 @@ export function AdminStatsDashboard({
 
           const expandedRow2: LeaderboardCard[] = [
             {
-              title: "Highest Kills / Game",
+              title: "Kills / Game",
               icons: <Sword className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topKills,
               fmt: (p) => p.killsPerGame.toFixed(1),
             },
             {
-              title: "Lowest Deaths / Game",
+              title: "Deaths / Game",
               icons: <Skull className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: lowestDeaths,
               fmt: (p) => p.deathsPerGame.toFixed(1),
             },
             {
-              title: "Highest Assists / Game",
+              title: "Assists / Game",
               icons: <Shield className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topAssists,
               fmt: (p) => p.assistsPerGame.toFixed(1),
@@ -1170,8 +1191,21 @@ export function AdminStatsDashboard({
               key={card.title}
               className="xp-panel overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
             >
-              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2">
-                <span>{card.title}</span>
+              <div
+                onClick={card.onHeaderClick}
+                title={card.headerTooltip}
+                className={`bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2 ${
+                  card.onHeaderClick ? "cursor-pointer hover:bg-[#362c16]" : ""
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span>{card.title}</span>
+                  {card.copiedBadge && !exportingLeaderboard && (
+                    <span className="text-[9px] text-[#7cd438] normal-case font-semibold">
+                      Copied!
+                    </span>
+                  )}
+                </span>
                 {card.icons && (
                   <span className="inline-flex items-center gap-1 shrink-0">
                     {card.icons}
