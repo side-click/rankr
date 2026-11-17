@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Award, User } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
+import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import type {
   PlayerTierListPayload,
   RankingType,
@@ -126,23 +127,39 @@ export function BallotCard({
           })
       : [];
 
-    const topTierPreview = isPlayer
+    const playerConfigPreview = isPlayer
       ? (() => {
           const td = ballot.tier_data as PlayerTierListPayload | null | undefined;
-          const firstTier = td?.sections?.[0]?.tiers?.find(
-            (t) => t.players.length > 0
-          );
-          if (!firstTier) return null;
+          const presetLabel =
+            td?.preset === "draft_day" ||
+            ballot.tier_variant === "draft_day_overall" ||
+            ballot.tier_variant === "draft_day_split"
+              ? "Draft Day"
+              : "Standard";
+          const isSplit =
+            typeof td?.splitByRole === "boolean"
+              ? td.splitByRole
+              : ballot.tier_variant === "standard_split" ||
+                ballot.tier_variant === "draft_day_split";
+          const populatedRoles =
+            isSplit && Array.isArray(td?.sections)
+              ? td.sections
+                  .filter(
+                    (sec) =>
+                      sec.role !== "all" &&
+                      sec.tiers.some((t) => t.players.length > 0)
+                  )
+                  .map((sec) => getRoleMeta(sec.role as LeagueRole))
+              : [];
           return {
-            label: firstTier.label,
-            players: firstTier.players
-              .slice(0, 3)
-              .map((p) => p.name.split("#")[0].trim() || p.name),
+            presetLabel,
+            splitLabel: isSplit ? "Split Roles" : "Overall",
+            populatedRoles,
           };
         })()
       : null;
 
-    const hasPreview = top3Teams.length > 0 || Boolean(topTierPreview);
+    const hasPreview = top3Teams.length > 0 || Boolean(playerConfigPreview);
 
     return (
       <Link
@@ -258,15 +275,33 @@ export function BallotCard({
                   <span className="whitespace-nowrap">{t.name}</span>
                 </span>
               ))}
-              {topTierPreview && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
-                  <span className="font-bold text-[#f0c020]">
-                    {topTierPreview.label}:
+              {playerConfigPreview && (
+                <>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0] whitespace-nowrap">
+                    <span className="text-[#f0c020]">
+                      {playerConfigPreview.presetLabel}
+                    </span>
+                    <span className="text-white/30">•</span>
+                    <span>{playerConfigPreview.splitLabel}</span>
                   </span>
-                  <span className="max-w-[260px] truncate">
-                    {topTierPreview.players.join(", ")}
-                  </span>
-                </span>
+                  {playerConfigPreview.populatedRoles.length > 0 && (
+                    <span className="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-semibold text-[#c7c5b8] whitespace-nowrap">
+                      {playerConfigPreview.populatedRoles.map((r) => (
+                        <span
+                          key={r.key}
+                          className="inline-flex items-center gap-1"
+                        >
+                          <img
+                            src={r.icon}
+                            alt={r.label}
+                            className="w-3.5 h-3.5 object-contain shrink-0"
+                          />
+                          <span>{r.label}</span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </>
               )}
             </>
           )}
