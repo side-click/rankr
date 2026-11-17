@@ -603,18 +603,16 @@ export function ConsensusRankingsView({
                 style={
                   exporting
                     ? { borderRadius: "44px", boxShadow: "none" }
-                    : undefined
+                    : { borderRadius: "44px" }
                 }
-                className={`relative w-[1060px] mx-auto bg-[#181e1c] border-2 border-[#c89b3c]/60 overflow-hidden ${
-                  exporting ? "rounded-[44px]" : "rounded-xl shadow-2xl"
+                className={`relative w-[1060px] mx-auto bg-[#181e1c] border-2 border-[#c89b3c]/60 overflow-hidden rounded-[44px] ${
+                  exporting ? "" : "shadow-2xl"
                 }`}
               >
                 {/* Graphic Header Banner */}
                 <div
                   style={{ background: themeGradients.bannerGradient }}
-                  className={`border-b border-[#c89b3c]/40 text-white flex flex-row items-center justify-between gap-4 ${
-                    exporting ? "px-11 py-6" : "px-6 py-5"
-                  }`}
+                  className="border-b border-[#c89b3c]/40 text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
                 >
                   <div className="flex items-center gap-4 text-left">
                     {leagueLogoUrl && (
