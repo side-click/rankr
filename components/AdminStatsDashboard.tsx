@@ -707,30 +707,30 @@ export function AdminStatsDashboard({
         {/* Most Picked Champions Grid */}
         {overview.champs.length > 0 && (
           <div className="mb-6 xp-panel p-3">
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Champions Picked ({overview.champs.length})
               </h2>
-              <span className="text-[10px] text-[#a6a89e]">
-                Top 36 by pick count
+              <span className="text-[11px] text-[#a6a89e]">
+                Top 24 by pick count
               </span>
             </div>
-            <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
-              {overview.champs.slice(0, 36).map((c) => (
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+              {overview.champs.slice(0, 24).map((c) => (
                 <div
                   key={c.name}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
                     0
                   )}% WR)`}
-                  className="relative rounded border border-white/15 bg-black/40 overflow-hidden group"
+                  className="rounded border border-white/15 bg-[#121615] overflow-hidden flex flex-col"
                 >
                   <img
                     src={getChampionIconUrl(c.name, ddVersion)}
                     alt={c.name}
                     className="w-full aspect-square object-cover block"
                   />
-                  <div className="absolute bottom-0 inset-x-0 bg-black/80 px-1 py-0.5 flex items-center justify-between text-[9px] font-bold leading-none">
-                    <span className="text-[#f0ede0]">{c.games}</span>
+                  <div className="px-1.5 py-1 border-t border-white/10 flex items-center justify-between text-[11px] font-bold leading-none tabular-nums">
+                    <span className="text-[#f0ede0]">{c.games}G</span>
                     <span
                       className={
                         c.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
@@ -747,8 +747,8 @@ export function AdminStatsDashboard({
 
         {/* Stat Leaderboards Grid (Top 5 cards) */}
         {leaderboardPlayers.length > 0 && (
-          <div className="mb-6 space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+          <div className="mb-6 space-y-2.5">
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
               Player Stat Leaderboards
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
