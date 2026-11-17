@@ -344,19 +344,28 @@ export function PlayerTierShareView({
     return { preset: "standard", splitByRole: false, sections: [] };
   }, [ballot.tier_data]);
 
+  const activeSections = useMemo(() => {
+    if (!tierData.splitByRole) return tierData.sections;
+    const nonEmpty = tierData.sections.filter((sec) =>
+      sec.tiers.some((t) => t.players.length > 0)
+    );
+    return nonEmpty.length > 0 ? nonEmpty : tierData.sections;
+  }, [tierData]);
+
   const visibleSections = useMemo(() => {
     if (!tierData.splitByRole || roleFilter === "all") {
-      return tierData.sections;
+      return activeSections;
     }
-    return tierData.sections.filter((sec) => sec.role === roleFilter);
-  }, [tierData, roleFilter]);
+    const filtered = activeSections.filter((sec) => sec.role === roleFilter);
+    return filtered.length > 0 ? filtered : activeSections;
+  }, [tierData.splitByRole, activeSections, roleFilter]);
 
   const hasAnyCommentary = useMemo(
     () =>
-      tierData.sections.some((sec) =>
+      activeSections.some((sec) =>
         sec.tiers.some((t) => Boolean(t.commentary?.trim()))
       ),
-    [tierData]
+    [activeSections]
   );
 
   const isMultiRoleCompact =
@@ -669,7 +678,7 @@ export function PlayerTierShareView({
         </div>
 
         {/* Role View Filter Tabs (when Split by 5 Roles) */}
-        {tierData.splitByRole && tierData.sections.length > 1 && (
+        {tierData.splitByRole && activeSections.length > 1 && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 xp-panel p-2.5">
             <div className="text-[11px] font-bold uppercase text-[#a6a89e]">
               View Role Filter:
@@ -682,9 +691,9 @@ export function PlayerTierShareView({
                   roleFilter === "all" ? "xp-btn-primary" : ""
                 }`}
               >
-                All Roles ({tierData.sections.length})
+                All Roles ({activeSections.length})
               </button>
-              {tierData.sections.map((sec) => {
+              {activeSections.map((sec) => {
                 if (sec.role === "all") return null;
                 const roleMeta = getRoleMeta(sec.role);
                 return (
