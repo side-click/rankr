@@ -1,4 +1,7 @@
-# Rankr
+<p>
+  <img src="images/rankr-wordmark.png" alt="Rankr" height="48" />
+</p>
+
 
 Power rankings and player tier lists for amateur esports leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
 
