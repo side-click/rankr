@@ -8,7 +8,6 @@ import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import {
   formatMinutesSeconds,
-  formatSoloRank,
   getRoleFilteredSoloChampions,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
@@ -36,6 +35,37 @@ function deriveLeaguePrefix(leagueName?: string): string {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
   return initials || raw;
+}
+
+const RANK_COLOR_MAP: Record<string, string> = {
+  CHALLENGER: "text-[#38bdf8]",
+  GRANDMASTER: "text-[#f87171]",
+  MASTER: "text-[#c084fc]",
+  DIAMOND: "text-[#60a5fa]",
+  EMERALD: "text-[#34d399]",
+  PLATINUM: "text-[#9ca3af]",
+  GOLD: "text-[#f0c020]",
+  SILVER: "text-[#d1d5db]",
+  BRONZE: "text-[#cd7f32]",
+  IRON: "text-[#78716c]",
+};
+
+function formatStyledSoloRank(
+  tier: string | null,
+  rank: string | null,
+  lp: number | null
+): { label: string; className: string } {
+  if (!tier) return { label: "Unranked", className: "text-[#8e9286]" };
+  const t = tier.toUpperCase();
+  const titleTier = t.charAt(0) + t.slice(1).toLowerCase();
+  const color = RANK_COLOR_MAP[t] ?? "text-[#f0c020]";
+  const isApex = t === "MASTER" || t === "GRANDMASTER" || t === "CHALLENGER";
+  if (isApex) {
+    const label = lp != null ? `${titleTier} ${lp} LP` : titleTier;
+    return { label, className: color };
+  }
+  const label = rank ? `${titleTier} ${rank}` : titleTier;
+  return { label, className: color };
 }
 
 function isOutlierChamp(
@@ -251,7 +281,7 @@ export function AdminTeamScoutingView({
                 {team.teamName}
               </h1>
               <div className="text-xs font-bold text-[#f0c020]">
-                {team.divisionName} • {seasonName}
+                {team.divisionName} • {leaguePrefix} {seasonName}
               </div>
             </div>
           </div>
@@ -337,7 +367,11 @@ export function AdminTeamScoutingView({
               const lp = leaguePlayerByKey.get(soloPlayer.playerKey);
               const statsSrc = lp && lp.games > 0 ? lp : null;
               const roleMeta = getRoleMeta(soloPlayer.role as LeagueRole);
-              const topMastery = soloPlayer.masteryTop4[0] ?? null;
+              const styledRank = formatStyledSoloRank(
+                soloPlayer.soloTier,
+                soloPlayer.soloRank,
+                soloPlayer.soloLp
+              );
 
               const leagueChamps = lp?.topChampions ?? [];
               const leagueTotal = leagueChamps.reduce(
@@ -359,54 +393,27 @@ export function AdminTeamScoutingView({
                   key={soloPlayer.playerKey}
                   className="xp-panel p-3 flex flex-col gap-3 w-full max-w-[380px] mx-auto sm:max-w-none"
                 >
-                  {/* Top Row: Large Role Icon + Name + Top Mastery Icon */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/admin/stats/player/${encodeURIComponent(
-                          soloPlayer.playerKey
-                        )}`}
-                        className="flex items-center gap-2 hover:text-[#f0c020] transition"
-                      >
-                        <img
-                          src={roleMeta.icon}
-                          alt={roleMeta.label}
-                          title={roleMeta.label}
-                          className="w-6 h-6 object-contain shrink-0"
-                        />
-                        <span className="font-extrabold text-sm text-[#f0ede0] truncate">
-                          {soloPlayer.displayName}
-                        </span>
-                      </Link>
-                      <div className="text-[11px] font-bold text-[#f0c020] mt-0.5">
-                        {formatSoloRank(
-                          soloPlayer.soloTier,
-                          soloPlayer.soloRank,
-                          soloPlayer.soloLp
-                        )}
-                      </div>
+                  {/* Top Row: Role Icon + Larger Player Name + Rank */}
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/stats/player/${encodeURIComponent(
+                        soloPlayer.playerKey
+                      )}`}
+                      className="flex items-center gap-2 hover:text-[#f0c020] transition"
+                    >
+                      <img
+                        src={roleMeta.icon}
+                        alt={roleMeta.label}
+                        title={roleMeta.label}
+                        className="w-6 h-6 object-contain shrink-0"
+                      />
+                      <span className="font-extrabold text-base sm:text-[17px] text-[#f0ede0] truncate">
+                        {soloPlayer.displayName}
+                      </span>
+                    </Link>
+                    <div className={`text-xs font-bold mt-1 ${styledRank.className}`}>
+                      {styledRank.label}
                     </div>
-
-                    {topMastery && (
-                      <div
-                        className="shrink-0 flex flex-col items-center"
-                        title={`Highest Mastery: ${
-                          topMastery.championName
-                        } (${formatMasteryPoints(topMastery.championPoints)} pts)`}
-                      >
-                        <img
-                          src={getChampionIconUrl(
-                            topMastery.championName,
-                            ddVersion
-                          )}
-                          alt={topMastery.championName}
-                          className="w-11 h-11 rounded border-2 border-[#f0c020]/75 object-cover shadow"
-                        />
-                        <span className="text-[9px] font-bold text-[#f0c020] mt-0.5">
-                          {formatMasteryPoints(topMastery.championPoints)}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Season Stats (League Only) */}
