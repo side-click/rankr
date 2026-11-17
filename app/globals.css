@@ -245,3 +245,36 @@ body {
   border-bottom: 2px solid #c89b3c;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
 }
+
+/* Subtle GPU-composited attention glow for the next required selector */
+@keyframes select-glow-opacity {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.select-attention {
+  position: relative;
+}
+
+.select-attention::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 2px;
+  border: 1px solid rgba(240, 192, 32, 0.85);
+  box-shadow: 0 0 12px rgba(240, 192, 32, 0.32);
+  pointer-events: none;
+  animation: select-glow-opacity 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select-attention::after {
+    animation: none;
+    opacity: 0.85;
+  }
+}

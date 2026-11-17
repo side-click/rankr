@@ -1675,126 +1675,156 @@ export function PlayerTierEditor({
         {/* Season / Division Scope / Edition Selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 xp-panel p-3">
           <div>
-            <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+            <label
+              className={`block text-[11px] font-bold mb-1 ${
+                !seasonId ? "text-[#f0c020]" : "text-[#c7c5b8]"
+              }`}
+            >
               Season
             </label>
-            <select
-              value={seasonId}
-              onChange={(e) => {
-                const newId = e.target.value;
-                if (newId === seasonId) return;
-                if (!confirmSwitchScope()) return;
-                setSeasonId(newId);
-                const nextSeason = seasons.find((s) => s.id === newId);
-                if (nextSeason?.slug) {
-                  router.replace(
-                    `/rank?type=player&season=${encodeURIComponent(
-                      nextSeason.slug
-                    )}`
+            <div className={!seasonId ? "select-attention" : undefined}>
+              <select
+                value={seasonId}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  if (newId === seasonId) return;
+                  if (!confirmSwitchScope()) return;
+                  setSeasonId(newId);
+                  const nextSeason = seasons.find((s) => s.id === newId);
+                  if (nextSeason?.slug) {
+                    router.replace(
+                      `/rank?type=player&season=${encodeURIComponent(
+                        nextSeason.slug
+                      )}`
+                    );
+                  } else {
+                    router.replace("/rank?type=player");
+                  }
+                }}
+                className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
+              >
+                <option value="">Select a season...</option>
+                {seasons.map((s) => {
+                  const league = Array.isArray(s.leagues)
+                    ? s.leagues[0]
+                    : s.leagues;
+                  const prefix =
+                    league?.short_name ||
+                    (league?.slug === "scdl" ? "SCDL" : league?.name);
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {prefix ? `${prefix}: ` : ""}
+                      {s.name} {!s.is_active ? "(Inactive)" : ""}
+                    </option>
                   );
-                } else {
-                  router.replace("/rank?type=player");
-                }
-              }}
-              className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
-            >
-              <option value="">Select a season...</option>
-              {seasons.map((s) => {
-                const league = Array.isArray(s.leagues)
-                  ? s.leagues[0]
-                  : s.leagues;
-                const prefix =
-                  league?.short_name ||
-                  (league?.slug === "scdl" ? "SCDL" : league?.name);
-                return (
-                  <option key={s.id} value={s.id}>
-                    {prefix ? `${prefix}: ` : ""}
-                    {s.name} {!s.is_active ? "(Inactive)" : ""}
-                  </option>
-                );
-              })}
-            </select>
+                })}
+              </select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+            <label
+              className={`block text-[11px] font-bold mb-1 ${
+                seasonId && !divisionScope ? "text-[#f0c020]" : "text-[#c7c5b8]"
+              }`}
+            >
               Player Pool
             </label>
-            <select
-              value={divisionScope}
-              disabled={!seasonId}
-              onChange={(e) => {
-                const nextScope = e.target.value;
-                if (nextScope === divisionScope) return;
-                if (!confirmSwitchScope()) return;
-                setDivisionScope(nextScope);
-                if (nextScope && nextScope !== "all") {
-                  setSelectedPreset("standard");
-                }
-                if (!nextScope) {
-                  setEditionId("");
-                } else if (!editionId && seasonEditions.length > 0) {
-                  const reversedEds = [...seasonEditions].reverse();
-                  const latestOpen = reversedEds.find(
-                    (ed) => ed.is_open && !ed.is_archived
-                  );
-                  const latestActive = reversedEds.find(
-                    (ed) => !ed.is_archived
-                  );
-                  setEditionId(
-                    (latestOpen ?? latestActive ?? reversedEds[0]).id
-                  );
-                }
-              }}
-              className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
+            <div
+              className={
+                seasonId && !divisionScope ? "select-attention" : undefined
+              }
             >
-              <option value="">Select a player pool...</option>
-              <option value="all">
-                All Divisions
-              </option>
-              {seasonDivisions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} Only
+              <select
+                value={divisionScope}
+                disabled={!seasonId}
+                onChange={(e) => {
+                  const nextScope = e.target.value;
+                  if (nextScope === divisionScope) return;
+                  if (!confirmSwitchScope()) return;
+                  setDivisionScope(nextScope);
+                  if (nextScope && nextScope !== "all") {
+                    setSelectedPreset("standard");
+                  }
+                  if (!nextScope) {
+                    setEditionId("");
+                  } else if (!editionId && seasonEditions.length > 0) {
+                    const reversedEds = [...seasonEditions].reverse();
+                    const latestOpen = reversedEds.find(
+                      (ed) => ed.is_open && !ed.is_archived
+                    );
+                    const latestActive = reversedEds.find(
+                      (ed) => !ed.is_archived
+                    );
+                    setEditionId(
+                      (latestOpen ?? latestActive ?? reversedEds[0]).id
+                    );
+                  }
+                }}
+                className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
+              >
+                <option value="">Select a player pool...</option>
+                <option value="all">
+                  All Divisions
                 </option>
-              ))}
-            </select>
+                {seasonDivisions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} Only
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+            <label
+              className={`block text-[11px] font-bold mb-1 ${
+                seasonId && divisionScope && !editionId
+                  ? "text-[#f0c020]"
+                  : "text-[#c7c5b8]"
+              }`}
+            >
               Edition
             </label>
-            <select
-              value={editionId}
-              disabled={!seasonId}
-              onChange={(e) => {
-                const nextEdId = e.target.value;
-                if (nextEdId === editionId) return;
-                if (!confirmSwitchScope()) return;
-                setEditionId(nextEdId);
-                const nextEd = seasonEditions.find((ed) => ed.id === nextEdId);
-                const isNextFirstEdition =
-                  seasonEditions.length > 0 &&
-                  nextEdId === seasonEditions[0].id;
-                setSelectedPreset(
-                  nextEd?.is_players_only &&
-                    !isSpecificDivision &&
-                    isNextFirstEdition
-                    ? "draft_day"
-                    : "standard"
-                );
-                setSelectedSplitByRole(false);
-              }}
-              className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
+            <div
+              className={
+                seasonId && divisionScope && !editionId
+                  ? "select-attention"
+                  : undefined
+              }
             >
-              <option value="">Select an edition...</option>
-              {seasonEditions.map((ed) => (
-                <option key={ed.id} value={ed.id}>
-                  {ed.name}
-                  {ed.id === currentOpenEditionId ? " (Current)" : ""}
-                </option>
-              ))}
-            </select>
+              <select
+                value={editionId}
+                disabled={!seasonId}
+                onChange={(e) => {
+                  const nextEdId = e.target.value;
+                  if (nextEdId === editionId) return;
+                  if (!confirmSwitchScope()) return;
+                  setEditionId(nextEdId);
+                  const nextEd = seasonEditions.find((ed) => ed.id === nextEdId);
+                  const isNextFirstEdition =
+                    seasonEditions.length > 0 &&
+                    nextEdId === seasonEditions[0].id;
+                  setSelectedPreset(
+                    nextEd?.is_players_only &&
+                      !isSpecificDivision &&
+                      isNextFirstEdition
+                      ? "draft_day"
+                      : "standard"
+                  );
+                  setSelectedSplitByRole(false);
+                }}
+                className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
+              >
+                <option value="">Select an edition...</option>
+                {seasonEditions.map((ed) => (
+                  <option key={ed.id} value={ed.id}>
+                    {ed.name}
+                    {ed.id === currentOpenEditionId ? " (Current)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
