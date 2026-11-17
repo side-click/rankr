@@ -1,4 +1,19 @@
 {
+  "5680632994": {
+    "blueTeam": "Globetrotters",
+    "redTeam": "Ticks",
+    "bans": [
+      "Trundle",
+      "Vi",
+      "Ashe",
+      "Gwen",
+      "Mordekaiser",
+      "Viego",
+      "Sylas",
+      "Naafiri"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/t5qQP6SPT8/t7QBFQgPL1"
+  },
   "5680614674": {
     "blueTeam": "Duck Donuts",
     "redTeam": "Breadwinners",

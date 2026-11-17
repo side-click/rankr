@@ -269,54 +269,10 @@ export async function fetchScdlSheetStats(
 
     const matchedRoster =
       rosterByKey.get(normKey) ?? rosterByDisplay.get(dispKey);
-    const teamMeta = teamMetaByName.get(r.teamName.trim().toLowerCase());
+    if (!matchedRoster) continue;
 
-    const targetKey = matchedRoster?.playerKey ?? normKey;
-    let bucket = matchesByPlayerKey.get(targetKey);
-    if (!bucket) {
-      const subMeta: AggregatedPlayerStats = {
-        playerKey: targetKey,
-        riotId: r.playerName,
-        displayName: r.playerName.split("#")[0].trim() || r.playerName,
-        teamId: teamMeta?.teamId ?? null,
-        teamName: teamMeta?.teamName ?? r.teamName,
-        teamLogoUrl: teamMeta?.logoUrl ?? null,
-        divisionId: teamMeta?.divisionId ?? null,
-        divisionName: teamMeta?.divisionName ?? "SCDL",
-        role: r.role,
-        soloTier: null,
-        soloRank: null,
-        soloLp: null,
-        rankScore: 0,
-        games: 0,
-        wins: 0,
-        losses: 0,
-        winRate: 0,
-        kda: 0,
-        killsPerGame: 0,
-        deathsPerGame: 0,
-        assistsPerGame: 0,
-        csPerMin: 0,
-        dpm: 0,
-        gpm: 0,
-        visionPerMin: 0,
-        kpPct: 0,
-        damageSharePct: 0,
-        goldSharePct: 0,
-        avgGameMinutes: 0,
-        avgGoldDiff: null,
-        soloKills: 0,
-        hasSoloKillsData: false,
-        firstBloodPct: null,
-        leagueRating: 0,
-        topChampions: [],
-        matches: [],
-        syncedAt: null,
-        syncError: null,
-      };
-      bucket = { meta: subMeta, matches: [] };
-      matchesByPlayerKey.set(targetKey, bucket);
-    }
+    const bucket = matchesByPlayerKey.get(matchedRoster.playerKey);
+    if (!bucket) continue;
 
     const tgKey = `${r.gameId}::${r.teamName.toLowerCase()}`;
     const tot = teamGameTotals.get(tgKey) ?? {

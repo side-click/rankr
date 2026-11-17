@@ -797,6 +797,35 @@ export function AdminStatsDashboard({
           </div>
         )}
 
+        {(() => {
+          const missingDataPlayers = filteredPlayers.filter(
+            (p) => p.games === 0
+          );
+          if (missingDataPlayers.length === 0) return null;
+          if (dataSource === "sheet" && !sheetData) return null;
+          const preview = missingDataPlayers
+            .slice(0, 6)
+            .map((p) => `${p.displayName} (${p.teamName})`)
+            .join(", ");
+          const remainder = missingDataPlayers.length - 6;
+          return (
+            <div
+              title={missingDataPlayers
+                .map((p) => `${p.displayName} (${p.teamName})`)
+                .join(", ")}
+              className="mb-4 px-3 py-2 bg-[#2a2210]/80 border border-[#c89b3c]/40 rounded text-[11px] text-[#f0c020] flex items-center gap-2"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                <strong>{missingDataPlayers.length}</strong> rostered{" "}
+                {missingDataPlayers.length === 1 ? "player has" : "players have"}{" "}
+                no match data yet: {preview}
+                {remainder > 0 ? ` +${remainder} more` : ""}
+              </span>
+            </div>
+          );
+        })()}
+
         {syncLogs.length > 0 && (
           <div className="mb-4 xp-panel overflow-hidden">
             <button
