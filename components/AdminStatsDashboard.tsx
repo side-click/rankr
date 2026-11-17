@@ -287,24 +287,39 @@ export function AdminStatsDashboard({
   const overview = useMemo(() => {
     const allMatches = filteredPlayers.flatMap((p) => p.matches);
     const totalMatchRows = allMatches.length;
+
+    const uniqueMatchMap = new Map<string, typeof allMatches[number]>();
+    const uniqueSideMap = new Map<string, typeof allMatches[number]>();
+    if (dataSource === "sheet") {
+      for (const m of allMatches) {
+        if (!uniqueMatchMap.has(m.matchId)) uniqueMatchMap.set(m.matchId, m);
+        const sideKey = `${m.matchId}::${m.teamId}`;
+        if (!uniqueSideMap.has(sideKey)) uniqueSideMap.set(sideKey, m);
+      }
+    }
+
     const totalGames =
-      dataSource === "sheet"
-        ? new Set(allMatches.map((m) => m.matchId)).size
-        : totalMatchRows;
+      dataSource === "sheet" ? uniqueMatchMap.size : totalMatchRows;
+
+    const durationSource =
+      dataSource === "sheet" ? [...uniqueMatchMap.values()] : allMatches;
     const avgDurationMin =
-      totalMatchRows > 0
-        ? allMatches.reduce((s, m) => s + m.gameDuration, 0) /
+      durationSource.length > 0
+        ? durationSource.reduce((s, m) => s + m.gameDuration, 0) /
           60 /
-          totalMatchRows
-        : 0;
-    const avgKillsPerGame =
-      totalMatchRows > 0
-        ? allMatches.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
-          totalMatchRows
+          durationSource.length
         : 0;
 
-    const blueGames = allMatches.filter((m) => m.teamId === 100);
-    const redGames = allMatches.filter((m) => m.teamId === 200);
+    const sideSource =
+      dataSource === "sheet" ? [...uniqueSideMap.values()] : allMatches;
+    const avgKillsPerGame =
+      sideSource.length > 0
+        ? sideSource.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
+          sideSource.length
+        : 0;
+
+    const blueGames = sideSource.filter((m) => m.teamId === 100);
+    const redGames = sideSource.filter((m) => m.teamId === 200);
     const blueWr =
       blueGames.length > 0
         ? (blueGames.filter((m) => m.win).length / blueGames.length) * 100
