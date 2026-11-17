@@ -3,6 +3,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toPng } from "html-to-image";
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
   Clock,
   Coins,
   Diff,
+  Download,
   Droplet,
   Eye,
   Flame,
@@ -29,6 +31,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
+import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import {
   computeRoleNormalizedRatings,
   formatMinutesSeconds,
@@ -130,7 +133,58 @@ export function AdminStatsDashboard({
     { time: string; level: "ok" | "warn" | "err"; text: string }[]
   >([]);
   const [showSyncLog, setShowSyncLog] = useState(true);
+  const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
   const cancelSyncRef = useRef(false);
+  const leaderboardCardRef = useRef<HTMLDivElement>(null);
+
+  const selectedDivision = useMemo(
+    () =>
+      divisionFilter !== "all"
+        ? divisions.find((d) => d.id === divisionFilter) ?? null
+        : null,
+    [divisions, divisionFilter]
+  );
+
+  const selectedDivisionTheme = useMemo(
+    () =>
+      selectedDivision
+        ? resolveDivisionTheme(selectedDivision.theme_key)
+        : null,
+    [selectedDivision]
+  );
+
+  const showLeaderboards =
+    divisions.length <= 1 || selectedDivision !== null;
+
+  async function handleExportLeaderboardPng() {
+    if (!leaderboardCardRef.current) return;
+    setExportingLeaderboard(true);
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      const exportWidth = Math.ceil(leaderboardCardRef.current.offsetWidth);
+      const exportHeight = Math.ceil(leaderboardCardRef.current.offsetHeight);
+      const dataUrl = await toPng(leaderboardCardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: exportWidth,
+        height: exportHeight,
+        backgroundColor: "#171b19",
+        style: { margin: "0" },
+      });
+      const link = document.createElement("a");
+      const divPart = selectedDivision?.slug || "league";
+      const srcPart = dataSource === "sheet" ? "scdl" : "soloq";
+      link.download = `${divPart}-${srcPart}-leaderboards.png`
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, "-");
+      link.href = dataUrl;
+      link.click();
+    } finally {
+      setExportingLeaderboard(false);
+    }
+  }
 
   function appendSyncLog(level: "ok" | "warn" | "err", text: string) {
     const time = new Date().toLocaleTimeString("en-US", {
@@ -638,7 +692,17 @@ export function AdminStatsDashboard({
             ? `Stats Lab (SCDL Sheet) - SCDL ${seasonName}`
             : `Stats Lab (Riot API) - SCDL ${seasonName}`
         }
-        theme="scdl"
+        theme={
+          selectedDivision
+            ? selectedDivision.theme_key === "dragon"
+              ? "dragon"
+              : selectedDivision.theme_key === "baron"
+              ? "baron"
+              : "scdl"
+            : "scdl"
+        }
+        customTheme={selectedDivisionTheme}
+        iconSrc={selectedDivision?.logo_url ?? undefined}
       >
         {/* Division Toggle + Riot Sync Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
@@ -1022,7 +1086,7 @@ export function AdminStatsDashboard({
         )}
 
         {/* Stat Leaderboards Grid (Top 5 cards) */}
-        {leaderboardPlayers.length > 0 && (() => {
+        {showLeaderboards && leaderboardPlayers.length > 0 && (() => {
           type LeaderboardCard = {
             title: string;
             icons?: React.ReactNode;
@@ -1201,6 +1265,7 @@ export function AdminStatsDashboard({
                         <img
                           src={p.teamLogoUrl}
                           alt={p.teamName}
+                          crossOrigin="anonymous"
                           className="w-4 h-4 object-contain shrink-0"
                         />
                       )}
@@ -1217,31 +1282,101 @@ export function AdminStatsDashboard({
             </div>
           );
 
+          const cardBorderColor =
+            selectedDivisionTheme?.primary_color ?? "#c89b3c";
+          const bannerGradient = selectedDivisionTheme
+            ? getThemeGradients(selectedDivisionTheme).bannerGradient
+            : "linear-gradient(135deg, #1b3626 0%, #121615 100%)";
+
           return (
-            <div className="mb-6 space-y-3">
-              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-center gap-2">
-                <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
-                <span>Leaderboards</span>
-              </h2>
-
-              <div className="flex flex-wrap justify-center gap-3">
-                {primaryRow.map(renderCard)}
+            <div className="mb-6 space-y-2.5">
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleExportLeaderboardPng()}
+                  disabled={exportingLeaderboard}
+                  className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>
+                    {exportingLeaderboard ? "Exporting..." : "Export PNG"}
+                  </span>
+                </button>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-3">
-                {secondaryRow.map(renderCard)}
-              </div>
+              <div
+                ref={leaderboardCardRef}
+                style={{ borderColor: cardBorderColor }}
+                className={`border-2 rounded-lg overflow-hidden bg-[#171b19] ${
+                  exportingLeaderboard ? "" : "shadow-2xl"
+                }`}
+              >
+                {/* Consensus-Style Graphic Header Banner */}
+                <div
+                  style={{ background: bannerGradient }}
+                  className="border-b border-[#c89b3c]/40 text-white flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {selectedDivision?.logo_url && (
+                      <img
+                        src={selectedDivision.logo_url}
+                        alt={selectedDivision.name}
+                        crossOrigin="anonymous"
+                        className="w-12 h-12 object-contain drop-shadow shrink-0"
+                      />
+                    )}
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider font-bold text-[#f0c020]">
+                        SCDL {seasonName} •{" "}
+                        {dataSource === "sheet"
+                          ? "SCDL League Stats"
+                          : "SoloQ Stats"}
+                      </div>
+                      <h2 className="wow-heading text-xl sm:text-2xl font-extrabold text-white leading-tight flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-[#f0c020] shrink-0" />
+                        <span>
+                          {selectedDivision
+                            ? `${selectedDivision.name} Leaderboards`
+                            : "League Leaderboards"}
+                        </span>
+                      </h2>
+                    </div>
+                  </div>
 
-              {showAllLeaderboards && (
-                <>
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {expandedRow1.map(renderCard)}
+                  <div className="flex items-center gap-2.5 bg-black/45 px-3 py-1.5 rounded-lg border border-[#f0c020]/40 shrink-0">
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
+                        {leaderboardPlayers.length} Players
+                      </div>
+                      <div className="text-xs font-extrabold text-white leading-tight">
+                        Top 5 Leaders
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4 space-y-3 bg-[#171b19]">
                   <div className="flex flex-wrap justify-center gap-3">
-                    {expandedRow2.map(renderCard)}
+                    {primaryRow.map(renderCard)}
                   </div>
-                </>
-              )}
+
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {secondaryRow.map(renderCard)}
+                  </div>
+
+                  {showAllLeaderboards && (
+                    <>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {expandedRow1.map(renderCard)}
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {expandedRow2.map(renderCard)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
 
               <div className="flex justify-center pt-1">
                 <button
