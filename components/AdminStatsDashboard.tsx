@@ -505,9 +505,6 @@ export function AdminStatsDashboard({
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Admin Console</span>
         </Link>
-        <span className="px-2.5 py-1 rounded bg-[#2a2210] border border-[#c89b3c]/60 text-[11px] font-bold text-[#f0c020]">
-          Admin-Only Riot API Stats Prototype • {seasonName}
-        </span>
       </div>
 
       {missingTable && (
@@ -539,7 +536,7 @@ export function AdminStatsDashboard({
         </div>
       )}
 
-      <RetroWindow title="SCDL Stats Lab — League Overview" theme="scdl">
+      <RetroWindow title={`Stats Lab (Riot API) - SCDL ${seasonName}`} theme="scdl">
         {/* Division Toggle + Riot Sync Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
           <div className="flex flex-wrap items-center gap-1.5">
