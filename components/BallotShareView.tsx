@@ -542,7 +542,7 @@ export function BallotShareView({
           <div
             ref={cardRef}
             style={exporting ? { borderRadius: "44px", boxShadow: "none" } : { borderRadius: "44px" }}
-            className={`relative w-[1060px] mx-auto bg-[#181e1c] border-2 border-[#39443f] overflow-hidden ${
+            className={`relative w-[1060px] mx-auto bg-[#181e1c] border-4 border-[#c89b3c]/80 overflow-hidden ${
               exporting ? "" : "shadow-lg"
             }`}
           >
@@ -550,7 +550,7 @@ export function BallotShareView({
               style={{
                 background: getThemeGradients(resolvedTheme).bannerGradient,
               }}
-              className="border-b border-[#39443f] text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
+              className="border-b-2 border-[#c89b3c]/55 text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
             >
               <div className="flex items-center gap-4 text-left">
                 {leagueLogo && (

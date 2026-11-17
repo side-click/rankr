@@ -8,7 +8,6 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
-  ArrowUpDown,
   Award,
   BarChart3,
   Clock,
@@ -38,7 +37,6 @@ import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import {
   computeRoleNormalizedRatings,
   formatMinutesSeconds,
-  formatSoloRank,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
 } from "@/utils/riotStatsAggregation";
@@ -67,7 +65,6 @@ interface AdminStatsDashboardProps {
 }
 
 type SortKey =
-  | "rankScore"
   | "leagueRating"
   | "winRate"
   | "kda"
@@ -76,6 +73,8 @@ type SortKey =
   | "csPerMin"
   | "kpPct"
   | "visionPerMin"
+  | "avgGoldDiff"
+  | "damageSharePct"
   | "games";
 
 const MIGRATION_SQL = `create table if not exists public.riot_player_stats (
@@ -472,8 +471,8 @@ export function AdminStatsDashboard({
         : filteredPlayers.filter((p) => p.role === roleFilter);
 
     return [...roleFiltered].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = (a[sortKey] as number | null) ?? -999999;
+      const bv = (b[sortKey] as number | null) ?? -999999;
       return sortAsc ? av - bv : bv - av;
     });
   }, [filteredPlayers, roleFilter, sortKey, sortAsc]);
@@ -1220,12 +1219,12 @@ export function AdminStatsDashboard({
           const renderCard = (card: LeaderboardCard) => (
             <div
               key={card.title}
-              className="xp-panel overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
+              className="xp-panel border-2 border-white/20 overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
             >
               <div
                 onClick={card.onHeaderClick}
                 title={card.headerTooltip}
-                className={`bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2 ${
+                className={`bg-[#2a2210] border-b-2 border-[#c89b3c]/70 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2 ${
                   card.onHeaderClick ? "cursor-pointer hover:bg-[#362c16]" : ""
                 }`}
               >
@@ -1302,14 +1301,14 @@ export function AdminStatsDashboard({
               <div
                 ref={leaderboardCardRef}
                 style={{ borderColor: cardBorderColor }}
-                className={`border-2 rounded-lg overflow-hidden bg-[#171b19] ${
+                className={`border-4 rounded-lg overflow-hidden bg-[#171b19] ${
                   exportingLeaderboard ? "" : "shadow-2xl"
                 }`}
               >
                 {/* Consensus-Style Graphic Header Banner */}
                 <div
                   style={{ background: bannerGradient }}
-                  className="border-b border-[#c89b3c]/40 text-white flex flex-wrap items-center justify-between gap-4 px-6 py-5"
+                  className="border-b-2 border-[#c89b3c]/60 text-white flex flex-wrap items-center justify-between gap-4 px-6 py-5"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     {leagueLogoUrl && (
@@ -1595,17 +1594,9 @@ export function AdminStatsDashboard({
                   <th className="px-3 py-2">Player</th>
                   <th className="px-2 py-2">Team</th>
                   <th
-                    className="px-2 py-2 cursor-pointer hover:text-white"
-                    onClick={() => handleSort("rankScore")}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      SoloQ <ArrowUpDown className="w-3 h-3" />
-                    </span>
-                  </th>
-                  <th
                     className="px-2 py-2 text-right cursor-pointer hover:text-white"
                     onClick={() => handleSort("leagueRating")}
-                    title="Role-normalized 0–100 League Rating"
+                    title="Role-normalized 0–100 Rankr Rating"
                   >
                     Rating
                   </th>
@@ -1651,6 +1642,27 @@ export function AdminStatsDashboard({
                   >
                     KP%
                   </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("damageSharePct")}
+                    title="Team Damage Share %"
+                  >
+                    DMG%
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("visionPerMin")}
+                    title="Vision Score / Min"
+                  >
+                    VS/m
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("avgGoldDiff")}
+                    title="Average Gold Diff vs Lane Opponent"
+                  >
+                    GD
+                  </th>
                   <th className="px-3 py-2">Top Champs</th>
                 </tr>
               </thead>
@@ -1692,18 +1704,6 @@ export function AdminStatsDashboard({
                           <span>{p.teamName}</span>
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-[11px] text-[#f0c020] whitespace-nowrap">
-                        {p.syncError ? (
-                          <span
-                            title={p.syncError}
-                            className="text-[#ff857a] font-mono"
-                          >
-                            Error
-                          </span>
-                        ) : (
-                          formatSoloRank(p.soloTier, p.soloRank, p.soloLp)
-                        )}
-                      </td>
                       <td
                         className={`px-2 py-2 text-right font-mono font-bold ${
                           p.games <= 0
@@ -1741,6 +1741,27 @@ export function AdminStatsDashboard({
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
                         {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? `${p.damageSharePct.toFixed(0)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? p.visionPerMin.toFixed(2) : "—"}
+                      </td>
+                      <td
+                        className={`px-2 py-2 text-right font-mono ${
+                          p.avgGoldDiff === null || p.games <= 0
+                            ? "text-[#a6a89e]"
+                            : p.avgGoldDiff >= 0
+                            ? "text-[#7cd438]"
+                            : "text-[#ff857a]"
+                        }`}
+                      >
+                        {p.games > 0 && p.avgGoldDiff !== null
+                          ? `${p.avgGoldDiff >= 0 ? "+" : ""}${Math.round(
+                              p.avgGoldDiff
+                            )}`
+                          : "—"}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
