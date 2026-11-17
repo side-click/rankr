@@ -1355,16 +1355,15 @@ export function AdminStatsDashboard({
                     <div className="space-y-4">
                       {/* Featured Golden Rankr Rating Card */}
                       <div
-                        className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
+                        className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-[#171b19]"
                         style={{
-                          boxShadow:
-                            "0 0 28px rgba(240, 192, 32, 0.28), inset 0 0 18px rgba(240, 192, 32, 0.08)",
+                          boxShadow: "0 0 28px rgba(240, 192, 32, 0.25)",
                         }}
                       >
                         <div
                           onClick={ratingCard.onHeaderClick}
                           title={ratingCard.headerTooltip}
-                          className="bg-gradient-to-r from-[#3a2c0e] via-[#4c3912] to-[#3a2c0e] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#ffd74a] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
+                          className="bg-[#2a2210] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-between gap-2 cursor-pointer hover:bg-[#362c16] transition"
                         >
                           <span className="inline-flex items-center gap-2">
                             <span>{ratingCard.title}</span>
