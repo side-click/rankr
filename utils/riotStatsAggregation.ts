@@ -272,8 +272,9 @@ export function computeRoleNormalizedRatings(
       (p) => p.kpPct,
       (p) => p.dpm,
       (p) => p.csPerMin,
-      (p) => p.gpm,
-      (p) => p.damageSharePct,
+      (p) => p.avgGoldDiff ?? 0,
+      (p) => (p.games > 0 ? p.soloKills / p.games : 0),
+      (p) => p.firstBloodPct ?? 0,
     ],
     mid: [
       (p) => p.kda,
@@ -282,6 +283,7 @@ export function computeRoleNormalizedRatings(
       (p) => p.csPerMin,
       (p) => p.gpm,
       (p) => p.damageSharePct,
+      (p) => (p.games > 0 ? p.soloKills / p.games : 0),
     ],
     bot: [
       (p) => p.kda,
@@ -290,6 +292,7 @@ export function computeRoleNormalizedRatings(
       (p) => p.csPerMin,
       (p) => p.gpm,
       (p) => p.damageSharePct,
+      (p) => (p.gpm > 0 ? p.dpm / p.gpm : 0),
     ],
     jungle: [
       (p) => p.kda,
@@ -298,13 +301,14 @@ export function computeRoleNormalizedRatings(
       (p) => p.csPerMin,
       (p) => p.visionPerMin,
       (p) => p.assistsPerGame,
+      (p) => p.firstBloodPct ?? 0,
     ],
     support: [
       (p) => p.kda,
       (p) => p.kpPct,
       (p) => p.assistsPerGame,
       (p) => p.visionPerMin,
-      (p) => -p.deathsPerGame,
+      (p) => p.firstBloodPct ?? 0,
     ],
   };
 

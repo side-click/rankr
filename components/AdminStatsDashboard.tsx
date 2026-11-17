@@ -1050,10 +1050,12 @@ export function AdminStatsDashboard({
           const RANKR_RATING_BLURB = [
             "Rankr Rating (0–100) is a role-normalized composite score.",
             "Each player is compared strictly against peers in the same role within the current division using Z-scores across role-specific stats:",
-            "• Top / Mid / Bot: KDA, Kill Participation %, Damage/min, CS/min, Gold/min, Team Damage %",
-            "• Jungle: KDA, Kill Participation %, Damage/min, CS/min, Vision/min, Assists/game",
-            "• Support: KDA, Kill Participation %, Assists/game, Vision/min, and low Deaths/game",
-            "Each metric Z-score is clamped to [-2.5, 2.5], averaged, and scaled around 50 (50 + 15 × avgZ, bounded 10–99) so Supports aren't over-weighted by Vision Score and every role is judged on equal footing.",
+            "• Top: KDA, KP%, Damage/min, CS/min, Gold Diff/game, Solo Kills/game, First Blood %",
+            "• Jungle: KDA, KP%, Damage/min, CS/min, Vision/min, Assists/game, First Blood %",
+            "• Mid: KDA, KP%, Damage/min, CS/min, Gold/min, Team Damage %, Solo Kills/game",
+            "• Bot (ADC): KDA, KP%, Damage/min, CS/min, Gold/min, Team Damage %, Damage/Gold",
+            "• Support: KDA, KP%, Assists/game, Vision/min, First Blood %",
+            "Each metric Z-score is clamped to [-2.5, 2.5], averaged, and scaled around 50 (50 + 15 × avgZ, bounded 10–99) so every role is judged on equal footing.",
           ].join("\n");
 
           type LeaderboardCard = {
