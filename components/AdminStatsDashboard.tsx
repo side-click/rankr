@@ -184,7 +184,7 @@ export function AdminStatsDashboard({
       const dataUrl = await toPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 1060,
+        width: 780,
         height: exportHeight,
         backgroundColor: "#171b19",
         style: { margin: "0" },
@@ -1091,17 +1091,6 @@ export function AdminStatsDashboard({
               fmt: (p) => p.kda.toFixed(2),
             },
             {
-              title: "Vision / Min",
-              icons: (
-                <>
-                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
-                </>
-              ),
-              rows: topVision,
-              fmt: (p) => p.visionPerMin.toFixed(2),
-            },
-            {
               title: "Damage / Min",
               icons: (
                 <>
@@ -1113,15 +1102,26 @@ export function AdminStatsDashboard({
               fmt: (p) => Math.round(p.dpm).toString(),
             },
             {
-              title: "Gold / Min",
+              title: "Kill Participation",
               icons: (
                 <>
-                  <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
+              rows: topKp,
+              fmt: (p) => `${p.kpPct.toFixed(1)}%`,
+            },
+            {
+              title: "Vision / Min",
+              icons: (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
                   <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
                 </>
               ),
-              rows: topGpm,
-              fmt: (p) => Math.round(p.gpm).toString(),
+              rows: topVision,
+              fmt: (p) => p.visionPerMin.toFixed(2),
             },
             ...(topGoldDiff.length > 0
               ? [
@@ -1142,15 +1142,15 @@ export function AdminStatsDashboard({
                 ]
               : []),
             {
-              title: "Kill Participation",
+              title: "Gold / Min",
               icons: (
                 <>
-                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
                 </>
               ),
-              rows: topKp,
-              fmt: (p) => `${p.kpPct.toFixed(1)}%`,
+              rows: topGpm,
+              fmt: (p) => Math.round(p.gpm).toString(),
             },
           ];
 
@@ -1294,29 +1294,28 @@ export function AdminStatsDashboard({
                 </button>
               </div>
 
-              <ScaledGraphicFrame>
+              <ScaledGraphicFrame designWidth={780}>
                 <div
                   ref={leaderboardCardRef}
                   style={{
-                    borderColor: cardBorderColor,
                     borderRadius: "44px",
                   }}
-                  className={`w-[1060px] mx-auto border-4 rounded-[44px] overflow-hidden bg-[#171b19] ${
+                  className={`w-[780px] mx-auto border-4 border-[#5c6662] rounded-[44px] overflow-hidden bg-[#171b19] ${
                     exportingLeaderboard ? "" : "shadow-2xl"
                   }`}
                 >
                   {/* Consensus-Style Graphic Header Banner */}
                   <div
                     style={{ background: bannerGradient }}
-                    className="border-b-2 border-[#c89b3c]/60 text-white flex flex-row items-center justify-between gap-4 px-10 py-6"
+                    className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-7 py-5"
                   >
-                    <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-3.5 min-w-0">
                       {leagueLogoUrl && (
                         <img
                           src={leagueLogoUrl}
                           alt={leagueName}
                           crossOrigin="anonymous"
-                          className="w-20 h-16 object-contain drop-shadow shrink-0"
+                          className="w-16 h-12 object-contain drop-shadow shrink-0"
                         />
                       )}
                       {selectedDivision?.logo_url && (
@@ -1324,30 +1323,27 @@ export function AdminStatsDashboard({
                           src={selectedDivision.logo_url}
                           alt={selectedDivision.name}
                           crossOrigin="anonymous"
-                          className="w-16 h-16 object-contain drop-shadow shrink-0"
+                          className="w-12 h-12 object-contain drop-shadow shrink-0"
                         />
                       )}
                       <div>
-                        <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                        <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
                           {leagueName} ({seasonName})
                         </div>
-                        <h2 className="wow-heading text-3xl font-extrabold text-white leading-tight flex items-center gap-2.5">
-                          <Trophy className="w-6 h-6 text-[#f0c020] shrink-0" />
-                          <span>
-                            {selectedDivision
-                              ? `${selectedDivision.name} Stat Leaderboards`
-                              : "League Stat Leaderboards"}
-                          </span>
+                        <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight">
+                          {selectedDivision
+                            ? `${selectedDivision.name} Stat Leaderboards`
+                            : "League Stat Leaderboards"}
                         </h2>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 bg-black/45 px-4 py-2.5 rounded-xl border border-[#f0c020]/50 shrink-0">
+                    <div className="flex items-center gap-2.5 bg-black/45 px-3.5 py-2 rounded-xl border border-[#f0c020]/50 shrink-0">
                       <div className="text-right">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-[#f0c020]">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
                           Current Edition
                         </div>
-                        <div className="text-base font-extrabold text-white leading-tight">
+                        <div className="text-sm font-extrabold text-white leading-tight">
                           {currentEditionName}
                         </div>
                       </div>
@@ -1359,7 +1355,7 @@ export function AdminStatsDashboard({
                     <div className="space-y-4">
                       {/* Featured Golden Rankr Rating Card */}
                       <div
-                        className="max-w-[760px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
+                        className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
                         style={{
                           boxShadow:
                             "0 0 28px rgba(240, 192, 32, 0.28), inset 0 0 18px rgba(240, 192, 32, 0.08)",
