@@ -11,15 +11,14 @@ export function RecentBallotsPanel({ ballots }: RecentBallotsPanelProps) {
   const recentBallots = ballots.slice(0, 6);
 
   return (
-    <BallotListGrid
-      ballots={recentBallots}
-      defaultView="list"
-      headerLeft={
+    <div className="space-y-3">
+      <BallotListGrid ballots={recentBallots} defaultView="list" />
+      <div className="flex justify-start">
         <Link href="/browse" className="xp-btn text-xs">
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Browse All</span>
         </Link>
-      }
-    />
+      </div>
+    </div>
   );
 }
