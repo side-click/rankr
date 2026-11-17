@@ -7,7 +7,8 @@ import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 import { getLeaguePrefix } from "@/components/BallotCard";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
-import { Edit3, ExternalLink, Lock, User } from "lucide-react";
+import { resolveDivisionTheme } from "@/utils/themes";
+import { Award, Edit3, Lock, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +82,10 @@ export default async function MyRankingsPage() {
       season_name_snapshot,
       division_name_snapshot,
       division_logo_snapshot,
+      division_theme_snapshot,
       edition_name_snapshot,
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
-      divisions ( name, slug, logo_url ),
+      divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug, sort_order, is_open, is_archived )
     `
     )
@@ -102,7 +104,7 @@ export default async function MyRankingsPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {ballots.map((b) => {
             const season = Array.isArray(b.seasons) ? b.seasons[0] : b.seasons;
             const division = Array.isArray(b.divisions)
@@ -157,27 +159,76 @@ export default async function MyRankingsPage() {
             if (isPlayer && b.tier_variant) editParams.set("variant", b.tier_variant);
 
             const leagueSeasonLabel = `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`;
+            const isPublished = b.status === "published";
+            const editHref = `/rank?${editParams.toString()}`;
+            const primaryHref = isPublished ? `/ballot/${b.id}` : editHref;
+            const canEdit =
+              !edition?.is_archived && (edition?.is_open || !isPublished);
+
+            const dateStr = isPublished
+              ? `Published ${new Date(
+                  b.published_at ?? b.updated_at
+                ).toLocaleDateString()}`
+              : `Updated ${new Date(b.updated_at).toLocaleDateString()}`;
+
+            const resolvedTheme = hasDivision
+              ? resolveDivisionTheme(
+                  division?.theme_key ?? b.division_theme_snapshot
+                )
+              : {
+                  primary_color: "#1b5e36",
+                  secondary_color: "#0f2e1f",
+                  accent_text_color: "#7cd438",
+                };
+
+            const cardStyle: React.CSSProperties = {
+              borderLeftWidth: "3px",
+              borderLeftColor: resolvedTheme.primary_color,
+              backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
+            };
 
             return (
               <div
                 key={b.id}
-                className="xp-panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                style={cardStyle}
+                className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[124px_165px_auto_1fr] lg:items-center lg:gap-3"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  {displayLogo && (
-                    <img
-                      src={displayLogo}
-                      alt={hasDivision ? divName : league?.name ?? sName}
-                      className="w-10 h-10 object-contain shrink-0"
-                    />
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
+                <Link
+                  href={primaryHref}
+                  className="flex items-center gap-3 min-w-0 lg:contents"
+                >
+                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center px-2.5 py-2 rounded bg-black/25 border border-white/10">
+                    <span
+                      className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-xs border ${
+                        isPublished
+                          ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                          : "bg-[#3d3012] text-[#f0c020] border-[#8c6b16]"
+                      }`}
+                    >
+                      {b.status}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                        {edName}
+                      </span>
+                      {displayLogo ? (
+                        <img
+                          src={displayLogo}
+                          alt={hasDivision ? divName : league?.name ?? sName}
+                          className="lg:hidden w-5 h-5 object-contain shrink-0"
+                        />
+                      ) : (
+                        <Award className="lg:hidden w-4 h-4 text-[#7cd438] shrink-0" />
+                      )}
                       <span
                         title={
                           isPlayer ? "Player Tier List" : "Team Power Rankings"
                         }
-                        className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                        className="lg:hidden w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
                       >
                         {isPlayer ? (
                           <User className="w-3 h-3 text-[#f0c020]" />
@@ -185,54 +236,74 @@ export default async function MyRankingsPage() {
                           <TeamGroupIcon className="w-3 h-3 text-[#f0c020]" />
                         )}
                       </span>
-                      <span className="font-bold text-sm text-[#f0ede0] truncate">
-                        {edName}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-xs border ${
-                          b.status === "published"
-                            ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
-                            : "bg-[#3d3012] text-[#f0c020] border-[#8c6b16]"
-                        }`}
-                      >
-                        {b.status}
-                      </span>
                     </div>
-                    <div className="text-[11px] text-[#a6a89e]">
-                      {leagueSeasonLabel} •{" "}
-                      {hasDivision ? divName : "All Divisions"} •{" "}
-                      {isPlayer ? "Player Tier List" : "Team Power Rankings"} •
-                      Updated {new Date(b.updated_at).toLocaleDateString()}
+                    <div
+                      style={{ color: resolvedTheme.accent_text_color }}
+                      className="text-xs font-bold truncate"
+                    >
+                      {hasDivision ? divName : "All Divisions"}
+                    </div>
+                    <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate">
+                      {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
+                      <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
                     </div>
                   </div>
-                </div>
+                </Link>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {!edition?.is_archived &&
-                    (edition?.is_open || b.status === "draft") && (
-                      <Link
-                        href={`/rank?${editParams.toString()}`}
-                        className="xp-btn text-xs"
-                      >
+                {/* Desktop Col 3: Logo + Type + Season */}
+                <Link
+                  href={primaryHref}
+                  className="hidden lg:flex items-center gap-2 shrink-0"
+                >
+                  {displayLogo ? (
+                    <img
+                      src={displayLogo}
+                      alt={hasDivision ? divName : league?.name ?? sName}
+                      className="w-6 h-6 object-contain shrink-0"
+                    />
+                  ) : (
+                    <Award className="w-5 h-5 text-[#7cd438] shrink-0" />
+                  )}
+                  <span
+                    title={
+                      isPlayer ? "Player Tier List" : "Team Power Rankings"
+                    }
+                    className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                  >
+                    {isPlayer ? (
+                      <User className="w-3.5 h-3.5 text-[#f0c020]" />
+                    ) : (
+                      <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+                    )}
+                  </span>
+                  <div className="whitespace-nowrap">
+                    <div className="text-xs font-semibold text-[#c7c5b8]">
+                      {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                    </div>
+                    <div className="text-[11px] text-[#a6a89e]">
+                      {leagueSeasonLabel}
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Footer / Right Column: Date + Edit + Delete */}
+                <div className="flex items-center justify-between lg:justify-end gap-2.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 shrink-0">
+                  <span className="text-[11px] text-[#a6a89e] whitespace-nowrap">
+                    {dateStr}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canEdit && (
+                      <Link href={editHref} className="xp-btn text-xs">
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </Link>
                     )}
-                  {b.status === "draft" && (
                     <DeleteDraftButton
                       ballotId={b.id}
+                      status={isPublished ? "published" : "draft"}
                       title={`${edName} (${hasDivision ? divName : "All Divisions"})`}
                     />
-                  )}
-                  {b.status === "published" && (
-                    <Link
-                      href={`/ballot/${b.id}`}
-                      className="xp-btn xp-btn-primary text-xs min-w-[82px] justify-center"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>View</span>
-                    </Link>
-                  )}
+                  </div>
                 </div>
               </div>
             );

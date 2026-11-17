@@ -8,9 +8,15 @@ import { createClient } from "@/utils/supabase/client";
 interface DeleteDraftButtonProps {
   ballotId: string;
   title: string;
+  status?: "draft" | "published";
 }
 
-export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
+export function DeleteDraftButton({
+  ballotId,
+  title,
+  status = "draft",
+}: DeleteDraftButtonProps) {
+  const isPublished = status === "published";
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +29,7 @@ export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
     const { error: delError } = await supabase
       .from("ballots")
       .delete()
-      .eq("id", ballotId)
-      .eq("status", "draft");
+      .eq("id", ballotId);
 
     if (delError) {
       setError(delError.message);
@@ -45,8 +50,8 @@ export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
           setError(null);
           setConfirmOpen(true);
         }}
-        className="xp-btn xp-btn-danger text-xs min-w-[82px] justify-center"
-        title="Delete Draft"
+        className="xp-btn xp-btn-danger text-xs"
+        title={isPublished ? "Delete Published Ranking" : "Delete Draft"}
       >
         <Trash2 className="w-3.5 h-3.5" />
         <span>Delete</span>
@@ -64,7 +69,9 @@ export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
             <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-white">
                 <Trash2 className="w-3.5 h-3.5 text-[#ff857a]" />
-                <span>Delete Draft</span>
+                <span>
+                  {isPublished ? "Delete Published Ranking" : "Delete Draft"}
+                </span>
               </div>
               <button
                 type="button"
@@ -78,13 +85,16 @@ export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
             </div>
             <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
               <p className="leading-relaxed">
-                Are you sure you want to permanently delete the draft{" "}
-                <strong className="text-[#f0ede0]">{title}</strong>? This cannot
-                be undone.
+                Are you sure you want to permanently delete{" "}
+                {isPublished ? "your published ranking" : "the draft"}{" "}
+                <strong className="text-[#f0ede0]">{title}</strong>?{" "}
+                {isPublished
+                  ? "This will permanently remove it from public rankings and consensus. This cannot be undone."
+                  : "This cannot be undone."}
               </p>
               {error && (
                 <div className="p-2 bg-[#451717] border border-[#9e3535] text-[#ff857a] text-[11px] font-bold">
-                  Failed to delete draft: {error}
+                  Failed to delete {isPublished ? "ranking" : "draft"}: {error}
                 </div>
               )}
               <div className="flex items-center justify-end gap-2">
@@ -103,7 +113,13 @@ export function DeleteDraftButton({ ballotId, title }: DeleteDraftButtonProps) {
                   className="xp-btn xp-btn-danger text-xs min-w-[82px] justify-center"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>{deleting ? "Deleting..." : "Delete Draft"}</span>
+                  <span>
+                    {deleting
+                      ? "Deleting..."
+                      : isPublished
+                      ? "Delete Ranking"
+                      : "Delete Draft"}
+                  </span>
                 </button>
               </div>
             </div>
