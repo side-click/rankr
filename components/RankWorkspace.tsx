@@ -54,14 +54,21 @@ export function RankWorkspace({
 
   function handleSelectRankingType(nextType: RankingType) {
     setRankingType(nextType);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      typeof window !== "undefined"
+        ? window.location.search
+        : searchParams.toString()
+    );
     if (nextType === "player") {
       params.set("type", "player");
     } else {
       params.delete("type");
+      params.delete("variant");
     }
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    const nextUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(null, "", nextUrl);
+    router.replace(nextUrl, { scroll: false });
   }
 
   return (

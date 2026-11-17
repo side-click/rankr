@@ -391,7 +391,9 @@ export function BallotEditor({
 
   useEffect(() => {
     if (!currentSeason) return;
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
+    params.delete("type");
+    params.delete("variant");
     params.set("season", currentSeason.slug);
     if (currentDivision) {
       params.set("division", currentDivision.slug);

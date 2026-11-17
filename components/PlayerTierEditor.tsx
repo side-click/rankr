@@ -880,7 +880,8 @@ export function PlayerTierEditor({
   );
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
+    params.set("type", "player");
     if (currentSeason?.slug) params.set("season", currentSeason.slug);
     else params.delete("season");
 
