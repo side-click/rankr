@@ -117,7 +117,7 @@ export function AdminStatsDashboard({
   const router = useRouter();
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<LeagueRole | "all">("all");
-  const [sortKey, setSortKey] = useState<SortKey>("kda");
+  const [sortKey, setSortKey] = useState<SortKey>("leagueRating");
   const [sortAsc, setSortAsc] = useState(false);
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [showAllLeaderboards, setShowAllLeaderboards] = useState(false);
