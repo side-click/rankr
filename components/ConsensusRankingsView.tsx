@@ -656,11 +656,6 @@ export function ConsensusRankingsView({
                         {submissionCount}{" "}
                         {submissionCount === 1 ? "Ranking" : "Rankings"}
                       </div>
-                      {submissionCount >= 5 && (
-                        <div className="text-[10px] text-[#d6d3c4]">
-                          High &amp; low dropped
-                        </div>
-                      )}
                     </div>
                     <Trophy className="w-7 h-7 text-[#f0c020] shrink-0" />
                   </div>
@@ -680,7 +675,9 @@ export function ConsensusRankingsView({
                   {showChange && <div className="text-center">Change</div>}
                   <div className="pl-[104px]">Team</div>
                   <div className="text-center">Avg Rank</div>
-                  <div className="text-center">Range</div>
+                  <div className="text-center">
+                    {submissionCount >= 5 ? "Trimmed Range" : "Range"}
+                  </div>
                 </div>
 
                 {/* Consensus Rows */}
