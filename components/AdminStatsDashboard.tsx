@@ -771,19 +771,19 @@ export function AdminStatsDashboard({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/admin" className="xp-btn text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <Link href="/admin" className="xp-btn text-xs justify-center sm:justify-start">
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Admin Console</span>
         </Link>
-        <div className="flex items-center gap-1 bg-black/40 p-1 rounded border border-white/15">
+        <div className="grid grid-cols-2 sm:flex items-center gap-1 bg-black/40 p-1 rounded border border-white/15 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => {
               setDataSource("sheet");
               void loadSheetStats(false);
             }}
-            className={`xp-btn text-xs ${
+            className={`xp-btn text-xs justify-center ${
               dataSource === "sheet" ? "xp-btn-primary" : ""
             }`}
           >
@@ -792,7 +792,7 @@ export function AdminStatsDashboard({
           <button
             type="button"
             onClick={() => setDataSource("riot")}
-            className={`xp-btn text-xs ${
+            className={`xp-btn text-xs justify-center ${
               dataSource === "riot" ? "xp-btn-primary" : ""
             }`}
           >
@@ -850,11 +850,11 @@ export function AdminStatsDashboard({
       >
         {/* Division Toggle + Riot Sync Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 w-full lg:w-auto">
             <button
               type="button"
               onClick={() => setDivisionFilter("all")}
-              className={`xp-btn text-xs ${
+              className={`xp-btn text-xs justify-center col-span-2 sm:col-span-1 ${
                 divisionFilter === "all" ? "xp-btn-primary" : ""
               }`}
             >
@@ -869,7 +869,7 @@ export function AdminStatsDashboard({
                   key={div.id}
                   type="button"
                   onClick={() => setDivisionFilter(div.id)}
-                  className={`xp-btn text-xs ${
+                  className={`xp-btn text-xs justify-center ${
                     divisionFilter === div.id ? "xp-btn-primary" : ""
                   }`}
                 >
@@ -889,9 +889,9 @@ export function AdminStatsDashboard({
           </div>
 
           {dataSource === "sheet" ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
               {sheetData && (
-                <span className="text-[11px] text-[#a6a89e]">
+                <span className="text-[11px] text-[#a6a89e] text-center sm:text-left">
                   Loaded{" "}
                   <strong className="text-[#f0ede0]">
                     {sheetData.matchCount}
@@ -899,52 +899,66 @@ export function AdminStatsDashboard({
                   league games ({sheetData.rowCount} rows)
                 </span>
               )}
-              {sheetData && sheetData.unrosteredPlayers.length > 0 && (
+              <div
+                className={`grid gap-2 w-full sm:w-auto sm:flex sm:items-center ${
+                  sheetData && sheetData.unrosteredPlayers.length > 0
+                    ? "grid-cols-2"
+                    : "grid-cols-1"
+                }`}
+              >
+                {sheetData && sheetData.unrosteredPlayers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnrosteredModal(true)}
+                    title="View unrostered sub / alt summoner names found in the sheet"
+                    className="xp-btn text-xs justify-center"
+                  >
+                    <Users className="w-3.5 h-3.5 text-[#f0c020]" />
+                    <span>
+                      Unrostered ({sheetData.unrosteredPlayers.length})
+                    </span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowUnrosteredModal(true)}
-                  title="View unrostered sub / alt summoner names found in the sheet"
-                  className="xp-btn text-xs"
+                  disabled={sheetLoading}
+                  onClick={() => void loadSheetStats(true)}
+                  title="Fetch latest SCDL League stats from the public Google Sheet"
+                  className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
                 >
-                  <Users className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      sheetLoading ? "animate-spin" : ""
+                    }`}
+                  />
                   <span>
-                    Unrostered ({sheetData.unrosteredPlayers.length})
+                    {sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}
                   </span>
                 </button>
-              )}
-              <button
-                type="button"
-                disabled={sheetLoading}
-                onClick={() => void loadSheetStats(true)}
-                title="Fetch latest SCDL League stats from the public Google Sheet"
-                className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${sheetLoading ? "animate-spin" : ""}`}
-                />
-                <span>{sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}</span>
-              </button>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-[#a6a89e]">
-                Synced:{" "}
-                <strong className="text-[#f0ede0]">{syncedCount}</strong>/
-                {filteredPlayers.length}
-              </span>
-              <select
-                value={matchCount}
-                disabled={syncing}
-                onChange={(e) => setMatchCount(Number(e.target.value))}
-                className="xp-inset px-2 py-1 text-[11px] font-bold"
-                title="Recent non-tournament games to pull per player"
-              >
-                <option value={3}>3 games / player</option>
-                <option value={5}>5 games / player</option>
-                <option value={10}>10 games / player</option>
-              </select>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+              <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                <span className="text-[11px] text-[#a6a89e]">
+                  Synced:{" "}
+                  <strong className="text-[#f0ede0]">{syncedCount}</strong>/
+                  {filteredPlayers.length}
+                </span>
+                <select
+                  value={matchCount}
+                  disabled={syncing}
+                  onChange={(e) => setMatchCount(Number(e.target.value))}
+                  className="xp-inset px-2 py-1 text-[11px] font-bold"
+                  title="Recent non-tournament games to pull per player"
+                >
+                  <option value={3}>3 games / player</option>
+                  <option value={5}>5 games / player</option>
+                  <option value={10}>10 games / player</option>
+                </select>
+              </div>
               {!syncing ? (
-                <>
+                <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
                   <button
                     type="button"
                     disabled={
@@ -954,7 +968,7 @@ export function AdminStatsDashboard({
                     }
                     onClick={() => void runBatchSync(true)}
                     title="Sync only players in this view who have never been synced"
-                    className="xp-btn text-xs disabled:opacity-50"
+                    className="xp-btn text-xs justify-center disabled:opacity-50"
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
                     <span>
@@ -966,19 +980,19 @@ export function AdminStatsDashboard({
                     disabled={!hasRiotKey || missingTable}
                     onClick={() => void runBatchSync(false)}
                     title="Force-refresh all players in the current division view"
-                    className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
+                    className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Re-Sync All ({filteredPlayers.length})</span>
                   </button>
-                </>
+                </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
                     cancelSyncRef.current = true;
                   }}
-                  className="xp-btn xp-btn-danger text-xs"
+                  className="xp-btn xp-btn-danger text-xs justify-center w-full sm:w-auto"
                 >
                   <Square className="w-3 h-3" />
                   <span>Stop Sync</span>
