@@ -102,7 +102,21 @@ export function AdminStatsDashboard({
     currentLabel: string;
   } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncLogs, setSyncLogs] = useState<
+    { time: string; level: "ok" | "warn" | "err"; text: string }[]
+  >([]);
+  const [showSyncLog, setShowSyncLog] = useState(true);
   const cancelSyncRef = useRef(false);
+
+  function appendSyncLog(level: "ok" | "warn" | "err", text: string) {
+    const time = new Date().toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    setSyncLogs((prev) => [{ time, level, text }, ...prev].slice(0, 120));
+  }
 
   const filteredPlayers = useMemo(() => {
     return players.filter((p) =>
@@ -280,6 +294,12 @@ export function AdminStatsDashboard({
     cancelSyncRef.current = false;
     setSyncing(true);
     setSyncError(null);
+    setShowSyncLog(true);
+    setSyncLogs([]);
+    appendSyncLog(
+      "ok",
+      `Started sync for ${queue.length} player(s) (${matchCount} games/player)`
+    );
     setSyncProgress({
       done: 0,
       total: queue.length,
@@ -323,6 +343,10 @@ export function AdminStatsDashboard({
             2,
             Math.ceil((windowMs - (now - reqTimestamps[0])) / 1000)
           );
+          appendSyncLog(
+            "warn",
+            `Rate-limit safe pause (${waitSec}s) to stay under 100 req / 2 min`
+          );
           await waitForCountdown(waitSec, "Rate-limit safe pause");
           continue;
         }
@@ -347,16 +371,40 @@ export function AdminStatsDashboard({
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
           retryAfterSeconds?: number;
+          results?: {
+            riot_id: string;
+            solo_tier: string | null;
+            solo_rank: string | null;
+            matches: unknown[];
+            sync_error: string | null;
+          }[];
         };
 
         if (res.status === 429) {
           const waitSec = Math.max(2, Number(data.retryAfterSeconds ?? 30) + 2);
+          appendSyncLog("warn", `Riot 429 Retry-After pause (${waitSec}s)`);
           await waitForCountdown(waitSec, "Riot Retry-After pause");
           continue;
         }
 
         if (!res.ok) {
           throw new Error(data.error || `Sync failed (${res.status})`);
+        }
+
+        const syncedRow = data.results?.[0];
+        if (syncedRow?.sync_error) {
+          appendSyncLog(
+            "err",
+            `${playerItem.riotId} — ${syncedRow.sync_error}`
+          );
+        } else if (syncedRow) {
+          const tierLabel = syncedRow.solo_tier
+            ? `${syncedRow.solo_tier} ${syncedRow.solo_rank ?? ""}`.trim()
+            : "Unranked";
+          appendSyncLog(
+            "ok",
+            `${syncedRow.riot_id} — ${tierLabel} • ${syncedRow.matches.length}G`
+          );
         }
 
         i += 1;
@@ -366,9 +414,16 @@ export function AdminStatsDashboard({
           currentLabel: playerItem.riotId.split("#")[0],
         });
       }
+      if (cancelSyncRef.current) {
+        appendSyncLog("warn", "Sync stopped by admin.");
+      } else {
+        appendSyncLog("ok", "Sync finished.");
+      }
       router.refresh();
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Sync failed.");
+      const msg = err instanceof Error ? err.message : "Sync failed.";
+      appendSyncLog("err", msg);
+      setSyncError(msg);
     } finally {
       setSyncing(false);
     }
@@ -538,6 +593,38 @@ export function AdminStatsDashboard({
         {syncError && (
           <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
             {syncError}
+          </div>
+        )}
+
+        {syncLogs.length > 0 && (
+          <div className="mb-4 xp-panel overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowSyncLog((prev) => !prev)}
+              className="w-full bg-[#121615] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-[#c7c5b8] hover:text-white cursor-pointer"
+            >
+              <span>Sync Activity Log ({syncLogs.length})</span>
+              <span>{showSyncLog ? "Hide ▲" : "Show ▼"}</span>
+            </button>
+            {showSyncLog && (
+              <div className="max-h-36 overflow-y-auto p-2 space-y-1 font-mono text-[11px] bg-black/40">
+                {syncLogs.map((entry, idx) => (
+                  <div
+                    key={idx}
+                    className={
+                      entry.level === "err"
+                        ? "text-[#ff857a]"
+                        : entry.level === "warn"
+                        ? "text-[#f0c020]"
+                        : "text-[#7cd438]"
+                    }
+                  >
+                    <span className="text-[#a6a89e] mr-2">[{entry.time}]</span>
+                    {entry.text}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -756,9 +843,9 @@ export function AdminStatsDashboard({
 
         {/* Teams Table (Click through to Team Page) */}
         <div className="mb-6 xp-panel overflow-hidden">
-          <div className="bg-[#121615] border-b border-white/10 px-3 py-2 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" />
+          <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between">
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
+              <Users className="w-4 h-4" />
               <span>Teams ({filteredTeams.length})</span>
             </h2>
             <span className="text-[10px] text-[#a6a89e]">
@@ -838,8 +925,8 @@ export function AdminStatsDashboard({
 
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
         <div className="xp-panel overflow-hidden">
-          <div className="bg-[#121615] border-b border-white/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+          <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
               Top Players ({tablePlayers.length})
             </h2>
             <div className="flex flex-wrap items-center gap-1">

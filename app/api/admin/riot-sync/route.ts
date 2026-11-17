@@ -53,10 +53,29 @@ export async function POST(request: Request) {
   try {
     for (const player of players) {
       const synced = await syncPlayerFromRiot(player, apiKey, matchCount);
+      if (synced.sync_error) {
+        console.warn("[riot-sync] player_error", {
+          riotId: synced.riot_id,
+          error: synced.sync_error,
+        });
+      } else {
+        console.info("[riot-sync] player_ok", {
+          riotId: synced.riot_id,
+          solo: synced.solo_tier
+            ? `${synced.solo_tier} ${synced.solo_rank ?? ""} ${
+                synced.solo_lp ?? 0
+              }LP`
+            : "Unranked",
+          matches: synced.matches.length,
+        });
+      }
       results.push(synced);
     }
   } catch (err) {
     if (err instanceof RiotRateLimitError) {
+      console.warn("[riot-sync] rate_limited", {
+        retryAfterSeconds: err.retryAfterSeconds,
+      });
       if (results.length > 0) {
         await supabase
           .from("riot_player_stats")
