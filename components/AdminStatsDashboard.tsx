@@ -1001,7 +1001,7 @@ export function AdminStatsDashboard({
 
           return (
             <div className="mb-6 space-y-3">
-              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
+              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] text-center">
                 Leaderboards
               </h2>
 
