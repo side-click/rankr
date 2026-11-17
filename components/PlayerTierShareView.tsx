@@ -834,9 +834,6 @@ export function PlayerTierShareView({
                     {divisionName
                       ? `${divisionName} Player Tier List`
                       : "Player Tier List"}
-                    {tierData.splitByRole && roleFilter !== "all"
-                      ? ` (${getRoleMeta(roleFilter).label} Only)`
-                      : ""}
                   </div>
                   {ballot.author_notes && (
                     <p className="mt-1 text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">
