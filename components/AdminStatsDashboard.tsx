@@ -13,6 +13,7 @@ import {
   Clock,
   Coins,
   Copy,
+  Crown,
   Diff,
   Download,
   Droplet,
@@ -30,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
+import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
@@ -178,12 +180,11 @@ export function AdminStatsDashboard({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
-      const exportWidth = Math.ceil(leaderboardCardRef.current.offsetWidth);
       const exportHeight = Math.ceil(leaderboardCardRef.current.offsetHeight);
       const dataUrl = await toPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: exportWidth,
+        width: 1060,
         height: exportHeight,
         backgroundColor: "#171b19",
         style: { margin: "0" },
@@ -1067,30 +1068,28 @@ export function AdminStatsDashboard({
             copiedBadge?: boolean;
           };
 
-          const primaryRow: LeaderboardCard[] = [
-            {
-              title: "Rankr Rating",
-              icons: <Award className="w-3.5 h-3.5 text-[#f0c020]" />,
-              rows: topRating,
-              fmt: (p) => p.leagueRating.toFixed(1),
-              headerTooltip: "Click to copy Rankr Rating algorithm summary",
-              copiedBadge: copiedRatingBlurb,
-              onHeaderClick: () => {
-                void navigator.clipboard.writeText(RANKR_RATING_BLURB).then(() => {
-                  setCopiedRatingBlurb(true);
-                  setTimeout(() => setCopiedRatingBlurb(false), 2000);
-                });
-              },
+          const ratingCard: LeaderboardCard = {
+            title: "Rankr Rating",
+            icons: <Award className="w-4 h-4 text-[#f0c020]" />,
+            rows: topRating,
+            fmt: (p) => p.leagueRating.toFixed(1),
+            headerTooltip: "Click to copy Rankr Rating algorithm summary",
+            copiedBadge: copiedRatingBlurb,
+            onHeaderClick: () => {
+              void navigator.clipboard.writeText(RANKR_RATING_BLURB).then(() => {
+                setCopiedRatingBlurb(true);
+                setTimeout(() => setCopiedRatingBlurb(false), 2000);
+              });
             },
+          };
+
+          const defaultGridCards: LeaderboardCard[] = [
             {
               title: "KDA",
               icons: <Swords className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topKda,
               fmt: (p) => p.kda.toFixed(2),
             },
-          ];
-
-          const secondaryRow: LeaderboardCard[] = [
             {
               title: "Vision / Min",
               icons: (
@@ -1144,7 +1143,7 @@ export function AdminStatsDashboard({
               : []),
           ];
 
-          const expandedRow1: LeaderboardCard[] = [
+          const expandedGridCards: LeaderboardCard[] = [
             {
               title: "Kill Participation",
               icons: (
@@ -1193,9 +1192,6 @@ export function AdminStatsDashboard({
                   },
                 ]
               : []),
-          ];
-
-          const expandedRow2: LeaderboardCard[] = [
             {
               title: "Kills / Game",
               icons: <Sword className="w-3.5 h-3.5 text-[#f0c020]" />,
@@ -1219,7 +1215,7 @@ export function AdminStatsDashboard({
           const renderCard = (card: LeaderboardCard) => (
             <div
               key={card.title}
-              className="xp-panel border-2 border-white/20 overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
+              className="xp-panel border-2 border-white/20 overflow-hidden w-[calc(50%-8px)]"
             >
               <div
                 onClick={card.onHeaderClick}
@@ -1298,84 +1294,153 @@ export function AdminStatsDashboard({
                 </button>
               </div>
 
-              <div
-                ref={leaderboardCardRef}
-                style={{ borderColor: cardBorderColor }}
-                className={`border-4 rounded-lg overflow-hidden bg-[#171b19] ${
-                  exportingLeaderboard ? "" : "shadow-2xl"
-                }`}
-              >
-                {/* Consensus-Style Graphic Header Banner */}
+              <ScaledGraphicFrame>
                 <div
-                  style={{ background: bannerGradient }}
-                  className="border-b-2 border-[#c89b3c]/60 text-white flex flex-wrap items-center justify-between gap-4 px-6 py-5"
+                  ref={leaderboardCardRef}
+                  style={{ borderColor: cardBorderColor }}
+                  className={`w-[1060px] mx-auto border-4 rounded-lg overflow-hidden bg-[#171b19] ${
+                    exportingLeaderboard ? "" : "shadow-2xl"
+                  }`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {leagueLogoUrl && (
-                      <img
-                        src={leagueLogoUrl}
-                        alt={leagueName}
-                        crossOrigin="anonymous"
-                        className="w-16 h-12 object-contain drop-shadow shrink-0"
-                      />
-                    )}
-                    {selectedDivision?.logo_url && (
-                      <img
-                        src={selectedDivision.logo_url}
-                        alt={selectedDivision.name}
-                        crossOrigin="anonymous"
-                        className="w-12 h-12 object-contain drop-shadow shrink-0"
-                      />
-                    )}
-                    <div>
-                      <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
-                        {leagueName} ({seasonName})
+                  {/* Consensus-Style Graphic Header Banner */}
+                  <div
+                    style={{ background: bannerGradient }}
+                    className="border-b-2 border-[#c89b3c]/60 text-white flex flex-row items-center justify-between gap-4 px-10 py-6"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      {leagueLogoUrl && (
+                        <img
+                          src={leagueLogoUrl}
+                          alt={leagueName}
+                          crossOrigin="anonymous"
+                          className="w-20 h-16 object-contain drop-shadow shrink-0"
+                        />
+                      )}
+                      {selectedDivision?.logo_url && (
+                        <img
+                          src={selectedDivision.logo_url}
+                          alt={selectedDivision.name}
+                          crossOrigin="anonymous"
+                          className="w-16 h-16 object-contain drop-shadow shrink-0"
+                        />
+                      )}
+                      <div>
+                        <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                          {leagueName} ({seasonName})
+                        </div>
+                        <h2 className="wow-heading text-3xl font-extrabold text-white leading-tight flex items-center gap-2.5">
+                          <Trophy className="w-6 h-6 text-[#f0c020] shrink-0" />
+                          <span>
+                            {selectedDivision
+                              ? `${selectedDivision.name} Stat Leaderboards`
+                              : "League Stat Leaderboards"}
+                          </span>
+                        </h2>
                       </div>
-                      <h2 className="wow-heading text-xl sm:text-2xl font-extrabold text-white leading-tight flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-[#f0c020] shrink-0" />
-                        <span>
-                          {selectedDivision
-                            ? `${selectedDivision.name} Stat Leaderboards`
-                            : "League Stat Leaderboards"}
-                        </span>
-                      </h2>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 bg-black/45 px-4 py-2.5 rounded-xl border border-[#f0c020]/50 shrink-0">
+                      <div className="text-right">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-[#f0c020]">
+                          Current Edition
+                        </div>
+                        <div className="text-base font-extrabold text-white leading-tight">
+                          {currentEditionName}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 bg-black/45 px-3.5 py-2 rounded-xl border border-[#f0c020]/50 shrink-0">
-                    <div className="text-right">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
-                        Current Edition
+                  {/* Card Body */}
+                  <div className="px-10 py-6 bg-[#171b19]">
+                    <div className="max-w-[840px] mx-auto space-y-4">
+                      {/* Featured Golden Rankr Rating Card (Full 2-Card Width) */}
+                      <div
+                        className="rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
+                        style={{
+                          boxShadow:
+                            "0 0 28px rgba(240, 192, 32, 0.28), inset 0 0 18px rgba(240, 192, 32, 0.08)",
+                        }}
+                      >
+                        <div
+                          onClick={ratingCard.onHeaderClick}
+                          title={ratingCard.headerTooltip}
+                          className="bg-gradient-to-r from-[#3a2c0e] via-[#4c3912] to-[#3a2c0e] border-b-2 border-[#f0c020] px-5 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#ffd74a] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <span>{ratingCard.title}</span>
+                            {ratingCard.copiedBadge && !exportingLeaderboard && (
+                              <span className="text-[10px] text-[#7cd438] normal-case font-semibold">
+                                Copied!
+                              </span>
+                            )}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 shrink-0">
+                            {ratingCard.icons}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-[#f0c020]/15">
+                          {ratingCard.rows.map((p, idx) => (
+                            <Link
+                              key={p.playerKey}
+                              href={`/admin/stats/player/${encodeURIComponent(
+                                p.playerKey
+                              )}`}
+                              className={`px-5 py-2.5 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
+                                idx === 0 ? "bg-[#f0c020]/10" : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span
+                                  className={`text-sm font-mono font-extrabold w-5 text-center ${
+                                    idx === 0
+                                      ? "text-[#f0c020]"
+                                      : "text-[#c89b3c]"
+                                  }`}
+                                >
+                                  {idx + 1}
+                                </span>
+                                {p.teamLogoUrl && (
+                                  <img
+                                    src={p.teamLogoUrl}
+                                    alt={p.teamName}
+                                    crossOrigin="anonymous"
+                                    className="w-6 h-6 object-contain shrink-0"
+                                  />
+                                )}
+                                <span
+                                  className={`text-base font-extrabold truncate flex items-center gap-2 ${
+                                    idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
+                                  }`}
+                                >
+                                  <span>{p.displayName}</span>
+                                  {idx === 0 && (
+                                    <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                                  )}
+                                </span>
+                              </div>
+                              <span
+                                className={`font-mono font-black text-base shrink-0 ${
+                                  idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
+                                }`}
+                              >
+                                {ratingCard.fmt(p)}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-sm font-extrabold text-white leading-tight">
-                        {currentEditionName}
+
+                      {/* 2-by-2 Grid */}
+                      <div className="flex flex-wrap justify-center gap-4">
+                        {defaultGridCards.map(renderCard)}
+                        {showAllLeaderboards &&
+                          expandedGridCards.map(renderCard)}
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Card Body */}
-                <div className="p-4 space-y-3 bg-[#171b19]">
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {primaryRow.map(renderCard)}
-                  </div>
-
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {secondaryRow.map(renderCard)}
-                  </div>
-
-                  {showAllLeaderboards && (
-                    <>
-                      <div className="flex flex-wrap justify-center gap-3">
-                        {expandedRow1.map(renderCard)}
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-3">
-                        {expandedRow2.map(renderCard)}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              </ScaledGraphicFrame>
 
               <div className="flex justify-center pt-1">
                 <button
