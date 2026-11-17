@@ -1271,15 +1271,10 @@ export function AdminStatsDashboard({
                         <Trophy className="w-5 h-5 text-[#f0c020] shrink-0" />
                         <span>
                           {selectedDivision
-                            ? `${selectedDivision.name} Leaderboards`
-                            : "League Leaderboards"}
+                            ? `${selectedDivision.name} Stat Leaderboards`
+                            : "League Stat Leaderboards"}
                         </span>
                       </h2>
-                      <div className="text-xs font-bold text-white/85 leading-snug">
-                        {dataSource === "sheet"
-                          ? "SCDL League Match Stats"
-                          : "SoloQ Riot API Stats"}
-                      </div>
                     </div>
                   </div>
 
