@@ -381,14 +381,17 @@ export function AdminStatsDashboard({
     const reqTimestamps: number[] = [];
 
     async function waitForCountdown(seconds: number, reason: string) {
-      for (let rem = seconds; rem > 0; rem--) {
-        if (cancelSyncRef.current) return;
+      const targetEnd = Date.now() + seconds * 1000;
+      while (!cancelSyncRef.current) {
+        const remainingMs = targetEnd - Date.now();
+        if (remainingMs <= 0) break;
+        const rem = Math.ceil(remainingMs / 1000);
         setSyncProgress((prev) =>
           prev
             ? { ...prev, currentLabel: `${reason} (${rem}s)` }
             : prev
         );
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, Math.min(1000, remainingMs)));
       }
     }
 
