@@ -944,6 +944,7 @@ export function PlayerTierEditor({
   );
   const [loadingBallot, setLoadingBallot] = useState(false);
   const lastLoadedKeyRef = useRef<string>("");
+  const lastScopeKeyRef = useRef<string>("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -965,19 +966,22 @@ export function PlayerTierEditor({
     })
   );
 
-  // Load saved player tier ballot when (seasonId, divisionScope, editionId) changes
+  // Load saved player tier ballot when (seasonId, divisionScope, editionId) or tier_variant changes
   useEffect(() => {
     if (!seasonId || !editionId) {
       lastLoadedKeyRef.current = "";
+      lastScopeKeyRef.current = "";
       setExistingBallotId(null);
       setBallotStatus(null);
       setLoadingBallot(false);
       return;
     }
 
-    const selectionKey = `${seasonId}:${divisionScope}:${editionId}:${activeTierVariant}`;
+    const scopeKey = `${seasonId}:${divisionScope}:${editionId}`;
+    const selectionKey = `${scopeKey}:${activeTierVariant}`;
     if (lastLoadedKeyRef.current === selectionKey) return;
 
+    const isScopeChange = lastScopeKeyRef.current !== scopeKey;
     let cancelled = false;
 
     async function loadBallotState() {
@@ -991,8 +995,7 @@ export function PlayerTierEditor({
           .eq("user_id", userId)
           .eq("season_id", seasonId)
           .eq("edition_id", editionId)
-          .eq("ranking_type", "player")
-          .eq("tier_variant", activeTierVariant);
+          .eq("ranking_type", "player");
 
         if (divisionScope === "all") {
           query = query.is("division_id", null);
@@ -1000,10 +1003,45 @@ export function PlayerTierEditor({
           query = query.eq("division_id", divisionScope);
         }
 
-        const { data: currentBallot } = await query.maybeSingle();
+        if (!isScopeChange) {
+          query = query.eq("tier_variant", activeTierVariant);
+        } else {
+          query = query.order("updated_at", { ascending: false });
+        }
+
+        const { data: rows } = await query;
         if (cancelled) return;
 
+        const matchingList = rows ?? [];
+        let currentBallot =
+          matchingList.find((b) => b.tier_variant === activeTierVariant) ?? null;
+
+        if (isScopeChange && !currentBallot && matchingList.length > 0) {
+          // Prefer published over draft, then most recently updated
+          currentBallot =
+            matchingList.find((b) => b.status === "published") ??
+            matchingList[0];
+        }
+
+        lastScopeKeyRef.current = scopeKey;
+
         if (currentBallot) {
+          const resolvedVariant =
+            (currentBallot.tier_variant as string | null) ?? activeTierVariant;
+          const resolvedPreset: Exclude<TierPresetKey, "custom"> =
+            resolvedVariant === "draft_day_overall" ||
+            resolvedVariant === "draft_day_split"
+              ? "draft_day"
+              : "standard";
+          const resolvedSplit =
+            resolvedVariant === "standard_split" ||
+            resolvedVariant === "draft_day_split";
+
+          if (resolvedVariant !== activeTierVariant) {
+            setSelectedPreset(resolvedPreset);
+            setSelectedSplitByRole(resolvedSplit);
+          }
+
           setExistingBallotId(currentBallot.id);
           setBallotStatus(currentBallot.status);
           setAuthorNotes(currentBallot.author_notes ?? "");
@@ -1021,9 +1059,11 @@ export function PlayerTierEditor({
             setTierPayload(savedTierData);
           } else {
             setTierPayload(
-              createInitialTierPayload(selectedPreset, selectedSplitByRole)
+              createInitialTierPayload(resolvedPreset, resolvedSplit)
             );
           }
+
+          lastLoadedKeyRef.current = `${scopeKey}:${resolvedVariant}`;
         } else {
           setExistingBallotId(null);
           setBallotStatus(null);
@@ -1032,9 +1072,8 @@ export function PlayerTierEditor({
           setTierPayload(
             createInitialTierPayload(selectedPreset, selectedSplitByRole)
           );
+          lastLoadedKeyRef.current = selectionKey;
         }
-
-        lastLoadedKeyRef.current = selectionKey;
       } finally {
         if (!cancelled) setLoadingBallot(false);
       }
