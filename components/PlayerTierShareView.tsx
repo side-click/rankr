@@ -389,7 +389,7 @@ export function PlayerTierShareView({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 1060,
+        width: 1080,
         height: exportHeight,
         style: { margin: "0" },
       });
@@ -792,18 +792,18 @@ export function PlayerTierShareView({
           </div>
         )}
 
-        <ScaledGraphicFrame>
-          <div
-            ref={cardRef}
-            style={
-              exporting
-                ? { borderRadius: "44px", boxShadow: "none" }
-                : { borderRadius: "44px" }
-            }
-            className={`relative w-[1060px] mx-auto bg-[#141918] border-4 border-[#5c6662] overflow-hidden ${
-              exporting ? "" : "shadow-lg"
-            }`}
-          >
+        <ScaledGraphicFrame designWidth={1080}>
+          <div ref={cardRef} className="w-[1080px] p-2.5">
+            <div
+              style={
+                exporting
+                  ? { borderRadius: "44px", boxShadow: "none" }
+                  : { borderRadius: "44px" }
+              }
+              className={`relative w-full bg-[#141918] border-[6px] border-[#5c6662] overflow-hidden ${
+                exporting ? "" : "shadow-lg"
+              }`}
+            >
             {/* Header Banner */}
             <div
               style={{
@@ -1093,6 +1093,7 @@ export function PlayerTierShareView({
                 ))}
               </div>
             )}
+          </div>
           </div>
         </ScaledGraphicFrame>
       </RetroWindow>

@@ -167,7 +167,7 @@ export function BallotShareView({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 1060,
+        width: 1080,
         height: exportHeight,
         style: { margin: "0" },
       });
@@ -538,14 +538,14 @@ export function BallotShareView({
           </div>
         )}
 
-        <ScaledGraphicFrame>
-          <div
-            ref={cardRef}
-            style={exporting ? { borderRadius: "44px", boxShadow: "none" } : { borderRadius: "44px" }}
-            className={`relative w-[1060px] mx-auto bg-[#181e1c] border-4 border-[#5c6662] overflow-hidden ${
-              exporting ? "" : "shadow-lg"
-            }`}
-          >
+        <ScaledGraphicFrame designWidth={1080}>
+          <div ref={cardRef} className="w-[1080px] p-2.5">
+            <div
+              style={exporting ? { borderRadius: "44px", boxShadow: "none" } : { borderRadius: "44px" }}
+              className={`relative w-full bg-[#181e1c] border-[6px] border-[#5c6662] overflow-hidden ${
+                exporting ? "" : "shadow-lg"
+              }`}
+            >
             <div
               style={{
                 background: getThemeGradients(resolvedTheme).bannerGradient,
@@ -766,6 +766,7 @@ export function BallotShareView({
               ))}
             </div>
           )}
+          </div>
           </div>
         </ScaledGraphicFrame>
       </RetroWindow>

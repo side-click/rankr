@@ -195,7 +195,7 @@ export function ConsensusRankingsView({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 1060,
+        width: 1080,
         height: exportHeight,
         style: { margin: "0" },
       });
@@ -593,18 +593,18 @@ export function ConsensusRankingsView({
               </div>
             )}
 
-            <ScaledGraphicFrame>
-              <div
-                ref={cardRef}
-                style={
-                  exporting
-                    ? { borderRadius: "44px", boxShadow: "none" }
-                    : { borderRadius: "44px" }
-                }
-                className={`relative w-[1060px] mx-auto bg-[#181e1c] border-4 border-[#c89b3c]/85 overflow-hidden rounded-[44px] ${
-                  exporting ? "" : "shadow-2xl"
-                }`}
-              >
+            <ScaledGraphicFrame designWidth={1080}>
+              <div ref={cardRef} className="w-[1080px] p-2.5">
+                <div
+                  style={
+                    exporting
+                      ? { borderRadius: "44px", boxShadow: "none" }
+                      : { borderRadius: "44px" }
+                  }
+                  className={`relative w-full bg-[#181e1c] border-[6px] border-[#c89b3c]/85 overflow-hidden rounded-[44px] ${
+                    exporting ? "" : "shadow-2xl"
+                  }`}
+                >
                 {/* Graphic Header Banner */}
                 <div
                   style={{ background: themeGradients.bannerGradient }}
@@ -776,6 +776,7 @@ export function ConsensusRankingsView({
                     );
                   })}
                 </div>
+              </div>
               </div>
             </ScaledGraphicFrame>
           </>

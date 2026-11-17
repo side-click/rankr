@@ -184,9 +184,8 @@ export function AdminStatsDashboard({
       const dataUrl = await toPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 780,
+        width: 800,
         height: exportHeight,
-        backgroundColor: "#171b19",
         style: { margin: "0" },
       });
       const link = document.createElement("a");
@@ -1309,16 +1308,16 @@ export function AdminStatsDashboard({
                 </button>
               </div>
 
-              <ScaledGraphicFrame designWidth={780}>
-                <div
-                  ref={leaderboardCardRef}
-                  style={{
-                    borderRadius: "44px",
-                  }}
-                  className={`w-[780px] mx-auto border-4 border-[#5c6662] rounded-[44px] overflow-hidden bg-[#171b19] ${
-                    exportingLeaderboard ? "" : "shadow-2xl"
-                  }`}
-                >
+              <ScaledGraphicFrame designWidth={800}>
+                <div ref={leaderboardCardRef} className="w-[800px] p-2.5">
+                  <div
+                    style={{
+                      borderRadius: "44px",
+                    }}
+                    className={`w-full border-[6px] border-[#5c6662] rounded-[44px] overflow-hidden bg-[#171b19] ${
+                      exportingLeaderboard ? "" : "shadow-2xl"
+                    }`}
+                  >
                   {/* Consensus-Style Graphic Header Banner */}
                   <div
                     style={{ background: bannerGradient }}
@@ -1457,6 +1456,7 @@ export function AdminStatsDashboard({
                       </div>
                     </div>
                   </div>
+                </div>
                 </div>
               </ScaledGraphicFrame>
 
