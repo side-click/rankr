@@ -656,6 +656,11 @@ export function ConsensusRankingsView({
                         {submissionCount}{" "}
                         {submissionCount === 1 ? "Ranking" : "Rankings"}
                       </div>
+                      {submissionCount >= 5 && (
+                        <div className="text-[10px] text-[#d6d3c4]">
+                          High &amp; low dropped
+                        </div>
+                      )}
                     </div>
                     <Trophy className="w-7 h-7 text-[#f0c020] shrink-0" />
                   </div>
@@ -675,7 +680,7 @@ export function ConsensusRankingsView({
                   {showChange && <div className="text-center">Change</div>}
                   <div className="pl-[104px]">Team</div>
                   <div className="text-center">Avg Rank</div>
-                  <div className="text-center">#1 Votes</div>
+                  <div className="text-center">Range</div>
                 </div>
 
                 {/* Consensus Rows */}
@@ -700,7 +705,10 @@ export function ConsensusRankingsView({
                               : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
                           } items-center`}
                         >
-                          <div className="flex items-center justify-center">
+                          <div className="relative flex items-center justify-center">
+                            {row.consensusRank === 1 && (
+                              <Crown className="w-[18px] h-[18px] text-[#f0c020] absolute -top-5 left-1/2 -translate-x-1/2 pointer-events-none" />
+                            )}
                             <span
                               style={{
                                 backgroundColor: rankColor.badgeBg,
@@ -773,12 +781,11 @@ export function ConsensusRankingsView({
                           </div>
 
                           <div className="flex items-center justify-center">
-                            {row.firstPlaceVotes > 0 && (
-                              <span className="h-14 inline-flex items-center justify-center gap-2 px-5 rounded-full bg-[#2a2210] border border-[#f0c020]/70 text-2xl font-black text-[#f0c020] tabular-nums">
-                                <Crown className="w-6 h-6" />
-                                <span>{row.firstPlaceVotes}</span>
-                              </span>
-                            )}
+                            <span className="h-14 px-3.5 rounded-xl bg-black/40 border border-white/15 text-lg font-black text-[#f0ede0] tabular-nums inline-flex items-center justify-center whitespace-nowrap">
+                              {row.bestRank === row.worstRank
+                                ? `#${row.bestRank}`
+                                : `#${row.bestRank} – #${row.worstRank}`}
+                            </span>
                           </div>
                         </div>
                       </div>

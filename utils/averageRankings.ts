@@ -107,13 +107,20 @@ export function computeAverageTeamRankings(
     const count = bucket.ranks.length;
     if (count === 0) continue;
 
-    const sum = bucket.ranks.reduce((acc, r) => acc + r, 0);
-    const averageRank = sum / count;
-    const bestRank = Math.min(...bucket.ranks);
-    const worstRank = Math.max(...bucket.ranks);
+    // Olympic scoring: when at least 5 ballots exist for a team, drop the single best and single worst rank
+    const sortedRanks = [...bucket.ranks].sort((a, b) => a - b);
+    const effectiveRanks =
+      sortedRanks.length >= 5 ? sortedRanks.slice(1, -1) : sortedRanks;
+    const effectiveCount = effectiveRanks.length;
+
+    const sum = effectiveRanks.reduce((acc, r) => acc + r, 0);
+    const averageRank = sum / effectiveCount;
+    const bestRank = effectiveRanks[0];
+    const worstRank = effectiveRanks[effectiveCount - 1];
     const firstPlaceVotes = bucket.ranks.filter((r) => r === 1).length;
     const variance =
-      bucket.ranks.reduce((acc, r) => acc + (r - averageRank) ** 2, 0) / count;
+      effectiveRanks.reduce((acc, r) => acc + (r - averageRank) ** 2, 0) /
+      effectiveCount;
     const stdDev = Math.sqrt(variance);
 
     bucket.voterRanks.sort(
