@@ -178,7 +178,7 @@ export function AdminStatsDashboard({
     return {
       borderLeftWidth: "3px",
       borderLeftColor: theme.primary_color,
-      backgroundImage: `linear-gradient(135deg, ${theme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${theme.secondary_color}3a 100%)`,
+      backgroundImage: `linear-gradient(110deg, ${theme.primary_color}5c 0%, ${theme.primary_color}26 46%, rgba(18, 22, 21, 0.92) 100%)`,
     };
   }, [selectedDivisionTheme]);
 

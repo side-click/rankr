@@ -188,7 +188,7 @@ export default async function MyRankingsPage() {
             const cardStyle: React.CSSProperties = {
               borderLeftWidth: "3px",
               borderLeftColor: resolvedTheme.primary_color,
-              backgroundImage: `linear-gradient(135deg, ${resolvedTheme.primary_color}45 0%, rgba(18, 22, 21, 0.72) 52%, ${resolvedTheme.secondary_color}3a 100%)`,
+              backgroundImage: `linear-gradient(110deg, ${resolvedTheme.primary_color}5c 0%, ${resolvedTheme.primary_color}26 46%, rgba(18, 22, 21, 0.92) 100%)`,
             };
 
             return (
