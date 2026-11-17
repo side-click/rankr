@@ -292,11 +292,34 @@ export default async function MyRankingsPage() {
                     {dateStr}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
-                    {canEdit && (
-                      <Link href={editHref} className="xp-btn text-xs">
+                    {canEdit ? (
+                      <Link
+                        href={editHref}
+                        className="xp-btn text-xs w-[88px] justify-center"
+                      >
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </Link>
+                    ) : (
+                      (() => {
+                        const isArchived = Boolean(edition?.is_archived);
+                        const lockReason = isArchived
+                          ? "This edition is archived and can no longer be edited."
+                          : "This edition is locked by an admin and can no longer be edited.";
+                        return (
+                          <span
+                            tabIndex={0}
+                            title={lockReason}
+                            className="group relative w-[88px] py-1.5 px-2 rounded-xs bg-black/35 border border-white/15 text-[11px] font-bold text-[#a6a89e] inline-flex items-center justify-center gap-1 cursor-help select-none"
+                          >
+                            <Lock className="w-3 h-3 shrink-0 text-[#c89b3c]" />
+                            <span>{isArchived ? "Archived" : "Locked"}</span>
+                            <span className="pointer-events-none opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-150 absolute bottom-full right-0 mb-2 w-52 px-2.5 py-1.5 rounded bg-[#121615] border border-[#c89b3c]/70 text-[11px] font-normal text-[#f0ede0] shadow-xl z-30 text-left leading-snug">
+                              {lockReason}
+                            </span>
+                          </span>
+                        );
+                      })()
                     )}
                     <DeleteDraftButton
                       ballotId={b.id}
