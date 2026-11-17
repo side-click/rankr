@@ -148,11 +148,7 @@ export function BallotCard({
       <Link
         href={`/ballot/${ballot.id}`}
         style={cardStyle}
-        className={`xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid ${
-          hasPreview
-            ? "lg:grid-cols-[148px_minmax(115px,1fr)_auto_auto] xl:grid-cols-[148px_minmax(115px,1fr)_auto_auto_auto]"
-            : "lg:grid-cols-[148px_minmax(115px,1fr)_auto_auto]"
-        } lg:items-center lg:gap-3`}
+        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_auto_1fr] xl:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
         {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
         <div className="flex items-center gap-3 min-w-0 lg:contents">
@@ -242,37 +238,39 @@ export function BallotCard({
           </div>
         </div>
 
-        {/* Wide Desktop Col 4: Top 3 / Top Tier Preview (xl+ only) */}
-        {hasPreview && (
-          <div className="hidden xl:flex items-center gap-1.5 shrink-0">
-            {top3Teams.map((t) => (
-              <span
-                key={t.rank}
-                className="inline-flex items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
-              >
-                <span className="text-[#f0c020]">#{t.rank}</span>
-                {t.logoUrl && (
-                  <img
-                    src={t.logoUrl}
-                    alt={t.name}
-                    className="w-4 h-4 object-contain shrink-0"
-                  />
-                )}
-                <span className="max-w-[64px] truncate">{t.name}</span>
-              </span>
-            ))}
-            {topTierPreview && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
-                <span className="font-bold text-[#f0c020]">
-                  {topTierPreview.label}:
+        {/* Wide Desktop Col 4: Top 3 / Top Tier Preview (xl+ only, also acts as 1fr spacer) */}
+        <div className="hidden xl:flex items-center gap-1.5 min-w-0">
+          {hasPreview && (
+            <>
+              {top3Teams.map((t) => (
+                <span
+                  key={t.rank}
+                  className="inline-flex items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
+                >
+                  <span className="text-[#f0c020]">#{t.rank}</span>
+                  {t.logoUrl && (
+                    <img
+                      src={t.logoUrl}
+                      alt={t.name}
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                  <span className="max-w-[64px] truncate">{t.name}</span>
                 </span>
-                <span className="max-w-[190px] truncate">
-                  {topTierPreview.players.join(", ")}
+              ))}
+              {topTierPreview && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#f0ede0]">
+                  <span className="font-bold text-[#f0c020]">
+                    {topTierPreview.label}:
+                  </span>
+                  <span className="max-w-[190px] truncate">
+                    {topTierPreview.players.join(", ")}
+                  </span>
                 </span>
-              </span>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
 
         {/* Footer / Right Column */}
         <div className="flex items-center justify-between lg:justify-end gap-2.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
