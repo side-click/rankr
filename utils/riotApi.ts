@@ -69,6 +69,12 @@ export interface SyncedPlayerInput {
   role: string | null;
 }
 
+export interface ChampionMasteryEntry {
+  championName: string;
+  championLevel: number;
+  championPoints: number;
+}
+
 export interface SyncedPlayerResult {
   player_key: string;
   riot_id: string;
@@ -83,6 +89,8 @@ export interface SyncedPlayerResult {
   solo_wins: number | null;
   solo_losses: number | null;
   matches: CompactRiotMatch[];
+  mastery_top4?: ChampionMasteryEntry[];
+  deep_synced_at?: string | null;
   sync_error: string | null;
   synced_at: string;
 }
@@ -281,10 +289,46 @@ interface RiotMatchResponse {
   };
 }
 
+export async function fetchChampionMasteryTop4(
+  puuid: string,
+  apiKey: string,
+  champIdMap: Map<number, string>
+): Promise<ChampionMasteryEntry[]> {
+  try {
+    const raw = await riotFetch<
+      {
+        championId: number;
+        championLevel: number;
+        championPoints: number;
+      }[]
+    >(
+      `https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(
+        puuid
+      )}/top?count=4`,
+      apiKey
+    );
+    return (Array.isArray(raw) ? raw : [])
+      .map((m) => ({
+        championName: champIdMap.get(m.championId) ?? String(m.championId),
+        championLevel: m.championLevel,
+        championPoints: m.championPoints,
+      }))
+      .slice(0, 4);
+  } catch (err) {
+    if (err instanceof RiotRateLimitError) throw err;
+    return [];
+  }
+}
+
 export async function syncPlayerFromRiot(
   input: SyncedPlayerInput,
   apiKey: string,
-  matchCount = 5
+  matchCount = 5,
+  options?: {
+    existingMatches?: CompactRiotMatch[];
+    maxAgeDays?: number;
+    fetchMastery?: boolean;
+  }
 ): Promise<SyncedPlayerResult> {
   const nowIso = new Date().toISOString();
   const { gameName, tagLine } = parseRiotId(input.riotId);
@@ -313,18 +357,25 @@ export async function syncPlayerFromRiot(
       soloEntry = undefined;
     }
 
+    const startTimeParam =
+      options?.maxAgeDays && options.maxAgeDays > 0
+        ? `&startTime=${Math.floor(
+            (Date.now() - options.maxAgeDays * 86_400_000) / 1000
+          )}`
+        : "";
+
     // Fetch recent ranked match IDs; fall back to any SR matches if none
     let matchIds = await riotFetch<string[]>(
       `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
         puuid
-      )}/ids?type=ranked&start=0&count=${matchCount}`,
+      )}/ids?type=ranked&start=0&count=${matchCount}${startTimeParam}`,
       apiKey
     );
     if (matchIds.length === 0) {
       matchIds = await riotFetch<string[]>(
         `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
           puuid
-        )}/ids?start=0&count=${matchCount}`,
+        )}/ids?start=0&count=${matchCount}${startTimeParam}`,
         apiKey
       );
     }
@@ -332,8 +383,22 @@ export async function syncPlayerFromRiot(
     const ddVersion = await getLatestDdragonVersion();
     const champIdMap = await getChampionIdToNameMap(ddVersion);
 
+    const masteryTop4 = options?.fetchMastery
+      ? await fetchChampionMasteryTop4(puuid, apiKey, champIdMap)
+      : undefined;
+
+    const existingById = new Map<string, CompactRiotMatch>();
+    for (const em of options?.existingMatches ?? []) {
+      existingById.set(em.matchId, em);
+    }
+
     const matches: CompactRiotMatch[] = [];
     for (const matchId of matchIds) {
+      const cached = existingById.get(matchId);
+      if (cached) {
+        matches.push(cached);
+        continue;
+      }
       try {
         const matchData = await riotFetch<RiotMatchResponse>(
           `https://americas.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(
@@ -476,6 +541,8 @@ export async function syncPlayerFromRiot(
       solo_wins: soloEntry?.wins ?? null,
       solo_losses: soloEntry?.losses ?? null,
       matches,
+      ...(masteryTop4 ? { mastery_top4: masteryTop4 } : {}),
+      ...(options?.fetchMastery ? { deep_synced_at: nowIso } : {}),
       sync_error: null,
       synced_at: nowIso,
     };

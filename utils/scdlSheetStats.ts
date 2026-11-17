@@ -1,5 +1,5 @@
 import type { CompactRiotMatch } from "@/utils/riotApi";
-import draftBansData from "@/data/scdl_draft_bans.json";
+import draftsData from "@/data/scdl_drafts.json";
 import {
   aggregatePlayerStats,
   type AggregatedPlayerStats,
@@ -7,10 +7,18 @@ import {
   type RiotPlayerStatRow,
 } from "@/utils/riotStatsAggregation";
 
-const DRAFT_BANS_BY_GAME_ID = draftBansData as Record<
-  string,
-  { blueTeam: string; redTeam: string; bans: string[]; sourceUrl: string }
->;
+export interface DraftRecord {
+  blueTeam: string;
+  redTeam: string;
+  blueBans: string[];
+  redBans: string[];
+  bluePicks: string[];
+  redPicks: string[];
+  bans: string[];
+  sourceUrl: string;
+}
+
+const DRAFTS_BY_GAME_ID = draftsData as Record<string, DraftRecord>;
 
 const SCDL_SHEET_ID = "1tdi8ftaQ50sYS92H39YybU29SIPGVSyRNeT_HdOHP8A";
 const SCDL_SHEET_GIDS = [
@@ -376,7 +384,7 @@ export async function fetchScdlSheetStats(
       largestKillingSpree: r.largestKillingSpree,
       dragonKills: r.dragons,
       baronKills: r.barons,
-      bans: DRAFT_BANS_BY_GAME_ID[r.gameId]?.bans,
+      bans: DRAFTS_BY_GAME_ID[r.gameId]?.bans,
       flashKey: r.flashKey,
       goldDiff15: r.goldDiff15,
       questionPings: r.questionPings,
@@ -531,4 +539,171 @@ export async function fetchScdlSheetStats(
     rowCount: uniqueRows.length,
     matchCount: uniqueGames.size,
   };
+}
+
+export interface ScdlGamePlayerRow {
+  playerName: string;
+  displayName: string;
+  teamName: string;
+  role: string;
+  champion: string;
+  side: "Blue" | "Red";
+  win: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  gold: number;
+  damageDealt: number;
+  visionScore: number;
+  goldDiff: number | null;
+  goldDiff15: number;
+  soloKills: number;
+}
+
+export interface ScdlGameDetail {
+  gameId: string;
+  seriesKey: string;
+  matchLabel: string;
+  roundLabel: string;
+  gameDuration: number;
+  blueTeam: string;
+  redTeam: string;
+  winnerTeam: string;
+  blueKills: number;
+  redKills: number;
+  draft: DraftRecord | null;
+  players: ScdlGamePlayerRow[];
+}
+
+export interface ScdlSeriesDetail {
+  seriesKey: string;
+  matchLabel: string;
+  roundLabel: string;
+  teamA: string;
+  teamB: string;
+  teamAWins: number;
+  teamBWins: number;
+  games: ScdlGameDetail[];
+}
+
+function formatRoundLabel(matchLabel: string): string {
+  const raw = matchLabel.split("_")[0] ?? "";
+  return raw ? raw.replace(/([a-zA-Z]+)(\d+)/, "$1 $2") : "League Match";
+}
+
+async function fetchAllUniqueSheetRows(): Promise<ParsedSheetRow[]> {
+  const csvTexts = await Promise.all(
+    SCDL_SHEET_GIDS.map(async ({ gid }) => {
+      const url = `https://docs.google.com/spreadsheets/d/${SCDL_SHEET_ID}/export?format=csv&gid=${gid}`;
+      const res = await fetch(url, { next: { revalidate: 120 } });
+      if (!res.ok) return "";
+      return res.text();
+    })
+  );
+  let allRows: ParsedSheetRow[] = [];
+  for (let t = 0; t < csvTexts.length; t++) {
+    if (csvTexts[t]) allRows = allRows.concat(parseCsvRows(csvTexts[t], t * 100_000));
+  }
+  const seen = new Set<string>();
+  const unique: ParsedSheetRow[] = [];
+  for (const r of allRows) {
+    const k = `${r.gameId}::${normalizeRiotKey(r.playerName)}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    unique.push(r);
+  }
+  return unique;
+}
+
+export async function fetchAllScdlSeries(): Promise<ScdlSeriesDetail[]> {
+  const rows = await fetchAllUniqueSheetRows();
+  const byGame = new Map<string, ParsedSheetRow[]>();
+  for (const r of rows) {
+    const list = byGame.get(r.gameId) ?? [];
+    list.push(r);
+    byGame.set(r.gameId, list);
+  }
+
+  const seriesMap = new Map<string, ScdlGameDetail[]>();
+
+  for (const [gameId, gRows] of byGame.entries()) {
+    const blueRows = gRows.filter((r) => r.side === "Blue");
+    const redRows = gRows.filter((r) => r.side === "Red");
+    const blueTeam = blueRows[0]?.teamName ?? "Blue";
+    const redTeam = redRows[0]?.teamName ?? "Red";
+    const winnerTeam = gRows.find((r) => r.win)?.teamName ?? blueTeam;
+    const matchLabel = gRows[0]?.matchLabel || gameId;
+    const seriesKey = matchLabel;
+    const gameDuration = gRows[0]?.gameLength ?? 0;
+
+    const players: ScdlGamePlayerRow[] = gRows.map((r) => {
+      const opp = gRows.find(
+        (o) =>
+          o.teamName.toLowerCase() !== r.teamName.toLowerCase() &&
+          o.role === r.role
+      );
+      return {
+        playerName: r.playerName,
+        displayName: r.playerName.split("#")[0].trim() || r.playerName,
+        teamName: r.teamName,
+        role: r.role,
+        champion: r.champion,
+        side: r.side,
+        win: r.win,
+        kills: r.kills,
+        deaths: r.deaths,
+        assists: r.assists,
+        cs: r.cs,
+        gold: r.gold,
+        damageDealt: r.damageDealt,
+        visionScore: r.visionScore,
+        goldDiff: opp ? r.gold - opp.gold : null,
+        goldDiff15: r.goldDiff15,
+        soloKills: r.soloKills,
+      };
+    });
+
+    const detail: ScdlGameDetail = {
+      gameId,
+      seriesKey,
+      matchLabel,
+      roundLabel: formatRoundLabel(matchLabel),
+      gameDuration,
+      blueTeam,
+      redTeam,
+      winnerTeam,
+      blueKills: blueRows.reduce((s, r) => s + r.kills, 0),
+      redKills: redRows.reduce((s, r) => s + r.kills, 0),
+      draft: DRAFTS_BY_GAME_ID[gameId] ?? null,
+      players,
+    };
+
+    const sList = seriesMap.get(seriesKey) ?? [];
+    sList.push(detail);
+    seriesMap.set(seriesKey, sList);
+  }
+
+  const seriesList: ScdlSeriesDetail[] = [];
+  for (const [seriesKey, games] of seriesMap.entries()) {
+    const first = games[0];
+    const teamA = first.blueTeam;
+    const teamB = first.redTeam;
+    const teamAWins = games.filter(
+      (g) => g.winnerTeam.toLowerCase() === teamA.toLowerCase()
+    ).length;
+    const teamBWins = games.length - teamAWins;
+    seriesList.push({
+      seriesKey,
+      matchLabel: first.matchLabel,
+      roundLabel: first.roundLabel,
+      teamA,
+      teamB,
+      teamAWins,
+      teamBWins,
+      games,
+    });
+  }
+
+  return seriesList;
 }

@@ -1,4 +1,7 @@
-import type { CompactRiotMatch } from "@/utils/riotApi";
+import type {
+  ChampionMasteryEntry,
+  CompactRiotMatch,
+} from "@/utils/riotApi";
 
 export interface RiotPlayerStatRow {
   player_key: string;
@@ -14,6 +17,8 @@ export interface RiotPlayerStatRow {
   solo_wins: number | null;
   solo_losses: number | null;
   matches: CompactRiotMatch[];
+  mastery_top4?: ChampionMasteryEntry[];
+  deep_synced_at?: string | null;
   sync_error: string | null;
   synced_at: string;
 }
@@ -58,8 +63,10 @@ export interface AggregatedPlayerStats {
   objectiveDpm: number;
   leagueRating: number;
   topChampions: { name: string; games: number; wins: number }[];
+  masteryTop4: ChampionMasteryEntry[];
   matches: CompactRiotMatch[];
   syncedAt: string | null;
+  deepSyncedAt: string | null;
   syncError: string | null;
 }
 
@@ -270,10 +277,55 @@ export function aggregatePlayerStats(
     objectiveDpm: totalMinutes > 0 ? objectiveDmg / totalMinutes : 0,
     leagueRating: 0,
     topChampions,
+    masteryTop4: Array.isArray(row?.mastery_top4) ? row.mastery_top4 : [],
     matches,
     syncedAt: row?.synced_at ?? null,
+    deepSyncedAt: row?.deep_synced_at ?? null,
     syncError: row?.sync_error ?? null,
   };
+}
+
+const LEAGUE_TO_RIOT_POSITION: Record<string, string> = {
+  top: "TOP",
+  jungle: "JUNGLE",
+  mid: "MIDDLE",
+  bot: "BOTTOM",
+  support: "UTILITY",
+};
+
+/**
+ * Returns top SoloQ champions filtered strictly to the player's league role
+ * (when teamPosition is available on synced matches).
+ */
+export function getRoleFilteredSoloChampions(
+  matches: CompactRiotMatch[],
+  leagueRole: string,
+  limit = 7
+): { name: string; games: number; wins: number; winRate: number }[] {
+  const targetPos = LEAGUE_TO_RIOT_POSITION[leagueRole.toLowerCase()];
+  const positioned = matches.filter((m) => Boolean(m.teamPosition));
+  const scoped =
+    targetPos && positioned.length > 0
+      ? matches.filter((m) => m.teamPosition?.toUpperCase() === targetPos)
+      : matches;
+
+  const champMap = new Map<string, { games: number; wins: number }>();
+  for (const m of scoped) {
+    const cur = champMap.get(m.championName) ?? { games: 0, wins: 0 };
+    cur.games += 1;
+    if (m.win) cur.wins += 1;
+    champMap.set(m.championName, cur);
+  }
+
+  return [...champMap.entries()]
+    .map(([name, val]) => ({
+      name,
+      games: val.games,
+      wins: val.wins,
+      winRate: (val.wins / val.games) * 100,
+    }))
+    .sort((a, b) => b.games - a.games || b.wins - a.wins)
+    .slice(0, limit);
 }
 
 /**

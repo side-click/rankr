@@ -1,0 +1,1004 @@
+{
+  "5680663535": {
+    "blueTeam": "Milk",
+    "redTeam": "Breadwinners",
+    "blueBans": [
+      "LeeSin",
+      "Galio",
+      "Veigar",
+      "Rakan",
+      "Ornn"
+    ],
+    "redBans": [
+      "Nocturne",
+      "Fizz",
+      "Zac",
+      "Yone",
+      "Kassadin"
+    ],
+    "bluePicks": [
+      "Seraphine",
+      "Ashe",
+      "Amumu",
+      "Kayle",
+      "Jax"
+    ],
+    "redPicks": [
+      "Skarner",
+      "Ziggs",
+      "Xayah",
+      "Sylas",
+      "Sion"
+    ],
+    "bans": [
+      "LeeSin",
+      "Galio",
+      "Veigar",
+      "Rakan",
+      "Ornn",
+      "Nocturne",
+      "Fizz",
+      "Zac",
+      "Yone",
+      "Kassadin"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/MG3FhflAVS"
+  },
+  "5680632994": {
+    "blueTeam": "Globetrotters",
+    "redTeam": "Ticks",
+    "blueBans": [
+      "Trundle",
+      "Vi",
+      "Ashe",
+      "Gwen",
+      "Mordekaiser"
+    ],
+    "redBans": [
+      "Viego",
+      "Sylas",
+      "Naafiri"
+    ],
+    "bluePicks": [
+      "Aurora",
+      "Sivir",
+      "Braum",
+      "Ornn",
+      "MonkeyKing"
+    ],
+    "redPicks": [
+      "Thresh",
+      "Ahri",
+      "Jhin",
+      "Volibear",
+      "Vladimir"
+    ],
+    "bans": [
+      "Trundle",
+      "Vi",
+      "Ashe",
+      "Gwen",
+      "Mordekaiser",
+      "Viego",
+      "Sylas",
+      "Naafiri"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/t5qQP6SPT8/t7QBFQgPL1"
+  },
+  "5680614674": {
+    "blueTeam": "Duck Donuts",
+    "redTeam": "Breadwinners",
+    "blueBans": [
+      "Caitlyn",
+      "Ashe",
+      "Lucian",
+      "Rakan",
+      "Alistar"
+    ],
+    "redBans": [
+      "Locke",
+      "Xayah",
+      "Rengar",
+      "Cassiopeia",
+      "Taliyah"
+    ],
+    "bluePicks": [
+      "Jhin",
+      "TahmKench",
+      "MonkeyKing",
+      "Ambessa",
+      "Katarina"
+    ],
+    "redPicks": [
+      "Orianna",
+      "Vi",
+      "Smolder",
+      "Nami",
+      "Urgot"
+    ],
+    "bans": [
+      "Caitlyn",
+      "Ashe",
+      "Lucian",
+      "Rakan",
+      "Alistar",
+      "Locke",
+      "Xayah",
+      "Rengar",
+      "Cassiopeia",
+      "Taliyah"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/0AYcZrPI5i"
+  },
+  "5680614603": {
+    "blueTeam": "Bandle City",
+    "redTeam": "Milkshakes",
+    "blueBans": [
+      "Kayn",
+      "Lissandra",
+      "Nocturne",
+      "Rakan",
+      "Malphite"
+    ],
+    "redBans": [
+      "Akali",
+      "Thresh",
+      "MonkeyKing",
+      "Yorick",
+      "Syndra"
+    ],
+    "bluePicks": [
+      "Naafiri",
+      "Ashe",
+      "Seraphine",
+      "Viktor",
+      "Sett"
+    ],
+    "redPicks": [
+      "XinZhao",
+      "Xayah",
+      "Mel",
+      "Braum",
+      "Ornn"
+    ],
+    "bans": [
+      "Kayn",
+      "Lissandra",
+      "Nocturne",
+      "Rakan",
+      "Malphite",
+      "Akali",
+      "Thresh",
+      "MonkeyKing",
+      "Yorick",
+      "Syndra"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/fearless/sJd8znD4tj/nooh5j1JKs/nz5TymELZn"
+  },
+  "5680621994": {
+    "blueTeam": "Chudmates",
+    "redTeam": "Milk",
+    "blueBans": [
+      "Nocturne",
+      "Zac",
+      "Sylas",
+      "Yone",
+      "Jax"
+    ],
+    "redBans": [
+      "TwistedFate",
+      "MonkeyKing",
+      "Caitlyn",
+      "Galio",
+      "Shen"
+    ],
+    "bluePicks": [
+      "JarvanIV",
+      "Aphelios",
+      "Thresh",
+      "Leblanc",
+      "Gnar"
+    ],
+    "redPicks": [
+      "Ezreal",
+      "Nami",
+      "Briar",
+      "Locke",
+      "Ornn"
+    ],
+    "bans": [
+      "Nocturne",
+      "Zac",
+      "Sylas",
+      "Yone",
+      "Jax",
+      "TwistedFate",
+      "MonkeyKing",
+      "Caitlyn",
+      "Galio",
+      "Shen"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/L4GZGX8am9"
+  },
+  "5680663669": {
+    "blueTeam": "Bandle City",
+    "redTeam": "Globetrotters",
+    "blueBans": [
+      "Draven",
+      "Kalista",
+      "Sylas",
+      "Orianna",
+      "Vex"
+    ],
+    "redBans": [
+      "Akali",
+      "MonkeyKing",
+      "Aatrox",
+      "Yorick",
+      "Urgot"
+    ],
+    "bluePicks": [
+      "Zaahen",
+      "Aphelios",
+      "Thresh",
+      "Olaf",
+      "Lissandra"
+    ],
+    "redPicks": [
+      "Zeri",
+      "Yuumi",
+      "XinZhao",
+      "Mordekaiser",
+      "Hwei"
+    ],
+    "bans": [
+      "Draven",
+      "Kalista",
+      "Sylas",
+      "Orianna",
+      "Vex",
+      "Akali",
+      "MonkeyKing",
+      "Aatrox",
+      "Yorick",
+      "Urgot"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/DmMFg2WzZT/yMlPoNXuWq"
+  },
+  "5680671193": {
+    "blueTeam": "Duck Donuts",
+    "redTeam": "Ticks",
+    "blueBans": [
+      "Trundle",
+      "Aurora",
+      "Rell",
+      "Ekko",
+      "Akali"
+    ],
+    "redBans": [
+      "Darius",
+      "Lissandra",
+      "Renekton",
+      "Cassiopeia"
+    ],
+    "bluePicks": [
+      "Sivir",
+      "Lulu",
+      "Naafiri",
+      "Locke",
+      "Shen"
+    ],
+    "redPicks": [
+      "Xayah",
+      "Vi",
+      "Rakan",
+      "Orianna",
+      "Aatrox"
+    ],
+    "bans": [
+      "Trundle",
+      "Aurora",
+      "Rell",
+      "Ekko",
+      "Akali",
+      "Darius",
+      "Lissandra",
+      "Renekton",
+      "Cassiopeia"
+    ],
+    "sourceUrl": "https://draftify.lol/draft/lbkm2jy1g?game=1"
+  },
+  "5680671587": {
+    "blueTeam": "Chudmates",
+    "redTeam": "Milkshakes",
+    "blueBans": [
+      "Kayn",
+      "Lissandra",
+      "Trundle",
+      "Orianna",
+      "Syndra"
+    ],
+    "redBans": [
+      "Galio",
+      "TwistedFate",
+      "MonkeyKing",
+      "Rumble",
+      "Ambessa"
+    ],
+    "bluePicks": [
+      "Sejuani",
+      "Yunara",
+      "Braum",
+      "Olaf",
+      "AurelionSol"
+    ],
+    "redPicks": [
+      "Volibear",
+      "Caitlyn",
+      "Thresh",
+      "Poppy",
+      "Ryze"
+    ],
+    "bans": [
+      "Kayn",
+      "Lissandra",
+      "Trundle",
+      "Orianna",
+      "Syndra",
+      "Galio",
+      "TwistedFate",
+      "MonkeyKing",
+      "Rumble",
+      "Ambessa"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/FmvrsujUfD/fApz5uvbEk"
+  },
+  "5680720847": {
+    "blueTeam": "Globetrotters",
+    "redTeam": "Milk",
+    "blueBans": [
+      "Fizz",
+      "Zac",
+      "Nocturne",
+      "Fiddlesticks",
+      "Sylas"
+    ],
+    "redBans": [
+      "JarvanIV",
+      "Viktor",
+      "Viego",
+      "Rakan",
+      "Thresh"
+    ],
+    "bluePicks": [
+      "Zaahen",
+      "Akali",
+      "Xayah",
+      "Blitzcrank",
+      "Sion"
+    ],
+    "redPicks": [
+      "Yone",
+      "Belveth",
+      "Ziggs",
+      "Lulu",
+      "AurelionSol"
+    ],
+    "bans": [
+      "Fizz",
+      "Zac",
+      "Nocturne",
+      "Fiddlesticks",
+      "Sylas",
+      "JarvanIV",
+      "Viktor",
+      "Viego",
+      "Rakan",
+      "Thresh"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/r3W8vOdw9T/1Pl5F2pOKy"
+  },
+  "5680709711": {
+    "blueTeam": "Ticks",
+    "redTeam": "Bandle City",
+    "blueBans": [
+      "Akali",
+      "RekSai",
+      "Yasuo",
+      "Teemo"
+    ],
+    "redBans": [
+      "Aurora",
+      "Leona",
+      "Nocturne",
+      "Karma",
+      "Rell"
+    ],
+    "bluePicks": [
+      "Locke",
+      "Ashe",
+      "Jax",
+      "Shen",
+      "Nautilus"
+    ],
+    "redPicks": [
+      "Jhin",
+      "MonkeyKing",
+      "Braum",
+      "Sylas",
+      "Yorick"
+    ],
+    "bans": [
+      "Akali",
+      "RekSai",
+      "Yasuo",
+      "Teemo",
+      "Aurora",
+      "Leona",
+      "Nocturne",
+      "Karma",
+      "Rell"
+    ],
+    "sourceUrl": "https://draftify.lol/draft/pdjg0qk21?game=1"
+  },
+  "5680714668": {
+    "blueTeam": "Breadwinners",
+    "redTeam": "Chudmates",
+    "blueBans": [
+      "Caitlyn",
+      "MonkeyKing",
+      "Seraphine",
+      "Sivir",
+      "Nautilus"
+    ],
+    "redBans": [
+      "Ivern",
+      "JarvanIV",
+      "Poppy",
+      "Kaisa",
+      "Swain"
+    ],
+    "bluePicks": [
+      "Galio",
+      "LeeSin",
+      "Ornn",
+      "Janna",
+      "Lucian"
+    ],
+    "redPicks": [
+      "TwistedFate",
+      "Shyvana",
+      "Camille",
+      "Xayah",
+      "Blitzcrank"
+    ],
+    "bans": [
+      "Caitlyn",
+      "MonkeyKing",
+      "Seraphine",
+      "Sivir",
+      "Nautilus",
+      "Ivern",
+      "JarvanIV",
+      "Poppy",
+      "Kaisa",
+      "Swain"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/fearless/J89Jy6NOe5/sHlKJcBa1p/Rthwes7yui"
+  },
+  "5680737895": {
+    "blueTeam": "Milkshakes",
+    "redTeam": "Duck Donuts",
+    "blueBans": [
+      "Taliyah",
+      "Cassiopeia",
+      "Nami",
+      "Nocturne",
+      "Darius"
+    ],
+    "redBans": [
+      "Kayn",
+      "Lissandra",
+      "Jhin",
+      "Locke",
+      "Galio"
+    ],
+    "bluePicks": [
+      "MonkeyKing",
+      "Sivir",
+      "Milio",
+      "Syndra",
+      "Maokai"
+    ],
+    "redPicks": [
+      "Ashe",
+      "Seraphine",
+      "Orianna",
+      "Diana",
+      "Olaf"
+    ],
+    "bans": [
+      "Taliyah",
+      "Cassiopeia",
+      "Nami",
+      "Nocturne",
+      "Darius",
+      "Kayn",
+      "Lissandra",
+      "Jhin",
+      "Locke",
+      "Galio"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/fearless/P3FSVlHmPO/Ie2qtnOLVk/4MO7jE1wUV"
+  },
+  "5680629953": {
+    "blueTeam": "Checkmates",
+    "redTeam": "Miners",
+    "blueBans": [
+      "Shyvana",
+      "Yunara",
+      "Orianna",
+      "Galio"
+    ],
+    "redBans": [
+      "Darius",
+      "Aatrox",
+      "MonkeyKing",
+      "Ambessa",
+      "Kennen"
+    ],
+    "bluePicks": [
+      "Kaisa",
+      "Leona",
+      "Pantheon",
+      "Veigar",
+      "Zaahen"
+    ],
+    "redPicks": [
+      "Xayah",
+      "Rakan",
+      "Nocturne",
+      "Ryze",
+      "Ornn"
+    ],
+    "bans": [
+      "Shyvana",
+      "Yunara",
+      "Orianna",
+      "Galio",
+      "Darius",
+      "Aatrox",
+      "MonkeyKing",
+      "Ambessa",
+      "Kennen"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/2r9TAioZ?game=1"
+  },
+  "5680624983": {
+    "blueTeam": "Gunkers",
+    "redTeam": "Catboys",
+    "blueBans": [
+      "RekSai",
+      "Nautilus",
+      "Vi",
+      "Ahri",
+      "Leblanc"
+    ],
+    "redBans": [
+      "Lillia",
+      "MissFortune",
+      "Akali",
+      "Olaf",
+      "Trundle"
+    ],
+    "bluePicks": [
+      "Syndra",
+      "Yunara",
+      "Lulu",
+      "Ambessa",
+      "Sejuani"
+    ],
+    "redPicks": [
+      "Ezreal",
+      "Karma",
+      "MonkeyKing",
+      "Orianna",
+      "Gnar"
+    ],
+    "bans": [
+      "RekSai",
+      "Nautilus",
+      "Vi",
+      "Ahri",
+      "Leblanc",
+      "Lillia",
+      "MissFortune",
+      "Akali",
+      "Olaf",
+      "Trundle"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/8ih7A3EqAl/hc8loNAyLD"
+  },
+  "5680627960": {
+    "blueTeam": "Bandits",
+    "redTeam": "Ghoulblins",
+    "blueBans": [
+      "KSante",
+      "Blitzcrank",
+      "Aphelios",
+      "Teemo",
+      "Hwei"
+    ],
+    "redBans": [
+      "Anivia",
+      "Pantheon",
+      "Nocturne",
+      "Zyra",
+      "Olaf"
+    ],
+    "bluePicks": [],
+    "redPicks": [],
+    "bans": [
+      "KSante",
+      "Blitzcrank",
+      "Aphelios",
+      "Teemo",
+      "Hwei",
+      "Anivia",
+      "Pantheon",
+      "Nocturne",
+      "Zyra",
+      "Olaf"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/UpdQ9XJr?game=1"
+  },
+  "5680628051": {
+    "blueTeam": "Mud Newts",
+    "redTeam": "Chickens",
+    "blueBans": [
+      "Akali",
+      "Hecarim",
+      "Shyvana",
+      "Orianna",
+      "Gwen"
+    ],
+    "redBans": [
+      "Lucian",
+      "Lulu",
+      "Locke",
+      "Renekton"
+    ],
+    "bluePicks": [
+      "Xayah",
+      "Milio",
+      "XinZhao",
+      "KSante",
+      "Sylas"
+    ],
+    "redPicks": [
+      "Ashe",
+      "Seraphine",
+      "Khazix",
+      "Ornn",
+      "Taliyah"
+    ],
+    "bans": [
+      "Akali",
+      "Hecarim",
+      "Shyvana",
+      "Orianna",
+      "Gwen",
+      "Lucian",
+      "Lulu",
+      "Locke",
+      "Renekton"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/cwNQOb1HYN/4n4mHRTtQA"
+  },
+  "5680678911": {
+    "blueTeam": "Catboys",
+    "redTeam": "Miners",
+    "blueBans": [
+      "MonkeyKing",
+      "Ahri",
+      "Kayn",
+      "MissFortune",
+      "Pantheon"
+    ],
+    "redBans": [
+      "Darius",
+      "Qiyana",
+      "Nocturne",
+      "Ambessa",
+      "Mordekaiser"
+    ],
+    "bluePicks": [],
+    "redPicks": [],
+    "bans": [
+      "MonkeyKing",
+      "Ahri",
+      "Kayn",
+      "MissFortune",
+      "Pantheon",
+      "Darius",
+      "Qiyana",
+      "Nocturne",
+      "Ambessa",
+      "Mordekaiser"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/WLv7Y_1v?game=1"
+  },
+  "5680681864": {
+    "blueTeam": "Bandits",
+    "redTeam": "Checkmates",
+    "blueBans": [
+      "Darius",
+      "Aatrox",
+      "MonkeyKing",
+      "Syndra",
+      "KSante"
+    ],
+    "redBans": [
+      "Bard",
+      "Anivia",
+      "Xerath",
+      "Aurora"
+    ],
+    "bluePicks": [
+      "Lulu",
+      "Yunara",
+      "Chogath",
+      "Olaf",
+      "Diana"
+    ],
+    "redPicks": [
+      "Nami",
+      "Corki",
+      "Lillia",
+      "Hwei",
+      "Renekton"
+    ],
+    "bans": [
+      "Darius",
+      "Aatrox",
+      "MonkeyKing",
+      "Syndra",
+      "KSante",
+      "Bard",
+      "Anivia",
+      "Xerath",
+      "Aurora"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/3dJiCMDG?game=1"
+  },
+  "5680680676": {
+    "blueTeam": "Gunkers",
+    "redTeam": "Chickens",
+    "blueBans": [
+      "Viktor",
+      "Shyvana",
+      "Hecarim",
+      "Leona",
+      "Nautilus"
+    ],
+    "redBans": [
+      "Akali",
+      "Lillia",
+      "MissFortune",
+      "Rakan"
+    ],
+    "bluePicks": [
+      "Aurora",
+      "JarvanIV",
+      "Locke",
+      "Lucian",
+      "Milio"
+    ],
+    "redPicks": [
+      "Syndra",
+      "Corki",
+      "Diana",
+      "Ambessa",
+      "Maokai"
+    ],
+    "bans": [
+      "Viktor",
+      "Shyvana",
+      "Hecarim",
+      "Leona",
+      "Nautilus",
+      "Akali",
+      "Lillia",
+      "MissFortune",
+      "Rakan"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/4BzmfhO8wt/tgYBNy55NK"
+  },
+  "5680697739": {
+    "blueTeam": "Ghoulblins",
+    "redTeam": "Mud Newts",
+    "blueBans": [
+      "Jayce",
+      "Graves",
+      "Swain",
+      "JarvanIV",
+      "Renekton"
+    ],
+    "redBans": [
+      "Yorick",
+      "Darius",
+      "Jhin",
+      "MonkeyKing",
+      "Sivir"
+    ],
+    "bluePicks": [],
+    "redPicks": [],
+    "bans": [
+      "Jayce",
+      "Graves",
+      "Swain",
+      "JarvanIV",
+      "Renekton",
+      "Yorick",
+      "Darius",
+      "Jhin",
+      "MonkeyKing",
+      "Sivir"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/BRLhSRp8?game=1"
+  },
+  "5680724406": {
+    "blueTeam": "Catboys",
+    "redTeam": "Bandits",
+    "blueBans": [
+      "Urgot",
+      "Caitlyn",
+      "Corki",
+      "Jhin",
+      "Tristana"
+    ],
+    "redBans": [
+      "RekSai",
+      "XinZhao",
+      "KSante",
+      "Nautilus",
+      "Leona"
+    ],
+    "bluePicks": [
+      "Cassiopeia",
+      "Olaf",
+      "Sivir",
+      "Seraphine",
+      "Mordekaiser"
+    ],
+    "redPicks": [
+      "Xerath",
+      "Amumu",
+      "Bard",
+      "Twitch",
+      "Darius"
+    ],
+    "bans": [
+      "Urgot",
+      "Caitlyn",
+      "Corki",
+      "Jhin",
+      "Tristana",
+      "RekSai",
+      "XinZhao",
+      "KSante",
+      "Nautilus",
+      "Leona"
+    ],
+    "sourceUrl": "https://draft.lowbudgetlcs.com/xkxkomIpcY/AANXKkzbmR"
+  },
+  "5680728560": {
+    "blueTeam": "Miners",
+    "redTeam": "Gunkers",
+    "blueBans": [
+      "Kayn",
+      "MissFortune",
+      "Ashe",
+      "Ambessa",
+      "Renekton"
+    ],
+    "redBans": [
+      "Malphite",
+      "Cassiopeia",
+      "Ryze",
+      "Sivir",
+      "Aphelios"
+    ],
+    "bluePicks": [],
+    "redPicks": [],
+    "bans": [
+      "Kayn",
+      "MissFortune",
+      "Ashe",
+      "Ambessa",
+      "Renekton",
+      "Malphite",
+      "Cassiopeia",
+      "Ryze",
+      "Sivir",
+      "Aphelios"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/D5_IPtFs?game=1"
+  },
+  "5680735560": {
+    "blueTeam": "Mud Newts",
+    "redTeam": "Checkmates",
+    "blueBans": [
+      "Darius",
+      "Caitlyn",
+      "Thresh",
+      "Aatrox",
+      "Olaf"
+    ],
+    "redBans": [
+      "Akali",
+      "Aurora",
+      "Yone",
+      "Viktor",
+      "Ryze"
+    ],
+    "bluePicks": [
+      "MonkeyKing",
+      "Ezreal",
+      "Janna",
+      "Renekton",
+      "Azir"
+    ],
+    "redPicks": [
+      "Lucian",
+      "Nautilus",
+      "Chogath",
+      "Syndra",
+      "Gnar"
+    ],
+    "bans": [
+      "Darius",
+      "Caitlyn",
+      "Thresh",
+      "Aatrox",
+      "Olaf",
+      "Akali",
+      "Aurora",
+      "Yone",
+      "Viktor",
+      "Ryze"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/rFayZuVc?game=1"
+  },
+  "5680749360": {
+    "blueTeam": "Ghoulblins",
+    "redTeam": "Chickens",
+    "blueBans": [
+      "Kayn",
+      "Akali",
+      "Gwen",
+      "Galio",
+      "Zed"
+    ],
+    "redBans": [
+      "Poppy",
+      "Sivir",
+      "Amumu",
+      "Graves"
+    ],
+    "bluePicks": [],
+    "redPicks": [],
+    "bans": [
+      "Kayn",
+      "Akali",
+      "Gwen",
+      "Galio",
+      "Zed",
+      "Poppy",
+      "Sivir",
+      "Amumu",
+      "Graves"
+    ],
+    "sourceUrl": "https://drafter.lol/draft/yH6PwNnA?game=1"
+  }
+}
