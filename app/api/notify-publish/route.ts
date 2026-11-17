@@ -106,10 +106,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
+  const pingUserId = process.env.DISCORD_MOD_PING_USER_ID?.trim();
+
   await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      ...(pingUserId
+        ? {
+            content: `<@${pingUserId}>`,
+            allowed_mentions: { users: [pingUserId] },
+          }
+        : {}),
       embeds: [
         {
           title: isFlagged

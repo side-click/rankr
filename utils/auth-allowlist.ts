@@ -46,12 +46,19 @@ export async function enforceAllowlistAfterLogin(
     typeof meta.avatar_url === "string" ? meta.avatar_url : undefined;
 
   const webhookUrl = process.env.DISCORD_MOD_WEBHOOK_URL;
+  const pingUserId = process.env.DISCORD_MOD_PING_USER_ID?.trim();
   if (webhookUrl) {
     try {
       await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(pingUserId
+            ? {
+                content: `<@${pingUserId}>`,
+                allowed_mentions: { users: [pingUserId] },
+              }
+            : {}),
           embeds: [
             {
               title: "🔒 Blocked Login Attempt (Not Allowlisted)",
