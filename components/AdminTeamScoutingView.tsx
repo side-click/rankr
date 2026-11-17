@@ -649,7 +649,7 @@ export function AdminTeamScoutingView({
           <div className="xp-panel p-3 space-y-3 lg:col-span-7">
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
               <Swords className="w-4 h-4" />
-              <span>Draft Tendencies (B1 / R1-2 / R5)</span>
+              <span>Draft Tendencies</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               <div className="bg-black/35 border border-white/10 rounded p-2.5">
