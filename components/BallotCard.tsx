@@ -187,29 +187,31 @@ export function BallotCard({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
                 {edName}
               </span>
-              {displayLogo ? (
-                <img
-                  src={displayLogo}
-                  alt={hasDivision ? divName : league?.name ?? sName}
-                  className="lg:hidden w-5 h-5 object-contain shrink-0"
-                />
-              ) : (
-                <Award className="lg:hidden w-4 h-4 text-[#7cd438] shrink-0" />
-              )}
-              <span
-                title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
-                className="lg:hidden w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
-              >
-                {isPlayer ? (
-                  <User className="w-3 h-3 text-[#f0c020]" />
+              <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
+                {displayLogo ? (
+                  <img
+                    src={displayLogo}
+                    alt={hasDivision ? divName : league?.name ?? sName}
+                    className="w-5 h-5 object-contain shrink-0"
+                  />
                 ) : (
-                  <TeamGroupIcon className="w-3 h-3 text-[#f0c020]" />
+                  <Award className="w-4 h-4 text-[#7cd438] shrink-0" />
                 )}
-              </span>
+                <span
+                  title={isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                  className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                >
+                  {isPlayer ? (
+                    <User className="w-3 h-3 text-[#f0c020]" />
+                  ) : (
+                    <TeamGroupIcon className="w-3 h-3 text-[#f0c020]" />
+                  )}
+                </span>
+              </div>
             </div>
             <div
               style={{ color: resolvedTheme.accent_text_color }}
@@ -386,7 +388,6 @@ export function BallotCard({
         <span className="text-[#a6a89e]">
           {publishedDate ? `Published ${publishedDate}` : ""}
         </span>
-        <span className="text-[#7cd438] font-bold shrink-0">Open →</span>
       </div>
     </Link>
   );
