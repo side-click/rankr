@@ -113,6 +113,134 @@ function getTierContrastText(hex: string): string {
   return luminance > 0.65 ? "#111318" : "#ffffff";
 }
 
+type PillSize = "lg" | "md" | "sm";
+
+const PILL_STYLES: Record<
+  PillSize,
+  { container: string; logo: string; captain: string }
+> = {
+  lg: {
+    container: "px-3.5 py-2 text-base gap-2",
+    logo: "w-6 h-6",
+    captain: "w-4 h-4",
+  },
+  md: {
+    container: "px-2.5 py-1.5 text-sm gap-1.5",
+    logo: "w-5 h-5",
+    captain: "w-4 h-4",
+  },
+  sm: {
+    container: "px-2.5 py-1 text-[13px] gap-1.5",
+    logo: "w-4 h-4",
+    captain: "w-3.5 h-3.5",
+  },
+};
+
+function getTierPillSize(
+  players: { name: string; role?: string }[],
+  splitByRole: boolean,
+  hasCommentary: boolean,
+  isCompactLayout: boolean
+): PillSize {
+  if (isCompactLayout || players.length === 0) return "sm";
+
+  const nameChars = (list: { name: string }[]) =>
+    list.reduce(
+      (sum, p) => sum + (p.name.split("#")[0].trim() || p.name).length,
+      0
+    );
+
+  if (!splitByRole) {
+    const roleCounts = new Map<string, { name: string }[]>();
+    for (const p of players) {
+      const key = p.role ?? "other";
+      const arr = roleCounts.get(key) ?? [];
+      arr.push(p);
+      roleCounts.set(key, arr);
+    }
+    const activeRoles = roleCounts.size;
+    if (activeRoles >= 3) return "sm";
+    const maxInRole = Math.max(
+      ...[...roleCounts.values()].map((arr) => arr.length)
+    );
+    const maxCharsInRole = Math.max(
+      ...[...roleCounts.values()].map((arr) => nameChars(arr))
+    );
+    if (activeRoles === 2) {
+      const fitsOneLine = hasCommentary
+        ? maxInRole <= 3 && maxCharsInRole <= 36
+        : maxInRole <= 5 && maxCharsInRole <= 64;
+      return fitsOneLine ? "md" : "sm";
+    }
+    // activeRoles === 1: fall through to single-line sizing
+    const chars = nameChars(players);
+    if (hasCommentary) {
+      if (players.length <= 2 && chars <= 24) return "lg";
+      if (players.length <= 3 && chars <= 38) return "md";
+      return "sm";
+    }
+    if (players.length <= 4 && chars <= 52) return "lg";
+    if (players.length <= 6 && chars <= 76) return "md";
+    return "sm";
+  }
+
+  const chars = nameChars(players);
+  if (hasCommentary) {
+    if (players.length <= 2 && chars <= 24) return "lg";
+    if (players.length <= 3 && chars <= 38) return "md";
+    return "sm";
+  }
+  if (players.length <= 4 && chars <= 52) return "lg";
+  if (players.length <= 6 && chars <= 76) return "md";
+  return "sm";
+}
+
+function renderPlayerPill(
+  pl: {
+    id: string;
+    name: string;
+    team_logo_url?: string | null;
+    team_name?: string | null;
+    is_captain?: boolean;
+  },
+  size: PillSize
+) {
+  const styles = PILL_STYLES[size];
+  return (
+    <div
+      key={pl.id}
+      className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] ${styles.container}`}
+    >
+      <span className="font-bold leading-none whitespace-nowrap">
+        {pl.name.split("#")[0].trim() || pl.name}
+      </span>
+      {pl.team_logo_url ? (
+        <img
+          src={pl.team_logo_url}
+          alt={pl.team_name ?? "Team"}
+          title={pl.team_name ?? undefined}
+          crossOrigin="anonymous"
+          className={`${styles.logo} object-contain shrink-0`}
+        />
+      ) : (
+        pl.team_name && (
+          <span className="text-[10px] font-semibold text-[#a0a7b4] bg-black/35 px-1 py-0.5 rounded leading-none">
+            {pl.team_name}
+          </span>
+        )
+      )}
+      {pl.is_captain && (
+        <img
+          src={CAPTAIN_ICON}
+          alt="Captain"
+          crossOrigin="anonymous"
+          className={`${styles.captain} object-contain shrink-0`}
+        />
+      )}
+    </div>
+  );
+}
+
 export function PlayerTierShareView({
   ballot,
   themes,
@@ -848,8 +976,16 @@ export function PlayerTierShareView({
                             </div>
 
                             {/* Players Cell */}
+                            {(() => {
+                              const pillSize = getTierPillSize(
+                                tier.players,
+                                Boolean(tierData.splitByRole),
+                                hasAnyCommentary,
+                                isMultiRoleCompact
+                              );
+                              return (
                             <div
-                              className={`min-w-0 ${
+                              className={`min-w-0 flex items-center ${
                                 isMultiRoleCompact ? "px-2.5 py-1.5" : "px-3 py-2"
                               }`}
                             >
@@ -867,96 +1003,34 @@ export function PlayerTierShareView({
                                     return (
                                       <div
                                         key={r.key}
-                                        className="flex items-start gap-2"
+                                        className="flex items-center gap-2"
                                       >
                                         <img
                                           src={r.icon}
                                           alt={r.label}
                                           title={r.label}
                                           crossOrigin="anonymous"
-                                          className="w-5 h-5 object-contain shrink-0 mt-0.5"
+                                          className="w-5 h-5 object-contain shrink-0"
                                         />
                                         <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
-                                          {rolePlayers.map((pl) => (
-                                            <div
-                                              key={pl.id}
-                                              className="inline-flex items-center gap-1.5 rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] px-2 py-1 text-xs"
-                                            >
-                                              <span className="font-bold leading-none whitespace-nowrap">
-                                                {pl.name.split("#")[0].trim() ||
-                                                  pl.name}
-                                              </span>
-                                              {pl.team_logo_url ? (
-                                                <img
-                                                  src={pl.team_logo_url}
-                                                  alt={pl.team_name ?? "Team"}
-                                                  title={
-                                                    pl.team_name ?? undefined
-                                                  }
-                                                  crossOrigin="anonymous"
-                                                  className="w-4 h-4 object-contain shrink-0"
-                                                />
-                                              ) : (
-                                                pl.team_name && (
-                                                  <span className="text-[10px] font-semibold text-[#a0a7b4] bg-black/35 px-1 py-0.5 rounded leading-none">
-                                                    {pl.team_name}
-                                                  </span>
-                                                )
-                                              )}
-                                              {pl.is_captain && (
-                                                <img
-                                                  src={CAPTAIN_ICON}
-                                                  alt="Captain"
-                                                  crossOrigin="anonymous"
-                                                  className="w-3.5 h-3.5 object-contain shrink-0"
-                                                />
-                                              )}
-                                            </div>
-                                          ))}
+                                          {rolePlayers.map((pl) =>
+                                            renderPlayerPill(pl, pillSize)
+                                          )}
                                         </div>
                                       </div>
                                     );
                                   })}
                                 </div>
                               ) : (
-                                <div className="flex flex-wrap items-center content-center gap-1.5">
-                                  {tier.players.map((pl) => (
-                                    <div
-                                      key={pl.id}
-                                      className="inline-flex items-center gap-1.5 rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] px-2 py-1 text-xs"
-                                    >
-                                      <span className="font-bold leading-none whitespace-nowrap">
-                                        {pl.name.split("#")[0].trim() ||
-                                          pl.name}
-                                      </span>
-                                      {pl.team_logo_url ? (
-                                        <img
-                                          src={pl.team_logo_url}
-                                          alt={pl.team_name ?? "Team"}
-                                          title={pl.team_name ?? undefined}
-                                          crossOrigin="anonymous"
-                                          className="w-4 h-4 object-contain shrink-0"
-                                        />
-                                      ) : (
-                                        pl.team_name && (
-                                          <span className="text-[10px] font-semibold text-[#a0a7b4] bg-black/35 px-1 py-0.5 rounded leading-none">
-                                            {pl.team_name}
-                                          </span>
-                                        )
-                                      )}
-                                      {pl.is_captain && (
-                                        <img
-                                          src={CAPTAIN_ICON}
-                                          alt="Captain"
-                                          crossOrigin="anonymous"
-                                          className="w-3.5 h-3.5 object-contain shrink-0"
-                                        />
-                                      )}
-                                    </div>
-                                  ))}
+                                <div className="flex flex-wrap items-center content-center gap-2">
+                                  {tier.players.map((pl) =>
+                                    renderPlayerPill(pl, pillSize)
+                                  )}
                                 </div>
                               )}
                             </div>
+                              );
+                            })()}
 
                             {/* Comments Cell */}
                             {hasAnyCommentary && (
