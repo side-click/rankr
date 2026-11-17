@@ -1141,9 +1141,6 @@ export function AdminStatsDashboard({
                   },
                 ]
               : []),
-          ];
-
-          const expandedGridCards: LeaderboardCard[] = [
             {
               title: "Kill Participation",
               icons: (
@@ -1155,6 +1152,9 @@ export function AdminStatsDashboard({
               rows: topKp,
               fmt: (p) => `${p.kpPct.toFixed(1)}%`,
             },
+          ];
+
+          const expandedGridCards: LeaderboardCard[] = [
             {
               title: "Team Damage %",
               icons: (
@@ -1285,7 +1285,7 @@ export function AdminStatsDashboard({
                   type="button"
                   onClick={() => void handleExportLeaderboardPng()}
                   disabled={exportingLeaderboard}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold bg-gradient-to-b from-[#f0c020] to-[#c89b3c] text-[#141714] hover:brightness-110 transition shadow-[0_0_16px_rgba(240,192,32,0.28)] cursor-pointer disabled:opacity-60"
+                  className="xp-btn xp-btn-gold text-xs disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>
@@ -1297,8 +1297,11 @@ export function AdminStatsDashboard({
               <ScaledGraphicFrame>
                 <div
                   ref={leaderboardCardRef}
-                  style={{ borderColor: cardBorderColor }}
-                  className={`w-[1060px] mx-auto border-4 rounded-lg overflow-hidden bg-[#171b19] ${
+                  style={{
+                    borderColor: cardBorderColor,
+                    borderRadius: "44px",
+                  }}
+                  className={`w-[1060px] mx-auto border-4 rounded-[44px] overflow-hidden bg-[#171b19] ${
                     exportingLeaderboard ? "" : "shadow-2xl"
                   }`}
                 >
@@ -1352,11 +1355,11 @@ export function AdminStatsDashboard({
                   </div>
 
                   {/* Card Body */}
-                  <div className="px-10 py-6 bg-[#171b19]">
-                    <div className="max-w-[840px] mx-auto space-y-4">
-                      {/* Featured Golden Rankr Rating Card (Full 2-Card Width) */}
+                  <div className="px-5 py-5 bg-[#171b19]">
+                    <div className="space-y-4">
+                      {/* Featured Golden Rankr Rating Card */}
                       <div
-                        className="rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
+                        className="max-w-[760px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-gradient-to-b from-[#2b220c] via-[#1d1a11] to-[#171b19]"
                         style={{
                           boxShadow:
                             "0 0 28px rgba(240, 192, 32, 0.28), inset 0 0 18px rgba(240, 192, 32, 0.08)",
@@ -1365,7 +1368,7 @@ export function AdminStatsDashboard({
                         <div
                           onClick={ratingCard.onHeaderClick}
                           title={ratingCard.headerTooltip}
-                          className="bg-gradient-to-r from-[#3a2c0e] via-[#4c3912] to-[#3a2c0e] border-b-2 border-[#f0c020] px-5 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#ffd74a] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
+                          className="bg-gradient-to-r from-[#3a2c0e] via-[#4c3912] to-[#3a2c0e] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#ffd74a] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
                         >
                           <span className="inline-flex items-center gap-2">
                             <span>{ratingCard.title}</span>
@@ -1386,13 +1389,13 @@ export function AdminStatsDashboard({
                               href={`/admin/stats/player/${encodeURIComponent(
                                 p.playerKey
                               )}`}
-                              className={`px-5 py-2.5 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
+                              className={`px-6 py-2.5 flex items-center justify-between gap-4 transition hover:bg-[#f0c020]/10 ${
                                 idx === 0 ? "bg-[#f0c020]/10" : ""
                               }`}
                             >
-                              <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex items-center gap-4 min-w-0">
                                 <span
-                                  className={`text-sm font-mono font-extrabold w-5 text-center ${
+                                  className={`text-lg font-extrabold tabular-nums w-5 text-center ${
                                     idx === 0
                                       ? "text-[#f0c020]"
                                       : "text-[#c89b3c]"
@@ -1405,22 +1408,22 @@ export function AdminStatsDashboard({
                                     src={p.teamLogoUrl}
                                     alt={p.teamName}
                                     crossOrigin="anonymous"
-                                    className="w-6 h-6 object-contain shrink-0"
+                                    className="w-7 h-7 object-contain shrink-0"
                                   />
                                 )}
                                 <span
-                                  className={`text-base font-extrabold truncate flex items-center gap-2 ${
+                                  className={`text-xl font-extrabold truncate flex items-center gap-2 ${
                                     idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
                                   }`}
                                 >
                                   <span>{p.displayName}</span>
                                   {idx === 0 && (
-                                    <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                                    <Crown className="w-5 h-5 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
                                   )}
                                 </span>
                               </div>
                               <span
-                                className={`font-mono font-black text-base shrink-0 ${
+                                className={`font-black text-xl tabular-nums shrink-0 ${
                                   idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
                                 }`}
                               >
