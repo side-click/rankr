@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -57,75 +58,79 @@ export function DeleteDraftButton({
         <span>Delete</span>
       </button>
 
-      {confirmOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4"
-          onClick={() => !deleting && setConfirmOpen(false)}
-        >
+      {confirmOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="w-full max-w-sm xp-window overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4"
+            onClick={() => !deleting && setConfirmOpen(false)}
           >
-            <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <Trash2 className="w-3.5 h-3.5 text-[#ff857a]" />
-                <span>
-                  {isPublished ? "Delete Published Ranking" : "Delete Draft"}
-                </span>
-              </div>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => setConfirmOpen(false)}
-                className="text-white/80 hover:text-white"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
-              <p className="leading-relaxed">
-                Are you sure you want to permanently delete{" "}
-                {isPublished ? "your published ranking" : "the draft"}{" "}
-                <strong className="text-[#f0ede0]">{title}</strong>?{" "}
-                {isPublished
-                  ? "This will permanently remove it from public rankings and consensus. This cannot be undone."
-                  : "This cannot be undone."}
-              </p>
-              {error && (
-                <div className="p-2 bg-[#451717] border border-[#9e3535] text-[#ff857a] text-[11px] font-bold">
-                  Failed to delete {isPublished ? "ranking" : "draft"}: {error}
+            <div
+              className="w-full max-w-sm xp-window overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <Trash2 className="w-3.5 h-3.5 text-[#ff857a]" />
+                  <span>
+                    {isPublished ? "Delete Published Ranking" : "Delete Draft"}
+                  </span>
                 </div>
-              )}
-              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   disabled={deleting}
                   onClick={() => setConfirmOpen(false)}
-                  className="xp-btn text-xs"
+                  className="text-white/80 hover:text-white"
+                  aria-label="Close"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={() => void handleConfirmDelete()}
-                  className="xp-btn xp-btn-danger text-xs min-w-[82px] justify-center"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>
-                    {deleting
-                      ? "Deleting..."
-                      : isPublished
-                      ? "Delete Ranking"
-                      : "Delete Draft"}
-                  </span>
+                  <X className="w-4 h-4" />
                 </button>
               </div>
+              <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
+                <p className="leading-relaxed">
+                  Are you sure you want to permanently delete{" "}
+                  {isPublished ? "your published ranking" : "the draft"}{" "}
+                  <strong className="text-[#f0ede0]">{title}</strong>?{" "}
+                  {isPublished
+                    ? "This will permanently remove it from public rankings and consensus. This cannot be undone."
+                    : "This cannot be undone."}
+                </p>
+                {error && (
+                  <div className="p-2 bg-[#451717] border border-[#9e3535] text-[#ff857a] text-[11px] font-bold">
+                    Failed to delete {isPublished ? "ranking" : "draft"}:{" "}
+                    {error}
+                  </div>
+                )}
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => setConfirmOpen(false)}
+                    className="xp-btn text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => void handleConfirmDelete()}
+                    className="xp-btn xp-btn-danger text-xs min-w-[82px] justify-center"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>
+                      {deleting
+                        ? "Deleting..."
+                        : isPublished
+                        ? "Delete Ranking"
+                        : "Delete Draft"}
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
