@@ -230,12 +230,22 @@ export async function fetchScdlSheetStats(
     rowsByGame.set(r.gameId, gList);
   }
 
-  // Lookup maps from active roster
+  // Lookup maps from active roster (including alt accounts)
   const rosterByKey = new Map<string, AggregatedPlayerStats>();
   const rosterByDisplay = new Map<string, AggregatedPlayerStats>();
   for (const p of rosterPlayers) {
     rosterByKey.set(normalizeRiotKey(p.playerKey), p);
     rosterByDisplay.set(p.displayName.trim().toLowerCase(), p);
+    for (const alt of p.altAccounts ?? []) {
+      const altKey = normalizeRiotKey(alt);
+      if (altKey && !rosterByKey.has(altKey)) {
+        rosterByKey.set(altKey, p);
+      }
+      const altDisp = alt.split("#")[0].trim().toLowerCase();
+      if (altDisp && !rosterByDisplay.has(altDisp)) {
+        rosterByDisplay.set(altDisp, p);
+      }
+    }
   }
 
   const teamMetaByName = new Map<string, AggregatedTeamStats>();

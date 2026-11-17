@@ -28,6 +28,7 @@ export interface AggregatedPlayerStats {
   divisionId: string | null;
   divisionName: string;
   role: string;
+  altAccounts?: string[];
   soloTier: string | null;
   soloRank: string | null;
   soloLp: number | null;
@@ -136,6 +137,7 @@ export function aggregatePlayerStats(
     divisionId: string | null;
     divisionName: string;
     role: string;
+    altAccounts?: string[];
   }
 ): AggregatedPlayerStats {
   const matches = Array.isArray(row?.matches) ? row.matches : [];
@@ -214,6 +216,9 @@ export function aggregatePlayerStats(
     divisionId: meta.divisionId,
     divisionName: meta.divisionName,
     role: meta.role,
+    ...(meta.altAccounts && meta.altAccounts.length > 0
+      ? { altAccounts: meta.altAccounts }
+      : {}),
     soloTier: row?.solo_tier ?? null,
     soloRank: row?.solo_rank ?? null,
     soloLp: row?.solo_lp ?? null,

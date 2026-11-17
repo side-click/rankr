@@ -4,6 +4,7 @@ export interface RosterSlot {
   role: LeagueRole;
   name: string;
   is_captain?: boolean;
+  alt_accounts?: string[];
 }
 
 export const LEAGUE_ROLES: {
@@ -34,10 +35,14 @@ export function normalizeRoster(
   return LEAGUE_ROLES.map((roleDef, idx) => {
     const entry = items[idx];
     if (entry && typeof entry === "object" && "name" in entry) {
+      const alts = Array.isArray(entry.alt_accounts)
+        ? entry.alt_accounts.map((a) => String(a).trim()).filter(Boolean)
+        : [];
       return {
         role: (entry.role as LeagueRole) ?? roleDef.key,
         name: entry.name ?? "",
         is_captain: Boolean(entry.is_captain),
+        ...(alts.length > 0 ? { alt_accounts: alts } : {}),
       };
     }
 

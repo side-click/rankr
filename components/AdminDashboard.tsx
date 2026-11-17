@@ -170,6 +170,14 @@ export function AdminDashboard({
     useState<ConflictingBallotInfo | null>(null);
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [confirmOverwriteChecked, setConfirmOverwriteChecked] = useState(false);
+  const [altModal, setAltModal] = useState<{
+    teamId: string;
+    teamName: string;
+    slotIdx: number;
+    playerName: string;
+    alts: string[];
+  } | null>(null);
+  const [altInput, setAltInput] = useState("");
 
   const allowedIdSet = useMemo(
     () => new Set(allowedUsers.map((u) => u.discord_id)),
@@ -1623,6 +1631,33 @@ export function AdminDashboard({
                                   placeholder={roleMeta.label}
                                   className="flex-1 min-w-0 bg-transparent text-xs font-mono focus:outline-none"
                                 />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAltInput("");
+                                    setAltModal({
+                                      teamId: team.id,
+                                      teamName: team.name,
+                                      slotIdx: sIdx,
+                                      playerName: slot.name || roleMeta.label,
+                                      alts: [...(slot.alt_accounts ?? [])],
+                                    });
+                                  }}
+                                  title={
+                                    slot.alt_accounts?.length
+                                      ? `Alt accounts: ${slot.alt_accounts.join(", ")}`
+                                      : "Add alt Riot ID for official match stats"
+                                  }
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 cursor-pointer transition ${
+                                    slot.alt_accounts?.length
+                                      ? "bg-[#2a2210] border-[#c89b3c]/70 text-[#f0c020]"
+                                      : "bg-black/30 border-white/15 text-[#a6a89e] hover:text-white hover:border-white/30"
+                                  }`}
+                                >
+                                  {slot.alt_accounts?.length
+                                    ? `Alt (${slot.alt_accounts.length})`
+                                    : "+Alt"}
+                                </button>
                                 <label
                                   className="inline-flex items-center gap-1 cursor-pointer shrink-0 text-[10px] text-[#c7c5b8]"
                                   title="Set as Team Captain"
@@ -3311,6 +3346,170 @@ export function AdminDashboard({
                       ? "Force Overwrite Edition"
                       : "Move to Edition"}
                   </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {altModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="xp-window xp-window-scdl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="xp-titlebar xp-titlebar-scdl flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-[#f0c020]" />
+                <span>
+                  Alt Accounts — {altModal.playerName} ({altModal.teamName})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAltModal(null)}
+                className="text-[#c7c5b8] hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 text-xs bg-[#171b19]">
+              <p className="text-[11px] text-[#a6a89e]">
+                Add any alt Riot IDs (e.g. <code>AltName#NA1</code>) this
+                player used in official league matches. Only used to link match
+                stats back to this rostered player.
+              </p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={altInput}
+                  onChange={(e) => setAltInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const clean = altInput.trim();
+                      if (!clean) return;
+                      setAltModal((prev) =>
+                        prev &&
+                        !prev.alts.some(
+                          (a) => a.toLowerCase() === clean.toLowerCase()
+                        )
+                          ? { ...prev, alts: [...prev.alts, clean] }
+                          : prev
+                      );
+                      setAltInput("");
+                    }
+                  }}
+                  placeholder="RiotID#TAG"
+                  className="flex-1 xp-inset px-2.5 py-1.5 text-xs font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clean = altInput.trim();
+                    if (!clean) return;
+                    setAltModal((prev) =>
+                      prev &&
+                      !prev.alts.some(
+                        (a) => a.toLowerCase() === clean.toLowerCase()
+                      )
+                        ? { ...prev, alts: [...prev.alts, clean] }
+                        : prev
+                    );
+                    setAltInput("");
+                  }}
+                  className="xp-btn text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
+                </button>
+              </div>
+
+              {altModal.alts.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {altModal.alts.map((alt) => (
+                    <span
+                      key={alt}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-[#2a2210] border border-[#c89b3c]/60 text-[11px] font-mono text-[#f0c020]"
+                    >
+                      <span>{alt}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAltModal((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  alts: prev.alts.filter((a) => a !== alt),
+                                }
+                              : prev
+                          )
+                        }
+                        className="text-[#ff857a] hover:text-white cursor-pointer"
+                        title="Remove alt"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[11px] text-[#a6a89e] italic">
+                  No alt accounts linked yet.
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setAltModal(null)}
+                  className="xp-btn text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    const targetTeam = teams.find(
+                      (t) => t.id === altModal.teamId
+                    );
+                    if (!targetTeam) {
+                      setAltModal(null);
+                      return;
+                    }
+                    const cleanPending = altInput.trim();
+                    const finalAlts =
+                      cleanPending &&
+                      !altModal.alts.some(
+                        (a) => a.toLowerCase() === cleanPending.toLowerCase()
+                      )
+                        ? [...altModal.alts, cleanPending]
+                        : altModal.alts;
+                    const nextRoster = normalizeRoster(
+                      targetTeam.roster,
+                      targetTeam.captain
+                    ).map((r, idx) =>
+                      idx === altModal.slotIdx
+                        ? {
+                            ...r,
+                            ...(finalAlts.length > 0
+                              ? { alt_accounts: finalAlts }
+                              : { alt_accounts: undefined }),
+                          }
+                        : r
+                    );
+                    const updatedTeam = { ...targetTeam, roster: nextRoster };
+                    setTeams((prev) =>
+                      prev.map((t) =>
+                        t.id === updatedTeam.id ? updatedTeam : t
+                      )
+                    );
+                    setAltModal(null);
+                    void handleSaveTeam(updatedTeam);
+                  }}
+                  className="xp-btn xp-btn-primary text-xs"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Alts</span>
                 </button>
               </div>
             </div>

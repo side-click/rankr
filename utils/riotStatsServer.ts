@@ -145,6 +145,7 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
         divisionId: team.division_id,
         divisionName: div?.name ?? "Division",
         role: slot.role,
+        altAccounts: slot.alt_accounts ?? [],
       });
 
       aggregatedPlayers.push(agg);
