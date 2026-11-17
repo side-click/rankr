@@ -13,6 +13,7 @@ import {
   BarChart3,
   Clock,
   Coins,
+  Copy,
   Diff,
   Download,
   Droplet,
@@ -26,6 +27,8 @@ import {
   Swords,
   Trophy,
   User,
+  Users,
+  X,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
@@ -39,6 +42,7 @@ import {
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
 } from "@/utils/riotStatsAggregation";
+import type { UnrosteredSheetPlayer } from "@/utils/scdlSheetStats";
 
 interface DivisionItem {
   id: string;
@@ -121,12 +125,17 @@ export function AdminStatsDashboard({
   const [sheetData, setSheetData] = useState<{
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
+    unrosteredPlayers: UnrosteredSheetPlayer[];
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
   } | null>(null);
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [showUnrosteredModal, setShowUnrosteredModal] = useState(false);
+  const [copiedUnrosteredId, setCopiedUnrosteredId] = useState<string | null>(
+    null
+  );
 
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
@@ -215,6 +224,7 @@ export function AdminStatsDashboard({
         error?: string;
         players?: AggregatedPlayerStats[];
         teams?: AggregatedTeamStats[];
+        unrosteredPlayers?: UnrosteredSheetPlayer[];
         fetchedAt?: string;
         rowCount?: number;
         matchCount?: number;
@@ -225,6 +235,7 @@ export function AdminStatsDashboard({
       setSheetData({
         players: json.players,
         teams: json.teams,
+        unrosteredPlayers: json.unrosteredPlayers ?? [],
         fetchedAt: json.fetchedAt ?? new Date().toISOString(),
         rowCount: json.rowCount ?? 0,
         matchCount: json.matchCount ?? 0,
@@ -766,6 +777,19 @@ export function AdminStatsDashboard({
                   </strong>{" "}
                   league games ({sheetData.rowCount} rows)
                 </span>
+              )}
+              {sheetData && sheetData.unrosteredPlayers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowUnrosteredModal(true)}
+                  title="View unrostered sub / alt summoner names found in the sheet"
+                  className="xp-btn text-xs"
+                >
+                  <Users className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <span>
+                    Unrostered ({sheetData.unrosteredPlayers.length})
+                  </span>
+                </button>
               )}
               <button
                 type="button"
@@ -1756,7 +1780,78 @@ export function AdminStatsDashboard({
             </div>
           )}
         </div>
-      </RetroWindow>
+        {showUnrosteredModal && sheetData && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="xp-window xp-window-scdl w-full max-w-xl overflow-hidden shadow-2xl">
+            <div className="xp-titlebar xp-titlebar-scdl flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Users className="w-3.5 h-3.5 text-[#f0c020]" />
+                <span>
+                  Unrostered / Sub Accounts in Sheet (
+                  {sheetData.unrosteredPlayers.length})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUnrosteredModal(false)}
+                className="text-[#c7c5b8] hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 text-xs bg-[#171b19]">
+              <p className="text-[11px] text-[#a6a89e]">
+                These summoner names appeared in the SCDL sheet but do not match
+                any main roster player or linked alt account. Copy any alt
+                Riot ID to add it via <strong>Setup Teams &rarr; +Alt</strong>.
+              </p>
+              <div className="max-h-80 overflow-y-auto border border-white/10 rounded divide-y divide-white/10 bg-black/30">
+                {sheetData.unrosteredPlayers.map((u) => (
+                  <div
+                    key={`${u.riotId}-${u.teamName}`}
+                    className="px-3 py-2 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-mono font-bold text-[#f0ede0] truncate">
+                        {u.riotId}
+                      </div>
+                      <div className="text-[10px] text-[#a6a89e]">
+                        {u.teamName} • {u.role.toUpperCase()} • {u.games}{" "}
+                        {u.games === 1 ? "game" : "games"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(u.riotId).then(() => {
+                          setCopiedUnrosteredId(u.riotId);
+                          setTimeout(() => setCopiedUnrosteredId(null), 1500);
+                        });
+                      }}
+                      className="xp-btn text-[10px] px-2 py-1 shrink-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedUnrosteredId === u.riotId ? "Copied!" : "Copy"}
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowUnrosteredModal(false)}
+                  className="xp-btn text-xs"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </RetroWindow>
     </div>
   );
 }

@@ -18,9 +18,17 @@ const SCDL_SHEET_GIDS = [
   { gid: "1849724071", label: "Tab 2" },
 ];
 
+export interface UnrosteredSheetPlayer {
+  riotId: string;
+  teamName: string;
+  role: string;
+  games: number;
+}
+
 export interface SheetSyncSummary {
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
+  unrosteredPlayers: UnrosteredSheetPlayer[];
   fetchedAt: string;
   rowCount: number;
   matchCount: number;
@@ -271,6 +279,7 @@ export async function fetchScdlSheetStats(
   }
 
   const uniqueGames = new Set<string>();
+  const unrosteredMap = new Map<string, UnrosteredSheetPlayer>();
 
   for (const r of uniqueRows) {
     uniqueGames.add(r.gameId);
@@ -279,7 +288,20 @@ export async function fetchScdlSheetStats(
 
     const matchedRoster =
       rosterByKey.get(normKey) ?? rosterByDisplay.get(dispKey);
-    if (!matchedRoster) continue;
+    if (!matchedRoster) {
+      const existing = unrosteredMap.get(normKey);
+      if (existing) {
+        existing.games += 1;
+      } else {
+        unrosteredMap.set(normKey, {
+          riotId: r.playerName,
+          teamName: r.teamName,
+          role: r.role,
+          games: 1,
+        });
+      }
+      continue;
+    }
 
     const bucket = matchesByPlayerKey.get(matchedRoster.playerKey);
     if (!bucket) continue;
@@ -455,9 +477,17 @@ export async function fetchScdlSheetStats(
     };
   });
 
+  const unrosteredPlayers = [...unrosteredMap.values()].sort(
+    (a, b) =>
+      a.teamName.localeCompare(b.teamName) ||
+      b.games - a.games ||
+      a.riotId.localeCompare(b.riotId)
+  );
+
   return {
     players: aggregatedPlayers,
     teams: aggregatedTeams,
+    unrosteredPlayers,
     fetchedAt: nowIso,
     rowCount: uniqueRows.length,
     matchCount: uniqueGames.size,
