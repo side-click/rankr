@@ -99,6 +99,16 @@ export function AdminStatsDashboard({
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [showAllLeaderboards, setShowAllLeaderboards] = useState(false);
   const [matchCount, setMatchCount] = useState<number>(5);
+  const [dataSource, setDataSource] = useState<"riot" | "sheet">("riot");
+  const [sheetData, setSheetData] = useState<{
+    players: AggregatedPlayerStats[];
+    teams: AggregatedTeamStats[];
+    fetchedAt: string;
+    rowCount: number;
+    matchCount: number;
+  } | null>(null);
+  const [sheetLoading, setSheetLoading] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
 
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
@@ -123,20 +133,65 @@ export function AdminStatsDashboard({
     setSyncLogs((prev) => [{ time, level, text }, ...prev].slice(0, 120));
   }
 
+  async function loadSheetStats(force = false) {
+    if (!force && sheetData) return;
+    setSheetLoading(true);
+    setSheetError(null);
+    try {
+      const res = await fetch("/api/admin/scdl-sheet-stats", {
+        cache: "no-store",
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        players?: AggregatedPlayerStats[];
+        teams?: AggregatedTeamStats[];
+        fetchedAt?: string;
+        rowCount?: number;
+        matchCount?: number;
+      };
+      if (!res.ok || !json.players || !json.teams) {
+        throw new Error(json.error || `Sheet load failed (${res.status})`);
+      }
+      setSheetData({
+        players: json.players,
+        teams: json.teams,
+        fetchedAt: json.fetchedAt ?? new Date().toISOString(),
+        rowCount: json.rowCount ?? 0,
+        matchCount: json.matchCount ?? 0,
+      });
+    } catch (err) {
+      setSheetError(
+        err instanceof Error ? err.message : "Failed to load SCDL sheet stats"
+      );
+    } finally {
+      setSheetLoading(false);
+    }
+  }
+
+  const activePlayers = useMemo(
+    () => (dataSource === "sheet" && sheetData ? sheetData.players : players),
+    [dataSource, sheetData, players]
+  );
+
+  const activeTeams = useMemo(
+    () => (dataSource === "sheet" && sheetData ? sheetData.teams : teams),
+    [dataSource, sheetData, teams]
+  );
+
   const filteredPlayers = useMemo(() => {
-    const scoped = players.filter((p) =>
+    const scoped = activePlayers.filter((p) =>
       divisionFilter === "all" ? true : p.divisionId === divisionFilter
     );
     return computeRoleNormalizedRatings(scoped);
-  }, [players, divisionFilter]);
+  }, [activePlayers, divisionFilter]);
 
   const filteredTeams = useMemo(() => {
-    return teams
+    return activeTeams
       .filter((t) =>
         divisionFilter === "all" ? true : t.divisionId === divisionFilter
       )
       .sort((a, b) => b.winRate - a.winRate || b.avgKda - a.avgKda);
-  }, [teams, divisionFilter]);
+  }, [activeTeams, divisionFilter]);
 
   const syncedCount = useMemo(
     () => filteredPlayers.filter((p) => p.syncedAt !== null).length,
@@ -145,15 +200,21 @@ export function AdminStatsDashboard({
 
   const overview = useMemo(() => {
     const allMatches = filteredPlayers.flatMap((p) => p.matches);
-    const totalGames = allMatches.length;
+    const totalMatchRows = allMatches.length;
+    const totalGames =
+      dataSource === "sheet"
+        ? new Set(allMatches.map((m) => m.matchId)).size
+        : totalMatchRows;
     const avgDurationMin =
-      totalGames > 0
-        ? allMatches.reduce((s, m) => s + m.gameDuration, 0) / 60 / totalGames
+      totalMatchRows > 0
+        ? allMatches.reduce((s, m) => s + m.gameDuration, 0) /
+          60 /
+          totalMatchRows
         : 0;
     const avgKillsPerGame =
-      totalGames > 0
+      totalMatchRows > 0
         ? allMatches.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
-          totalGames
+          totalMatchRows
         : 0;
 
     const blueGames = allMatches.filter((m) => m.teamId === 100);
@@ -217,7 +278,7 @@ export function AdminStatsDashboard({
       champs,
       bannedChamps,
     };
-  }, [filteredPlayers]);
+  }, [filteredPlayers, dataSource]);
 
   const leaderboardPlayers = useMemo(
     () => filteredPlayers.filter((p) => p.games > 0),
@@ -508,6 +569,29 @@ export function AdminStatsDashboard({
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Admin Console</span>
         </Link>
+        <div className="flex items-center gap-1 bg-black/40 p-1 rounded border border-white/15">
+          <button
+            type="button"
+            onClick={() => setDataSource("riot")}
+            className={`xp-btn text-xs ${
+              dataSource === "riot" ? "xp-btn-primary" : ""
+            }`}
+          >
+            SoloQ (Riot API)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDataSource("sheet");
+              void loadSheetStats(false);
+            }}
+            className={`xp-btn text-xs ${
+              dataSource === "sheet" ? "xp-btn-primary" : ""
+            }`}
+          >
+            SCDL League (Sheet)
+          </button>
+        </div>
       </div>
 
       {missingTable && (
@@ -539,7 +623,14 @@ export function AdminStatsDashboard({
         </div>
       )}
 
-      <RetroWindow title={`Stats Lab (Riot API) - SCDL ${seasonName}`} theme="scdl">
+      <RetroWindow
+        title={
+          dataSource === "sheet"
+            ? `Stats Lab (SCDL Sheet) - SCDL ${seasonName}`
+            : `Stats Lab (Riot API) - SCDL ${seasonName}`
+        }
+        theme="scdl"
+      >
         {/* Division Toggle + Riot Sync Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -550,10 +641,10 @@ export function AdminStatsDashboard({
                 divisionFilter === "all" ? "xp-btn-primary" : ""
               }`}
             >
-              All Divisions ({players.length})
+              All Divisions ({activePlayers.length})
             </button>
             {divisions.map((div) => {
-              const count = players.filter(
+              const count = activePlayers.filter(
                 (p) => p.divisionId === div.id
               ).length;
               return (
@@ -580,64 +671,91 @@ export function AdminStatsDashboard({
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-[#a6a89e]">
-              Synced: <strong className="text-[#f0ede0]">{syncedCount}</strong>/
-              {filteredPlayers.length}
-            </span>
-            <select
-              value={matchCount}
-              disabled={syncing}
-              onChange={(e) => setMatchCount(Number(e.target.value))}
-              className="xp-inset px-2 py-1 text-[11px] font-bold"
-              title="Recent non-tournament games to pull per player"
-            >
-              <option value={3}>3 games / player</option>
-              <option value={5}>5 games / player</option>
-              <option value={10}>10 games / player</option>
-            </select>
-            {!syncing ? (
-              <>
-                <button
-                  type="button"
-                  disabled={
-                    !hasRiotKey ||
-                    missingTable ||
-                    filteredPlayers.length - syncedCount === 0
-                  }
-                  onClick={() => void runBatchSync(true)}
-                  title="Sync only players in this view who have never been synced"
-                  className="xp-btn text-xs disabled:opacity-50"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
-                  <span>
-                    Sync Missing ({filteredPlayers.length - syncedCount})
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled={!hasRiotKey || missingTable}
-                  onClick={() => void runBatchSync(false)}
-                  title="Force-refresh all players in the current division view"
-                  className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Re-Sync All ({filteredPlayers.length})</span>
-                </button>
-              </>
-            ) : (
+          {dataSource === "sheet" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {sheetData && (
+                <span className="text-[11px] text-[#a6a89e]">
+                  Loaded{" "}
+                  <strong className="text-[#f0ede0]">
+                    {sheetData.matchCount}
+                  </strong>{" "}
+                  league games ({sheetData.rowCount} rows)
+                </span>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  cancelSyncRef.current = true;
-                }}
-                className="xp-btn xp-btn-danger text-xs"
+                disabled={sheetLoading}
+                onClick={() => void loadSheetStats(true)}
+                title="Fetch latest SCDL League stats from the public Google Sheet"
+                className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
               >
-                <Square className="w-3 h-3" />
-                <span>Stop Sync</span>
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${sheetLoading ? "animate-spin" : ""}`}
+                />
+                <span>{sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}</span>
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-[#a6a89e]">
+                Synced:{" "}
+                <strong className="text-[#f0ede0]">{syncedCount}</strong>/
+                {filteredPlayers.length}
+              </span>
+              <select
+                value={matchCount}
+                disabled={syncing}
+                onChange={(e) => setMatchCount(Number(e.target.value))}
+                className="xp-inset px-2 py-1 text-[11px] font-bold"
+                title="Recent non-tournament games to pull per player"
+              >
+                <option value={3}>3 games / player</option>
+                <option value={5}>5 games / player</option>
+                <option value={10}>10 games / player</option>
+              </select>
+              {!syncing ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={
+                      !hasRiotKey ||
+                      missingTable ||
+                      filteredPlayers.length - syncedCount === 0
+                    }
+                    onClick={() => void runBatchSync(true)}
+                    title="Sync only players in this view who have never been synced"
+                    className="xp-btn text-xs disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
+                    <span>
+                      Sync Missing ({filteredPlayers.length - syncedCount})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!hasRiotKey || missingTable}
+                    onClick={() => void runBatchSync(false)}
+                    title="Force-refresh all players in the current division view"
+                    className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Re-Sync All ({filteredPlayers.length})</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    cancelSyncRef.current = true;
+                  }}
+                  className="xp-btn xp-btn-danger text-xs"
+                >
+                  <Square className="w-3 h-3" />
+                  <span>Stop Sync</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {syncProgress && (
@@ -667,7 +785,13 @@ export function AdminStatsDashboard({
           </div>
         )}
 
-        {syncError && (
+        {sheetError && dataSource === "sheet" && (
+          <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
+            {sheetError}
+          </div>
+        )}
+
+        {syncError && dataSource === "riot" && (
           <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
             {syncError}
           </div>
@@ -716,7 +840,9 @@ export function AdminStatsDashboard({
               {overview.totalGames}
             </div>
             <div className="text-[10px] text-[#a6a89e]">
-              Non-tournament personal games
+              {dataSource === "sheet"
+                ? "Official SCDL league games"
+                : "Non-tournament personal games"}
             </div>
           </div>
 
