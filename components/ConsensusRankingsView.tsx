@@ -110,7 +110,7 @@ export function ConsensusRankingsView({
   >(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showChange, setShowChange] = useState(true);
 
   useEffect(() => {
@@ -230,75 +230,14 @@ export function ConsensusRankingsView({
 
       <div className="relative p-4 sm:p-6 space-y-5">
         {/* Celebratory Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#c89b3c]/25">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f0c020]/25 to-[#8c6b16]/25 border border-[#f0c020]/60 flex items-center justify-center shadow-[0_0_24px_rgba(240,192,32,0.22)] shrink-0">
-              <Trophy className="w-6 h-6 text-[#f0c020]" />
-            </div>
-            <div>
-              <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-                Consensus Power Rankings
-              </h1>
-            </div>
+        <div className="flex items-center gap-3.5 pb-4 border-b border-[#c89b3c]/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f0c020]/25 to-[#8c6b16]/25 border border-[#f0c020]/60 flex items-center justify-center shadow-[0_0_24px_rgba(240,192,32,0.22)] shrink-0">
+            <Trophy className="w-6 h-6 text-[#f0c020]" />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {rows.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowChange((prev) => !prev)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
-                    showChange
-                      ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
-                      : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
-                  }`}
-                >
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  <span>{showChange ? "Hide Change" : "Show Change"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBreakdown((prev) => !prev)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
-                    showBreakdown
-                      ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
-                      : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>{showBreakdown ? "Hide Voter Ranks" : "Show Voter Ranks"}</span>
-                  {showBreakdown ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-black/40 border border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white transition cursor-pointer"
-            >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-[#7cd438]" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
-            </button>
-            {rows.length > 0 && (
-              <button
-                type="button"
-                onClick={handleExportPng}
-                disabled={exporting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold bg-gradient-to-b from-[#f0c020] to-[#c89b3c] text-[#141714] hover:brightness-110 transition shadow-[0_0_16px_rgba(240,192,32,0.28)] cursor-pointer disabled:opacity-60"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{exporting ? "Exporting..." : "Export PNG"}</span>
-              </button>
-            )}
+          <div>
+            <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+              Consensus Power Rankings
+            </h1>
           </div>
         </div>
 
@@ -567,6 +506,66 @@ export function ConsensusRankingsView({
             </div>
           </div>
         )}
+
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+          {rows.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowChange((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                  showChange
+                    ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
+                    : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                }`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span>{showChange ? "Hide Change" : "Show Change"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBreakdown((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                  showBreakdown
+                    ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
+                    : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>{showBreakdown ? "Hide Voter Ranks" : "Show Voter Ranks"}</span>
+                {showBreakdown ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-black/40 border border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white transition cursor-pointer"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-[#7cd438]" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span>{copied ? "Copied!" : "Copy Link"}</span>
+          </button>
+          {rows.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExportPng}
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold bg-gradient-to-b from-[#f0c020] to-[#c89b3c] text-[#141714] hover:brightness-110 transition shadow-[0_0_16px_rgba(240,192,32,0.28)] cursor-pointer disabled:opacity-60"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{exporting ? "Exporting..." : "Export PNG"}</span>
+            </button>
+          )}
+        </div>
 
         {/* Consensus Graphic / Empty State */}
         {rows.length === 0 ? (
