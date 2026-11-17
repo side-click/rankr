@@ -443,9 +443,10 @@ function DroppableTierRow({
             </span>
             <input
               type="text"
+              size={1}
               disabled={disabled}
               value={tier.label}
-              maxLength={14}
+              maxLength={13}
               onChange={(e) => onLabelChange(e.target.value)}
               placeholder="Tier..."
               style={{ color: contrastText }}
