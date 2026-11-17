@@ -52,8 +52,11 @@ interface AdminStatsDashboardProps {
   missingTable: boolean;
   hasRiotKey: boolean;
   ddVersion: string;
+  leagueName: string;
+  leagueLogoUrl: string | null;
   seasonName: string;
   seasonId: string | null;
+  currentEditionName: string;
   divisions: DivisionItem[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
@@ -97,8 +100,11 @@ export function AdminStatsDashboard({
   missingTable,
   hasRiotKey,
   ddVersion,
+  leagueName,
+  leagueLogoUrl,
   seasonName,
   seasonId,
+  currentEditionName,
   divisions,
   players,
   teams,
@@ -1295,7 +1301,7 @@ export function AdminStatsDashboard({
                   type="button"
                   onClick={() => void handleExportLeaderboardPng()}
                   disabled={exportingLeaderboard}
-                  className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold bg-gradient-to-b from-[#f0c020] to-[#c89b3c] text-[#141714] hover:brightness-110 transition shadow-[0_0_16px_rgba(240,192,32,0.28)] cursor-pointer disabled:opacity-60"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>
@@ -1314,9 +1320,17 @@ export function AdminStatsDashboard({
                 {/* Consensus-Style Graphic Header Banner */}
                 <div
                   style={{ background: bannerGradient }}
-                  className="border-b border-[#c89b3c]/40 text-white flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+                  className="border-b border-[#c89b3c]/40 text-white flex flex-wrap items-center justify-between gap-4 px-6 py-5"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
+                    {leagueLogoUrl && (
+                      <img
+                        src={leagueLogoUrl}
+                        alt={leagueName}
+                        crossOrigin="anonymous"
+                        className="w-16 h-12 object-contain drop-shadow shrink-0"
+                      />
+                    )}
                     {selectedDivision?.logo_url && (
                       <img
                         src={selectedDivision.logo_url}
@@ -1326,11 +1340,8 @@ export function AdminStatsDashboard({
                       />
                     )}
                     <div>
-                      <div className="text-[11px] uppercase tracking-wider font-bold text-[#f0c020]">
-                        SCDL {seasonName} •{" "}
-                        {dataSource === "sheet"
-                          ? "SCDL League Stats"
-                          : "SoloQ Stats"}
+                      <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
+                        {leagueName} ({seasonName})
                       </div>
                       <h2 className="wow-heading text-xl sm:text-2xl font-extrabold text-white leading-tight flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-[#f0c020] shrink-0" />
@@ -1340,16 +1351,21 @@ export function AdminStatsDashboard({
                             : "League Leaderboards"}
                         </span>
                       </h2>
+                      <div className="text-xs font-bold text-white/85 leading-snug">
+                        {dataSource === "sheet"
+                          ? "SCDL League Match Stats"
+                          : "SoloQ Riot API Stats"}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 bg-black/45 px-3 py-1.5 rounded-lg border border-[#f0c020]/40 shrink-0">
+                  <div className="flex items-center gap-2.5 bg-black/45 px-3.5 py-2 rounded-xl border border-[#f0c020]/50 shrink-0">
                     <div className="text-right">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
-                        {leaderboardPlayers.length} Players
+                        Current Edition
                       </div>
-                      <div className="text-xs font-extrabold text-white leading-tight">
-                        Top 5 Leaders
+                      <div className="text-sm font-extrabold text-white leading-tight">
+                        {currentEditionName}
                       </div>
                     </div>
                   </div>

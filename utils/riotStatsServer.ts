@@ -13,8 +13,11 @@ export interface LoadedAdminStatsContext {
   missingTable: boolean;
   hasRiotKey: boolean;
   ddVersion: string;
+  leagueName: string;
+  leagueLogoUrl: string | null;
   seasonName: string;
   seasonId: string | null;
+  currentEditionName: string;
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
@@ -45,24 +48,43 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
       missingTable: false,
       hasRiotKey,
       ddVersion,
+      leagueName: "",
+      leagueLogoUrl: null,
       seasonName: "",
       seasonId: null,
+      currentEditionName: "",
       divisions: [],
       players: [],
       teams: [],
     };
   }
 
-  const [{ data: seasons }, { data: divisions }, { data: teams }, statsRes] =
-    await Promise.all([
-      supabase
-        .from("seasons")
-        .select("id, name, is_active, created_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("divisions").select("id, name, slug, logo_url, theme_key, season_id").order("name"),
-      supabase.from("teams").select("id, name, logo_url, division_id, roster, captain, default_order").order("default_order"),
-      supabase.from("riot_player_stats").select("*"),
-    ]);
+  const [
+    { data: seasons },
+    { data: divisions },
+    { data: teams },
+    { data: editions },
+    statsRes,
+  ] = await Promise.all([
+    supabase
+      .from("seasons")
+      .select("id, name, is_active, created_at, leagues ( name, logo_url )")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("divisions")
+      .select("id, name, slug, logo_url, theme_key, season_id")
+      .order("name"),
+    supabase
+      .from("teams")
+      .select("id, name, logo_url, division_id, roster, captain, default_order")
+      .order("default_order"),
+    supabase
+      .from("editions")
+      .select("id, name, season_id, is_open, sort_order, created_at")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase.from("riot_player_stats").select("*"),
+  ]);
 
   const missingTable = Boolean(
     statsRes.error &&
@@ -72,6 +94,23 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
 
   const activeSeason =
     (seasons ?? []).find((s) => s.is_active) ?? (seasons ?? [])[0] ?? null;
+
+  const leagueInfo = (
+    activeSeason as unknown as {
+      leagues?: { name?: string; logo_url?: string | null } | null;
+    } | null
+  )?.leagues;
+  const leagueName = leagueInfo?.name ?? "SCDL";
+  const leagueLogoUrl = leagueInfo?.logo_url ?? null;
+
+  const seasonEditions = (editions ?? []).filter(
+    (e) => !activeSeason || e.season_id === activeSeason.id
+  );
+  const openEditions = seasonEditions.filter((e) => e.is_open);
+  const currentEditionName =
+    (openEditions.length > 0
+      ? openEditions[openEditions.length - 1]?.name
+      : seasonEditions[seasonEditions.length - 1]?.name) ?? "Week 1";
 
   const seasonDivisions = (divisions ?? []).filter(
     (d) => !activeSeason || d.season_id === activeSeason.id
@@ -170,8 +209,11 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
     missingTable,
     hasRiotKey,
     ddVersion,
+    leagueName,
+    leagueLogoUrl,
     seasonName: activeSeason?.name ?? "Active Season",
     seasonId: activeSeason?.id ?? null,
+    currentEditionName,
     divisions: seasonDivisions.map((d) => ({
       id: d.id,
       name: d.name,

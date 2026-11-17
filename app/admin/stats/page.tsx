@@ -30,8 +30,11 @@ export default async function AdminStatsPage() {
       missingTable={ctx.missingTable}
       hasRiotKey={ctx.hasRiotKey}
       ddVersion={ctx.ddVersion}
+      leagueName={ctx.leagueName}
+      leagueLogoUrl={ctx.leagueLogoUrl}
       seasonName={ctx.seasonName}
       seasonId={ctx.seasonId}
+      currentEditionName={ctx.currentEditionName}
       divisions={ctx.divisions}
       players={ctx.players}
       teams={ctx.teams}
