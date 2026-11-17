@@ -1,0 +1,982 @@
+"use client";
+
+import React, { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpDown,
+  Award,
+  BarChart3,
+  Clock,
+  RefreshCw,
+  Square,
+  Swords,
+  Users,
+} from "lucide-react";
+import { RetroWindow } from "@/components/RetroWindow";
+import { getChampionIconUrl } from "@/utils/riotApi";
+import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
+import {
+  formatMinutesSeconds,
+  formatSoloRank,
+  type AggregatedPlayerStats,
+  type AggregatedTeamStats,
+} from "@/utils/riotStatsAggregation";
+
+interface DivisionItem {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  theme_key: string;
+}
+
+interface AdminStatsDashboardProps {
+  missingTable: boolean;
+  hasRiotKey: boolean;
+  ddVersion: string;
+  seasonName: string;
+  seasonId: string | null;
+  divisions: DivisionItem[];
+  players: AggregatedPlayerStats[];
+  teams: AggregatedTeamStats[];
+}
+
+type SortKey =
+  | "rankScore"
+  | "winRate"
+  | "kda"
+  | "dpm"
+  | "gpm"
+  | "csPerMin"
+  | "kpPct"
+  | "visionPerMin"
+  | "games";
+
+const MIGRATION_SQL = `create table if not exists public.riot_player_stats (
+  player_key text primary key,
+  riot_id text not null,
+  puuid text,
+  season_id uuid references public.seasons(id) on delete set null,
+  division_id uuid references public.divisions(id) on delete set null,
+  team_id uuid references public.teams(id) on delete set null,
+  role text,
+  solo_tier text,
+  solo_rank text,
+  solo_lp integer,
+  solo_wins integer,
+  solo_losses integer,
+  matches jsonb not null default '[]'::jsonb,
+  sync_error text,
+  synced_at timestamptz not null default now()
+);
+alter table public.riot_player_stats enable row level security;
+create policy "Admins can manage riot_player_stats" on public.riot_player_stats for all
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));`;
+
+export function AdminStatsDashboard({
+  missingTable,
+  hasRiotKey,
+  ddVersion,
+  seasonName,
+  seasonId,
+  divisions,
+  players,
+  teams,
+}: AdminStatsDashboardProps) {
+  const router = useRouter();
+  const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<LeagueRole | "all">("all");
+  const [sortKey, setSortKey] = useState<SortKey>("kda");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [matchCount, setMatchCount] = useState<number>(5);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    done: number;
+    total: number;
+    currentLabel: string;
+  } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const cancelSyncRef = useRef(false);
+
+  const filteredPlayers = useMemo(() => {
+    return players.filter((p) =>
+      divisionFilter === "all" ? true : p.divisionId === divisionFilter
+    );
+  }, [players, divisionFilter]);
+
+  const filteredTeams = useMemo(() => {
+    return teams
+      .filter((t) =>
+        divisionFilter === "all" ? true : t.divisionId === divisionFilter
+      )
+      .sort((a, b) => b.winRate - a.winRate || b.avgKda - a.avgKda);
+  }, [teams, divisionFilter]);
+
+  const syncedCount = useMemo(
+    () => filteredPlayers.filter((p) => p.syncedAt !== null).length,
+    [filteredPlayers]
+  );
+
+  const overview = useMemo(() => {
+    const allMatches = filteredPlayers.flatMap((p) => p.matches);
+    const totalGames = allMatches.length;
+    const avgDurationMin =
+      totalGames > 0
+        ? allMatches.reduce((s, m) => s + m.gameDuration, 0) / 60 / totalGames
+        : 0;
+    const avgKillsPerGame =
+      totalGames > 0
+        ? allMatches.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
+          totalGames
+        : 0;
+
+    const blueGames = allMatches.filter((m) => m.teamId === 100);
+    const redGames = allMatches.filter((m) => m.teamId === 200);
+    const blueWr =
+      blueGames.length > 0
+        ? (blueGames.filter((m) => m.win).length / blueGames.length) * 100
+        : 50;
+    const redWr =
+      redGames.length > 0
+        ? (redGames.filter((m) => m.win).length / redGames.length) * 100
+        : 50;
+
+    const champMap = new Map<string, { games: number; wins: number }>();
+    for (const m of allMatches) {
+      const c = champMap.get(m.championName) ?? { games: 0, wins: 0 };
+      c.games += 1;
+      if (m.win) c.wins += 1;
+      champMap.set(m.championName, c);
+    }
+
+    const champs = [...champMap.entries()]
+      .map(([name, val]) => ({
+        name,
+        games: val.games,
+        wins: val.wins,
+        winRate: (val.wins / val.games) * 100,
+      }))
+      .sort((a, b) => b.games - a.games || b.winRate - a.winRate);
+
+    return {
+      totalGames,
+      avgDurationMin,
+      avgKillsPerGame,
+      uniqueChamps: champs.length,
+      blueWr,
+      redWr,
+      champs,
+    };
+  }, [filteredPlayers]);
+
+  const leaderboardPlayers = useMemo(
+    () => filteredPlayers.filter((p) => p.games > 0),
+    [filteredPlayers]
+  );
+
+  const topKda = useMemo(
+    () =>
+      [...leaderboardPlayers].sort((a, b) => b.kda - a.kda).slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topKills = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.killsPerGame - a.killsPerGame)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const lowestDeaths = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => a.deathsPerGame - b.deathsPerGame)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topCs = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.csPerMin - a.csPerMin)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topDpm = useMemo(
+    () =>
+      [...leaderboardPlayers].sort((a, b) => b.dpm - a.dpm).slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topGpm = useMemo(
+    () =>
+      [...leaderboardPlayers].sort((a, b) => b.gpm - a.gpm).slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topVision = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.visionPerMin - a.visionPerMin)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topKp = useMemo(
+    () =>
+      [...leaderboardPlayers].sort((a, b) => b.kpPct - a.kpPct).slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topDmgShare = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.damageSharePct - a.damageSharePct)
+        .slice(0, 5),
+    [leaderboardPlayers]
+  );
+
+  const tablePlayers = useMemo(() => {
+    const roleFiltered =
+      roleFilter === "all"
+        ? filteredPlayers
+        : filteredPlayers.filter((p) => p.role === roleFilter);
+
+    return [...roleFiltered].sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      return sortAsc ? av - bv : bv - av;
+    });
+  }, [filteredPlayers, roleFilter, sortKey, sortAsc]);
+
+  function handleSort(nextKey: SortKey) {
+    if (sortKey === nextKey) {
+      setSortAsc((prev) => !prev);
+    } else {
+      setSortKey(nextKey);
+      setSortAsc(false);
+    }
+  }
+
+  async function runBatchSync(onlyUnsynced: boolean) {
+    const queue = (
+      onlyUnsynced
+        ? filteredPlayers.filter((p) => p.syncedAt === null)
+        : filteredPlayers
+    ).map((p) => ({
+      playerKey: p.playerKey,
+      riotId: p.riotId,
+      seasonId,
+      divisionId: p.divisionId,
+      teamId: p.teamId,
+      role: p.role,
+    }));
+
+    if (queue.length === 0) {
+      setSyncError("All players in this view are already synced.");
+      return;
+    }
+
+    cancelSyncRef.current = false;
+    setSyncing(true);
+    setSyncError(null);
+    setSyncProgress({
+      done: 0,
+      total: queue.length,
+      currentLabel: queue[0].riotId,
+    });
+
+    const batchSize = 3;
+    try {
+      for (let i = 0; i < queue.length; i += batchSize) {
+        if (cancelSyncRef.current) break;
+        const batch = queue.slice(i, i + batchSize);
+        setSyncProgress({
+          done: i,
+          total: queue.length,
+          currentLabel: batch.map((b) => b.riotId.split("#")[0]).join(", "),
+        });
+
+        const res = await fetch("/api/admin/riot-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ players: batch, matchCount }),
+        });
+
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+
+        if (!res.ok) {
+          throw new Error(data.error || `Sync failed (${res.status})`);
+        }
+
+        setSyncProgress({
+          done: Math.min(i + batch.length, queue.length),
+          total: queue.length,
+          currentLabel: batch[batch.length - 1].riotId.split("#")[0],
+        });
+      }
+      router.refresh();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link href="/admin" className="xp-btn text-xs">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Admin Console</span>
+        </Link>
+        <span className="px-2.5 py-1 rounded bg-[#2a2210] border border-[#c89b3c]/60 text-[11px] font-bold text-[#f0c020]">
+          Admin-Only Riot API Stats Prototype • {seasonName}
+        </span>
+      </div>
+
+      {missingTable && (
+        <RetroWindow title="Setup Required — Create Stats Cache Table" theme="xp">
+          <div className="space-y-3 text-xs text-[#e8e5d8]">
+            <div className="flex items-start gap-2 text-[#f0c020] font-bold">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Run migration{" "}
+                <code>supabase/migrations/017_riot_stats_cache.sql</code> in
+                your Supabase SQL Editor to cache Riot API stats:
+              </span>
+            </div>
+            <pre className="xp-inset p-3 text-[11px] overflow-x-auto text-[#7cd438] font-mono">
+              {MIGRATION_SQL}
+            </pre>
+          </div>
+        </RetroWindow>
+      )}
+
+      {!hasRiotKey && (
+        <div className="xp-panel p-3 border border-[#9e3535] bg-[#451717]/60 text-xs text-[#ff857a] font-bold flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>
+            <code>RIOT_API_KEY</code> is not set in server environment
+            variables. Add it to <code>.env.local</code> and Vercel to sync live
+            Riot data.
+          </span>
+        </div>
+      )}
+
+      <RetroWindow title="SCDL Stats Lab — League Overview" theme="scdl">
+        {/* Division Toggle + Riot Sync Controls */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setDivisionFilter("all")}
+              className={`xp-btn text-xs ${
+                divisionFilter === "all" ? "xp-btn-primary" : ""
+              }`}
+            >
+              All Divisions ({players.length})
+            </button>
+            {divisions.map((div) => {
+              const count = players.filter(
+                (p) => p.divisionId === div.id
+              ).length;
+              return (
+                <button
+                  key={div.id}
+                  type="button"
+                  onClick={() => setDivisionFilter(div.id)}
+                  className={`xp-btn text-xs ${
+                    divisionFilter === div.id ? "xp-btn-primary" : ""
+                  }`}
+                >
+                  {div.logo_url && (
+                    <img
+                      src={div.logo_url}
+                      alt={div.name}
+                      className="w-4 h-4 object-contain"
+                    />
+                  )}
+                  <span>
+                    {div.name} ({count})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-[#a6a89e]">
+              Synced: <strong className="text-[#f0ede0]">{syncedCount}</strong>/
+              {filteredPlayers.length}
+            </span>
+            <select
+              value={matchCount}
+              disabled={syncing}
+              onChange={(e) => setMatchCount(Number(e.target.value))}
+              className="xp-inset px-2 py-1 text-[11px] font-bold"
+              title="Recent non-tournament games to pull per player"
+            >
+              <option value={3}>3 games / player</option>
+              <option value={5}>5 games / player</option>
+              <option value={10}>10 games / player</option>
+            </select>
+            {!syncing ? (
+              <>
+                <button
+                  type="button"
+                  disabled={!hasRiotKey || missingTable}
+                  onClick={() => void runBatchSync(true)}
+                  className="xp-btn text-xs disabled:opacity-50"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
+                  <span>Sync Unsynced</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasRiotKey || missingTable}
+                  onClick={() => void runBatchSync(false)}
+                  className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Re-Sync View</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  cancelSyncRef.current = true;
+                }}
+                className="xp-btn xp-btn-danger text-xs"
+              >
+                <Square className="w-3 h-3" />
+                <span>Stop Sync</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {syncProgress && (
+          <div className="mb-4 xp-inset p-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-[#f0c020] font-bold">
+                {syncing
+                  ? `Syncing Riot API (${syncProgress.currentLabel})...`
+                  : "Sync Complete"}
+              </span>
+              <span className="text-[#c7c5b8] font-mono">
+                {syncProgress.done} / {syncProgress.total}
+              </span>
+            </div>
+            <div className="w-full h-2 rounded bg-black/50 overflow-hidden">
+              <div
+                className="h-full bg-[#7cd438] transition-all"
+                style={{
+                  width: `${
+                    syncProgress.total > 0
+                      ? (syncProgress.done / syncProgress.total) * 100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {syncError && (
+          <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
+            {syncError}
+          </div>
+        )}
+
+        {/* Top Overview KPI Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Matches Analyzed</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.totalGames}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              Non-tournament personal games
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#7cd438]" />
+              <span>Avg Game Time</span>
+            </div>
+            <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
+              {formatMinutesSeconds(overview.avgDurationMin)}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              Across synced matches
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
+              <span>Avg Team Kills / G</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.avgKillsPerGame.toFixed(1)}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">Per player team</div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-[#00b8c9]" />
+              <span>Unique Champs</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.uniqueChamps}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              Patch {ddVersion}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between col-span-2 lg:col-span-1">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <BarChart3 className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Side Win Rate</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <div className="flex justify-between text-[11px] font-bold">
+                <span className="text-[#5ea3ff]">
+                  Blue {overview.blueWr.toFixed(1)}%
+                </span>
+                <span className="text-[#ff7b72]">
+                  Red {overview.redWr.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#ff7b72]/70">
+                <div
+                  className="bg-[#3b82f6] h-full"
+                  style={{ width: `${overview.blueWr}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Most Picked Champions Grid */}
+        {overview.champs.length > 0 && (
+          <div className="mb-6 xp-panel p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+                Champions Picked ({overview.champs.length})
+              </h2>
+              <span className="text-[10px] text-[#a6a89e]">
+                Top 36 by pick count
+              </span>
+            </div>
+            <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
+              {overview.champs.slice(0, 36).map((c) => (
+                <div
+                  key={c.name}
+                  title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
+                    0
+                  )}% WR)`}
+                  className="relative rounded border border-white/15 bg-black/40 overflow-hidden group"
+                >
+                  <img
+                    src={getChampionIconUrl(c.name, ddVersion)}
+                    alt={c.name}
+                    className="w-full aspect-square object-cover block"
+                  />
+                  <div className="absolute bottom-0 inset-x-0 bg-black/80 px-1 py-0.5 flex items-center justify-between text-[9px] font-bold leading-none">
+                    <span className="text-[#f0ede0]">{c.games}</span>
+                    <span
+                      className={
+                        c.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
+                      }
+                    >
+                      {c.winRate.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stat Leaderboards Grid (Top 5 cards) */}
+        {leaderboardPlayers.length > 0 && (
+          <div className="mb-6 space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+              Player Stat Leaderboards
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                {
+                  title: "Highest KDA",
+                  rows: topKda,
+                  fmt: (p: AggregatedPlayerStats) => p.kda.toFixed(2),
+                },
+                {
+                  title: "Highest Kills / Game",
+                  rows: topKills,
+                  fmt: (p: AggregatedPlayerStats) => p.killsPerGame.toFixed(1),
+                },
+                {
+                  title: "Lowest Deaths / Game",
+                  rows: lowestDeaths,
+                  fmt: (p: AggregatedPlayerStats) =>
+                    p.deathsPerGame.toFixed(1),
+                },
+                {
+                  title: "Highest CS / Min",
+                  rows: topCs,
+                  fmt: (p: AggregatedPlayerStats) => p.csPerMin.toFixed(2),
+                },
+                {
+                  title: "Highest Damage / Min",
+                  rows: topDpm,
+                  fmt: (p: AggregatedPlayerStats) => Math.round(p.dpm).toString(),
+                },
+                {
+                  title: "Highest Gold / Min",
+                  rows: topGpm,
+                  fmt: (p: AggregatedPlayerStats) => Math.round(p.gpm).toString(),
+                },
+                {
+                  title: "Highest Vision / Min",
+                  rows: topVision,
+                  fmt: (p: AggregatedPlayerStats) => p.visionPerMin.toFixed(2),
+                },
+                {
+                  title: "Highest Kill Participation",
+                  rows: topKp,
+                  fmt: (p: AggregatedPlayerStats) => `${p.kpPct.toFixed(1)}%`,
+                },
+                {
+                  title: "Highest Team Damage %",
+                  rows: topDmgShare,
+                  fmt: (p: AggregatedPlayerStats) =>
+                    `${p.damageSharePct.toFixed(1)}%`,
+                },
+              ].map((card) => (
+                <div key={card.title} className="xp-panel overflow-hidden">
+                  <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
+                    {card.title}
+                  </div>
+                  <div className="divide-y divide-white/10">
+                    {card.rows.map((p, idx) => (
+                      <Link
+                        key={p.playerKey}
+                        href={`/admin/stats/player/${encodeURIComponent(
+                          p.playerKey
+                        )}`}
+                        className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-mono text-[#a6a89e] w-3">
+                            {idx + 1}
+                          </span>
+                          {p.teamLogoUrl && (
+                            <img
+                              src={p.teamLogoUrl}
+                              alt={p.teamName}
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                          )}
+                          <span className="font-bold text-[#f0ede0] truncate">
+                            {p.displayName}
+                          </span>
+                        </div>
+                        <span className="font-mono font-bold text-[#7cd438] shrink-0">
+                          {card.fmt(p)}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Teams Table (Click through to Team Page) */}
+        <div className="mb-6 xp-panel overflow-hidden">
+          <div className="bg-[#121615] border-b border-white/10 px-3 py-2 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              <span>Teams ({filteredTeams.length})</span>
+            </h2>
+            <span className="text-[10px] text-[#a6a89e]">
+              Click any team for full roster breakdown
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-black/35 text-[10px] uppercase text-[#a6a89e] border-b border-white/10">
+                <tr>
+                  <th className="px-3 py-2">Team</th>
+                  <th className="px-3 py-2">Division</th>
+                  <th className="px-3 py-2 text-right">Games</th>
+                  <th className="px-3 py-2 text-right">WR%</th>
+                  <th className="px-3 py-2 text-right">KDA</th>
+                  <th className="px-3 py-2 text-right">DPM</th>
+                  <th className="px-3 py-2 text-right">GPM</th>
+                  <th className="px-3 py-2 text-right">Avg Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {filteredTeams.map((t) => (
+                  <tr
+                    key={t.teamId}
+                    className="hover:bg-white/5 transition cursor-pointer"
+                    onClick={() =>
+                      router.push(
+                        `/admin/stats/team/${encodeURIComponent(t.teamId)}`
+                      )
+                    }
+                  >
+                    <td className="px-3 py-2 font-bold text-[#f0ede0]">
+                      <div className="flex items-center gap-2">
+                        {t.logoUrl && (
+                          <img
+                            src={t.logoUrl}
+                            alt={t.teamName}
+                            className="w-5 h-5 object-contain shrink-0"
+                          />
+                        )}
+                        <span>{t.teamName}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-[#c7c5b8]">
+                      {t.divisionName}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {t.games}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-mono font-bold ${
+                        t.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
+                      }`}
+                    >
+                      {t.games > 0 ? `${t.winRate.toFixed(1)}%` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {t.games > 0 ? t.avgKda.toFixed(2) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {t.games > 0 ? Math.round(t.avgDpm) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {t.games > 0 ? Math.round(t.avgGpm) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {t.games > 0
+                        ? formatMinutesSeconds(t.avgGameMinutes)
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Full Players Leaderboard (Sortable + Role Filter) */}
+        <div className="xp-panel overflow-hidden">
+          <div className="bg-[#121615] border-b border-white/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+              Top Players ({tablePlayers.length})
+            </h2>
+            <div className="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setRoleFilter("all")}
+                className={`xp-btn text-[10px] px-2 py-1 ${
+                  roleFilter === "all" ? "xp-btn-primary" : ""
+                }`}
+              >
+                All Roles
+              </button>
+              {LEAGUE_ROLES.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => setRoleFilter(r.key)}
+                  className={`xp-btn text-[10px] px-2 py-1 ${
+                    roleFilter === r.key ? "xp-btn-primary" : ""
+                  }`}
+                >
+                  <img
+                    src={r.icon}
+                    alt={r.label}
+                    className="w-3.5 h-3.5 object-contain"
+                  />
+                  <span>{r.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-black/35 text-[10px] uppercase text-[#a6a89e] border-b border-white/10">
+                <tr>
+                  <th className="px-3 py-2">Player</th>
+                  <th className="px-2 py-2">Team</th>
+                  <th
+                    className="px-2 py-2 cursor-pointer hover:text-white"
+                    onClick={() => handleSort("rankScore")}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      SoloQ <ArrowUpDown className="w-3 h-3" />
+                    </span>
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("games")}
+                  >
+                    Games
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("winRate")}
+                  >
+                    WR%
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("kda")}
+                  >
+                    KDA
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("dpm")}
+                  >
+                    DPM
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("gpm")}
+                  >
+                    GPM
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("csPerMin")}
+                  >
+                    CS/m
+                  </th>
+                  <th
+                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    onClick={() => handleSort("kpPct")}
+                  >
+                    KP%
+                  </th>
+                  <th className="px-3 py-2">Top Champs</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {tablePlayers.map((p) => {
+                  const roleMeta = getRoleMeta(p.role as LeagueRole);
+                  return (
+                    <tr
+                      key={p.playerKey}
+                      onClick={() =>
+                        router.push(
+                          `/admin/stats/player/${encodeURIComponent(
+                            p.playerKey
+                          )}`
+                        )
+                      }
+                      className="hover:bg-white/5 transition cursor-pointer"
+                    >
+                      <td className="px-3 py-2 font-bold text-[#f0ede0] whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={roleMeta.icon}
+                            alt={roleMeta.label}
+                            className="w-4 h-4 object-contain shrink-0"
+                          />
+                          <span>{p.displayName}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-[#c7c5b8] whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {p.teamLogoUrl && (
+                            <img
+                              src={p.teamLogoUrl}
+                              alt={p.teamName}
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                          )}
+                          <span>{p.teamName}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-[11px] text-[#f0c020] whitespace-nowrap">
+                        {p.syncError ? (
+                          <span
+                            title={p.syncError}
+                            className="text-[#ff857a] font-mono"
+                          >
+                            Error
+                          </span>
+                        ) : (
+                          formatSoloRank(p.soloTier, p.soloRank, p.soloLp)
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games}
+                      </td>
+                      <td
+                        className={`px-2 py-2 text-right font-mono font-bold ${
+                          p.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
+                        }`}
+                      >
+                        {p.games > 0 ? `${p.winRate.toFixed(0)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono font-bold">
+                        {p.games > 0 ? p.kda.toFixed(2) : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? Math.round(p.dpm) : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? Math.round(p.gpm) : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? p.csPerMin.toFixed(1) : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1">
+                          {p.topChampions.slice(0, 3).map((c) => (
+                            <img
+                              key={c.name}
+                              src={getChampionIconUrl(c.name, ddVersion)}
+                              alt={c.name}
+                              title={`${c.name} (${c.games}G)`}
+                              className="w-5 h-5 rounded border border-white/20 object-cover"
+                            />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </RetroWindow>
+    </div>
+  );
+}
