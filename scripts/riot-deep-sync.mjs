@@ -41,12 +41,20 @@ async function paceRequest() {
   }
 }
 
+class RiotAuthError extends Error {}
+
 async function riotFetch(url) {
   for (let attempt = 0; attempt < 5; attempt++) {
     await paceRequest();
     const res = await fetch(url, {
       headers: { "X-Riot-Token": RIOT_API_KEY },
     });
+    if (res.status === 401 || res.status === 403) {
+      const text = await res.text().catch(() => "");
+      throw new RiotAuthError(
+        `Riot ${res.status}: RIOT_API_KEY expired or unauthorized (${text.slice(0, 120)})`
+      );
+    }
     if (res.status === 429) {
       const retryAfter = Number(res.headers.get("Retry-After") ?? "30");
       const waitSec = Math.max(2, Math.ceil(retryAfter) + 2);
@@ -318,6 +326,12 @@ for (let idx = 0; idx < players.length; idx++) {
         .join("/")}`
     );
   } catch (err) {
+    if (err instanceof RiotAuthError) {
+      console.error(
+        "::error::RIOT_API_KEY expired or unauthorized (HTTP 401/403). Regenerate your key at https://developer.riotgames.com/ and update the RIOT_API_KEY repository secret."
+      );
+      process.exit(1);
+    }
     console.error(`[${idx + 1}/${players.length}] ${p.riotId} ERR: ${err.message}`);
   }
 }
