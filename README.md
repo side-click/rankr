@@ -18,3 +18,5 @@ Found a bug or have a feature request? Feel free to open an issue in the **[Issu
 ---
 
 *All rights reserved. Source code is publicly viewable for transparency and issue tracking only and is not licensed for redistribution or commercial reuse.*
+
+*Rankr isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.*

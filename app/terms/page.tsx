@@ -63,14 +63,21 @@ export default function TermsPage() {
           </h2>
           <p>
             Rankr is provided &ldquo;as is&rdquo; without warranties of any
-            kind. All league names, team logos, and Riot Games / League of
-            Legends trademarks remain the property of their respective owners.
+            kind. All league names and team logos remain the property of their
+            respective owners. Rankr isn&apos;t endorsed by Riot Games and
+            doesn&apos;t reflect the views or opinions of Riot Games or anyone
+            officially involved in producing or managing Riot Games properties.
+            Riot Games, and all associated properties are trademarks or
+            registered trademarks of Riot Games, Inc.
           </p>
         </section>
 
-        <div className="pt-2">
+        <div className="pt-2 flex items-center gap-2">
           <Link href="/" className="xp-btn text-xs">
             ← Back to Home
+          </Link>
+          <Link href="/privacy" className="xp-btn text-xs">
+            Privacy Policy
           </Link>
         </div>
       </div>

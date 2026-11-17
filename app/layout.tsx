@@ -147,6 +147,13 @@ export default async function RootLayout({
               Terms of Service
             </Link>
             <span className="text-white/20">•</span>
+            <Link
+              href="/privacy"
+              className="text-[#c7c5b8] hover:text-[#f0c020] underline"
+            >
+              Privacy Policy
+            </Link>
+            <span className="text-white/20">•</span>
             <a
               href="https://github.com/side-click/rankr"
               target="_blank"
@@ -186,11 +193,12 @@ export default async function RootLayout({
           <div className="max-w-3xl mx-auto text-[10px] text-[#7e8781] leading-relaxed">
             Rankr is an independent platform and is not affiliated with or
             representing Scuttle Crab Draft League (SCDL). All SCDL names,
-            logos, and league content remain the property of SCDL. Rankr is not
-            endorsed by Riot Games and does not reflect the views or opinions of
-            Riot Games or anyone officially involved in producing or managing
-            League of Legends. League of Legends and Riot Games are trademarks
-            or registered trademarks of Riot Games, Inc.
+            logos, and league content remain the property of SCDL. Rankr
+            isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the views
+            or opinions of Riot Games or anyone officially involved in producing
+            or managing Riot Games properties. Riot Games, and all associated
+            properties are trademarks or registered trademarks of Riot Games,
+            Inc.
           </div>
         </footer>
       </body>
