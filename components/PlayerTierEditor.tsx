@@ -1171,15 +1171,21 @@ export function PlayerTierEditor({
   const isSpecificDivision = Boolean(
     divisionScope && divisionScope !== "all"
   );
+  const isAfterFirstEdition = Boolean(
+    editionId &&
+      seasonEditions.length > 0 &&
+      editionId !== seasonEditions[0].id
+  );
+  const isDraftDayDisallowed = isSpecificDivision || isAfterFirstEdition;
 
   useEffect(() => {
-    if (isSpecificDivision && selectedPreset === "draft_day") {
+    if (isDraftDayDisallowed && selectedPreset === "draft_day") {
       setSelectedPreset("standard");
     }
-  }, [isSpecificDivision, selectedPreset]);
+  }, [isDraftDayDisallowed, selectedPreset]);
 
   function handleApplyPreset(presetKey: Exclude<TierPresetKey, "custom">) {
-    if (presetKey === "draft_day" && isSpecificDivision) return;
+    if (presetKey === "draft_day" && isDraftDayDisallowed) return;
     if (presetKey === selectedPreset) return;
     if (!confirmSwitchScope()) return;
     setSelectedPreset(presetKey);
@@ -1767,8 +1773,15 @@ export function PlayerTierEditor({
                 if (!confirmSwitchScope()) return;
                 setEditionId(nextEdId);
                 const nextEd = seasonEditions.find((ed) => ed.id === nextEdId);
+                const isNextFirstEdition =
+                  seasonEditions.length > 0 &&
+                  nextEdId === seasonEditions[0].id;
                 setSelectedPreset(
-                  nextEd?.is_players_only ? "draft_day" : "standard"
+                  nextEd?.is_players_only &&
+                    !isSpecificDivision &&
+                    isNextFirstEdition
+                    ? "draft_day"
+                    : "standard"
                 );
                 setSelectedSplitByRole(false);
               }}
@@ -1919,7 +1932,7 @@ export function PlayerTierEditor({
               <div className="xp-inset p-1 flex items-center gap-1">
                 {TIER_PRESETS.map((preset) => {
                   const isPresetDisabled =
-                    preset.key === "draft_day" && isSpecificDivision;
+                    preset.key === "draft_day" && isDraftDayDisallowed;
                   return (
                     <button
                       key={preset.key}
@@ -1928,7 +1941,9 @@ export function PlayerTierEditor({
                       onClick={() => handleApplyPreset(preset.key)}
                       title={
                         isPresetDisabled
-                          ? "Draft Day Tiers are only available for All Divisions (pre-draft pool)"
+                          ? isSpecificDivision
+                            ? "Draft Day Tiers are only available for All Divisions (pre-draft pool)"
+                            : "Draft Day Tiers are only available for the first edition of a season"
                           : preset.description
                       }
                       className={`px-2 py-1 text-[11px] font-bold rounded-xs transition-colors ${
