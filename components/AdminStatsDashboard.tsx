@@ -904,7 +904,7 @@ export function AdminStatsDashboard({
           </div>
 
           {dataSource === "sheet" ? (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between lg:justify-end gap-2 w-full lg:w-auto">
               {sheetData && (
                 <span className="text-[11px] text-[#a6a89e] text-center sm:text-left">
                   Loaded{" "}
@@ -1351,22 +1351,9 @@ export function AdminStatsDashboard({
             : "linear-gradient(135deg, #1b3626 0%, #121615 100%)";
 
           return (
-            <div className="mb-6 space-y-2.5">
-              <div className="flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => void handleExportLeaderboardPng()}
-                  disabled={exportingLeaderboard}
-                  className="xp-btn xp-btn-gold text-xs disabled:opacity-50"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>
-                    {exportingLeaderboard ? "Exporting..." : "Export PNG"}
-                  </span>
-                </button>
-              </div>
-
-              <ScaledGraphicFrame designWidth={800}>
+            <div className="mb-6 space-y-3">
+              <div className="max-w-[800px] mx-auto w-full">
+                <ScaledGraphicFrame designWidth={800}>
                 <div ref={leaderboardCardRef} className="w-[800px] p-2.5">
                   <div
                     style={{
@@ -1517,16 +1504,28 @@ export function AdminStatsDashboard({
                 </div>
                 </div>
               </ScaledGraphicFrame>
+              </div>
 
-              <div className="flex justify-center pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowAllLeaderboards((prev) => !prev)}
-                  className="xp-btn text-[11px] px-3 py-1"
+                  className="xp-btn text-xs px-3 py-1.5"
                 >
                   {showAllLeaderboards
                     ? "Show Fewer Leaderboards ▲"
                     : "Show More Leaderboards ▼"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleExportLeaderboardPng()}
+                  disabled={exportingLeaderboard}
+                  className="xp-btn xp-btn-gold text-xs disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>
+                    {exportingLeaderboard ? "Exporting..." : "Export PNG"}
+                  </span>
                 </button>
               </div>
             </div>
