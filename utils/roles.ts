@@ -11,14 +11,14 @@ export const LEAGUE_ROLES: {
   label: string;
   icon: string;
 }[] = [
-  { key: "top", label: "Top", icon: "/images/Roles/120px-Top_icon.webp" },
-  { key: "jungle", label: "Jungle", icon: "/images/Roles/120px-Jungle_icon.webp" },
-  { key: "mid", label: "Mid", icon: "/images/Roles/120px-Middle_icon.webp" },
-  { key: "bot", label: "Bot", icon: "/images/Roles/120px-Bottom_icon.webp" },
-  { key: "support", label: "Support", icon: "/images/Roles/120px-Support_icon.webp" },
+  { key: "top", label: "Top", icon: "/images/roles/top.webp" },
+  { key: "jungle", label: "Jungle", icon: "/images/roles/jungle.webp" },
+  { key: "mid", label: "Mid", icon: "/images/roles/mid.webp" },
+  { key: "bot", label: "Bot", icon: "/images/roles/bot.webp" },
+  { key: "support", label: "Support", icon: "/images/roles/support.webp" },
 ];
 
-export const CAPTAIN_ICON = "/images/Roles/captain_crop.png";
+export const CAPTAIN_ICON = "/images/roles/captain.png";
 
 export function getRoleMeta(role: LeagueRole) {
   return LEAGUE_ROLES.find((r) => r.key === role) ?? LEAGUE_ROLES[0];

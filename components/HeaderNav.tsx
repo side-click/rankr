@@ -20,7 +20,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         className="flex items-center gap-2.5 shrink-0 hover:brightness-110 transition"
       >
         <img
-          src="/images/rankr_crop.png"
+          src="/images/brand/rankr-icon.png"
           alt="Rankr"
           className="w-10 h-10 sm:w-11 sm:h-11 object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,0.95)] drop-shadow-[0_6px_12px_rgba(0,0,0,0.75)]"
         />

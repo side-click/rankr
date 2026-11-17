@@ -7,7 +7,7 @@ export const DEFAULT_DIVISION_THEMES: Record<string, DivisionTheme> = {
     primary_color: "#6b2d8b",
     secondary_color: "#00b8c9",
     accent_text_color: "#c77dff",
-    default_logo_url: "/images/SCDL Logos/Baron.png",
+    default_logo_url: "/images/leagues/scdl/divisions/baron.png",
   },
   dragon: {
     key: "dragon",
@@ -15,7 +15,7 @@ export const DEFAULT_DIVISION_THEMES: Record<string, DivisionTheme> = {
     primary_color: "#e84a1b",
     secondary_color: "#3b1c4a",
     accent_text_color: "#ff8a5c",
-    default_logo_url: "/images/SCDL Logos/Dragon.png",
+    default_logo_url: "/images/leagues/scdl/divisions/dragon.png",
   },
 };
 

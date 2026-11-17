@@ -1,5 +1,5 @@
 <p>
-  <img src="images/rankr-wordmark.png" alt="Rankr" height="48" />
+  <img src="public/images/brand/rankr-wordmark.png" alt="Rankr" height="48" />
 </p>
 
 
