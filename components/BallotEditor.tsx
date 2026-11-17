@@ -281,7 +281,9 @@ function SortableTeamRow({
                       title={roleMeta.label}
                       className="w-4 h-4 object-contain shrink-0"
                     />
-                    <span className="truncate">{slot.name}</span>
+                    <span className="truncate">
+                      {slot.name.split("#")[0].trim() || slot.name}
+                    </span>
                     {slot.is_captain && (
                       <img
                         src={CAPTAIN_ICON}

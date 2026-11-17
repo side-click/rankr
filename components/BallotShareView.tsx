@@ -699,7 +699,9 @@ export function BallotShareView({
                                 crossOrigin="anonymous"
                                 className="w-3.5 h-3.5 object-contain shrink-0"
                               />
-                              <span className="truncate">{slot.name}</span>
+                              <span className="truncate">
+                                {slot.name.split("#")[0].trim() || slot.name}
+                              </span>
                               {slot.is_captain && (
                                 <img
                                   src={CAPTAIN_ICON}
