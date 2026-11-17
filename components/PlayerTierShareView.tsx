@@ -883,9 +883,7 @@ export function PlayerTierShareView({
                 hasAnyCommentary
                   ? "grid-cols-[148px_1fr_430px]"
                   : "grid-cols-[148px_1fr]"
-              } gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
-                exporting ? "px-7 py-2" : "px-3 py-1.5"
-              }`}
+              } gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-7 py-2`}
             >
               <div className="text-center">Tier</div>
               <div className={isMultiRoleCompact ? "px-2.5" : "px-3"}>
@@ -894,11 +892,7 @@ export function PlayerTierShareView({
               {hasAnyCommentary && <div className="text-center">Comments</div>}
             </div>
 
-            <div
-              className={`divide-y divide-[#39443f] ${
-                exporting ? "pb-3" : ""
-              }`}
-            >
+            <div className="divide-y divide-[#39443f] pb-3">
               {visibleSections.map((section, secIdx) => {
                 const roleMeta =
                   section.role !== "all" ? getRoleMeta(section.role) : null;
@@ -912,9 +906,7 @@ export function PlayerTierShareView({
                           hasAnyCommentary
                             ? "grid-cols-[148px_1fr_430px]"
                             : "grid-cols-[148px_1fr]"
-                        } gap-x-3 items-center ${
-                          exporting ? "px-7 py-2" : "px-3 py-2"
-                        }`}
+                        } gap-x-3 items-center px-7 py-2`}
                       >
                         <div />
                         <div
@@ -957,14 +949,8 @@ export function PlayerTierShareView({
                               hasAnyCommentary
                                 ? "grid-cols-[148px_1fr_430px]"
                                 : "grid-cols-[148px_1fr]"
-                            } gap-x-3 items-center ${
+                            } gap-x-3 items-center px-7 py-3 ${
                               isMultiRoleCompact ? "min-h-[82px]" : "min-h-[104px]"
-                            } ${
-                              exporting
-                                ? "px-7 py-3"
-                                : isMultiRoleCompact
-                                ? "px-3 py-2"
-                                : "px-3 py-2.5"
                             }`}
                           >
                             {/* Tier Label Cell */}

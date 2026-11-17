@@ -618,9 +618,7 @@ export function BallotShareView({
 
 
           <div
-            className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
-              exporting ? "px-10 py-2" : "px-3 py-1.5"
-            }`}
+            className="grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2"
           >
             <div className="text-center">Rank</div>
             <div className="text-center">Change</div>
@@ -637,10 +635,8 @@ export function BallotShareView({
                 <div
                   key={entry.id}
                   style={{ background: rankColor.cardBg }}
-                  className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 items-center ${
-                    exporting
-                      ? `px-10 ${isLast ? "pt-3.5 pb-6" : "py-3.5"}`
-                      : "px-3 py-3"
+                  className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 items-center px-10 ${
+                    isLast ? "pt-3.5 pb-6" : "py-3.5"
                   }`}
                 >
                   <div className="flex items-center justify-center">

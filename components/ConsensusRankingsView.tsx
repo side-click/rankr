@@ -664,9 +664,7 @@ export function ConsensusRankingsView({
                     showChange
                       ? "grid-cols-[100px_88px_1fr_140px_120px] gap-x-6"
                       : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
-                  } bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] ${
-                    exporting ? "px-10 py-2" : "px-8 py-2"
-                  }`}
+                  } bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2`}
                 >
                   <div className="text-center">Rank</div>
                   {showChange && <div className="text-center">Change</div>}
@@ -686,11 +684,7 @@ export function ConsensusRankingsView({
                       <div
                         key={row.teamKey}
                         style={{ background: rankColor.cardBg }}
-                        className={
-                          exporting
-                            ? `px-10 ${isLast ? "pt-4 pb-6" : "py-4"}`
-                            : "px-8 py-4"
-                        }
+                        className={`px-10 ${isLast ? "pt-4 pb-6" : "py-4"}`}
                       >
                         <div
                           className={`grid ${
