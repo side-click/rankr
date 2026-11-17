@@ -959,7 +959,10 @@ export function AdminStatsDashboard({
           ];
 
           const renderCard = (card: LeaderboardCard) => (
-            <div key={card.title} className="xp-panel overflow-hidden">
+            <div
+              key={card.title}
+              className="xp-panel overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
+            >
               <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
                 {card.title}
               </div>
@@ -1002,20 +1005,20 @@ export function AdminStatsDashboard({
                 Leaderboards
               </h2>
 
-              <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {primaryRow.map(renderCard)}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {secondaryRow.map(renderCard)}
               </div>
 
               {showAllLeaderboards && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="flex flex-wrap justify-center gap-3">
                     {expandedRow1.map(renderCard)}
                   </div>
-                  <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="flex flex-wrap justify-center gap-3">
                     {expandedRow2.map(renderCard)}
                   </div>
                 </>
