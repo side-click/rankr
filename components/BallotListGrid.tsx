@@ -35,7 +35,11 @@ export function BallotListGrid({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div
+        className={`flex-wrap items-center justify-between gap-2 ${
+          headerLeft || showCount ? "flex" : "hidden md:flex"
+        }`}
+      >
         <div className="text-[11px] text-[#a6a89e]">
           {headerLeft
             ? headerLeft
@@ -43,7 +47,7 @@ export function BallotListGrid({
             ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
             : null}
         </div>
-        <div className="xp-inset p-0.5 inline-flex items-center gap-0.5">
+        <div className="xp-inset p-0.5 hidden md:inline-flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => setViewMode("grid")}
@@ -80,11 +84,18 @@ export function BallotListGrid({
           ))}
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {ballots.map((b) => (
-            <BallotCard key={b.id} ballot={b} layout="list" />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {ballots.map((b) => (
+              <BallotCard key={b.id} ballot={b} layout="grid" />
+            ))}
+          </div>
+          <div className="hidden md:block space-y-2.5">
+            {ballots.map((b) => (
+              <BallotCard key={b.id} ballot={b} layout="list" />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
