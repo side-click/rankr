@@ -434,18 +434,24 @@ function DroppableTierRow({
           }}
           className="md:w-[152px] shrink-0 p-2.5 flex flex-row md:flex-col items-center justify-between gap-2 border-b md:border-b-0 md:border-r border-black/30 rounded-t-lg md:rounded-t-none md:rounded-l-lg"
         >
-          <textarea
-            rows={2}
-            disabled={disabled}
-            value={tier.label}
-            maxLength={32}
-            onChange={(e) =>
-              onLabelChange(e.target.value.replace(/[\r\n]+/g, " "))
-            }
-            placeholder="Tier..."
-            style={{ color: contrastText }}
-            className="w-full bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-1.5 py-1 text-center font-black text-sm leading-tight resize-none focus:outline-none placeholder:text-white/50 disabled:opacity-75"
-          />
+          <div className="inline-grid items-center justify-items-center max-w-full">
+            <span
+              aria-hidden="true"
+              className="col-start-1 row-start-1 invisible whitespace-pre px-2 py-1 font-black text-sm leading-tight min-w-[2ch]"
+            >
+              {tier.label || "Tier..."}
+            </span>
+            <input
+              type="text"
+              disabled={disabled}
+              value={tier.label}
+              maxLength={14}
+              onChange={(e) => onLabelChange(e.target.value)}
+              placeholder="Tier..."
+              style={{ color: contrastText }}
+              className="col-start-1 row-start-1 w-full min-w-0 bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black text-sm leading-tight focus:outline-none placeholder:text-white/50 disabled:opacity-75"
+            />
+          </div>
 
           {!disabled && (
             <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
