@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Square,
   Swords,
+  Trophy,
   User,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -1156,8 +1157,9 @@ export function AdminStatsDashboard({
 
           return (
             <div className="mb-6 space-y-3">
-              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] text-center">
-                Leaderboards
+              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-center gap-2">
+                <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
+                <span>Leaderboards</span>
               </h2>
 
               <div className="flex flex-wrap justify-center gap-3">
