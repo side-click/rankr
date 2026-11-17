@@ -524,6 +524,128 @@ export async function fetchScdlSheetStats(
     };
   });
 
+  // Build head-to-head series records across unique sheet games
+  const h2hGamesBySeries = new Map<
+    string,
+    Map<string, { teamA: string; teamB: string; winner: string }>
+  >();
+  for (const r of uniqueRows) {
+    const sKey = r.matchLabel?.trim() || r.gameId;
+    let gMap = h2hGamesBySeries.get(sKey);
+    if (!gMap) {
+      gMap = new Map();
+      h2hGamesBySeries.set(sKey, gMap);
+    }
+    const existing = gMap.get(r.gameId) ?? {
+      teamA: "",
+      teamB: "",
+      winner: "",
+    };
+    const tLower = r.teamName.trim().toLowerCase();
+    if (!existing.teamA) existing.teamA = tLower;
+    else if (existing.teamA !== tLower && !existing.teamB) existing.teamB = tLower;
+    if (r.win) existing.winner = tLower;
+    gMap.set(r.gameId, existing);
+  }
+
+  // h2hSeriesRecord[teamLower][oppLower] = { wins, losses }
+  const h2hRecord = new Map<
+    string,
+    Map<string, { wins: number; losses: number }>
+  >();
+  for (const gMap of h2hGamesBySeries.values()) {
+    const gamesList = [...gMap.values()].filter((g) => g.teamA && g.teamB);
+    if (gamesList.length === 0) continue;
+    const tA = gamesList[0].teamA;
+    const tB = gamesList[0].teamB;
+    let aWins = 0;
+    let bWins = 0;
+    for (const g of gamesList) {
+      if (g.winner === tA) aWins++;
+      else if (g.winner === tB) bWins++;
+    }
+    if (aWins === bWins) continue;
+    const sWinner = aWins > bWins ? tA : tB;
+    const sLoser = aWins > bWins ? tB : tA;
+    if (!h2hRecord.has(sWinner)) h2hRecord.set(sWinner, new Map());
+    if (!h2hRecord.has(sLoser)) h2hRecord.set(sLoser, new Map());
+    const wEntry = h2hRecord.get(sWinner)!.get(sLoser) ?? { wins: 0, losses: 0 };
+    wEntry.wins += 1;
+    h2hRecord.get(sWinner)!.set(sLoser, wEntry);
+    const lEntry = h2hRecord.get(sLoser)!.get(sWinner) ?? { wins: 0, losses: 0 };
+    lEntry.losses += 1;
+    h2hRecord.get(sLoser)!.set(sWinner, lEntry);
+  }
+
+  // Compute division standings & seeds:
+  // 1) Series record (diff, then win%), 2) Head-to-head among tied teams, 3) Game record (diff, then win%)
+  const teamsByDiv = new Map<string, AggregatedTeamStats[]>();
+  for (const team of aggregatedTeams) {
+    const list = teamsByDiv.get(team.divisionId) ?? [];
+    list.push(team);
+    teamsByDiv.set(team.divisionId, list);
+  }
+  for (const divList of teamsByDiv.values()) {
+    const seriesBuckets = new Map<string, AggregatedTeamStats[]>();
+    for (const t of divList) {
+      const sW = t.seriesWins ?? t.wins;
+      const sL = t.seriesLosses ?? Math.max(0, t.games - t.wins);
+      const key = `${t.games > 0 ? 1 : 0}:${sW - sL}:${sW}:${sL}`;
+      const bucket = seriesBuckets.get(key) ?? [];
+      bucket.push(t);
+      seriesBuckets.set(key, bucket);
+    }
+    const h2hScoreAgainstTied = new Map<string, number>();
+    for (const bucket of seriesBuckets.values()) {
+      if (bucket.length < 2) continue;
+      const tiedNames = new Set(bucket.map((b) => b.teamName.toLowerCase()));
+      for (const b of bucket) {
+        const oppMap = h2hRecord.get(b.teamName.toLowerCase());
+        let w = 0;
+        let l = 0;
+        if (oppMap) {
+          for (const [opp, rec] of oppMap.entries()) {
+            if (tiedNames.has(opp)) {
+              w += rec.wins;
+              l += rec.losses;
+            }
+          }
+        }
+        h2hScoreAgainstTied.set(b.teamId, w - l + (w + l > 0 ? w / (w + l) * 0.01 : 0));
+      }
+    }
+
+    divList.sort((a, b) => {
+      const aHas = a.games > 0 ? 1 : 0;
+      const bHas = b.games > 0 ? 1 : 0;
+      if (aHas !== bHas) return bHas - aHas;
+
+      const aSW = a.seriesWins ?? a.wins;
+      const aSL = a.seriesLosses ?? Math.max(0, a.games - a.wins);
+      const bSW = b.seriesWins ?? b.wins;
+      const bSL = b.seriesLosses ?? Math.max(0, b.games - b.wins);
+      const seriesDiff = (bSW - bSL) - (aSW - aSL);
+      if (seriesDiff !== 0) return seriesDiff;
+      const aSPct = aSW + aSL > 0 ? aSW / (aSW + aSL) : 0;
+      const bSPct = bSW + bSL > 0 ? bSW / (bSW + bSL) : 0;
+      if (bSPct !== aSPct) return bSPct - aSPct;
+
+      const aH2H = h2hScoreAgainstTied.get(a.teamId) ?? 0;
+      const bH2H = h2hScoreAgainstTied.get(b.teamId) ?? 0;
+      if (bH2H !== aH2H) return bH2H - aH2H;
+
+      const aGDiff = a.wins - (a.games - a.wins);
+      const bGDiff = b.wins - (b.games - b.wins);
+      if (bGDiff !== aGDiff) return bGDiff - aGDiff;
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      return b.avgKda - a.avgKda;
+    });
+
+    divList.forEach((t, idx) => {
+      t.seed = idx + 1;
+    });
+  }
+
   const unrosteredPlayers = [...unrosteredMap.values()].sort(
     (a, b) =>
       a.teamName.localeCompare(b.teamName) ||

@@ -290,6 +290,9 @@ export function AdminStatsDashboard({
         divisionFilter === "all" ? true : t.divisionId === divisionFilter
       )
       .sort((a, b) => {
+        if (a.seed != null && b.seed != null && a.seed !== b.seed) {
+          return a.seed - b.seed;
+        }
         const aSeriesDiff =
           (a.seriesWins ?? a.wins) -
           (a.seriesLosses ?? Math.max(0, a.games - a.wins));
@@ -2120,6 +2123,7 @@ export function AdminStatsDashboard({
             <table className="w-full text-xs text-left">
               <thead className="bg-black/35 text-[10px] uppercase text-[#a6a89e] border-b border-white/10">
                 <tr>
+                  <th className="px-3 py-2 text-center w-10">Seed</th>
                   <th className="px-3 py-2">Team</th>
                   <th className="px-3 py-2">Division</th>
                   <th className="px-3 py-2 text-right">Series</th>
@@ -2146,6 +2150,9 @@ export function AdminStatsDashboard({
                       )
                     }
                   >
+                    <td className="px-3 py-2 text-center font-mono font-extrabold text-[#f0c020]">
+                      {t.seed != null ? `#${t.seed}` : "—"}
+                    </td>
                     <td className="px-3 py-2 font-bold text-[#f0ede0]">
                       <div className="flex items-center gap-2">
                         {t.logoUrl && (

@@ -288,8 +288,14 @@ export function AdminTeamScoutingView({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center w-full lg:w-auto shrink-0">
-            <div className="xp-inset px-3 py-2">
+          <div className="grid grid-cols-3 gap-2 text-center w-full sm:w-auto shrink-0">
+            <div className="xp-inset px-3 py-2 min-w-[76px]">
+              <div className="text-[10px] uppercase text-[#a6a89e]">Seed</div>
+              <div className="text-base font-black text-[#f0c020]">
+                {leagueTeam?.seed != null ? `#${leagueTeam.seed}` : "—"}
+              </div>
+            </div>
+            <div className="xp-inset px-3 py-2 min-w-[76px]">
               <div className="text-[10px] uppercase text-[#a6a89e]">Series</div>
               <div
                 className={`text-base font-black ${
@@ -303,7 +309,7 @@ export function AdminTeamScoutingView({
                 {displayTeam.games > 0 ? `${sWins}-${sLosses}` : "—"}
               </div>
             </div>
-            <div className="xp-inset px-3 py-2">
+            <div className="xp-inset px-3 py-2 min-w-[76px]">
               <div className="text-[10px] uppercase text-[#a6a89e]">Games</div>
               <div
                 className={`text-base font-black ${
@@ -315,32 +321,6 @@ export function AdminTeamScoutingView({
                 }`}
               >
                 {displayTeam.games > 0 ? `${gWins}-${gLosses}` : "—"}
-              </div>
-            </div>
-            <div className="xp-inset px-3 py-2">
-              <div className="text-[10px] uppercase text-[#a6a89e]">
-                Avg KDA
-              </div>
-              <div className="text-base font-black text-[#f0c020]">
-                {displayTeam.games > 0 ? displayTeam.avgKda.toFixed(2) : "—"}
-              </div>
-            </div>
-            <div className="xp-inset px-3 py-2">
-              <div className="text-[10px] uppercase text-[#a6a89e]">
-                Avg DPM
-              </div>
-              <div className="text-base font-black text-white">
-                {displayTeam.games > 0 ? Math.round(displayTeam.avgDpm) : "—"}
-              </div>
-            </div>
-            <div className="xp-inset px-3 py-2">
-              <div className="text-[10px] uppercase text-[#a6a89e]">
-                Avg Time
-              </div>
-              <div className="text-base font-black text-white">
-                {displayTeam.games > 0
-                  ? formatMinutesSeconds(displayTeam.avgGameMinutes)
-                  : "—"}
               </div>
             </div>
           </div>
@@ -407,18 +387,18 @@ export function AdminTeamScoutingView({
                         src={roleMeta.icon}
                         alt={roleMeta.label}
                         title={roleMeta.label}
-                        className="w-6 h-6 object-contain shrink-0"
+                        className="w-7 h-7 object-contain shrink-0"
                       />
-                      <span className="font-extrabold text-base sm:text-[17px] text-[#f0ede0] truncate">
+                      <span className="font-extrabold text-lg text-[#f0ede0] truncate">
                         {soloPlayer.displayName}
                       </span>
                     </Link>
-                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1.5">
                       <span className={`text-xs font-bold ${styledRank.className}`}>
                         {styledRank.label}
                       </span>
                       {roleRank !== null && (
-                        <span className="text-[11px] font-extrabold text-[#f0c020] bg-black/40 border border-[#f0c020]/35 rounded px-1.5 py-0.5">
+                        <span className="text-xs sm:text-[13px] font-extrabold text-[#f0c020] bg-black/45 border border-[#f0c020]/40 rounded px-2 py-0.5">
                           #{roleRank} {roleMeta.label}
                         </span>
                       )}
