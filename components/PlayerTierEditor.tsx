@@ -671,14 +671,15 @@ export function PlayerTierEditor({
     return reversed.find((ed) => ed.is_open && !ed.is_archived)?.id ?? null;
   }, [seasonEditions]);
 
-  // "all" means division_id = null ("All Divisions" / Pre-draft / SCDL theme)
+  // "" = unselected, "all" = division_id = null ("All Divisions" / Pre-draft / SCDL theme)
   const [divisionScope, setDivisionScope] = useState<string>(() => {
-    if (!initialDivisionSlug || initialDivisionSlug === "all") return "all";
+    if (!initialDivisionSlug) return "";
+    if (initialDivisionSlug === "all") return "all";
     const match = divisions.find(
       (d) =>
         d.season_id === defaultSeason?.id && d.slug === initialDivisionSlug
     );
-    return match?.id ?? "all";
+    return match?.id ?? "";
   });
 
   const [editionId, setEditionId] = useState<string>(() => {
@@ -708,10 +709,18 @@ export function PlayerTierEditor({
 
   useEffect(() => {
     if (
+      divisionScope !== "" &&
       divisionScope !== "all" &&
       !seasonDivisions.some((d) => d.id === divisionScope)
     ) {
-      setDivisionScope("all");
+      setDivisionScope("");
+      if (editionId !== "") setEditionId("");
+      return;
+    }
+
+    if (!divisionScope) {
+      if (editionId !== "") setEditionId("");
+      return;
     }
 
     if (seasonEditions.length === 0) {
@@ -726,7 +735,7 @@ export function PlayerTierEditor({
 
   // Resolve available player pool for this scope
   const availablePlayers = useMemo<PlayerTierItem[]>(() => {
-    if (!seasonId) return [];
+    if (!seasonId || !divisionScope) return [];
 
     // Helper: team roster lookup map by lower name for this season
     const teamRosterByName = new Map<
@@ -968,7 +977,7 @@ export function PlayerTierEditor({
 
   // Load saved player tier ballot when (seasonId, divisionScope, editionId) or tier_variant changes
   useEffect(() => {
-    if (!seasonId || !editionId) {
+    if (!seasonId || !divisionScope || !editionId) {
       lastLoadedKeyRef.current = "";
       lastScopeKeyRef.current = "";
       setExistingBallotId(null);
@@ -1647,9 +1656,24 @@ export function PlayerTierEditor({
                 if (nextScope === divisionScope) return;
                 if (!confirmSwitchScope()) return;
                 setDivisionScope(nextScope);
+                if (!nextScope) {
+                  setEditionId("");
+                } else if (!editionId && seasonEditions.length > 0) {
+                  const reversedEds = [...seasonEditions].reverse();
+                  const latestOpen = reversedEds.find(
+                    (ed) => ed.is_open && !ed.is_archived
+                  );
+                  const latestActive = reversedEds.find(
+                    (ed) => !ed.is_archived
+                  );
+                  setEditionId(
+                    (latestOpen ?? latestActive ?? reversedEds[0]).id
+                  );
+                }
               }}
               className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
             >
+              <option value="">Select a player pool...</option>
               <option value="all">
                 All Divisions
               </option>
@@ -1964,10 +1988,10 @@ export function PlayerTierEditor({
           <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
             Loading players &amp; saved tiers...
           </div>
-        ) : !seasonId || !editionId ? (
+        ) : !seasonId || !divisionScope || !editionId ? (
           <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
-            Select a season and edition above to start building your Player Tier
-            List.
+            Select a season, player pool, and edition above to start building
+            your Player Tier List.
           </div>
         ) : availablePlayers.length === 0 && totalPlacedPlayers === 0 ? (
           <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
