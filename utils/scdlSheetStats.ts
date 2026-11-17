@@ -705,5 +705,20 @@ export async function fetchAllScdlSeries(): Promise<ScdlSeriesDetail[]> {
     });
   }
 
+function roundSortRank(label: string): number {
+  const m = label.match(/round\s*(\d+)/i);
+  if (m) return Number(m[1]);
+  if (/quarter/i.test(label)) return 1001;
+  if (/semi/i.test(label)) return 1002;
+  if (/final/i.test(label)) return 1003;
+  return 999;
+}
+
+  seriesList.sort(
+    (a, b) =>
+      roundSortRank(a.roundLabel) - roundSortRank(b.roundLabel) ||
+      a.matchLabel.localeCompare(b.matchLabel)
+  );
+
   return seriesList;
 }

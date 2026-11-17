@@ -72,6 +72,7 @@ export default async function AdminTeamStatsPage({
   return (
     <AdminTeamScoutingView
       ddVersion={ctx.ddVersion}
+      leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}
       divisionThemeKey={divisionThemeKey}
       team={team}

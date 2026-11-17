@@ -18,12 +18,24 @@ import { resolveDivisionTheme } from "@/utils/themes";
 
 interface AdminTeamScoutingViewProps {
   ddVersion: string;
+  leagueName?: string;
   seasonName: string;
   divisionThemeKey: string;
   team: AggregatedTeamStats;
   leagueTeam: AggregatedTeamStats | null;
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
+}
+
+function deriveLeaguePrefix(leagueName?: string): string {
+  const raw = (leagueName ?? "").trim();
+  if (!raw) return "League";
+  if (raw.length <= 6 && !raw.includes(" ")) return raw.toUpperCase();
+  const initials = raw
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  return initials || raw;
 }
 
 function isOutlierChamp(
@@ -49,6 +61,7 @@ function formatMasteryPoints(pts: number): string {
 
 export function AdminTeamScoutingView({
   ddVersion,
+  leagueName,
   seasonName,
   divisionThemeKey,
   team,
@@ -56,6 +69,7 @@ export function AdminTeamScoutingView({
   seriesHistory,
   teamLogoMap,
 }: AdminTeamScoutingViewProps) {
+  const leaguePrefix = deriveLeaguePrefix(leagueName);
   const divTheme = resolveDivisionTheme(divisionThemeKey);
   const windowTheme =
     divisionThemeKey === "dragon"
@@ -442,10 +456,10 @@ export function AdminTeamScoutingView({
                     </div>
                   </div>
 
-                  {/* 1. This Season (League) */}
+                  {/* 1. This Season (League Prefix) */}
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020] mb-1.5">
-                      This Season (League)
+                      This Season ({leaguePrefix})
                     </div>
                     {leagueChamps.length > 0 ? (
                       <div className="space-y-1">
@@ -603,8 +617,8 @@ export function AdminTeamScoutingView({
         </div>
 
         {/* Draft Scouting: Banned Against & Draft Tendencies */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <div className="xp-panel p-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+          <div className="xp-panel p-3 lg:col-span-5">
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#ff857a] mb-2.5 flex items-center gap-1.5">
               <Shield className="w-4 h-4" />
               <span>Banned Against ({bannedAgainstList.length} Champs)</span>
@@ -639,30 +653,30 @@ export function AdminTeamScoutingView({
             )}
           </div>
 
-          <div className="xp-panel p-3 space-y-3">
+          <div className="xp-panel p-3 space-y-3 lg:col-span-7">
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
               <Swords className="w-4 h-4" />
               <span>Draft Tendencies (B1 / R1-2 / R5)</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="bg-black/35 border border-white/10 rounded p-2">
+              <div className="bg-black/35 border border-white/10 rounded p-2.5">
                 <div className="text-[10px] font-bold uppercase text-[#5ea3ff] mb-1.5">
                   Blue 1st Picks (B1)
                 </div>
                 {b1Picks.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {b1Picks.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
+                      <div key={idx} className="flex items-start gap-1.5">
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
-                          className="w-5 h-5 rounded object-cover"
+                          className="w-5 h-5 rounded object-cover shrink-0 mt-0.5"
                         />
                         <div className="min-w-0">
-                          <div className="font-bold text-[#f0ede0] truncate">
+                          <div className="font-bold text-[#f0ede0] leading-tight">
                             {p.champ}
                           </div>
-                          <div className="text-[9px] text-[#a6a89e] truncate">
+                          <div className="text-[9px] text-[#a6a89e] leading-snug">
                             {p.round} vs {p.vs}
                           </div>
                         </div>
@@ -674,29 +688,29 @@ export function AdminTeamScoutingView({
                 )}
               </div>
 
-              <div className="bg-black/35 border border-white/10 rounded p-2">
+              <div className="bg-black/35 border border-white/10 rounded p-2.5">
                 <div className="text-[10px] font-bold uppercase text-[#ff7b72] mb-1.5">
                   Red Openings (R1-2)
                 </div>
                 {r12Picks.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {r12Picks.map((p, idx) => (
                       <div key={idx} className="space-y-0.5">
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
                           {p.champs.map((ch) => (
                             <img
                               key={ch}
                               src={getChampionIconUrl(ch, ddVersion)}
                               alt={ch}
                               title={ch}
-                              className="w-5 h-5 rounded object-cover"
+                              className="w-5 h-5 rounded object-cover shrink-0"
                             />
                           ))}
-                          <span className="font-bold text-[#f0ede0] truncate text-[11px]">
+                          <span className="font-bold text-[#f0ede0] text-[11px] leading-tight">
                             {p.champs.join(" + ")}
                           </span>
                         </div>
-                        <div className="text-[9px] text-[#a6a89e] truncate">
+                        <div className="text-[9px] text-[#a6a89e] leading-snug">
                           {p.round} vs {p.vs}
                         </div>
                       </div>
@@ -707,12 +721,12 @@ export function AdminTeamScoutingView({
                 )}
               </div>
 
-              <div className="bg-black/35 border border-white/10 rounded p-2">
+              <div className="bg-black/35 border border-white/10 rounded p-2.5">
                 <div className="text-[10px] font-bold uppercase text-[#f0c020] mb-1">
                   R5 Counterpicks
                 </div>
                 {r5Picks.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {(() => {
                       const byPlayer = new Map<string, number>();
                       for (const p of r5Picks) {
@@ -726,7 +740,7 @@ export function AdminTeamScoutingView({
                         .map(([name, cnt]) => `${name} (${cnt}/${r5Picks.length})`)
                         .join(", ");
                       return (
-                        <div className="text-[9px] text-[#a6a89e] pb-1 border-b border-white/10">
+                        <div className="text-[9px] text-[#a6a89e] pb-1 border-b border-white/10 leading-snug">
                           Usually R5:{" "}
                           <span className="text-[#f0ede0] font-semibold">
                             {topSummary}
@@ -735,14 +749,14 @@ export function AdminTeamScoutingView({
                       );
                     })()}
                     {r5Picks.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
+                      <div key={idx} className="flex items-start gap-1.5">
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
-                          className="w-5 h-5 rounded object-cover shrink-0"
+                          className="w-5 h-5 rounded object-cover shrink-0 mt-0.5"
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="font-bold text-[#f0ede0] truncate flex items-center gap-1">
+                          <div className="font-bold text-[#f0ede0] flex flex-wrap items-center gap-1 leading-tight">
                             <span>{p.champ}</span>
                             {p.role && (
                               <span className="text-[10px] text-[#f0c020]">
@@ -760,13 +774,13 @@ export function AdminTeamScoutingView({
                                   title={`Counterpicked into ${p.vsChamp}`}
                                   className="w-4 h-4 rounded object-cover shrink-0"
                                 />
-                                <span className="text-[10px] text-[#ff857a] font-semibold truncate">
+                                <span className="text-[10px] text-[#ff857a] font-semibold">
                                   {p.vsChamp}
                                 </span>
                               </>
                             )}
                           </div>
-                          <div className="text-[9px] text-[#a6a89e] truncate">
+                          <div className="text-[9px] text-[#a6a89e] leading-snug mt-0.5">
                             {p.player} • {p.round} vs {p.vs}
                           </div>
                         </div>
