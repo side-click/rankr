@@ -24,6 +24,7 @@ interface AdminTeamScoutingViewProps {
   leagueTeam: AggregatedTeamStats | null;
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
+  roleRankByPlayerKey: Record<string, number>;
 }
 
 function deriveLeaguePrefix(leagueName?: string): string {
@@ -98,6 +99,7 @@ export function AdminTeamScoutingView({
   leagueTeam,
   seriesHistory,
   teamLogoMap,
+  roleRankByPlayerKey,
 }: AdminTeamScoutingViewProps) {
   const leaguePrefix = deriveLeaguePrefix(leagueName);
   const divTheme = resolveDivisionTheme(divisionThemeKey);
@@ -365,7 +367,7 @@ export function AdminTeamScoutingView({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {team.players.map((soloPlayer: AggregatedPlayerStats) => {
               const lp = leaguePlayerByKey.get(soloPlayer.playerKey);
-              const statsSrc = lp && lp.games > 0 ? lp : null;
+              const roleRank = roleRankByPlayerKey[soloPlayer.playerKey] ?? null;
               const roleMeta = getRoleMeta(soloPlayer.role as LeagueRole);
               const styledRank = formatStyledSoloRank(
                 soloPlayer.soloTier,
@@ -393,7 +395,7 @@ export function AdminTeamScoutingView({
                   key={soloPlayer.playerKey}
                   className="xp-panel p-3 flex flex-col gap-3 w-full max-w-[380px] mx-auto sm:max-w-none"
                 >
-                  {/* Top Row: Role Icon + Larger Player Name + Rank */}
+                  {/* Top Row: Role Icon + Larger Player Name + Rank & Division Role Rank */}
                   <div className="min-w-0">
                     <Link
                       href={`/admin/stats/player/${encodeURIComponent(
@@ -411,41 +413,15 @@ export function AdminTeamScoutingView({
                         {soloPlayer.displayName}
                       </span>
                     </Link>
-                    <div className={`text-xs font-bold mt-1 ${styledRank.className}`}>
-                      {styledRank.label}
-                    </div>
-                  </div>
-
-                  {/* Season Stats (League Only) */}
-                  <div className="bg-black/35 border border-white/10 rounded px-2.5 py-2">
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1">
-                      This Season ({statsSrc ? `${statsSrc.games}G` : "0G"})
-                    </div>
-                    <div className="grid grid-cols-2 gap-y-1 text-[11px]">
-                      <div>
-                        KDA:{" "}
-                        <strong className="text-[#f0c020]">
-                          {statsSrc ? statsSrc.kda.toFixed(2) : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        GP/m:{" "}
-                        <strong className="text-white">
-                          {statsSrc ? Math.round(statsSrc.gpm) : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        CS/m:{" "}
-                        <strong className="text-white">
-                          {statsSrc ? statsSrc.csPerMin.toFixed(1) : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        DPM:{" "}
-                        <strong className="text-white">
-                          {statsSrc ? Math.round(statsSrc.dpm) : "—"}
-                        </strong>
-                      </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+                      <span className={`text-xs font-bold ${styledRank.className}`}>
+                        {styledRank.label}
+                      </span>
+                      {roleRank !== null && (
+                        <span className="text-[11px] font-extrabold text-[#f0c020] bg-black/40 border border-[#f0c020]/35 rounded px-1.5 py-0.5">
+                          #{roleRank} {roleMeta.label}
+                        </span>
+                      )}
                     </div>
                   </div>
 
