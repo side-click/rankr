@@ -26,7 +26,27 @@
 html {
   color-scheme: dark;
   background-color: #0e1311;
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: #39443f #0e1311;
+}
+
+html::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #0e1311;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #2f3b36;
+  border-radius: 9999px;
+  border: 2px solid #0e1311;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #465750;
 }
 
 body {
