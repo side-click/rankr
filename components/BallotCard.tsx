@@ -255,7 +255,7 @@ export function BallotCard({
                       className="w-4 h-4 object-contain shrink-0"
                     />
                   )}
-                  <span className="max-w-[64px] truncate">{t.name}</span>
+                  <span className="whitespace-nowrap">{t.name}</span>
                 </span>
               ))}
               {topTierPreview && (
@@ -263,7 +263,7 @@ export function BallotCard({
                   <span className="font-bold text-[#f0c020]">
                     {topTierPreview.label}:
                   </span>
-                  <span className="max-w-[190px] truncate">
+                  <span className="max-w-[260px] truncate">
                     {topTierPreview.players.join(", ")}
                   </span>
                 </span>
@@ -273,12 +273,9 @@ export function BallotCard({
         </div>
 
         {/* Footer / Right Column */}
-        <div className="flex items-center justify-between lg:justify-end gap-2.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
+        <div className="flex items-center justify-between lg:justify-end pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
           <span className="text-[#a6a89e] whitespace-nowrap">
             {publishedDate ? `Published ${publishedDate}` : ""}
-          </span>
-          <span className="text-[#7cd438] font-bold shrink-0 whitespace-nowrap">
-            Open →
           </span>
         </div>
       </Link>
