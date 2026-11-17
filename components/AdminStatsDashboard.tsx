@@ -1331,9 +1331,14 @@ export function AdminStatsDashboard({
                           {leagueName} ({seasonName})
                         </div>
                         <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight">
-                          {selectedDivision
-                            ? `${selectedDivision.name} Stat Leaderboards`
-                            : "League Stat Leaderboards"}
+                          <span>
+                            {selectedDivision
+                              ? selectedDivision.name
+                              : "League"}
+                          </span>{" "}
+                          <span className="inline-block whitespace-nowrap">
+                            Stat Leaderboards
+                          </span>
                         </h2>
                       </div>
                     </div>
