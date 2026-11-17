@@ -12,6 +12,7 @@ import {
   BarChart3,
   Clock,
   Coins,
+  Diff,
   Droplet,
   Eye,
   Flame,
@@ -1038,6 +1039,7 @@ export function AdminStatsDashboard({
             },
             {
               title: "Highest KDA",
+              icons: <Swords className="w-3.5 h-3.5 text-[#f0c020]" />,
               rows: topKda,
               fmt: (p) => p.kda.toFixed(2),
             },
@@ -1081,7 +1083,12 @@ export function AdminStatsDashboard({
               ? [
                   {
                     title: "Highest Gold Diff / Game",
-                    icons: <Coins className="w-3.5 h-3.5 text-[#f0c020]" />,
+                    icons: (
+                      <>
+                        <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+                        <Diff className="w-3.5 h-3.5 text-[#f0c020]" />
+                      </>
+                    ),
                     rows: topGoldDiff,
                     fmt: (p: AggregatedPlayerStats) => {
                       const val = Math.round(p.avgGoldDiff ?? 0);
@@ -1169,7 +1176,7 @@ export function AdminStatsDashboard({
               key={card.title}
               className="xp-panel overflow-hidden w-full sm:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]"
             >
-              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center gap-1.5">
+              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2">
                 <span>{card.title}</span>
                 {card.icons && (
                   <span className="inline-flex items-center gap-1 shrink-0">
