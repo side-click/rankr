@@ -29,3 +29,16 @@ jobs:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
           DEEP_SYNC_MATCH_COUNT: ${{ github.event.inputs.match_count || '100' }}
         run: node scripts/riot-deep-sync.mjs
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL not set; skipping Discord notification."
+            exit 0
+          fi
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"⚠️ **Riot Deep SoloQ Sync failed** — likely an expired \`RIOT_API_KEY\`. Refresh at <https://developer.riotgames.com/> and update the \`RIOT_API_KEY\` repo secret.\\nRun: $RUN_URL\"}"
