@@ -914,17 +914,23 @@ export function PlayerTierShareView({
                       >
                         <div />
                         <div
-                          className={`flex items-center gap-2.5 min-w-0 ${
-                            isMultiRoleCompact ? "px-2.5" : "px-3"
+                          className={`flex items-center gap-3 min-w-0 ${
+                            isMultiRoleCompact ? "px-2.5" : "px-3 py-0.5"
                           }`}
                         >
                           <img
                             src={roleMeta.icon}
                             alt={roleMeta.label}
                             crossOrigin="anonymous"
-                            className="w-5 h-5 object-contain shrink-0"
+                            className={`${
+                              isMultiRoleCompact ? "w-6 h-6" : "w-7 h-7"
+                            } object-contain shrink-0`}
                           />
-                          <span className="font-extrabold text-sm uppercase tracking-wider text-[#f0c020]">
+                          <span
+                            className={`font-extrabold uppercase tracking-wider text-[#f0c020] ${
+                              isMultiRoleCompact ? "text-base" : "text-lg"
+                            }`}
+                          >
                             {getRoleSectionTitle(section.role)}
                           </span>
                         </div>
