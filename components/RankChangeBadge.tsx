@@ -11,19 +11,8 @@ export function RankChangeBadge({
   rankChange,
   compact = false,
 }: RankChangeBadgeProps) {
-  if (previousRank === null || rankChange === null) {
-    return (
-      <div className="inline-flex flex-col items-center justify-center leading-tight">
-        <span className="px-2 py-0.5 text-xs font-bold bg-[#2b322f] text-[#b4b7ad] border border-[#4a5450] rounded-xs">
-          —
-        </span>
-        {!compact && (
-          <span className="text-[11px] text-[#9aa096] mt-0.5 whitespace-nowrap">
-            Last: N/A
-          </span>
-        )}
-      </div>
-    );
+  if (previousRank === null || rankChange === null || rankChange === 0) {
+    return null;
   }
 
   if (rankChange > 0) {
@@ -41,25 +30,10 @@ export function RankChangeBadge({
     );
   }
 
-  if (rankChange < 0) {
-    return (
-      <div className="inline-flex flex-col items-center justify-center leading-tight">
-        <span className="px-2 py-0.5 text-xs font-bold bg-[#451717] text-[#ff857a] border border-[#9e3535] rounded-xs">
-          ▼ {rankChange}
-        </span>
-        {!compact && (
-          <span className="text-[11px] text-[#b8bdb2] mt-0.5 whitespace-nowrap">
-            Last: #{previousRank}
-          </span>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="inline-flex flex-col items-center justify-center leading-tight">
-      <span className="px-2 py-0.5 text-xs font-bold bg-[#2b322f] text-[#d5d4c8] border border-[#4a5450] rounded-xs">
-        — 0
+      <span className="px-2 py-0.5 text-xs font-bold bg-[#451717] text-[#ff857a] border border-[#9e3535] rounded-xs">
+        ▼ {rankChange}
       </span>
       {!compact && (
         <span className="text-[11px] text-[#b8bdb2] mt-0.5 whitespace-nowrap">
