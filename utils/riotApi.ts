@@ -2,23 +2,54 @@ export interface CompactRiotMatch {
   matchId: string;
   gameCreation: number;
   gameDuration: number; // seconds
+  gameVersion?: string;
   queueId: number;
   win: boolean;
   championName: string;
   teamId: number; // 100 = Blue, 200 = Red
+  teamPosition?: string;
+  champLevel?: number;
   kills: number;
   deaths: number;
   assists: number;
   cs: number;
   totalDamageDealtToChampions: number;
+  totalDamageTaken?: number;
+  damageSelfMitigated?: number;
+  totalHealsOnTeammates?: number;
+  totalDamageShieldedOnTeammates?: number;
+  damageDealtToObjectives?: number;
+  damageDealtToTurrets?: number;
+  timeCCingOthers?: number;
   goldEarned: number;
   visionScore: number;
+  wardsPlaced?: number;
+  wardsKilled?: number;
+  controlWardsBought?: number;
   teamKills: number;
   teamDamage: number;
   teamGold: number;
+  opponentChampion?: string;
   goldDiff?: number;
+  csDiff?: number;
+  dmgDiff?: number;
+  xpDiff?: number;
   soloKills?: number;
   firstBlood?: boolean;
+  firstTower?: boolean;
+  doubleKills?: number;
+  tripleKills?: number;
+  quadraKills?: number;
+  pentaKills?: number;
+  largestKillingSpree?: number;
+  turretKills?: number;
+  dragonKills?: number;
+  baronKills?: number;
+  teamDragons?: number;
+  teamBarons?: number;
+  teamHeralds?: number;
+  teamVoidgrubs?: number;
+  teamTowers?: number;
   bans?: string[];
 }
 
@@ -178,18 +209,40 @@ interface RiotMatchParticipant {
   puuid: string;
   teamId: number;
   teamPosition?: string;
+  champLevel?: number;
+  champExperience?: number;
   win: boolean;
   championName: string;
   kills: number;
   deaths: number;
   assists: number;
+  doubleKills?: number;
+  tripleKills?: number;
+  quadraKills?: number;
+  pentaKills?: number;
+  largestKillingSpree?: number;
   totalMinionsKilled: number;
   neutralMinionsKilled: number;
   totalDamageDealtToChampions: number;
+  totalDamageTaken?: number;
+  damageSelfMitigated?: number;
+  totalHealsOnTeammates?: number;
+  totalDamageShieldedOnTeammates?: number;
+  damageDealtToObjectives?: number;
+  damageDealtToTurrets?: number;
+  timeCCingOthers?: number;
   goldEarned: number;
   visionScore: number;
+  wardsPlaced?: number;
+  wardsKilled?: number;
+  visionWardsBoughtInGame?: number;
+  turretKills?: number;
+  dragonKills?: number;
+  baronKills?: number;
   firstBloodKill?: boolean;
   firstBloodAssist?: boolean;
+  firstTowerKill?: boolean;
+  firstTowerAssist?: boolean;
   challenges?: {
     soloKills?: number;
   };
@@ -198,6 +251,13 @@ interface RiotMatchParticipant {
 interface RiotMatchTeam {
   teamId: number;
   bans?: { championId: number; pickTurn: number }[];
+  objectives?: {
+    dragon?: { kills?: number };
+    baron?: { kills?: number };
+    riftHerald?: { kills?: number };
+    horde?: { kills?: number };
+    tower?: { kills?: number };
+  };
 }
 
 interface RiotMatchResponse {
@@ -205,6 +265,7 @@ interface RiotMatchResponse {
   info: {
     gameCreation: number;
     gameDuration: number;
+    gameVersion?: string;
     queueId: number;
     participants: RiotMatchParticipant[];
     teams?: RiotMatchTeam[];
@@ -284,15 +345,35 @@ export async function syncPlayerFromRiot(
         );
         const teamGold = allies.reduce((s, p) => s + p.goldEarned, 0);
 
+        const meCs = me.totalMinionsKilled + me.neutralMinionsKilled;
         const laneOpponent = me.teamPosition
           ? matchData.info.participants.find(
               (p) =>
                 p.teamId !== me.teamId && p.teamPosition === me.teamPosition
             )
           : undefined;
+        const oppCs = laneOpponent
+          ? laneOpponent.totalMinionsKilled + laneOpponent.neutralMinionsKilled
+          : undefined;
         const goldDiff = laneOpponent
           ? me.goldEarned - laneOpponent.goldEarned
           : undefined;
+        const csDiff =
+          oppCs !== undefined ? meCs - oppCs : undefined;
+        const dmgDiff = laneOpponent
+          ? me.totalDamageDealtToChampions -
+            laneOpponent.totalDamageDealtToChampions
+          : undefined;
+        const xpDiff =
+          laneOpponent &&
+          typeof me.champExperience === "number" &&
+          typeof laneOpponent.champExperience === "number"
+            ? me.champExperience - laneOpponent.champExperience
+            : undefined;
+
+        const myTeam = matchData.info.teams?.find(
+          (t) => t.teamId === me.teamId
+        );
 
         const bans: string[] = [];
         for (const t of matchData.info.teams ?? []) {
@@ -308,23 +389,54 @@ export async function syncPlayerFromRiot(
           matchId: matchData.metadata.matchId,
           gameCreation: matchData.info.gameCreation,
           gameDuration: matchData.info.gameDuration,
+          gameVersion: matchData.info.gameVersion,
           queueId: matchData.info.queueId,
           win: me.win,
           championName: me.championName,
           teamId: me.teamId,
+          teamPosition: me.teamPosition,
+          champLevel: me.champLevel,
           kills: me.kills,
           deaths: me.deaths,
           assists: me.assists,
-          cs: me.totalMinionsKilled + me.neutralMinionsKilled,
+          cs: meCs,
           totalDamageDealtToChampions: me.totalDamageDealtToChampions,
+          totalDamageTaken: me.totalDamageTaken,
+          damageSelfMitigated: me.damageSelfMitigated,
+          totalHealsOnTeammates: me.totalHealsOnTeammates,
+          totalDamageShieldedOnTeammates: me.totalDamageShieldedOnTeammates,
+          damageDealtToObjectives: me.damageDealtToObjectives,
+          damageDealtToTurrets: me.damageDealtToTurrets,
+          timeCCingOthers: me.timeCCingOthers,
           goldEarned: me.goldEarned,
           visionScore: me.visionScore,
+          wardsPlaced: me.wardsPlaced,
+          wardsKilled: me.wardsKilled,
+          controlWardsBought: me.visionWardsBoughtInGame,
           teamKills,
           teamDamage,
           teamGold,
+          opponentChampion: laneOpponent?.championName,
           goldDiff,
+          csDiff,
+          dmgDiff,
+          xpDiff,
           soloKills: me.challenges?.soloKills,
           firstBlood: Boolean(me.firstBloodKill || me.firstBloodAssist),
+          firstTower: Boolean(me.firstTowerKill || me.firstTowerAssist),
+          doubleKills: me.doubleKills,
+          tripleKills: me.tripleKills,
+          quadraKills: me.quadraKills,
+          pentaKills: me.pentaKills,
+          largestKillingSpree: me.largestKillingSpree,
+          turretKills: me.turretKills,
+          dragonKills: me.dragonKills,
+          baronKills: me.baronKills,
+          teamDragons: myTeam?.objectives?.dragon?.kills,
+          teamBarons: myTeam?.objectives?.baron?.kills,
+          teamHeralds: myTeam?.objectives?.riftHerald?.kills,
+          teamVoidgrubs: myTeam?.objectives?.horde?.kills,
+          teamTowers: myTeam?.objectives?.tower?.kills,
           bans,
         });
       } catch (matchErr) {

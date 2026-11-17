@@ -97,6 +97,7 @@ export function AdminStatsDashboard({
   const [sortKey, setSortKey] = useState<SortKey>("kda");
   const [sortAsc, setSortAsc] = useState(false);
   const [showAllPlayers, setShowAllPlayers] = useState(false);
+  const [showAllLeaderboards, setShowAllLeaderboards] = useState(false);
   const [matchCount, setMatchCount] = useState<number>(5);
 
   const [syncing, setSyncing] = useState(false);
@@ -227,6 +228,13 @@ export function AdminStatsDashboard({
   const topKda = useMemo(
     () =>
       [...leaderboardPlayers].sort((a, b) => b.kda - a.kda).slice(0, 5),
+    [leaderboardPlayers]
+  );
+  const topKills = useMemo(
+    () =>
+      [...leaderboardPlayers]
+        .sort((a, b) => b.killsPerGame - a.killsPerGame)
+        .slice(0, 5),
     [leaderboardPlayers]
   );
   const topAssists = useMemo(
@@ -586,21 +594,29 @@ export function AdminStatsDashboard({
               <>
                 <button
                   type="button"
-                  disabled={!hasRiotKey || missingTable}
+                  disabled={
+                    !hasRiotKey ||
+                    missingTable ||
+                    filteredPlayers.length - syncedCount === 0
+                  }
                   onClick={() => void runBatchSync(true)}
+                  title="Sync only players in this view who have never been synced"
                   className="xp-btn text-xs disabled:opacity-50"
                 >
                   <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
-                  <span>Sync Unsynced</span>
+                  <span>
+                    Sync Missing ({filteredPlayers.length - syncedCount})
+                  </span>
                 </button>
                 <button
                   type="button"
                   disabled={!hasRiotKey || missingTable}
                   onClick={() => void runBatchSync(false)}
+                  title="Force-refresh all players in the current division view"
                   className="xp-btn xp-btn-primary text-xs disabled:opacity-50"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Re-Sync View</span>
+                  <span>Re-Sync All ({filteredPlayers.length})</span>
                 </button>
               </>
             ) : (
@@ -831,137 +847,183 @@ export function AdminStatsDashboard({
         )}
 
         {/* Stat Leaderboards Grid (Top 5 cards) */}
-        {leaderboardPlayers.length > 0 && (
-          <div className="mb-6 space-y-2.5">
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
-              Leaderboards
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[
-                {
-                  title: "League Rating (Role-Norm)",
-                  rows: topRating,
-                  fmt: (p: AggregatedPlayerStats) => p.leagueRating.toFixed(1),
-                },
-                {
-                  title: "Highest KDA",
-                  rows: topKda,
-                  fmt: (p: AggregatedPlayerStats) => p.kda.toFixed(2),
-                },
-                {
-                  title: "Lowest Deaths / Game",
-                  rows: lowestDeaths,
-                  fmt: (p: AggregatedPlayerStats) =>
-                    p.deathsPerGame.toFixed(1),
-                },
-                {
-                  title: "Highest Assists / Game",
-                  rows: topAssists,
-                  fmt: (p: AggregatedPlayerStats) =>
-                    p.assistsPerGame.toFixed(1),
-                },
-                {
-                  title: "Highest CS / Min",
-                  rows: topCs,
-                  fmt: (p: AggregatedPlayerStats) => p.csPerMin.toFixed(2),
-                },
-                {
-                  title: "Highest Damage / Min",
-                  rows: topDpm,
-                  fmt: (p: AggregatedPlayerStats) => Math.round(p.dpm).toString(),
-                },
-                {
-                  title: "Highest Gold / Min",
-                  rows: topGpm,
-                  fmt: (p: AggregatedPlayerStats) => Math.round(p.gpm).toString(),
-                },
-                {
-                  title: "Highest Vision / Min",
-                  rows: topVision,
-                  fmt: (p: AggregatedPlayerStats) => p.visionPerMin.toFixed(2),
-                },
-                {
-                  title: "Highest Kill Participation",
-                  rows: topKp,
-                  fmt: (p: AggregatedPlayerStats) => `${p.kpPct.toFixed(1)}%`,
-                },
-                {
-                  title: "Highest Team Damage %",
-                  rows: topDmgShare,
-                  fmt: (p: AggregatedPlayerStats) =>
-                    `${p.damageSharePct.toFixed(1)}%`,
-                },
-                ...(topGoldDiff.length > 0
-                  ? [
-                      {
-                        title: "Highest Gold Diff / Game",
-                        rows: topGoldDiff,
-                        fmt: (p: AggregatedPlayerStats) => {
-                          const val = Math.round(p.avgGoldDiff ?? 0);
-                          return val >= 0 ? `+${val}` : `${val}`;
-                        },
-                      },
-                    ]
-                  : []),
-                ...(topSoloKills.length > 0
-                  ? [
-                      {
-                        title: "Most Solo Kills",
-                        rows: topSoloKills,
-                        fmt: (p: AggregatedPlayerStats) => `${p.soloKills}`,
-                      },
-                    ]
-                  : []),
-                ...(topFirstBlood.length > 0
-                  ? [
-                      {
-                        title: "First Blood %",
-                        rows: topFirstBlood,
-                        fmt: (p: AggregatedPlayerStats) =>
-                          `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
-                      },
-                    ]
-                  : []),
-              ].map((card) => (
-                <div key={card.title} className="xp-panel overflow-hidden">
-                  <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
-                    {card.title}
-                  </div>
-                  <div className="divide-y divide-white/10">
-                    {card.rows.map((p, idx) => (
-                      <Link
-                        key={p.playerKey}
-                        href={`/admin/stats/player/${encodeURIComponent(
-                          p.playerKey
-                        )}`}
-                        className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[10px] font-mono text-[#a6a89e] w-3">
-                            {idx + 1}
-                          </span>
-                          {p.teamLogoUrl && (
-                            <img
-                              src={p.teamLogoUrl}
-                              alt={p.teamName}
-                              className="w-4 h-4 object-contain shrink-0"
-                            />
-                          )}
-                          <span className="font-bold text-[#f0ede0] truncate">
-                            {p.displayName}
-                          </span>
-                        </div>
-                        <span className="font-mono font-bold text-[#7cd438] shrink-0">
-                          {card.fmt(p)}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
+        {leaderboardPlayers.length > 0 && (() => {
+          type LeaderboardCard = {
+            title: string;
+            rows: AggregatedPlayerStats[];
+            fmt: (p: AggregatedPlayerStats) => string;
+          };
+
+          const primaryRow: LeaderboardCard[] = [
+            {
+              title: "League Rating (Role-Norm)",
+              rows: topRating,
+              fmt: (p) => p.leagueRating.toFixed(1),
+            },
+            {
+              title: "Highest KDA",
+              rows: topKda,
+              fmt: (p) => p.kda.toFixed(2),
+            },
+          ];
+
+          const secondaryRow: LeaderboardCard[] = [
+            {
+              title: "Highest Vision / Min",
+              rows: topVision,
+              fmt: (p) => p.visionPerMin.toFixed(2),
+            },
+            {
+              title: "Highest Damage / Min",
+              rows: topDpm,
+              fmt: (p) => Math.round(p.dpm).toString(),
+            },
+            {
+              title: "Highest Gold / Min",
+              rows: topGpm,
+              fmt: (p) => Math.round(p.gpm).toString(),
+            },
+            ...(topGoldDiff.length > 0
+              ? [
+                  {
+                    title: "Highest Gold Diff / Game",
+                    rows: topGoldDiff,
+                    fmt: (p: AggregatedPlayerStats) => {
+                      const val = Math.round(p.avgGoldDiff ?? 0);
+                      return val >= 0 ? `+${val}` : `${val}`;
+                    },
+                  },
+                ]
+              : []),
+          ];
+
+          const expandedRow1: LeaderboardCard[] = [
+            {
+              title: "Highest Kill Participation",
+              rows: topKp,
+              fmt: (p) => `${p.kpPct.toFixed(1)}%`,
+            },
+            {
+              title: "Highest Team Damage %",
+              rows: topDmgShare,
+              fmt: (p) => `${p.damageSharePct.toFixed(1)}%`,
+            },
+            ...(topSoloKills.length > 0
+              ? [
+                  {
+                    title: "Most Solo Kills",
+                    rows: topSoloKills,
+                    fmt: (p: AggregatedPlayerStats) => `${p.soloKills}`,
+                  },
+                ]
+              : []),
+            ...(topFirstBlood.length > 0
+              ? [
+                  {
+                    title: "First Blood %",
+                    rows: topFirstBlood,
+                    fmt: (p: AggregatedPlayerStats) =>
+                      `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
+                  },
+                ]
+              : []),
+          ];
+
+          const expandedRow2: LeaderboardCard[] = [
+            {
+              title: "Highest Kills / Game",
+              rows: topKills,
+              fmt: (p) => p.killsPerGame.toFixed(1),
+            },
+            {
+              title: "Lowest Deaths / Game",
+              rows: lowestDeaths,
+              fmt: (p) => p.deathsPerGame.toFixed(1),
+            },
+            {
+              title: "Highest Assists / Game",
+              rows: topAssists,
+              fmt: (p) => p.assistsPerGame.toFixed(1),
+            },
+          ];
+
+          const renderCard = (card: LeaderboardCard) => (
+            <div key={card.title} className="xp-panel overflow-hidden">
+              <div className="bg-[#2a2210] border-b border-[#c89b3c]/50 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020]">
+                {card.title}
+              </div>
+              <div className="divide-y divide-white/10">
+                {card.rows.map((p, idx) => (
+                  <Link
+                    key={p.playerKey}
+                    href={`/admin/stats/player/${encodeURIComponent(
+                      p.playerKey
+                    )}`}
+                    className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono text-[#a6a89e] w-3">
+                        {idx + 1}
+                      </span>
+                      {p.teamLogoUrl && (
+                        <img
+                          src={p.teamLogoUrl}
+                          alt={p.teamName}
+                          className="w-4 h-4 object-contain shrink-0"
+                        />
+                      )}
+                      <span className="font-bold text-[#f0ede0] truncate">
+                        {p.displayName}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-[#7cd438] shrink-0">
+                      {card.fmt(p)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+
+          return (
+            <div className="mb-6 space-y-3">
+              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Leaderboards
+              </h2>
+
+              <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+                {primaryRow.map(renderCard)}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {secondaryRow.map(renderCard)}
+              </div>
+
+              {showAllLeaderboards && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {expandedRow1.map(renderCard)}
+                  </div>
+                  <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {expandedRow2.map(renderCard)}
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAllLeaderboards((prev) => !prev)}
+                  className="xp-btn text-[11px] px-3 py-1"
+                >
+                  {showAllLeaderboards
+                    ? "Show Fewer Leaderboards ▲"
+                    : "Show More Leaderboards ▼"}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Teams Table (Click through to Team Page) */}
         <div className="mb-6 xp-panel overflow-hidden">
