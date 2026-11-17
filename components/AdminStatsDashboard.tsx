@@ -286,35 +286,84 @@ export function AdminStatsDashboard({
       currentLabel: queue[0].riotId,
     });
 
-    const batchSize = 3;
+    const maxReqsPerPlayer = 4 + matchCount;
+    const windowMs = 122_000;
+    const maxReqsPerWindow = 85;
+    const reqTimestamps: number[] = [];
+
+    async function waitForCountdown(seconds: number, reason: string) {
+      for (let rem = seconds; rem > 0; rem--) {
+        if (cancelSyncRef.current) return;
+        setSyncProgress((prev) =>
+          prev
+            ? { ...prev, currentLabel: `${reason} (${rem}s)` }
+            : prev
+        );
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
     try {
-      for (let i = 0; i < queue.length; i += batchSize) {
+      let i = 0;
+      while (i < queue.length) {
         if (cancelSyncRef.current) break;
-        const batch = queue.slice(i, i + batchSize);
+
+        // Prune requests older than 2m02s from our sliding window
+        const now = Date.now();
+        while (reqTimestamps.length > 0 && now - reqTimestamps[0] >= windowMs) {
+          reqTimestamps.shift();
+        }
+
+        // If adding this player could exceed 85 reqs in 2 mins, pause until window frees up
+        if (
+          reqTimestamps.length > 0 &&
+          reqTimestamps.length + maxReqsPerPlayer > maxReqsPerWindow
+        ) {
+          const waitSec = Math.max(
+            2,
+            Math.ceil((windowMs - (now - reqTimestamps[0])) / 1000)
+          );
+          await waitForCountdown(waitSec, "Rate-limit safe pause");
+          continue;
+        }
+
+        const playerItem = queue[i];
         setSyncProgress({
           done: i,
           total: queue.length,
-          currentLabel: batch.map((b) => b.riotId.split("#")[0]).join(", "),
+          currentLabel: playerItem.riotId.split("#")[0],
         });
+
+        for (let r = 0; r < maxReqsPerPlayer; r++) {
+          reqTimestamps.push(Date.now());
+        }
 
         const res = await fetch("/api/admin/riot-sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ players: batch, matchCount }),
+          body: JSON.stringify({ players: [playerItem], matchCount }),
         });
 
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
+          retryAfterSeconds?: number;
         };
+
+        if (res.status === 429) {
+          const waitSec = Math.max(2, Number(data.retryAfterSeconds ?? 30) + 2);
+          await waitForCountdown(waitSec, "Riot Retry-After pause");
+          continue;
+        }
 
         if (!res.ok) {
           throw new Error(data.error || `Sync failed (${res.status})`);
         }
 
+        i += 1;
         setSyncProgress({
-          done: Math.min(i + batch.length, queue.length),
+          done: i,
           total: queue.length,
-          currentLabel: batch[batch.length - 1].riotId.split("#")[0],
+          currentLabel: playerItem.riotId.split("#")[0],
         });
       }
       router.refresh();

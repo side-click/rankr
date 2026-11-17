@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import {
+  RiotRateLimitError,
   syncPlayerFromRiot,
   type SyncedPlayerInput,
 } from "@/utils/riotApi";
@@ -49,11 +50,27 @@ export async function POST(request: Request) {
   }
 
   const results = [];
-  for (const player of players) {
-    const synced = await syncPlayerFromRiot(player, apiKey, matchCount);
-    results.push(synced);
-    // Small pacing delay to stay comfortably within Riot Personal API Key limits
-    await new Promise((r) => setTimeout(r, 150));
+  try {
+    for (const player of players) {
+      const synced = await syncPlayerFromRiot(player, apiKey, matchCount);
+      results.push(synced);
+    }
+  } catch (err) {
+    if (err instanceof RiotRateLimitError) {
+      if (results.length > 0) {
+        await supabase
+          .from("riot_player_stats")
+          .upsert(results, { onConflict: "player_key" });
+      }
+      return NextResponse.json(
+        {
+          error: err.message,
+          retryAfterSeconds: err.retryAfterSeconds,
+        },
+        { status: 429 }
+      );
+    }
+    throw err;
   }
 
   const { error: upsertErr } = await supabase

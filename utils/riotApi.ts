@@ -93,28 +93,32 @@ export function parseRiotId(raw: string): { gameName: string; tagLine: string } 
   return { gameName, tagLine };
 }
 
-async function riotFetch<T>(url: string, apiKey: string): Promise<T> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await fetch(url, {
-      headers: { "X-Riot-Token": apiKey },
-      cache: "no-store",
-    });
-
-    if (res.status === 429 && attempt === 0) {
-      const retryAfter = Number(res.headers.get("Retry-After") ?? "2");
-      const waitMs = Math.min(Math.max(retryAfter, 1), 5) * 1000;
-      await new Promise((r) => setTimeout(r, waitMs));
-      continue;
-    }
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Riot API ${res.status}: ${text.slice(0, 120)}`);
-    }
-
-    return (await res.json()) as T;
+export class RiotRateLimitError extends Error {
+  retryAfterSeconds: number;
+  constructor(retryAfterSeconds: number) {
+    super(`Riot API rate limit hit; retry after ${retryAfterSeconds}s`);
+    this.name = "RiotRateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
   }
-  throw new Error("Riot API rate limit exceeded");
+}
+
+async function riotFetch<T>(url: string, apiKey: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "X-Riot-Token": apiKey },
+    cache: "no-store",
+  });
+
+  if (res.status === 429) {
+    const retryAfter = Number(res.headers.get("Retry-After") ?? "30");
+    throw new RiotRateLimitError(Math.max(1, Math.ceil(retryAfter)));
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Riot API ${res.status}: ${text.slice(0, 120)}`);
+  }
+
+  return (await res.json()) as T;
 }
 
 interface RiotAccountResponse {
@@ -246,7 +250,10 @@ export async function syncPlayerFromRiot(
           teamDamage,
           teamGold,
         });
-      } catch {
+      } catch (matchErr) {
+        if (matchErr instanceof RiotRateLimitError) {
+          throw matchErr;
+        }
         // Skip failed individual match without failing whole player
       }
     }
@@ -269,6 +276,9 @@ export async function syncPlayerFromRiot(
       synced_at: nowIso,
     };
   } catch (err) {
+    if (err instanceof RiotRateLimitError) {
+      throw err;
+    }
     return {
       player_key: input.playerKey,
       riot_id: input.riotId,
