@@ -382,6 +382,8 @@ export async function fetchScdlSheetStats(
       questionPings: r.questionPings,
       turretPlates: r.turretPlates,
       objectivesStolen: r.objectivesStolen,
+      matchLabel: r.matchLabel,
+      teamName: r.teamName,
     };
 
     bucket.matches.push(compact);

@@ -56,6 +56,8 @@ export interface CompactRiotMatch {
   questionPings?: number;
   turretPlates?: number;
   objectivesStolen?: number;
+  matchLabel?: string;
+  teamName?: string;
 }
 
 export interface SyncedPlayerInput {

@@ -418,42 +418,63 @@ export function AdminStatsDashboard({
           100
         : null;
 
-    // Shortest & Longest game
-    const durationsSec = durationSource
-      .map((m) => m.gameDuration)
-      .filter((d) => d > 0);
-    const shortestMin =
-      durationsSec.length > 0 ? Math.min(...durationsSec) / 60 : 0;
-    const longestMin =
-      durationsSec.length > 0 ? Math.max(...durationsSec) / 60 : 0;
-
-    // ? Ping leader
-    let topPingPlayer: { name: string; count: number } | null = null;
-    for (const p of filteredPlayers) {
-      const count = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
-      if (count > 0 && (!topPingPlayer || count > topPingPlayer.count)) {
-        topPingPlayer = { name: p.displayName, count };
+    // Longest game with teams / result / week
+    let longestGame: {
+      durationMin: number;
+      winner: string;
+      loser: string;
+      roundLabel: string;
+    } | null = null;
+    for (const m of durationSource) {
+      if (
+        m.gameDuration > 0 &&
+        (!longestGame || m.gameDuration / 60 > longestGame.durationMin)
+      ) {
+        const gameRows = allMatches.filter((x) => x.matchId === m.matchId);
+        const winTeam =
+          gameRows.find((x) => x.win)?.teamName ??
+          (m.matchLabel ? m.matchLabel.split("_")[1] : "");
+        const loseTeam =
+          gameRows.find((x) => !x.win)?.teamName ??
+          (m.matchLabel ? m.matchLabel.split("_")[2] : "");
+        const rawRound = m.matchLabel ? m.matchLabel.split("_")[0] : "";
+        const roundLabel = rawRound
+          ? rawRound.replace(/([a-zA-Z]+)(\d+)/, "$1 $2")
+          : "";
+        longestGame = {
+          durationMin: m.gameDuration / 60,
+          winner: winTeam || "Winner",
+          loser: loseTeam || "Opponent",
+          roundLabel,
+        };
       }
     }
 
-    // Multi-kills, steals, solo kills, plates, control wards
-    let triples = 0;
-    let quadras = 0;
-    let pentas = 0;
-    let steals = 0;
-    let totalSoloKills = 0;
-    let totalPlates = 0;
+    // ? Ping leader, Most Pentakills, Most Objective Steals, Control Wards
+    let topPingPlayer: { name: string; count: number } | null = null;
+    let topPentaPlayer: { name: string; count: number } | null = null;
+    let topStealPlayer: { name: string; count: number } | null = null;
+    for (const p of filteredPlayers) {
+      const pings = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
+      if (pings > 0 && (!topPingPlayer || pings > topPingPlayer.count)) {
+        topPingPlayer = { name: p.displayName, count: pings };
+      }
+      const pentas = p.matches.reduce((s, m) => s + (m.pentaKills ?? 0), 0);
+      if (pentas > 0 && (!topPentaPlayer || pentas > topPentaPlayer.count)) {
+        topPentaPlayer = { name: p.displayName, count: pentas };
+      }
+      const steals = p.matches.reduce(
+        (s, m) => s + (m.objectivesStolen ?? 0),
+        0
+      );
+      if (steals > 0 && (!topStealPlayer || steals > topStealPlayer.count)) {
+        topStealPlayer = { name: p.displayName, count: steals };
+      }
+    }
+
     let totalControlWards = 0;
-    let totalWardsCleared = 0;
     for (const m of allMatches) {
-      triples += m.tripleKills ?? 0;
-      quadras += m.quadraKills ?? 0;
-      pentas += m.pentaKills ?? 0;
-      steals += m.objectivesStolen ?? 0;
-      totalSoloKills += m.soloKills ?? 0;
-      totalPlates += m.turretPlates ?? 0;
       totalControlWards += m.controlWardsBought ?? 0;
-      totalWardsCleared += m.wardsKilled ?? 0;
     }
 
     return {
@@ -473,17 +494,11 @@ export function AdminStatsDashboard({
       fbGames: fbTeams.length,
       gd15Wr,
       gd15Games: gd15AheadTeams.length,
-      shortestMin,
-      longestMin,
+      longestGame,
       topPingPlayer,
-      triples,
-      quadras,
-      pentas,
-      steals,
-      totalSoloKills,
-      totalPlates,
+      topPentaPlayer,
+      topStealPlayer,
       totalControlWards,
-      totalWardsCleared,
     };
   }, [filteredPlayers, dataSource]);
 
@@ -1622,21 +1637,21 @@ export function AdminStatsDashboard({
           <div className="xp-panel p-3 flex flex-col justify-between">
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#00b8c9]" />
-              <span>Game Length Range</span>
+              <span>Longest Game</span>
             </div>
-            <div className="mt-1.5 space-y-0.5 text-xs font-bold tabular-nums">
-              <div className="flex justify-between">
-                <span className="text-[#a6a89e]">Fastest</span>
-                <span className="text-[#7cd438]">
-                  {formatMinutesSeconds(overview.shortestMin)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#a6a89e]">Longest</span>
-                <span className="text-[#f0c020]">
-                  {formatMinutesSeconds(overview.longestMin)}
-                </span>
-              </div>
+            <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
+              {overview.longestGame
+                ? formatMinutesSeconds(overview.longestGame.durationMin)
+                : "—"}
+            </div>
+            <div className="text-[10px] text-[#a6a89e] truncate">
+              {overview.longestGame
+                ? `${overview.longestGame.winner} def. ${overview.longestGame.loser}${
+                    overview.longestGame.roundLabel
+                      ? ` • ${overview.longestGame.roundLabel}`
+                      : ""
+                  }`
+                : "No match data"}
             </div>
           </div>
 
@@ -1657,28 +1672,37 @@ export function AdminStatsDashboard({
 
           <div className="xp-panel p-3 flex flex-col justify-between">
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
-              <span>Multi-Kills &amp; Steals</span>
+              <Crown className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Most Pentakills</span>
             </div>
-            <div className="text-lg font-black text-white mt-1 tabular-nums">
-              {overview.triples}T / {overview.quadras}Q / {overview.pentas}P
+            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
+              {overview.topPentaPlayer ? overview.topPentaPlayer.name : "None yet"}
             </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              {overview.steals} objective{" "}
-              {overview.steals === 1 ? "steal" : "steals"}
+            <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
+              {overview.topPentaPlayer
+                ? `${overview.topPentaPlayer.count} ${
+                    overview.topPentaPlayer.count === 1
+                      ? "pentakill"
+                      : "pentakills"
+                  }`
+                : "0 pentakills"}
             </div>
           </div>
 
           <div className="xp-panel p-3 flex flex-col justify-between">
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Sword className="w-3.5 h-3.5 text-[#7cd438]" />
-              <span>Solo Kills &amp; Plates</span>
+              <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
+              <span>Most Objective Steals</span>
             </div>
-            <div className="text-2xl font-black text-white mt-1 tabular-nums">
-              {overview.totalSoloKills}
+            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
+              {overview.topStealPlayer ? overview.topStealPlayer.name : "None yet"}
             </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              {overview.totalPlates} turret plates
+            <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
+              {overview.topStealPlayer
+                ? `${overview.topStealPlayer.count} ${
+                    overview.topStealPlayer.count === 1 ? "steal" : "steals"
+                  }`
+                : "0 steals"}
             </div>
           </div>
 
@@ -1690,9 +1714,7 @@ export function AdminStatsDashboard({
             <div className="text-2xl font-black text-white mt-1 tabular-nums">
               {overview.totalControlWards}
             </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              {overview.totalWardsCleared} wards cleared
-            </div>
+            <div className="text-[10px] text-[#a6a89e]">Total bought</div>
           </div>
         </div>
 
