@@ -22,6 +22,7 @@ import type {
   PlayerTierListPayload,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import {
   CAPTAIN_ICON,
   getRoleMeta,
@@ -384,9 +385,7 @@ export function PlayerTierShareView({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
-      const exportHeight = Math.ceil(
-        cardRef.current.getBoundingClientRect().height
-      );
+      const exportHeight = Math.ceil(cardRef.current.offsetHeight);
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
@@ -598,7 +597,10 @@ export function PlayerTierShareView({
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-white/10">
           <div className="text-xs text-[#a6a89e]">
             {ballot.status === "published" && ballot.published_at
-              ? `Published ${new Date(ballot.published_at).toLocaleDateString()}`
+              ? `Published ${new Date(ballot.published_at).toLocaleDateString(
+                  "en-US",
+                  { timeZone: "America/New_York" }
+                )}`
               : "Draft Preview"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -790,11 +792,7 @@ export function PlayerTierShareView({
           </div>
         )}
 
-        <div className="lg:hidden text-[11px] text-[#a6a89e] mb-1.5">
-          Swipe horizontally to view full graphic →
-        </div>
-
-        <div className="overflow-x-auto pb-1">
+        <ScaledGraphicFrame>
           <div
             ref={cardRef}
             style={
@@ -1096,7 +1094,7 @@ export function PlayerTierShareView({
               </div>
             )}
           </div>
-        </div>
+        </ScaledGraphicFrame>
       </RetroWindow>
     </div>
   );

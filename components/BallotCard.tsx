@@ -93,7 +93,9 @@ export function BallotCard({
   const leaguePrefix = getLeaguePrefix(league, ballot.league_name_snapshot);
   const leagueSeasonLabel = `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`;
   const publishedDate = ballot.published_at
-    ? new Date(ballot.published_at).toLocaleDateString()
+    ? new Date(ballot.published_at).toLocaleDateString("en-US", {
+        timeZone: "America/New_York",
+      })
     : null;
 
   const resolvedTheme = hasDivision

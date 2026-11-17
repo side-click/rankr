@@ -23,6 +23,7 @@ import type {
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
+import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { CAPTAIN_ICON, getRoleMeta, normalizeRoster } from "@/utils/roles";
 import { getRankColor } from "@/utils/rankColors";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
@@ -162,9 +163,7 @@ export function BallotShareView({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
-      const exportHeight = Math.ceil(
-        cardRef.current.getBoundingClientRect().height
-      );
+      const exportHeight = Math.ceil(cardRef.current.offsetHeight);
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
@@ -382,7 +381,10 @@ export function BallotShareView({
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-white/10">
           <div className="text-xs text-[#a6a89e]">
             {ballot.status === "published" && ballot.published_at
-              ? `Published ${new Date(ballot.published_at).toLocaleDateString()}`
+              ? `Published ${new Date(ballot.published_at).toLocaleDateString(
+                  "en-US",
+                  { timeZone: "America/New_York" }
+                )}`
               : "Draft Preview"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -536,11 +538,7 @@ export function BallotShareView({
           </div>
         )}
 
-        <div className="lg:hidden text-[11px] text-[#a6a89e] mb-1.5">
-          Swipe horizontally to view full graphic →
-        </div>
-
-        <div className="overflow-x-auto pb-1">
+        <ScaledGraphicFrame>
           <div
             ref={cardRef}
             style={exporting ? { borderRadius: "44px", boxShadow: "none" } : { borderRadius: "44px" }}
@@ -769,7 +767,7 @@ export function BallotShareView({
             </div>
           )}
           </div>
-        </div>
+        </ScaledGraphicFrame>
       </RetroWindow>
     </div>
   );

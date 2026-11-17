@@ -168,8 +168,12 @@ export default async function MyRankingsPage() {
             const dateStr = isPublished
               ? `Published ${new Date(
                   b.published_at ?? b.updated_at
-                ).toLocaleDateString()}`
-              : `Updated ${new Date(b.updated_at).toLocaleDateString()}`;
+                ).toLocaleDateString("en-US", {
+                  timeZone: "America/New_York",
+                })}`
+              : `Updated ${new Date(b.updated_at).toLocaleDateString("en-US", {
+                  timeZone: "America/New_York",
+                })}`;
 
             const resolvedTheme = hasDivision
               ? resolveDivisionTheme(

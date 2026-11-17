@@ -18,6 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
+import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { getRankColor } from "@/utils/rankColors";
 import { getThemeGradients } from "@/utils/themes";
 import type { AverageTeamRow } from "@/utils/averageRankings";
@@ -190,9 +191,7 @@ export function ConsensusRankingsView({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
-      const exportHeight = Math.ceil(
-        cardRef.current.getBoundingClientRect().height
-      );
+      const exportHeight = Math.ceil(cardRef.current.offsetHeight);
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
@@ -593,11 +592,7 @@ export function ConsensusRankingsView({
               </div>
             )}
 
-            <div className="lg:hidden text-[11px] text-[#a6a89e]">
-              Swipe horizontally to view full graphic →
-            </div>
-
-            <div className="overflow-x-auto pb-1">
+            <ScaledGraphicFrame>
               <div
                 ref={cardRef}
                 style={
@@ -781,7 +776,7 @@ export function ConsensusRankingsView({
                   })}
                 </div>
               </div>
-            </div>
+            </ScaledGraphicFrame>
           </>
         )}
       </div>

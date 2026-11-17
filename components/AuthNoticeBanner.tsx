@@ -1,27 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ShieldAlert, Copy, Check, X } from "lucide-react";
 
 export function AuthNoticeBanner() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   const authError = searchParams.get("auth_error");
   const discordId = searchParams.get("discord_id");
 
-  if (authError !== "not_authorized" && authError !== "discord_callback_failed") {
+  if (
+    dismissed ||
+    (authError !== "not_authorized" && authError !== "discord_callback_failed")
+  ) {
     return null;
   }
 
   function dismiss() {
+    setDismissed(true);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("auth_error");
     params.delete("discord_id");
     const qs = params.toString();
-    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `?${qs}` : window.location.pathname
+    );
   }
 
   async function copyId() {
