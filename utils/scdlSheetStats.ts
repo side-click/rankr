@@ -117,6 +117,11 @@ interface ParsedSheetRow {
   dragons: number;
   barons: number;
   largestKillingSpree: number;
+  goldDiff15: number;
+  turretPlates: number;
+  objectivesStolen: number;
+  questionPings: number;
+  flashKey?: "D" | "F";
   rowOrder: number;
 }
 
@@ -181,6 +186,16 @@ function parseCsvRows(csvText: string, startOrder: number): ParsedSheetRow[] {
       dragons: parseNum(get(cols, "Dragons")),
       barons: parseNum(get(cols, "Barons")),
       largestKillingSpree: parseNum(get(cols, "Largest Killing Spree")),
+      goldDiff15: parseNum(get(cols, "GDiff@15")),
+      turretPlates: parseNum(get(cols, "Turret Plates")),
+      objectivesStolen: parseNum(get(cols, "Objectives Stolen")),
+      questionPings: parseNum(get(cols, "? Pings")),
+      flashKey:
+        get(cols, "Summoner D").toLowerCase() === "flash"
+          ? "D"
+          : get(cols, "Summoner F").toLowerCase() === "flash"
+          ? "F"
+          : undefined,
       rowOrder: startOrder + i,
     });
   }
@@ -362,6 +377,11 @@ export async function fetchScdlSheetStats(
       dragonKills: r.dragons,
       baronKills: r.barons,
       bans: DRAFT_BANS_BY_GAME_ID[r.gameId]?.bans,
+      flashKey: r.flashKey,
+      goldDiff15: r.goldDiff15,
+      questionPings: r.questionPings,
+      turretPlates: r.turretPlates,
+      objectivesStolen: r.objectivesStolen,
     };
 
     bucket.matches.push(compact);

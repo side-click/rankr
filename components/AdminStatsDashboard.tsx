@@ -368,6 +368,94 @@ export function AdminStatsDashboard({
       }))
       .sort((a, b) => b.bans - a.bans || a.name.localeCompare(b.name));
 
+    // Flash on D vs F
+    let flashDPicks = 0;
+    let flashDWins = 0;
+    let flashFPicks = 0;
+    let flashFWins = 0;
+    for (const m of allMatches) {
+      if (m.flashKey === "D") {
+        flashDPicks += 1;
+        if (m.win) flashDWins += 1;
+      } else if (m.flashKey === "F") {
+        flashFPicks += 1;
+        if (m.win) flashFWins += 1;
+      }
+    }
+
+    // First Blood team win rate & @15 gold lead team win rate
+    const teamMatchMeta = new Map<
+      string,
+      { win: boolean; hasFb: boolean; gd15Sum: number; hasGd15: boolean }
+    >();
+    for (const m of allMatches) {
+      const key = `${m.matchId}::${m.teamId}`;
+      const cur = teamMatchMeta.get(key) ?? {
+        win: m.win,
+        hasFb: false,
+        gd15Sum: 0,
+        hasGd15: false,
+      };
+      if (m.firstBlood) cur.hasFb = true;
+      if (typeof m.goldDiff15 === "number" && Number.isFinite(m.goldDiff15)) {
+        cur.gd15Sum += m.goldDiff15;
+        cur.hasGd15 = true;
+      }
+      teamMatchMeta.set(key, cur);
+    }
+    const fbTeams = [...teamMatchMeta.values()].filter((t) => t.hasFb);
+    const fbWr =
+      fbTeams.length > 0
+        ? (fbTeams.filter((t) => t.win).length / fbTeams.length) * 100
+        : null;
+
+    const gd15AheadTeams = [...teamMatchMeta.values()].filter(
+      (t) => t.hasGd15 && t.gd15Sum > 0
+    );
+    const gd15Wr =
+      gd15AheadTeams.length > 0
+        ? (gd15AheadTeams.filter((t) => t.win).length / gd15AheadTeams.length) *
+          100
+        : null;
+
+    // Shortest & Longest game
+    const durationsSec = durationSource
+      .map((m) => m.gameDuration)
+      .filter((d) => d > 0);
+    const shortestMin =
+      durationsSec.length > 0 ? Math.min(...durationsSec) / 60 : 0;
+    const longestMin =
+      durationsSec.length > 0 ? Math.max(...durationsSec) / 60 : 0;
+
+    // ? Ping leader
+    let topPingPlayer: { name: string; count: number } | null = null;
+    for (const p of filteredPlayers) {
+      const count = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
+      if (count > 0 && (!topPingPlayer || count > topPingPlayer.count)) {
+        topPingPlayer = { name: p.displayName, count };
+      }
+    }
+
+    // Multi-kills, steals, solo kills, plates, control wards
+    let triples = 0;
+    let quadras = 0;
+    let pentas = 0;
+    let steals = 0;
+    let totalSoloKills = 0;
+    let totalPlates = 0;
+    let totalControlWards = 0;
+    let totalWardsCleared = 0;
+    for (const m of allMatches) {
+      triples += m.tripleKills ?? 0;
+      quadras += m.quadraKills ?? 0;
+      pentas += m.pentaKills ?? 0;
+      steals += m.objectivesStolen ?? 0;
+      totalSoloKills += m.soloKills ?? 0;
+      totalPlates += m.turretPlates ?? 0;
+      totalControlWards += m.controlWardsBought ?? 0;
+      totalWardsCleared += m.wardsKilled ?? 0;
+    }
+
     return {
       totalGames,
       avgDurationMin,
@@ -377,6 +465,25 @@ export function AdminStatsDashboard({
       redWr,
       champs,
       bannedChamps,
+      flashDPicks,
+      flashDWr: flashDPicks > 0 ? (flashDWins / flashDPicks) * 100 : 0,
+      flashFPicks,
+      flashFWr: flashFPicks > 0 ? (flashFWins / flashFPicks) * 100 : 0,
+      fbWr,
+      fbGames: fbTeams.length,
+      gd15Wr,
+      gd15Games: gd15AheadTeams.length,
+      shortestMin,
+      longestMin,
+      topPingPlayer,
+      triples,
+      quadras,
+      pentas,
+      steals,
+      totalSoloKills,
+      totalPlates,
+      totalControlWards,
+      totalWardsCleared,
     };
   }, [filteredPlayers, dataSource]);
 
@@ -981,84 +1088,6 @@ export function AdminStatsDashboard({
           </div>
         )}
 
-        {/* Top Overview KPI Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-          <div className="xp-panel p-3 flex flex-col justify-between">
-            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-[#f0c020]" />
-              <span>Matches Analyzed</span>
-            </div>
-            <div className="text-2xl font-black text-white mt-1 tabular-nums">
-              {overview.totalGames}
-            </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              {dataSource === "sheet"
-                ? "Official SCDL league games"
-                : "Non-tournament personal games"}
-            </div>
-          </div>
-
-          <div className="xp-panel p-3 flex flex-col justify-between">
-            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#7cd438]" />
-              <span>Avg Game Time</span>
-            </div>
-            <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
-              {formatMinutesSeconds(overview.avgDurationMin)}
-            </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              Across synced matches
-            </div>
-          </div>
-
-          <div className="xp-panel p-3 flex flex-col justify-between">
-            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
-              <span>Avg Team Kills / G</span>
-            </div>
-            <div className="text-2xl font-black text-white mt-1 tabular-nums">
-              {overview.avgKillsPerGame.toFixed(1)}
-            </div>
-            <div className="text-[10px] text-[#a6a89e]">Per player team</div>
-          </div>
-
-          <div className="xp-panel p-3 flex flex-col justify-between">
-            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-[#00b8c9]" />
-              <span>Unique Champs</span>
-            </div>
-            <div className="text-2xl font-black text-white mt-1 tabular-nums">
-              {overview.uniqueChamps}
-            </div>
-            <div className="text-[10px] text-[#a6a89e]">
-              Patch {ddVersion}
-            </div>
-          </div>
-
-          <div className="xp-panel p-3 flex flex-col justify-between col-span-2 lg:col-span-1">
-            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5 text-[#f0c020]" />
-              <span>Side Win Rate</span>
-            </div>
-            <div className="mt-2 space-y-1.5">
-              <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-[#5ea3ff]">
-                  Blue {overview.blueWr.toFixed(1)}%
-                </span>
-                <span className="text-[#ff7b72]">
-                  Red {overview.redWr.toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#ff7b72]/70">
-                <div
-                  className="bg-[#3b82f6] h-full"
-                  style={{ width: `${overview.blueWr}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Stat Leaderboards Grid (Top 5 cards) */}
         {showLeaderboards && leaderboardPlayers.length > 0 && (() => {
           const RANKR_RATING_BLURB = [
@@ -1294,7 +1323,7 @@ export function AdminStatsDashboard({
 
           return (
             <div className="mb-6 space-y-2.5">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-center">
                 <button
                   type="button"
                   onClick={() => void handleExportLeaderboardPng()}
@@ -1474,6 +1503,184 @@ export function AdminStatsDashboard({
             </div>
           );
         })()}
+
+        {/* Top Overview KPI Strip (10 Cards) */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Matches Analyzed</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.totalGames}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {dataSource === "sheet"
+                ? "Official SCDL league games"
+                : "Non-tournament personal games"}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <BarChart3 className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Side Win Rate</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <div className="flex justify-between text-[11px] font-bold">
+                <span className="text-[#5ea3ff]">
+                  Blue {overview.blueWr.toFixed(1)}%
+                </span>
+                <span className="text-[#ff7b72]">
+                  Red {overview.redWr.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#ff7b72]/70">
+                <div
+                  className="bg-[#3b82f6] h-full"
+                  style={{ width: `${overview.blueWr}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Flash on D vs F</span>
+            </div>
+            {overview.flashDPicks + overview.flashFPicks > 0 ? (
+              <div className="mt-1.5 space-y-1 text-xs font-bold tabular-nums">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#f0ede0]">
+                    D: {overview.flashDPicks}
+                  </span>
+                  <span className="text-[#7cd438]">
+                    {overview.flashDWr.toFixed(0)}% WR
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#f0ede0]">
+                    F: {overview.flashFPicks}
+                  </span>
+                  <span className="text-[#7cd438]">
+                    {overview.flashFWr.toFixed(0)}% WR
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-lg font-bold text-[#a6a89e] mt-1">—</div>
+            )}
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Droplet className="w-3.5 h-3.5 text-[#ff857a]" />
+              <span>First Blood WR</span>
+            </div>
+            <div className="text-2xl font-black text-[#7cd438] mt-1 tabular-nums">
+              {overview.fbWr !== null ? `${overview.fbWr.toFixed(0)}%` : "—"}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.fbGames > 0
+                ? `Across ${overview.fbGames} FB games`
+                : "No FB data"}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>@15 Gold Lead WR</span>
+            </div>
+            <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
+              {overview.gd15Wr !== null
+                ? `${overview.gd15Wr.toFixed(0)}%`
+                : "—"}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.gd15Games > 0
+                ? "Teams ahead @15m"
+                : "Sheet mode only"}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#00b8c9]" />
+              <span>Game Length Range</span>
+            </div>
+            <div className="mt-1.5 space-y-0.5 text-xs font-bold tabular-nums">
+              <div className="flex justify-between">
+                <span className="text-[#a6a89e]">Fastest</span>
+                <span className="text-[#7cd438]">
+                  {formatMinutesSeconds(overview.shortestMin)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#a6a89e]">Longest</span>
+                <span className="text-[#f0c020]">
+                  {formatMinutesSeconds(overview.longestMin)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>? Ping Leader</span>
+            </div>
+            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
+              {overview.topPingPlayer ? overview.topPingPlayer.name : "—"}
+            </div>
+            <div className="text-[10px] text-[#f0c020] font-bold tabular-nums">
+              {overview.topPingPlayer
+                ? `${overview.topPingPlayer.count} missing pings`
+                : "Sheet mode only"}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
+              <span>Multi-Kills &amp; Steals</span>
+            </div>
+            <div className="text-lg font-black text-white mt-1 tabular-nums">
+              {overview.triples}T / {overview.quadras}Q / {overview.pentas}P
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.steals} objective{" "}
+              {overview.steals === 1 ? "steal" : "steals"}
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Sword className="w-3.5 h-3.5 text-[#7cd438]" />
+              <span>Solo Kills &amp; Plates</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.totalSoloKills}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.totalPlates} turret plates
+            </div>
+          </div>
+
+          <div className="xp-panel p-3 flex flex-col justify-between">
+            <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-[#00b8c9]" />
+              <span>Control Wards</span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tabular-nums">
+              {overview.totalControlWards}
+            </div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.totalWardsCleared} wards cleared
+            </div>
+          </div>
+        </div>
 
         {/* Most Picked Champions Grid */}
         {overview.champs.length > 0 && (

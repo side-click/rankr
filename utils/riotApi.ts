@@ -51,6 +51,11 @@ export interface CompactRiotMatch {
   teamVoidgrubs?: number;
   teamTowers?: number;
   bans?: string[];
+  flashKey?: "D" | "F";
+  goldDiff15?: number;
+  questionPings?: number;
+  turretPlates?: number;
+  objectivesStolen?: number;
 }
 
 export interface SyncedPlayerInput {
@@ -243,6 +248,8 @@ interface RiotMatchParticipant {
   firstBloodAssist?: boolean;
   firstTowerKill?: boolean;
   firstTowerAssist?: boolean;
+  summoner1Id?: number;
+  summoner2Id?: number;
   challenges?: {
     soloKills?: number;
   };
@@ -438,6 +445,12 @@ export async function syncPlayerFromRiot(
           teamVoidgrubs: myTeam?.objectives?.horde?.kills,
           teamTowers: myTeam?.objectives?.tower?.kills,
           bans,
+          flashKey:
+            me.summoner1Id === 4
+              ? "D"
+              : me.summoner2Id === 4
+              ? "F"
+              : undefined,
         });
       } catch (matchErr) {
         if (matchErr instanceof RiotRateLimitError) {
