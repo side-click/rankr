@@ -64,12 +64,6 @@ export function AdminTeamScoutingView({
       ? "baron"
       : "scdl";
 
-  const cardTintStyle: React.CSSProperties = {
-    borderLeftWidth: "3px",
-    borderLeftColor: divTheme.primary_color,
-    backgroundImage: `linear-gradient(110deg, ${divTheme.primary_color}48 0%, ${divTheme.primary_color}1e 46%, rgba(18, 22, 21, 0.92) 100%)`,
-  };
-
   const displayTeam = leagueTeam ?? team;
   const leaguePlayerByKey = new Map(
     (leagueTeam?.players ?? []).map((p) => [p.playerKey, p])
@@ -122,6 +116,7 @@ export function AdminTeamScoutingView({
     champ: string;
     player: string;
     role: string;
+    vsChamp: string;
     vs: string;
     round: string;
   }[] = [];
@@ -166,10 +161,18 @@ export function AdminTeamScoutingView({
                 gp.teamName.toLowerCase() === team.teamName.toLowerCase() &&
                 gp.champion.toLowerCase() === r5Champ.toLowerCase()
             );
+            const blueSameRole = matchedPlayer?.role
+              ? g.players.find(
+                  (gp) =>
+                    gp.teamName.toLowerCase() === g.blueTeam.toLowerCase() &&
+                    gp.role === matchedPlayer.role
+                )
+              : undefined;
             r5Picks.push({
               champ: r5Champ,
               player: matchedPlayer?.displayName ?? "—",
               role: matchedPlayer?.role ?? "",
+              vsChamp: blueSameRole?.champion ?? "",
               vs: oppName,
               round: g.roundLabel,
             });
@@ -236,13 +239,10 @@ export function AdminTeamScoutingView({
               <div className="text-xs font-bold text-[#f0c020]">
                 {team.divisionName} • {seasonName}
               </div>
-              <div className="text-[10px] text-[#a6a89e] mt-0.5">
-                Official League Match Stats + Role-Filtered SoloQ Scouting
-              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center w-full lg:w-auto shrink-0">
             <div className="xp-inset px-3 py-2">
               <div className="text-[10px] uppercase text-[#a6a89e]">Series</div>
               <div
@@ -287,7 +287,7 @@ export function AdminTeamScoutingView({
                 {displayTeam.games > 0 ? Math.round(displayTeam.avgDpm) : "—"}
               </div>
             </div>
-            <div className="xp-inset px-3 py-2 col-span-2 sm:col-span-1">
+            <div className="xp-inset px-3 py-2">
               <div className="text-[10px] uppercase text-[#a6a89e]">
                 Avg Time
               </div>
@@ -318,7 +318,7 @@ export function AdminTeamScoutingView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {team.players.map((soloPlayer: AggregatedPlayerStats) => {
               const lp = leaguePlayerByKey.get(soloPlayer.playerKey);
               const statsSrc = lp && lp.games > 0 ? lp : soloPlayer;
@@ -343,8 +343,7 @@ export function AdminTeamScoutingView({
               return (
                 <div
                   key={soloPlayer.playerKey}
-                  style={cardTintStyle}
-                  className="xp-panel p-3 flex flex-col gap-3"
+                  className="xp-panel p-3 flex flex-col gap-3 w-full max-w-[380px] mx-auto sm:max-w-none"
                 >
                   {/* Top Row: Large Role Icon + Name + Top Mastery Icon */}
                   <div className="flex items-start justify-between gap-2">
@@ -396,11 +395,11 @@ export function AdminTeamScoutingView({
                     )}
                   </div>
 
-                  {/* League Split Stats */}
+                  {/* Season Stats */}
                   <div className="bg-black/35 border border-white/10 rounded px-2.5 py-2">
                     <div className="text-[9px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1">
                       {lp && lp.games > 0
-                        ? `League Split (${lp.games}G)`
+                        ? `This Season (${lp.games}G)`
                         : `SoloQ (${soloPlayer.games}G)`}
                     </div>
                     <div className="grid grid-cols-2 gap-y-1 text-[11px]">
@@ -443,10 +442,10 @@ export function AdminTeamScoutingView({
                     </div>
                   </div>
 
-                  {/* 1. This Split (League) */}
+                  {/* 1. This Season (League) */}
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020] mb-1.5">
-                      This Split (League)
+                      This Season (League)
                     </div>
                     {leagueChamps.length > 0 ? (
                       <div className="space-y-1">
@@ -709,27 +708,66 @@ export function AdminTeamScoutingView({
               </div>
 
               <div className="bg-black/35 border border-white/10 rounded p-2">
-                <div className="text-[10px] font-bold uppercase text-[#f0c020] mb-1.5">
+                <div className="text-[10px] font-bold uppercase text-[#f0c020] mb-1">
                   R5 Counterpicks
                 </div>
                 {r5Picks.length > 0 ? (
                   <div className="space-y-1.5">
+                    {(() => {
+                      const byPlayer = new Map<string, number>();
+                      for (const p of r5Picks) {
+                        byPlayer.set(
+                          p.player,
+                          (byPlayer.get(p.player) ?? 0) + 1
+                        );
+                      }
+                      const topSummary = [...byPlayer.entries()]
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([name, cnt]) => `${name} (${cnt}/${r5Picks.length})`)
+                        .join(", ");
+                      return (
+                        <div className="text-[9px] text-[#a6a89e] pb-1 border-b border-white/10">
+                          Usually R5:{" "}
+                          <span className="text-[#f0ede0] font-semibold">
+                            {topSummary}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     {r5Picks.map((p, idx) => (
                       <div key={idx} className="flex items-center gap-1.5">
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
-                          className="w-5 h-5 rounded object-cover"
+                          className="w-5 h-5 rounded object-cover shrink-0"
                         />
-                        <div className="min-w-0">
-                          <div className="font-bold text-[#f0ede0] truncate">
-                            {p.champ}{" "}
-                            <span className="text-[10px] text-[#f0c020]">
-                              ({p.role || p.player})
-                            </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-[#f0ede0] truncate flex items-center gap-1">
+                            <span>{p.champ}</span>
+                            {p.role && (
+                              <span className="text-[10px] text-[#f0c020]">
+                                ({p.role})
+                              </span>
+                            )}
+                            {p.vsChamp && (
+                              <>
+                                <span className="text-[10px] text-[#a6a89e] font-normal">
+                                  vs
+                                </span>
+                                <img
+                                  src={getChampionIconUrl(p.vsChamp, ddVersion)}
+                                  alt={p.vsChamp}
+                                  title={`Counterpicked into ${p.vsChamp}`}
+                                  className="w-4 h-4 rounded object-cover shrink-0"
+                                />
+                                <span className="text-[10px] text-[#ff857a] font-semibold truncate">
+                                  {p.vsChamp}
+                                </span>
+                              </>
+                            )}
                           </div>
                           <div className="text-[9px] text-[#a6a89e] truncate">
-                            {p.player} • {p.round}
+                            {p.player} • {p.round} vs {p.vs}
                           </div>
                         </div>
                       </div>
