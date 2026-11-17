@@ -13,7 +13,7 @@ export function RecentBallotsPanel({ ballots }: RecentBallotsPanelProps) {
   return (
     <div className="space-y-3">
       <BallotListGrid ballots={recentBallots} defaultView="list" />
-      <div className="flex justify-start">
+      <div className="flex justify-end">
         <Link href="/browse" className="xp-btn text-xs">
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Browse All</span>
