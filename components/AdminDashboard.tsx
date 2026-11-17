@@ -1427,7 +1427,7 @@ export function AdminDashboard({
           href="/admin/stats"
           className="xp-btn text-xs sm:ml-auto border-[#c89b3c]/70 text-[#f0c020]"
         >
-          <span>Stats Lab (Riot API)</span>
+          <span>Stats Dashboard</span>
         </Link>
       </div>
 

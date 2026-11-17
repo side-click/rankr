@@ -598,7 +598,7 @@ export function AdminStatsDashboard({
         if (syncedRow?.sync_error) {
           appendSyncLog(
             "err",
-            `${playerItem.riotId} â€” ${syncedRow.sync_error}`
+            `${playerItem.riotId} — ${syncedRow.sync_error}`
           );
         } else if (syncedRow) {
           const tierLabel = syncedRow.solo_tier
@@ -606,7 +606,7 @@ export function AdminStatsDashboard({
             : "Unranked";
           appendSyncLog(
             "ok",
-            `${syncedRow.riot_id} â€” ${tierLabel} â€¢ ${syncedRow.matches.length}G`
+            `${syncedRow.riot_id} — ${tierLabel} • ${syncedRow.matches.length}G`
           );
         }
 
@@ -659,13 +659,13 @@ export function AdminStatsDashboard({
               dataSource === "sheet" ? "xp-btn-primary" : ""
             }`}
           >
-            SCDL League (Sheet)
+            SCDL League (Import)
           </button>
         </div>
       </div>
 
       {missingTable && (
-        <RetroWindow title="Setup Required â€” Create Stats Cache Table" theme="xp">
+        <RetroWindow title="Setup Required — Create Stats Cache Table" theme="xp">
           <div className="space-y-3 text-xs text-[#e8e5d8]">
             <div className="flex items-start gap-2 text-[#f0c020] font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -696,8 +696,8 @@ export function AdminStatsDashboard({
       <RetroWindow
         title={
           dataSource === "sheet"
-            ? `Stats Lab (SCDL Sheet) - SCDL ${seasonName}`
-            : `Stats Lab (Riot API) - SCDL ${seasonName}`
+            ? `Stats Dashboard (SCDL League (Import)) - SCDL ${seasonName}`
+            : `Stats Dashboard (SoloQ API) - SCDL ${seasonName}`
         }
         theme={
           selectedDivision
@@ -914,7 +914,7 @@ export function AdminStatsDashboard({
               className="w-full bg-[#121615] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-[#c7c5b8] hover:text-white cursor-pointer"
             >
               <span>Sync Activity Log ({syncLogs.length})</span>
-              <span>{showSyncLog ? "Hide â–²" : "Show â–¼"}</span>
+              <span>{showSyncLog ? "Hide ▲" : "Show ▼"}</span>
             </button>
             {showSyncLog && (
               <div className="max-h-36 overflow-y-auto p-2 space-y-1 font-mono text-[11px] bg-black/40">
@@ -1354,8 +1354,8 @@ export function AdminStatsDashboard({
                   className="xp-btn text-[11px] px-3 py-1"
                 >
                   {showAllLeaderboards
-                    ? "Show Fewer Leaderboards â–²"
-                    : "Show More Leaderboards â–¼"}
+                    ? "Show Fewer Leaderboards ▲"
+                    : "Show More Leaderboards ▼"}
                 </button>
               </div>
             </div>
@@ -1414,7 +1414,7 @@ export function AdminStatsDashboard({
                   {overview.bannedChamps.slice(0, 12).map((b) => (
                     <div
                       key={b.name}
-                      title={`${b.name} â€” ${b.bans} bans (${b.banRate.toFixed(
+                      title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
                         0
                       )}% ban rate)`}
                       className="bg-black/40 border border-white/10 rounded overflow-hidden"
@@ -1497,21 +1497,21 @@ export function AdminStatsDashboard({
                         t.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
                       }`}
                     >
-                      {t.games > 0 ? `${t.winRate.toFixed(1)}%` : "â€”"}
+                      {t.games > 0 ? `${t.winRate.toFixed(1)}%` : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? t.avgKda.toFixed(2) : "â€”"}
+                      {t.games > 0 ? t.avgKda.toFixed(2) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? Math.round(t.avgDpm) : "â€”"}
+                      {t.games > 0 ? Math.round(t.avgDpm) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? Math.round(t.avgGpm) : "â€”"}
+                      {t.games > 0 ? Math.round(t.avgGpm) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
                       {t.games > 0
                         ? formatMinutesSeconds(t.avgGameMinutes)
-                        : "â€”"}
+                        : "—"}
                     </td>
                   </tr>
                 ))}
@@ -1574,7 +1574,7 @@ export function AdminStatsDashboard({
                   <th
                     className="px-2 py-2 text-right cursor-pointer hover:text-white"
                     onClick={() => handleSort("leagueRating")}
-                    title="Role-normalized 0â€“100 League Rating"
+                    title="Role-normalized 0–100 League Rating"
                   >
                     Rating
                   </th>
@@ -1684,7 +1684,7 @@ export function AdminStatsDashboard({
                             : "text-[#ff857a]"
                         }`}
                       >
-                        {p.games > 0 ? p.leagueRating.toFixed(1) : "â€”"}
+                        {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
                         {p.games}
@@ -1694,22 +1694,22 @@ export function AdminStatsDashboard({
                           p.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
                         }`}
                       >
-                        {p.games > 0 ? `${p.winRate.toFixed(0)}%` : "â€”"}
+                        {p.games > 0 ? `${p.winRate.toFixed(0)}%` : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono font-bold">
-                        {p.games > 0 ? p.kda.toFixed(2) : "â€”"}
+                        {p.games > 0 ? p.kda.toFixed(2) : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
-                        {p.games > 0 ? Math.round(p.dpm) : "â€”"}
+                        {p.games > 0 ? Math.round(p.dpm) : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
-                        {p.games > 0 ? Math.round(p.gpm) : "â€”"}
+                        {p.games > 0 ? Math.round(p.gpm) : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
-                        {p.games > 0 ? p.csPerMin.toFixed(1) : "â€”"}
+                        {p.games > 0 ? p.csPerMin.toFixed(1) : "—"}
                       </td>
                       <td className="px-2 py-2 text-right font-mono">
-                        {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "â€”"}
+                        {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "—"}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
@@ -1745,8 +1745,8 @@ export function AdminStatsDashboard({
                 className="xp-btn text-xs"
               >
                 {showAllPlayers
-                  ? "Show Top 15 â–²"
-                  : `Show All ${tablePlayers.length} Players â–¼`}
+                  ? "Show Top 15 ▲"
+                  : `Show All ${tablePlayers.length} Players ▼`}
               </button>
             </div>
           )}
