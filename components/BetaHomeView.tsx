@@ -278,7 +278,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     {data.divisionStandings.map((div) => (
                       <div
                         key={div.divisionId}
-                        style={{ borderTopColor: div.primaryColor }}
+                        style={{
+                          borderColor: `${div.primaryColor}55`,
+                          borderTopColor: div.primaryColor,
+                          background: `linear-gradient(135deg, ${div.primaryColor}26 0%, #121615 65%)`,
+                        }}
                         className="xp-panel p-3 border-t-2 space-y-2"
                       >
                         <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
@@ -301,7 +305,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                             <Link
                               key={t.teamId}
                               href={`/stats/team/${encodeURIComponent(t.teamId)}`}
-                              className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-black/30 hover:bg-[#f0c020]/10 border border-white/10 hover:border-[#f0c020]/50 transition text-xs"
+                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
+                                idx === 0
+                                  ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
+                                  : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
+                              }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="w-5 text-center font-bold text-[#f0c020] tabular-nums shrink-0">
@@ -346,7 +354,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     {data.divisionTopPerformers.map((div) => (
                       <div
                         key={div.divisionId}
-                        style={{ borderTopColor: div.primaryColor }}
+                        style={{
+                          borderColor: `${div.primaryColor}55`,
+                          borderTopColor: div.primaryColor,
+                          background: `linear-gradient(135deg, ${div.primaryColor}26 0%, #121615 65%)`,
+                        }}
                         className="xp-panel p-3 border-t-2 space-y-2"
                       >
                         <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
@@ -373,7 +385,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                 href={`/stats/player/${encodeURIComponent(
                                   p.playerKey
                                 )}`}
-                                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-black/30 hover:bg-[#f0c020]/10 border border-white/10 hover:border-[#f0c020]/50 transition text-xs"
+                                className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
+                                  idx === 0
+                                    ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
+                                    : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
+                                }`}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <span className="w-4 font-extrabold text-[#f0c020] tabular-nums shrink-0">
@@ -412,25 +428,20 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             {/* Right Col: Vertically Stacked Recent Match Results */}
             {data.recentMatches.length > 0 && (
               <div className="lg:col-span-5 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-                    <Swords className="w-3.5 h-3.5" />
-                    <span>Recent Match Results</span>
-                  </h2>
-                  <Link
-                    href={statsHref}
-                    className="text-xs text-[#c7c5b8] hover:text-[#f0c020] underline"
-                  >
-                    Full Stats Hub →
-                  </Link>
-                </div>
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>Recent Match Results</span>
+                </h2>
                 <div className="space-y-2.5">
                   {data.recentMatches.map((m) => (
                     <Link
                       key={m.seriesKey}
                       href={`/stats/match/${encodeURIComponent(m.seriesKey)}`}
-                      style={{ borderLeftColor: m.divisionColor }}
-                      className="xp-panel p-3 border-l-4 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition grid grid-cols-3 items-center gap-2"
+                      style={{
+                        borderLeftColor: m.divisionColor,
+                        background: `linear-gradient(90deg, ${m.divisionColor}24 0%, #121615 55%)`,
+                      }}
+                      className="xp-panel p-3 border-l-4 hover:border-[#f0c020]/70 transition grid grid-cols-3 items-center gap-2"
                     >
                       <div className="flex flex-col items-center text-center gap-1 min-w-0">
                         {m.teamALogoUrl && (
@@ -491,6 +502,12 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 </div>
               </div>
             )}
+          </div>
+          <div className="flex justify-end pt-3">
+            <Link href={statsHref} className="xp-btn text-xs">
+              <BarChart3 className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+              <span>Full Stats Dashboard</span>
+            </Link>
           </div>
         </RetroWindow>
       )}
