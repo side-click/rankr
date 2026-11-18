@@ -573,15 +573,15 @@ export function AdminTeamScoutingView({
                                   {c.name}
                                 </span>
                               </div>
-                              <span className="font-mono text-xs text-[#c7c5b8] shrink-0">
-                                {c.games}
+                              <span className="inline-flex items-center font-mono text-xs text-[#c7c5b8] shrink-0 tabular-nums">
+                                <span className="w-7 text-right">{c.games}</span>
                                 <span className="text-[#a6a89e]/50 mx-1">/</span>
                                 <strong
-                                  className={
+                                  className={`w-10 text-right ${
                                     c.winRate >= 50
                                       ? "text-[#7cd438]"
                                       : "text-[#ff857a]"
-                                  }
+                                  }`}
                                 >
                                   {c.winRate.toFixed(0)}%
                                 </strong>
