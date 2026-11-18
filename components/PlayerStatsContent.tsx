@@ -556,8 +556,11 @@ export async function PlayerStatsContent({
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
                 This Season
               </h3>
-              <div className="flex items-center gap-2 text-[11px] text-[#a6a89e]">
-                <span className="text-[#ff5a52]">High Priority</span>
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 text-[#ff5a52]">
+                  <span className="w-2.5 h-2.5 rounded-xs border border-[#ff5a52] bg-[#ff5a52]/25 inline-block" />
+                  High Priority
+                </span>
               </div>
             </div>
             {leagueChamps.length > 0 ? (
