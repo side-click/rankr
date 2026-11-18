@@ -20,9 +20,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !RIOT_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Sliding window rate limiter: max 90 requests per 122s (safe under 100 / 120s dev key)
-const WINDOW_MS = 122_000;
-const MAX_REQS_PER_WINDOW = 90;
+// Sliding window rate limiter: max 95 requests per 121s (safe under 100 / 120s dev key)
+const WINDOW_MS = 121_000;
+const MAX_REQS_PER_WINDOW = 95;
 const reqTimestamps = [];
 
 async function paceRequest() {
@@ -116,9 +116,15 @@ const seasonTeams = (teams ?? []).filter((t) => divIds.has(t.division_id));
 
 const { data: existingRows } = await supabase
   .from("riot_player_stats")
-  .select("player_key, matches");
+  .select("player_key, matches, deep_synced_at");
 const existingByKey = new Map(
   (existingRows ?? []).map((r) => [r.player_key, r.matches ?? []])
+);
+const deepSyncedAtByKey = new Map(
+  (existingRows ?? []).map((r) => [
+    r.player_key,
+    r.deep_synced_at ? Date.parse(r.deep_synced_at) : 0,
+  ])
 );
 
 const players = [];
@@ -144,6 +150,13 @@ for (const team of seasonTeams) {
     });
   }
 }
+
+// Process un-synced or oldest-synced players first so interrupted runs resume cleanly
+players.sort(
+  (a, b) =>
+    (deepSyncedAtByKey.get(a.playerKey) ?? 0) -
+    (deepSyncedAtByKey.get(b.playerKey) ?? 0)
+);
 
 console.log(
   `Starting deep sync for ${players.length} players (${MATCH_COUNT} games, ${MAX_AGE_DAYS}d window)...`
@@ -276,11 +289,19 @@ for (let idx = 0; idx < players.length; idx++) {
       return ids;
     }
 
-    const prevMap = new Map(
-      (existingByKey.get(p.playerKey) ?? []).map((m) => [m.matchId, m])
-    );
+    const prevMatches = existingByKey.get(p.playerKey) ?? [];
+    const prevCutoffMs =
+      prevMatches.length >= MATCH_COUNT
+        ? [...prevMatches]
+            .map((m) => m.gameCreation ?? 0)
+            .sort((a, b) => b - a)[MATCH_COUNT - 1] ?? 0
+        : 0;
 
-    const matchesMap = new Map();
+    const matchesMap = new Map(
+      prevMatches
+        .filter((m) => (m.gameCreation ?? 0) >= startTimeSec * 1000)
+        .map((m) => [m.matchId, m])
+    );
     let fetchedNew = 0;
     for (const src of accountSources) {
       let srcIds = await fetchMatchIds(src.puuid, "ranked");
@@ -288,9 +309,8 @@ for (let idx = 0; idx < players.length; idx++) {
         srcIds = await fetchMatchIds(src.puuid, null);
       }
       for (const matchId of srcIds) {
-        if (matchesMap.has(matchId)) continue;
-        if (prevMap.has(matchId)) {
-          matchesMap.set(matchId, prevMap.get(matchId));
+        if (matchesMap.has(matchId)) {
+          if (prevCutoffMs > 0) break;
           continue;
         }
         try {
@@ -300,6 +320,12 @@ for (let idx = 0; idx < players.length; idx++) {
             )}`
           );
           fetchedNew += 1;
+          if (
+            prevCutoffMs > 0 &&
+            (matchData.info?.gameCreation ?? 0) < prevCutoffMs
+          ) {
+            break;
+          }
           const me = matchData.info.participants.find(
             (x) => x.puuid === src.puuid
           );
