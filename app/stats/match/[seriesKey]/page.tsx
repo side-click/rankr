@@ -1,5 +1,6 @@
 import { MatchSeriesContent } from "@/components/MatchSeriesContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export default async function PublicMatchSeriesPage({
 }) {
   const { seriesKey } = await params;
   const decodedKey = decodeURIComponent(seriesKey);
-  const ctx = await loadPublicStatsContext();
+  const effectiveSeason = await getFocusedSeasonSlug();
+  const ctx = await loadPublicStatsContext(effectiveSeason);
 
   return (
     <MatchSeriesContent ctx={ctx} decodedKey={decodedKey} basePath="/stats" />

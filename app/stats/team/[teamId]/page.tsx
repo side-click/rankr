@@ -3,6 +3,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { AdminTeamScoutingView } from "@/components/AdminTeamScoutingView";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
@@ -17,7 +18,8 @@ export default async function PublicTeamStatsPage({
 }) {
   const { teamId } = await params;
   const decodedId = decodeURIComponent(teamId);
-  const ctx = await loadPublicStatsContext();
+  const effectiveSeason = await getFocusedSeasonSlug();
+  const ctx = await loadPublicStatsContext(effectiveSeason);
 
   const team = ctx.teams.find((t) => t.teamId === decodedId);
   if (!team) {

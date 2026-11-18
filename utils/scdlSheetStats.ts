@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { CompactRiotMatch } from "@/utils/riotApi";
 import draftsData from "@/data/scdl_drafts.json";
 import {
@@ -210,27 +211,38 @@ function parseCsvRows(csvText: string, startOrder: number): ParsedSheetRow[] {
   return rows;
 }
 
-export async function fetchScdlSheetStats(
-  rosterPlayers: AggregatedPlayerStats[],
-  rosterTeams: AggregatedTeamStats[]
-): Promise<SheetSyncSummary> {
-  const csvTexts = await Promise.all(
-    SCDL_SHEET_GIDS.map(async ({ gid }) => {
-      const url = `https://docs.google.com/spreadsheets/d/${SCDL_SHEET_ID}/export?format=csv&gid=${gid}`;
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch SCDL sheet tab ${gid} (${res.status})`);
-      }
-      return res.text();
-    })
-  );
+export interface SheetSourceConfig {
+  sheetId?: string | null;
+  gids?: string[] | null;
+  bypassCache?: boolean;
+}
 
+const fetchUniqueSheetRowsCached = cache(
+  async (sheetId: string, gidsKey: string): Promise<ParsedSheetRow[]> => {
+    const gids = gidsKey.split(",").filter(Boolean);
+    const csvTexts = await Promise.all(
+      gids.map(async (gid) => {
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+        const res = await fetch(url, { next: { revalidate: 120 } });
+        if (!res.ok) {
+          throw new Error(
+            `Failed to fetch SCDL sheet tab ${gid} (${res.status})`
+          );
+        }
+        return res.text();
+      })
+    );
+    return dedupeParsedRows(csvTexts);
+  }
+);
+
+function dedupeParsedRows(csvTexts: string[]): ParsedSheetRow[] {
   let allRows: ParsedSheetRow[] = [];
   for (let t = 0; t < csvTexts.length; t++) {
-    allRows = allRows.concat(parseCsvRows(csvTexts[t], t * 100_000));
+    if (csvTexts[t]) {
+      allRows = allRows.concat(parseCsvRows(csvTexts[t], t * 100_000));
+    }
   }
-
-  // Deduplicate by (gameId + normalized playerName) in case a game appears in both tabs
   const seenRowKeys = new Set<string>();
   const uniqueRows: ParsedSheetRow[] = [];
   for (const r of allRows) {
@@ -239,6 +251,43 @@ export async function fetchScdlSheetStats(
     seenRowKeys.add(key);
     uniqueRows.push(r);
   }
+  return uniqueRows;
+}
+
+async function loadUniqueSheetRows(
+  config?: SheetSourceConfig
+): Promise<ParsedSheetRow[]> {
+  const sheetId = config?.sheetId?.trim() || SCDL_SHEET_ID;
+  const gids =
+    config?.gids && config.gids.length > 0
+      ? config.gids
+      : SCDL_SHEET_GIDS.map((g) => g.gid);
+
+  if (config?.bypassCache) {
+    const csvTexts = await Promise.all(
+      gids.map(async (gid) => {
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(
+            `Failed to fetch SCDL sheet tab ${gid} (${res.status})`
+          );
+        }
+        return res.text();
+      })
+    );
+    return dedupeParsedRows(csvTexts);
+  }
+
+  return fetchUniqueSheetRowsCached(sheetId, gids.join(","));
+}
+
+export async function fetchScdlSheetStats(
+  rosterPlayers: AggregatedPlayerStats[],
+  rosterTeams: AggregatedTeamStats[],
+  config?: SheetSourceConfig
+): Promise<SheetSyncSummary> {
+  const uniqueRows = await loadUniqueSheetRows(config);
 
   // Group by gameId + teamName for team totals
   const teamGameTotals = new Map<
@@ -823,32 +872,10 @@ function formatRoundLabel(matchLabel: string): string {
   return raw ? raw.replace(/([a-zA-Z]+)(\d+)/, "$1 $2") : "League Match";
 }
 
-async function fetchAllUniqueSheetRows(): Promise<ParsedSheetRow[]> {
-  const csvTexts = await Promise.all(
-    SCDL_SHEET_GIDS.map(async ({ gid }) => {
-      const url = `https://docs.google.com/spreadsheets/d/${SCDL_SHEET_ID}/export?format=csv&gid=${gid}`;
-      const res = await fetch(url, { next: { revalidate: 120 } });
-      if (!res.ok) return "";
-      return res.text();
-    })
-  );
-  let allRows: ParsedSheetRow[] = [];
-  for (let t = 0; t < csvTexts.length; t++) {
-    if (csvTexts[t]) allRows = allRows.concat(parseCsvRows(csvTexts[t], t * 100_000));
-  }
-  const seen = new Set<string>();
-  const unique: ParsedSheetRow[] = [];
-  for (const r of allRows) {
-    const k = `${r.gameId}::${normalizeRiotKey(r.playerName)}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    unique.push(r);
-  }
-  return unique;
-}
-
-export async function fetchAllScdlSeries(): Promise<ScdlSeriesDetail[]> {
-  const rows = await fetchAllUniqueSheetRows();
+export async function fetchAllScdlSeries(
+  config?: SheetSourceConfig
+): Promise<ScdlSeriesDetail[]> {
+  const rows = await loadUniqueSheetRows(config).catch(() => []);
   const byGame = new Map<string, ParsedSheetRow[]>();
   for (const r of rows) {
     const list = byGame.get(r.gameId) ?? [];

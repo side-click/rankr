@@ -1,5 +1,6 @@
 import { PlayerStatsContent } from "@/components/PlayerStatsContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export default async function PublicPlayerStatsPage({
 }) {
   const { playerKey } = await params;
   const decodedKey = decodeURIComponent(playerKey).toLowerCase();
-  const ctx = await loadPublicStatsContext();
+  const effectiveSeason = await getFocusedSeasonSlug();
+  const ctx = await loadPublicStatsContext(effectiveSeason);
 
   return (
     <PlayerStatsContent ctx={ctx} decodedKey={decodedKey} basePath="/stats" />

@@ -25,7 +25,9 @@ export async function GET() {
 
   try {
     const ctx = await loadAdminStatsContext();
-    const summary = await fetchScdlSheetStats(ctx.players, ctx.teams);
+    const summary = await fetchScdlSheetStats(ctx.players, ctx.teams, {
+      bypassCache: true,
+    });
     return NextResponse.json(summary);
   } catch (err) {
     return NextResponse.json(
