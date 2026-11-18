@@ -21,6 +21,7 @@ import {
   Droplet,
   Eye,
   Flame,
+  HelpCircle,
   RefreshCw,
   Shield,
   Skull,
@@ -1694,7 +1695,9 @@ export function AdminStatsDashboard({
             className="xp-panel p-3 flex flex-col justify-between"
           >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span className="w-3.5 h-3.5 rounded-[3px] border-[1.25px] border-[#f0c020] text-[#f0c020] text-[9px] font-black leading-none inline-flex items-center justify-center shrink-0">
+                F
+              </span>
               <span>Flash on D vs F</span>
             </div>
             {overview.flashDPicks + overview.flashFPicks > 0 ? (
@@ -1802,8 +1805,8 @@ export function AdminStatsDashboard({
             className="xp-panel p-3 flex flex-col justify-between"
           >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-[#f0c020]" />
-              <span>? Ping Leader</span>
+              <HelpCircle className="w-3.5 h-3.5 text-[#f0c020]" />
+              <span>Toxic Ping Leader?</span>
             </div>
             <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
               {overview.topPingPlayer ? overview.topPingPlayer.name : "—"}
