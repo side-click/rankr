@@ -1,8 +1,40 @@
+import type { Metadata } from "next";
 import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
 export const dynamic = "force-dynamic";
+
+const deploySha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
+const statsTitle = "Stats Dashboard | Rankr";
+const statsDescription =
+  "Player leaderboards, team standings, champion stats, and scouting data.";
+const statsOgUrl = `/stats/opengraph-image?v=${deploySha}`;
+
+export const metadata: Metadata = {
+  title: statsTitle,
+  description: statsDescription,
+  openGraph: {
+    type: "website",
+    siteName: "Rankr",
+    title: statsTitle,
+    description: statsDescription,
+    images: [
+      {
+        url: statsOgUrl,
+        width: 1200,
+        height: 630,
+        alt: statsTitle,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: statsTitle,
+    description: statsDescription,
+    images: [statsOgUrl],
+  },
+};
 
 export default async function PublicStatsPage() {
   const ctx = await loadPublicStatsContext();
