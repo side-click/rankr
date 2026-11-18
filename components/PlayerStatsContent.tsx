@@ -307,7 +307,7 @@ export async function PlayerStatsContent({
                   className="w-3.5 h-3.5 object-contain"
                 />
               )}
-              <span>{soloPlayer.teamName} Scouting</span>
+              <span>{soloPlayer.teamName} Team Stats</span>
             </Link>
           )}
         </div>
@@ -344,7 +344,7 @@ export async function PlayerStatsContent({
                 <h1 className="wow-heading text-3xl sm:text-4xl font-extrabold text-white">
                   {soloPlayer.displayName}
                 </h1>
-                <span className="text-sm font-mono text-[#a6a89e]">
+                <span className="text-sm tabular-nums text-[#a6a89e]">
                   {soloPlayer.riotId}
                 </span>
               </div>
@@ -595,7 +595,7 @@ export async function PlayerStatsContent({
                           {c.name}
                         </span>
                       </div>
-                      <span className="font-mono font-bold text-[#7cd438] shrink-0">
+                      <span className="tabular-nums font-bold text-[#7cd438] shrink-0">
                         {c.wins}-{losses}
                       </span>
                     </div>
@@ -647,7 +647,7 @@ export async function PlayerStatsContent({
                           {c.name}
                         </span>
                       </div>
-                      <span className="inline-flex items-center font-mono text-[11px] shrink-0 tabular-nums">
+                      <span className="inline-flex items-center tabular-nums text-[11px] shrink-0 tabular-nums">
                         <span className="w-7 text-right text-[#c7c5b8]">
                           {c.games}
                         </span>
@@ -745,7 +745,7 @@ export async function PlayerStatsContent({
                           <span>{g.row.champion}</span>
                           {g.pickSlot && (
                             <span
-                              className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
+                              className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded ${
                                 g.pickSlot.startsWith("B")
                                   ? "bg-[#5ea3ff]/20 text-[#5ea3ff]"
                                   : "bg-[#ff7b72]/20 text-[#ff7b72]"
@@ -777,7 +777,7 @@ export async function PlayerStatsContent({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-5 font-mono text-xs sm:text-[13px]">
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-5 tabular-nums text-xs sm:text-[13px]">
                       <div>
                         <strong className="text-white">
                           {g.row.kills}/{g.row.deaths}/{g.row.assists}

@@ -507,7 +507,7 @@ export function AdminTeamScoutingView({
                                 </span>
                               </div>
                               <span
-                                className={`font-mono font-bold shrink-0 ${
+                                className={`tabular-nums font-bold shrink-0 ${
                                   c.wins >= losses
                                     ? "text-[#7cd438]"
                                     : "text-[#ff857a]"
@@ -573,7 +573,7 @@ export function AdminTeamScoutingView({
                                   {c.name}
                                 </span>
                               </div>
-                              <span className="inline-flex items-center font-mono text-xs text-[#c7c5b8] shrink-0 tabular-nums">
+                              <span className="inline-flex items-center tabular-nums text-xs text-[#c7c5b8] shrink-0 tabular-nums">
                                 <span className="w-7 text-right">{c.games}</span>
                                 <span className="text-[#a6a89e]/50 mx-1">/</span>
                                 <strong
@@ -662,7 +662,7 @@ export function AdminTeamScoutingView({
                         {b.name}
                       </span>
                     </div>
-                    <span className="text-base sm:text-lg font-mono font-black text-[#ff857a] leading-none shrink-0">
+                    <span className="text-base sm:text-lg tabular-nums font-black text-[#ff857a] leading-none shrink-0">
                       {b.total}
                     </span>
                   </div>
@@ -877,7 +877,7 @@ export function AdminTeamScoutingView({
                           {s.roundLabel}
                         </span>
                         {s.games[0] && (
-                          <span className="inline-flex items-center gap-1 font-mono">
+                          <span className="inline-flex items-center gap-1 tabular-nums">
                             <Clock className="w-3 h-3" />
                             {formatMinutesSeconds(s.games[0].gameDuration / 60)}
                           </span>
@@ -913,7 +913,7 @@ export function AdminTeamScoutingView({
                                 {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Blue:{" "}
                                 {g.blueTeam}
                               </span>
-                              <div className="flex items-center gap-2.5 font-mono text-xs">
+                              <div className="flex items-center gap-2.5 tabular-nums text-xs">
                                 <span className="font-bold text-[#f0ede0]">
                                   {g.blueKills}/{g.blueDeaths}/{g.blueAssists}
                                 </span>
@@ -959,7 +959,7 @@ export function AdminTeamScoutingView({
                                 {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Red:{" "}
                                 {g.redTeam}
                               </span>
-                              <div className="flex items-center gap-2.5 font-mono text-xs">
+                              <div className="flex items-center gap-2.5 tabular-nums text-xs">
                                 <span className="font-bold text-[#f0ede0]">
                                   {g.redKills}/{g.redDeaths}/{g.redAssists}
                                 </span>

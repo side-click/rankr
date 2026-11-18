@@ -857,7 +857,7 @@ export function AdminStatsDashboard({
                 your Supabase SQL Editor to cache Riot API stats:
               </span>
             </div>
-            <pre className="xp-inset p-3 text-[11px] overflow-x-auto text-[#7cd438] font-mono">
+            <pre className="xp-inset p-3 text-[11px] overflow-x-auto text-[#7cd438] tabular-nums">
               {MIGRATION_SQL}
             </pre>
           </div>
@@ -1018,7 +1018,7 @@ export function AdminStatsDashboard({
                     >
                       {div.name}
                     </span>
-                    <span className="text-[10px] font-mono text-[#a6a89e]">
+                    <span className="text-[10px] tabular-nums text-[#a6a89e]">
                       {count}
                     </span>
                   </button>
@@ -1048,7 +1048,7 @@ export function AdminStatsDashboard({
                 <span className="text-xs font-extrabold text-[#f0ede0] truncate flex-1">
                   All Divisions
                 </span>
-                <span className="text-[10px] font-mono text-[#a6a89e]">
+                <span className="text-[10px] tabular-nums text-[#a6a89e]">
                   {activePlayers.length}
                 </span>
               </button>
@@ -1348,7 +1348,7 @@ export function AdminStatsDashboard({
                     className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] font-mono text-[#a6a89e] w-3">
+                      <span className="text-[10px] tabular-nums text-[#a6a89e] w-3">
                         {idx + 1}
                       </span>
                       {p.teamLogoUrl && (
@@ -1363,7 +1363,7 @@ export function AdminStatsDashboard({
                         {p.displayName}
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-[#7cd438] shrink-0">
+                    <span className="tabular-nums font-bold text-[#7cd438] shrink-0">
                       {card.fmt(p)}
                     </span>
                   </Link>
@@ -2163,7 +2163,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("leagueRating")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "leagueRating"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2173,7 +2173,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("games")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "games"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2183,7 +2183,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("avgGoldDiff15")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "avgGoldDiff15"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2205,7 +2205,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("kda")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "kda" ? "font-bold" : "text-[#e8e5d8]"
                         } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
@@ -2213,7 +2213,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("dpm")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "dpm" ? "font-bold" : "text-[#e8e5d8]"
                         } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
@@ -2221,7 +2221,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("gpm")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "gpm" ? "font-bold" : "text-[#e8e5d8]"
                         } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
@@ -2229,7 +2229,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("csPerMin")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "csPerMin"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2239,7 +2239,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("kpPct")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "kpPct" ? "font-bold" : "text-[#e8e5d8]"
                         } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
@@ -2247,7 +2247,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("damageSharePct")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "damageSharePct"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2257,7 +2257,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("visionPerMin")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "visionPerMin"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2267,7 +2267,7 @@ export function AdminStatsDashboard({
                       </td>
                       <td
                         style={sortCellStyle("avgGoldDiff")}
-                        className={`px-2 py-2 text-right font-mono ${
+                        className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "avgGoldDiff"
                             ? "font-bold"
                             : "text-[#e8e5d8]"
@@ -2385,7 +2385,7 @@ export function AdminStatsDashboard({
                           className="group w-full text-left rounded-lg border border-white/15 bg-black/40 hover:!bg-[#f0c020]/10 hover:!border-[#f0c020]/80 hover:shadow-[0_0_18px_rgba(240,192,32,0.18)] transition-all duration-150 px-3 py-3 sm:px-8 sm:py-6 flex items-center justify-between gap-2.5 sm:gap-6 cursor-pointer"
                         >
                           <div className="flex items-center gap-2 sm:gap-7 min-w-0 flex-1">
-                            <span className="text-base sm:text-3xl font-mono font-black text-[#f0c020] w-7 sm:w-14 text-center shrink-0">
+                            <span className="text-base sm:text-3xl tabular-nums font-black text-[#f0c020] w-7 sm:w-14 text-center shrink-0">
                               {t.seed != null ? `#${t.seed}` : "—"}
                             </span>
                             {t.logoUrl && (
@@ -2406,7 +2406,7 @@ export function AdminStatsDashboard({
                                 Series
                               </div>
                               <div
-                                className={`text-base sm:text-3xl font-mono font-black ${
+                                className={`text-base sm:text-3xl tabular-nums font-black ${
                                   t.games <= 0
                                     ? "text-[#a6a89e]"
                                     : sWins >= sLosses
@@ -2422,7 +2422,7 @@ export function AdminStatsDashboard({
                                 Games
                               </div>
                               <div
-                                className={`text-base sm:text-3xl font-mono font-black ${
+                                className={`text-base sm:text-3xl tabular-nums font-black ${
                                   t.games <= 0
                                     ? "text-[#a6a89e]"
                                     : gWins >= gLosses
@@ -2480,7 +2480,7 @@ export function AdminStatsDashboard({
                     className="px-3 py-2 flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
-                      <div className="font-mono font-bold text-[#f0ede0] truncate">
+                      <div className="tabular-nums font-bold text-[#f0ede0] truncate">
                         {u.riotId}
                       </div>
                       <div className="text-[10px] text-[#a6a89e]">
