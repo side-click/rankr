@@ -103,7 +103,7 @@ function getRoleRankBadgeStyle(
 const DUAL_PRIORITY_FLEX_STYLE: React.CSSProperties = {
   border: "1px solid transparent",
   backgroundImage:
-    "linear-gradient(90deg, rgba(255, 90, 82, 0.22), rgba(0, 184, 201, 0.22)), linear-gradient(90deg, #141816, #141816), linear-gradient(90deg, #ff5a52, #00b8c9)",
+    "linear-gradient(90deg, rgba(255, 90, 82, 0.22), rgba(0, 184, 201, 0.05)), linear-gradient(90deg, #141816, #141816), linear-gradient(90deg, #ff5a52, rgba(0, 184, 201, 0.4))",
   backgroundOrigin: "padding-box, padding-box, border-box",
   backgroundClip: "padding-box, padding-box, border-box",
 };
@@ -460,7 +460,7 @@ export function AdminTeamScoutingView({
                                   : isPriority
                                   ? getPriorityPickClass(prioRank)
                                   : isFlex
-                                  ? "border-[#00b8c9]/80 bg-[#00b8c9]/10"
+                                  ? "border-[#00b8c9]/40 bg-[#00b8c9]/5"
                                   : "border-white/10 bg-black/30"
                               }`}
                             >
@@ -523,7 +523,7 @@ export function AdminTeamScoutingView({
                                   : isPriority
                                   ? getPriorityPickClass(prioRank)
                                   : isFlex
-                                  ? "border-[#00b8c9]/70 bg-[#00b8c9]/10"
+                                  ? "border-[#00b8c9]/40 bg-[#00b8c9]/5"
                                   : "border-white/10 bg-black/25"
                               }`}
                             >
