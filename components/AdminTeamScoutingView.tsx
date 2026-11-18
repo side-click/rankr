@@ -352,11 +352,11 @@ export function AdminTeamScoutingView({
             <div className="flex items-center gap-3 text-[11px]">
               <span className="inline-flex items-center gap-1.5 text-[#00b8c9]">
                 <span className="w-2.5 h-2.5 rounded-xs border border-[#00b8c9] bg-[#00b8c9]/25 inline-block" />
-                Flex (2+ players)
+                Possible Flex (2+ players)
               </span>
               <span className="inline-flex items-center gap-1.5 text-[#ff5a52]">
                 <span className="w-2.5 h-2.5 rounded-xs border border-[#ff5a52] bg-[#ff5a52]/25 inline-block" />
-                High Priority Picks
+                High Priority
               </span>
             </div>
           </div>
