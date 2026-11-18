@@ -98,9 +98,9 @@ function SideBoxScore({
       <div className="overflow-x-auto">
         <table className="w-full text-xs sm:text-sm border-collapse">
           <thead>
-            <tr className="border-b border-[#252824] text-[11px] uppercase tracking-wider text-[#8e9286]">
+            <tr className="border-b border-[#252824] text-[11px] uppercase tracking-wider text-[#8e9286] whitespace-nowrap">
               <th className="py-2 px-2.5 text-left">Player</th>
-              <th className="py-2 px-2.5 text-center">K / D / A</th>
+              <th className="py-2 px-2.5 text-center">K/D/A</th>
               <th className="py-2 px-2.5 text-right">CS</th>
               <th className="py-2 px-2.5 text-right">Gold</th>
               <th className="py-2 px-2.5 text-right">DPM</th>
@@ -239,52 +239,46 @@ function DraftStrip({
             Blue — {game.blueTeam}
           </div>
           {draft.blueBans.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-9 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-10 shrink-0">
                 Bans
               </span>
-              <div className="grid grid-cols-5 gap-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {draft.blueBans.map((champ, i) => (
                   <div
                     key={`bb-${champ}-${i}`}
-                    className="flex items-center gap-1 rounded border border-[#3a2828] bg-[#201616] px-1.5 py-1 min-w-0"
+                    className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Blue Ban ${i + 1}: ${champ}`}
                   >
                     <img
                       src={getChampionIconUrl(champ, ddVersion)}
                       alt={champ}
-                      className="w-4 h-4 rounded grayscale opacity-80 shrink-0 object-cover"
+                      className="w-full h-full grayscale opacity-80 object-cover"
                     />
-                    <span className="text-[11px] text-[#c8a3a3] truncate">
-                      {champ}
-                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
           {draft.bluePicks.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-9 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-10 shrink-0">
                 Picks
               </span>
-              <div className="grid grid-cols-5 gap-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {draft.bluePicks.map((champ, i) => (
                   <div
                     key={`bp-${champ}-${i}`}
-                    className="flex items-center gap-1 rounded border border-[#2a4569] bg-[#142030] px-1.5 py-1 min-w-0"
+                    className="relative w-8 h-8 rounded border border-[#2a4569] bg-[#142030] overflow-hidden shrink-0"
                     title={`B${i + 1}: ${champ}`}
                   >
-                    <span className="text-[10px] font-bold text-[#78b7ff] shrink-0">
-                      B{i + 1}
-                    </span>
                     <img
                       src={getChampionIconUrl(champ, ddVersion)}
                       alt={champ}
-                      className="w-4 h-4 rounded shrink-0 object-cover"
+                      className="w-full h-full object-cover"
                     />
-                    <span className="text-[11px] text-[#dfe7f5] truncate">
-                      {champ}
+                    <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#78b7ff] rounded-br">
+                      B{i + 1}
                     </span>
                   </div>
                 ))}
@@ -298,52 +292,46 @@ function DraftStrip({
             Red — {game.redTeam}
           </div>
           {draft.redBans.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-9 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-10 shrink-0">
                 Bans
               </span>
-              <div className="grid grid-cols-5 gap-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {draft.redBans.map((champ, i) => (
                   <div
                     key={`rb-${champ}-${i}`}
-                    className="flex items-center gap-1 rounded border border-[#3a2828] bg-[#201616] px-1.5 py-1 min-w-0"
+                    className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Red Ban ${i + 1}: ${champ}`}
                   >
                     <img
                       src={getChampionIconUrl(champ, ddVersion)}
                       alt={champ}
-                      className="w-4 h-4 rounded grayscale opacity-80 shrink-0 object-cover"
+                      className="w-full h-full grayscale opacity-80 object-cover"
                     />
-                    <span className="text-[11px] text-[#c8a3a3] truncate">
-                      {champ}
-                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
           {draft.redPicks.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-9 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase text-[#7f8377] w-10 shrink-0">
                 Picks
               </span>
-              <div className="grid grid-cols-5 gap-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {draft.redPicks.map((champ, i) => (
                   <div
                     key={`rp-${champ}-${i}`}
-                    className="flex items-center gap-1 rounded border border-[#612d2a] bg-[#2a1717] px-1.5 py-1 min-w-0"
+                    className="relative w-8 h-8 rounded border border-[#612d2a] bg-[#2a1717] overflow-hidden shrink-0"
                     title={`R${i + 1}: ${champ}`}
                   >
-                    <span className="text-[10px] font-bold text-[#ff8f85] shrink-0">
-                      R{i + 1}
-                    </span>
                     <img
                       src={getChampionIconUrl(champ, ddVersion)}
                       alt={champ}
-                      className="w-4 h-4 rounded shrink-0 object-cover"
+                      className="w-full h-full object-cover"
                     />
-                    <span className="text-[11px] text-[#f5dfdf] truncate">
-                      {champ}
+                    <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#ff8f85] rounded-br">
+                      R{i + 1}
                     </span>
                   </div>
                 ))}
@@ -475,8 +463,8 @@ export async function MatchSeriesContent({
               )}
             </div>
 
-            <div className="text-center px-5 py-2 rounded border border-[#32362f] bg-[#111311] space-y-0.5">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#a6a89e]">
+            <div className="text-center px-5 py-2 rounded border border-[#32362f] bg-[#111311] space-y-0.5 shrink-0">
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#a6a89e] sm:whitespace-nowrap">
                 {series.roundLabel}
                 {division && (
                   <>
@@ -490,7 +478,7 @@ export async function MatchSeriesContent({
               <div className="text-2xl sm:text-3xl font-black tracking-wider text-[#f0c020] tabular-nums">
                 {series.teamAWins} - {series.teamBWins}
               </div>
-              <div className="text-[11px] uppercase tracking-wider text-[#8e9286]">
+              <div className="text-[11px] uppercase tracking-wider text-[#8e9286] whitespace-nowrap">
                 {series.games.length === 1
                   ? "Bo1"
                   : `Best of ${series.games.length <= 3 ? 3 : 5}`}{" "}
@@ -499,24 +487,24 @@ export async function MatchSeriesContent({
             </div>
 
             <div className="flex items-center gap-3.5">
-              {teamBData ? (
-                <Link
-                  href={`${basePath}/team/${encodeURIComponent(teamBData.teamId)}`}
-                  className="text-xl sm:text-2xl font-extrabold text-[#eaeade] hover:text-[#f0c020] transition-colors"
-                >
-                  {series.teamB}
-                </Link>
-              ) : (
-                <div className="text-xl sm:text-2xl font-extrabold text-[#eaeade]">
-                  {series.teamB}
-                </div>
-              )}
               {teamBData?.logoUrl && (
                 <img
                   src={teamBData.logoUrl}
                   alt={series.teamB}
-                  className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded"
+                  className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded sm:order-2"
                 />
+              )}
+              {teamBData ? (
+                <Link
+                  href={`${basePath}/team/${encodeURIComponent(teamBData.teamId)}`}
+                  className="text-xl sm:text-2xl font-extrabold text-[#eaeade] hover:text-[#f0c020] transition-colors sm:order-1"
+                >
+                  {series.teamB}
+                </Link>
+              ) : (
+                <div className="text-xl sm:text-2xl font-extrabold text-[#eaeade] sm:order-1">
+                  {series.teamB}
+                </div>
               )}
             </div>
           </div>

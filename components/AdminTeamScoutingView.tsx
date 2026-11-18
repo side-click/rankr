@@ -681,7 +681,7 @@ export function AdminTeamScoutingView({
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
               Draft Tendencies
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs sm:text-[13px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs sm:text-[13px]">
               <div className="bg-black/35 border border-white/10 rounded p-2.5">
                 <div className="text-[11px] font-bold uppercase text-[#5ea3ff] mb-2">
                   Blue 1st Picks (B1)
