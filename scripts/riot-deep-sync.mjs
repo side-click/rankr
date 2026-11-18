@@ -153,6 +153,27 @@ const startTimeSec = Math.floor(
   (Date.now() - MAX_AGE_DAYS * 86_400_000) / 1000
 );
 
+const TIER_SCORES = {
+  CHALLENGER: 10000,
+  GRANDMASTER: 9000,
+  MASTER: 8000,
+  DIAMOND: 7000,
+  EMERALD: 6000,
+  PLATINUM: 5000,
+  GOLD: 4000,
+  SILVER: 3000,
+  BRONZE: 2000,
+  IRON: 1000,
+};
+const DIV_SCORES = { I: 400, II: 300, III: 200, IV: 100 };
+
+function rankScore(entry) {
+  if (!entry || !entry.tier) return -1;
+  const tierVal = TIER_SCORES[String(entry.tier).toUpperCase()] ?? 0;
+  const divVal = DIV_SCORES[String(entry.rank ?? "").toUpperCase()] ?? 0;
+  return tierVal + divVal + (entry.leaguePoints ?? 0);
+}
+
 for (let idx = 0; idx < players.length; idx++) {
   const p = players[idx];
   const nowIso = new Date().toISOString();
@@ -165,48 +186,6 @@ for (let idx = 0; idx < players.length; idx++) {
       )}/${encodeURIComponent(tagLine)}`
     );
     const puuid = account.puuid;
-
-    let soloEntry;
-    try {
-      const entries = await riotFetch(
-        `https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/${encodeURIComponent(
-          puuid
-        )}`
-      );
-      soloEntry = entries.find((e) => e.queueType === "RANKED_SOLO_5x5");
-    } catch {
-      soloEntry = undefined;
-    }
-
-    const masteryRaw = await riotFetch(
-      `https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(
-        puuid
-      )}/top?count=4`
-    ).catch(() => []);
-    const mastery_top4 = (Array.isArray(masteryRaw) ? masteryRaw : [])
-      .map((m) => ({
-        championName: champIdMap.get(m.championId) ?? String(m.championId),
-        championLevel: m.championLevel,
-        championPoints: m.championPoints,
-      }))
-      .slice(0, 4);
-
-    async function fetchMatchIds(targetPuuid, typeParam) {
-      const ids = [];
-      for (let start = 0; start < MATCH_COUNT; start += 100) {
-        const count = Math.min(100, MATCH_COUNT - start);
-        const typeQuery = typeParam ? `type=${typeParam}&` : "";
-        const page = await riotFetch(
-          `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
-            targetPuuid
-          )}/ids?${typeQuery}start=${start}&count=${count}&startTime=${startTimeSec}`
-        );
-        if (!Array.isArray(page) || page.length === 0) break;
-        ids.push(...page);
-        if (page.length < count) break;
-      }
-      return ids;
-    }
 
     const accountSources = [{ puuid, riotId: p.riotId }];
     const seenPuuids = new Set([puuid]);
@@ -227,6 +206,74 @@ for (let idx = 0; idx < players.length; idx++) {
         if (altErr instanceof RiotAuthError) throw altErr;
         console.warn(`  [skip alt ${altId}] ${altErr.message}`);
       }
+    }
+
+    let soloEntry;
+    const masterySumMap = new Map();
+    for (const src of accountSources) {
+      try {
+        const entries = await riotFetch(
+          `https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/${encodeURIComponent(
+            src.puuid
+          )}`
+        );
+        const srcSolo = Array.isArray(entries)
+          ? entries.find((e) => e.queueType === "RANKED_SOLO_5x5")
+          : undefined;
+        if (srcSolo && rankScore(srcSolo) > rankScore(soloEntry)) {
+          soloEntry = srcSolo;
+        }
+      } catch (rankErr) {
+        if (rankErr instanceof RiotAuthError) throw rankErr;
+      }
+
+      const masteryRaw = await riotFetch(
+        `https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(
+          src.puuid
+        )}`
+      ).catch((mErr) => {
+        if (mErr instanceof RiotAuthError) throw mErr;
+        return [];
+      });
+      for (const m of Array.isArray(masteryRaw) ? masteryRaw : []) {
+        const championName =
+          champIdMap.get(m.championId) ?? String(m.championId);
+        const prev = masterySumMap.get(championName);
+        if (prev) {
+          prev.championPoints += m.championPoints ?? 0;
+          prev.championLevel = Math.max(
+            prev.championLevel ?? 0,
+            m.championLevel ?? 0
+          );
+        } else {
+          masterySumMap.set(championName, {
+            championName,
+            championLevel: m.championLevel ?? 0,
+            championPoints: m.championPoints ?? 0,
+          });
+        }
+      }
+    }
+
+    const mastery_top4 = [...masterySumMap.values()]
+      .sort((a, b) => b.championPoints - a.championPoints)
+      .slice(0, 4);
+
+    async function fetchMatchIds(targetPuuid, typeParam) {
+      const ids = [];
+      for (let start = 0; start < MATCH_COUNT; start += 100) {
+        const count = Math.min(100, MATCH_COUNT - start);
+        const typeQuery = typeParam ? `type=${typeParam}&` : "";
+        const page = await riotFetch(
+          `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
+            targetPuuid
+          )}/ids?${typeQuery}start=${start}&count=${count}&startTime=${startTimeSec}`
+        );
+        if (!Array.isArray(page) || page.length === 0) break;
+        ids.push(...page);
+        if (page.length < count) break;
+      }
+      return ids;
     }
 
     const prevMap = new Map(
