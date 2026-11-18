@@ -2055,15 +2055,6 @@ export function AdminStatsDashboard({
                   </th>
                   <th
                     className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "avgGoldDiff15" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("avgGoldDiff15")}
-                    title="Average Gold Diff at 15 Minutes vs Lane Opponent"
-                  >
-                    GD@15
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
                       sortKey === "kda" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("kda")}
@@ -2128,6 +2119,15 @@ export function AdminStatsDashboard({
                     title="Average Gold Diff vs Lane Opponent"
                   >
                     GD
+                  </th>
+                  <th
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "avgGoldDiff15" ? "text-[#f0c020]" : ""
+                    }`}
+                    onClick={() => handleSort("avgGoldDiff15")}
+                    title="Average Gold Diff at 15 Minutes vs Lane Opponent"
+                  >
+                    GD@15
                   </th>
                   <th className="px-3 py-2">Top Champs</th>
                 </tr>
@@ -2194,28 +2194,6 @@ export function AdminStatsDashboard({
                         }`}
                       >
                         {p.games}
-                      </td>
-                      <td
-                        style={sortCellStyle("avgGoldDiff15")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "avgGoldDiff15"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${
-                          p.avgGoldDiff15 === null ||
-                          p.avgGoldDiff15 === undefined ||
-                          p.games <= 0
-                            ? "text-[#a6a89e]"
-                            : ""
-                        }`}
-                      >
-                        {p.games > 0 &&
-                        p.avgGoldDiff15 !== null &&
-                        p.avgGoldDiff15 !== undefined
-                          ? `${p.avgGoldDiff15 >= 0 ? "+" : ""}${Math.round(
-                              p.avgGoldDiff15
-                            )}`
-                          : "—"}
                       </td>
                       <td
                         style={sortCellStyle("kda")}
@@ -2294,6 +2272,28 @@ export function AdminStatsDashboard({
                         {p.games > 0 && p.avgGoldDiff !== null
                           ? `${p.avgGoldDiff >= 0 ? "+" : ""}${Math.round(
                               p.avgGoldDiff
+                            )}`
+                          : "—"}
+                      </td>
+                      <td
+                        style={sortCellStyle("avgGoldDiff15")}
+                        className={`px-2 py-2 text-right tabular-nums ${
+                          sortKey === "avgGoldDiff15"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${
+                          p.avgGoldDiff15 === null ||
+                          p.avgGoldDiff15 === undefined ||
+                          p.games <= 0
+                            ? "text-[#a6a89e]"
+                            : ""
+                        }`}
+                      >
+                        {p.games > 0 &&
+                        p.avgGoldDiff15 !== null &&
+                        p.avgGoldDiff15 !== undefined
+                          ? `${p.avgGoldDiff15 >= 0 ? "+" : ""}${Math.round(
+                              p.avgGoldDiff15
                             )}`
                           : "—"}
                       </td>
