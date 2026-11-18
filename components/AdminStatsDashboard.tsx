@@ -1487,7 +1487,7 @@ export function AdminStatsDashboard({
                       }
                     : undefined
                 }
-                className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2"
+                className="bg-[#121615] border-b border-white/10 px-4 py-2.5 min-h-[54px] flex flex-wrap items-center justify-between gap-2"
               >
                 <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
                   <Trophy className="w-4 h-4" />
@@ -1894,7 +1894,7 @@ export function AdminStatsDashboard({
                     }
                   : undefined
               }
-              className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between"
+              className="bg-[#121615] border-b border-white/10 px-4 py-2.5 min-h-[54px] flex flex-wrap items-center justify-between gap-2"
             >
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Champions Played ({overview.champs.length})
@@ -1994,7 +1994,7 @@ export function AdminStatsDashboard({
                   }
                 : undefined
             }
-            className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2"
+            className="bg-[#121615] border-b border-white/10 px-4 py-2.5 min-h-[54px] flex flex-wrap items-center justify-between gap-2"
           >
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
               <User className="w-4 h-4" />
@@ -2368,7 +2368,7 @@ export function AdminStatsDashboard({
                     style={{
                       background: `linear-gradient(90deg, ${divTheme.primary_color}38 0%, #121615 70%)`,
                     }}
-                    className="bg-[#121615] border-b border-white/10 px-4 py-3 flex items-center justify-between gap-2"
+                    className="bg-[#121615] border-b border-white/10 px-4 py-2.5 min-h-[54px] flex flex-wrap items-center justify-between gap-2"
                   >
                     <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
                       <TeamGroupIcon className="w-4 h-4" />
