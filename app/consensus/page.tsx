@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { loadConsensusPageData } from "@/utils/consensusData";
 import { ConsensusRankingsView } from "@/components/ConsensusRankingsView";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +125,11 @@ export default async function ConsensusPage({
   }>;
 }) {
   const params = await searchParams;
-  const data = await loadConsensusPageData(params);
+  const effectiveSeason = await getFocusedSeasonSlug(params.season);
+  const data = await loadConsensusPageData({
+    ...params,
+    season: effectiveSeason,
+  });
 
   return (
     <ConsensusRankingsView

@@ -17,6 +17,7 @@ import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import type { BetaHomeData } from "@/utils/betaHomeData";
 
 const FOCUS_STORAGE_KEY = "rankr_focused_season";
+const FOCUS_COOKIE_NAME = "rankr_focused_season";
 
 export function BetaHomeView({ data }: { data: BetaHomeData }) {
   const router = useRouter();
@@ -34,11 +35,15 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
     try {
       if (slug) {
         localStorage.setItem(FOCUS_STORAGE_KEY, slug);
+        document.cookie = `${FOCUS_COOKIE_NAME}=${encodeURIComponent(
+          slug
+        )}; path=/; max-age=2592000; SameSite=Lax`;
       } else {
         localStorage.removeItem(FOCUS_STORAGE_KEY);
+        document.cookie = `${FOCUS_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
       }
     } catch {}
-    router.push(slug ? `/beta?season=${encodeURIComponent(slug)}` : "/beta");
+    router.push(slug ? `/?season=${encodeURIComponent(slug)}` : "/");
   }
 
   const qSeason = focusedSlug ? `?season=${encodeURIComponent(focusedSlug)}` : "";

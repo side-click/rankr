@@ -4,6 +4,7 @@ import { RankWorkspace } from "@/components/RankWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import type { RankingType } from "@/types/database";
 import { Lock } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default async function RankPage({
   }>;
 }) {
   const params = await searchParams;
+  const effectiveSeason = await getFocusedSeasonSlug(params.season);
   const supabase = await createClient();
   const {
     data: { user },
@@ -132,8 +134,8 @@ export default async function RankPage({
     meta.preferred_username ||
     "Discord User";
 
-  const matchedSeason = params.season
-    ? (seasons ?? []).find((s) => s.slug === params.season)
+  const matchedSeason = effectiveSeason
+    ? (seasons ?? []).find((s) => s.slug === effectiveSeason)
     : undefined;
   const matchedEdition =
     matchedSeason && params.edition
@@ -163,7 +165,7 @@ export default async function RankPage({
       teams={teams ?? []}
       seasonPlayers={seasonPlayers ?? []}
       initialType={initialType}
-      initialSeasonSlug={params.season}
+      initialSeasonSlug={effectiveSeason}
       initialDivisionSlug={params.division}
       initialEditionSlug={params.edition}
     />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BallotListGrid } from "@/components/BallotListGrid";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function BrowsePage({
   }>;
 }) {
   const params = await searchParams;
+  const effectiveSeason = await getFocusedSeasonSlug(params.season);
   const supabase = await createClient();
 
   const [{ data: seasons }, { data: divisions }, { data: editions }] =
@@ -61,8 +63,8 @@ export default async function BrowsePage({
   if (params.type === "team" || params.type === "player") {
     query = query.eq("ranking_type", params.type);
   }
-  if (params.season) {
-    const s = seasons?.find((x) => x.slug === params.season);
+  if (effectiveSeason) {
+    const s = seasons?.find((x) => x.slug === effectiveSeason);
     if (s) query = query.eq("season_id", s.id);
   }
   if (params.division) {
@@ -101,7 +103,7 @@ export default async function BrowsePage({
   return (
     <RetroWindow title="Browse Published Rankings" theme="scdl">
       <form
-        key={`${params.type ?? ""}|${params.season ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
+        key={`${params.type ?? ""}|${effectiveSeason ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
         method="GET"
         className="xp-panel p-3 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end"
       >
@@ -126,7 +128,7 @@ export default async function BrowsePage({
           </label>
           <select
             name="season"
-            defaultValue={params.season ?? ""}
+            defaultValue={effectiveSeason ?? ""}
             className="w-full xp-inset px-2 py-1.5 text-xs"
           >
             <option value="">All Seasons</option>

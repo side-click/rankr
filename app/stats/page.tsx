@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
+import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ export default async function PublicStatsPage({
   searchParams: Promise<{ season?: string }>;
 }) {
   const params = await searchParams;
-  const ctx = await loadPublicStatsContext(params.season);
+  const effectiveSeason = await getFocusedSeasonSlug(params.season);
+  const ctx = await loadPublicStatsContext(effectiveSeason);
   const sheetSummary = await fetchScdlSheetStats(ctx.players, ctx.teams).catch(
     () => null
   );
