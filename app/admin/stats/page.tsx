@@ -6,7 +6,18 @@ import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminStatsPage() {
+export default async function AdminStatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ division?: string; tab?: string }>;
+}) {
+  const params = await searchParams;
+  const initialTab =
+    params.tab === "players" ||
+    params.tab === "teams" ||
+    params.tab === "division"
+      ? params.tab
+      : undefined;
   const ctx = await loadAdminStatsContext();
 
   if (!ctx.authorized) {
@@ -43,6 +54,8 @@ export default async function AdminStatsPage() {
       divisions={ctx.divisions}
       players={ctx.players}
       teams={ctx.teams}
+      initialDivision={params.division}
+      initialTab={initialTab}
       initialSheetData={sheetSummary}
     />
   );

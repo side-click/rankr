@@ -113,6 +113,8 @@ interface AdminStatsDashboardProps {
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   isAdminView?: boolean;
+  initialDivision?: string;
+  initialTab?: "players" | "teams" | "division";
   initialSheetData?: {
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
@@ -169,16 +171,31 @@ export function AdminStatsDashboard({
   players,
   teams,
   isAdminView = true,
+  initialDivision,
+  initialTab,
   initialSheetData = null,
 }: AdminStatsDashboardProps) {
   const router = useRouter();
   const basePath = isAdminView ? "/admin/stats" : "/stats";
-  const [divisionFilter, setDivisionFilter] = useState<string>(
-    divisions[0]?.id ?? "all"
-  );
+  const [divisionFilter, setDivisionFilter] = useState<string>(() => {
+    if (
+      initialDivision &&
+      (initialDivision === "all" ||
+        divisions.some((d) => d.id === initialDivision))
+    ) {
+      return initialDivision;
+    }
+    return divisions[0]?.id ?? "all";
+  });
   const [activeSection, setActiveSection] = useState<
     "players" | "teams" | "division"
-  >("players");
+  >(() =>
+    initialTab === "players" ||
+    initialTab === "teams" ||
+    initialTab === "division"
+      ? initialTab
+      : "players"
+  );
   const [leaderboardStyle, setLeaderboardStyle] = useState<
     "standard" | "shareable"
   >("standard");

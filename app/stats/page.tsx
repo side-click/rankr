@@ -40,9 +40,15 @@ export const metadata: Metadata = {
 export default async function PublicStatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ season?: string }>;
+  searchParams: Promise<{ season?: string; division?: string; tab?: string }>;
 }) {
   const params = await searchParams;
+  const initialTab =
+    params.tab === "players" ||
+    params.tab === "teams" ||
+    params.tab === "division"
+      ? params.tab
+      : undefined;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
   const ctx = await loadPublicStatsContext(effectiveSeason);
   const sheetSummary = await fetchScdlSheetStats(ctx.players, ctx.teams).catch(
@@ -63,6 +69,8 @@ export default async function PublicStatsPage({
       players={ctx.players}
       teams={ctx.teams}
       isAdminView={false}
+      initialDivision={params.division}
+      initialTab={initialTab}
       initialSheetData={
         sheetSummary
           ? {
