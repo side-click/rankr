@@ -9,6 +9,8 @@ import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import {
   formatMinutesSeconds,
+  getPriorityPickClass,
+  getPriorityPickRanks,
   getRoleFilteredSoloChampions,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
@@ -69,31 +71,6 @@ function formatStyledSoloRank(
   }
   const label = rank ? `${titleTier} ${rank}` : titleTier;
   return { label, className: color };
-}
-
-function isHighPriorityPick(
-  games: number,
-  wins: number,
-  allCounts: number[],
-  totalGames: number
-): boolean {
-  const minGames = 4;
-  if (games < minGames || totalGames < 12 || allCounts.length < 2) return false;
-  const wr = wins / games;
-  if (wr < 0.45) return false;
-
-  const wrBoost = (wr - 0.5) * 2.0;
-  const reqZ = Math.min(2.0, Math.max(0.65, 1.15 - wrBoost));
-  const reqShare = Math.max(0.16, 0.23 - (wr - 0.5) * 0.25);
-  const reqMeanMult = Math.max(1.4, 1.75 - wrBoost * 0.4);
-
-  const share = games / totalGames;
-  const mean = allCounts.reduce((a, b) => a + b, 0) / allCounts.length;
-  const variance =
-    allCounts.reduce((acc, v) => acc + (v - mean) ** 2, 0) / allCounts.length;
-  const stdDev = Math.sqrt(variance);
-  const z = stdDev > 0 ? (games - mean) / stdDev : 0;
-  return share >= reqShare && (z >= reqZ || games >= mean * reqMeanMult);
 }
 
 function getRoleRankBadgeStyle(
@@ -396,19 +373,20 @@ export function AdminTeamScoutingView({
               );
 
               const leagueChamps = lp?.topChampions ?? [];
-              const leagueTotal = leagueChamps.reduce(
-                (s, c) => s + c.games,
-                0
+              const leaguePrioRanks = getPriorityPickRanks(
+                leagueChamps,
+                soloPlayer.masteryTop4
               );
-              const leagueCounts = leagueChamps.map((c) => c.games);
 
               const soloChamps = getRoleFilteredSoloChampions(
                 soloPlayer.matches,
                 soloPlayer.role,
                 7
               );
-              const soloTotal = soloChamps.reduce((s, c) => s + c.games, 0);
-              const soloCounts = soloChamps.map((c) => c.games);
+              const soloPrioRanks = getPriorityPickRanks(
+                soloChamps,
+                soloPlayer.masteryTop4
+              );
 
               return (
                 <div
@@ -465,12 +443,8 @@ export function AdminTeamScoutingView({
                       <div className="space-y-1.5">
                         {leagueChamps.map((c) => {
                           const isFlex = flexChamps.has(c.name);
-                          const isPriority = isHighPriorityPick(
-                            c.games,
-                            c.wins,
-                            leagueCounts,
-                            leagueTotal
-                          );
+                          const prioRank = leaguePrioRanks.get(c.name);
+                          const isPriority = prioRank !== undefined;
                           const losses = c.games - c.wins;
                           return (
                             <div
@@ -484,7 +458,7 @@ export function AdminTeamScoutingView({
                                 isPriority && isFlex
                                   ? ""
                                   : isPriority
-                                  ? "border-[#ff5a52] bg-[#ff5a52]/12"
+                                  ? getPriorityPickClass(prioRank)
                                   : isFlex
                                   ? "border-[#00b8c9]/80 bg-[#00b8c9]/10"
                                   : "border-white/10 bg-black/30"
@@ -533,12 +507,8 @@ export function AdminTeamScoutingView({
                       <div className="space-y-1.5">
                         {soloChamps.map((c) => {
                           const isFlex = flexChamps.has(c.name);
-                          const isPriority = isHighPriorityPick(
-                            c.games,
-                            c.wins,
-                            soloCounts,
-                            soloTotal
-                          );
+                          const prioRank = soloPrioRanks.get(c.name);
+                          const isPriority = prioRank !== undefined;
                           return (
                             <div
                               key={c.name}
@@ -551,7 +521,7 @@ export function AdminTeamScoutingView({
                                 isPriority && isFlex
                                   ? ""
                                   : isPriority
-                                  ? "border-[#ff5a52] bg-[#ff5a52]/12"
+                                  ? getPriorityPickClass(prioRank)
                                   : isFlex
                                   ? "border-[#00b8c9]/70 bg-[#00b8c9]/10"
                                   : "border-white/10 bg-black/25"

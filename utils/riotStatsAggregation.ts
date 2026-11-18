@@ -447,3 +447,61 @@ export function formatMinutesSeconds(minutesDecimal: number): string {
   const secs = totalSec % 60;
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
+
+/**
+ * Computes up to 3 High Priority pick ranks (1 = highest, 3 = lowest) for a
+ * player's champion pool using median-anchored play rate, win rate, and a
+ * one-way log-mastery bonus. Returns an empty map if no champion qualifies.
+ */
+export function getPriorityPickRanks(
+  champs: { name: string; games: number; wins: number }[],
+  masteryTop4?: { championName: string; championPoints: number }[]
+): Map<string, 1 | 2 | 3> {
+  const result = new Map<string, 1 | 2 | 3>();
+  const totalGames = champs.reduce((s, c) => s + c.games, 0);
+  if (totalGames < 12 || champs.length < 2) return result;
+
+  const sortedCounts = champs.map((c) => c.games).sort((a, b) => a - b);
+  const median = sortedCounts[Math.floor(sortedCounts.length / 2)];
+
+  const masteryMap = new Map<string, number>();
+  for (const m of masteryTop4 ?? []) {
+    masteryMap.set(m.championName.toLowerCase(), m.championPoints);
+  }
+
+  const scored: { name: string; score: number }[] = [];
+  for (const c of champs) {
+    if (c.games < 4) continue;
+    const wr = c.wins / c.games;
+    if (wr < 0.45) continue;
+    const share = c.games / totalGames;
+    if (share < 0.14) continue;
+
+    const relToMedian = median > 0 ? c.games / median : 1;
+    const wrScore = (wr - 0.5) * 1.5;
+    const pts = masteryMap.get(c.name.toLowerCase()) ?? 0;
+    const masteryBonus =
+      pts >= 100_000
+        ? Math.min(0.25, 0.1 + Math.max(0, Math.log10(pts / 100_000)) * 0.15)
+        : 0;
+
+    const score =
+      share * 2.5 + Math.min(2.2, relToMedian) * 0.35 + wrScore + masteryBonus;
+    if (score >= 1.15) {
+      scored.push({ name: c.name, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  scored.slice(0, 3).forEach((entry, idx) => {
+    result.set(entry.name, (idx + 1) as 1 | 2 | 3);
+  });
+  return result;
+}
+
+export function getPriorityPickClass(rank: 1 | 2 | 3 | undefined): string {
+  if (rank === 1) return "border-[#ff5a52] bg-[#ff5a52]/20";
+  if (rank === 2) return "border-[#ff5a52]/65 bg-[#ff5a52]/10";
+  if (rank === 3) return "border-[#ff5a52]/40 bg-[#ff5a52]/5";
+  return "";
+}
