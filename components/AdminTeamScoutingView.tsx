@@ -297,11 +297,13 @@ export function AdminTeamScoutingView({
             Last SoloQ Sync:{" "}
             <strong className="text-[#f0ede0]">
               {latestSyncIso
-                ? new Date(latestSyncIso).toLocaleDateString("en-US", {
+                ? new Date(latestSyncIso).toLocaleString("en-US", {
                     month: "short",
                     day: "numeric",
                     hour: "numeric",
                     minute: "2-digit",
+                    timeZone: "America/New_York",
+                    timeZoneName: "short",
                   })
                 : "Not synced yet"}
             </strong>

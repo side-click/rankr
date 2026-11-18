@@ -323,6 +323,8 @@ export async function PlayerStatsContent({
                     day: "numeric",
                     hour: "numeric",
                     minute: "2-digit",
+                    timeZone: "America/New_York",
+                    timeZoneName: "short",
                   })
                 : "Not synced yet"}
             </strong>
