@@ -539,25 +539,46 @@ export function AdminStatsDashboard({
       }
     }
 
-    // ? Ping leader, Most Pentakills, Most Objective Steals, Control Wards
-    let topPingPlayer: { name: string; count: number } | null = null;
-    let topPentaPlayer: { name: string; count: number } | null = null;
-    let topStealPlayer: { name: string; count: number } | null = null;
+    // Most Toxic?, Most Pentakills, Most Objective Steals, Control Wards / Min
+    type PlayerKpiLeader = {
+      name: string;
+      count: number;
+      teamName: string;
+      teamLogoUrl?: string | null;
+    };
+    let topPingPlayer: PlayerKpiLeader | null = null;
+    let topPentaPlayer: PlayerKpiLeader | null = null;
+    let topStealPlayer: PlayerKpiLeader | null = null;
     for (const p of filteredPlayers) {
       const pings = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
       if (pings > 0 && (!topPingPlayer || pings > topPingPlayer.count)) {
-        topPingPlayer = { name: p.displayName, count: pings };
+        topPingPlayer = {
+          name: p.displayName,
+          count: pings,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+        };
       }
       const pentas = p.matches.reduce((s, m) => s + (m.pentaKills ?? 0), 0);
       if (pentas > 0 && (!topPentaPlayer || pentas > topPentaPlayer.count)) {
-        topPentaPlayer = { name: p.displayName, count: pentas };
+        topPentaPlayer = {
+          name: p.displayName,
+          count: pentas,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+        };
       }
       const steals = p.matches.reduce(
         (s, m) => s + (m.objectivesStolen ?? 0),
         0
       );
       if (steals > 0 && (!topStealPlayer || steals > topStealPlayer.count)) {
-        topStealPlayer = { name: p.displayName, count: steals };
+        topStealPlayer = {
+          name: p.displayName,
+          count: steals,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+        };
       }
     }
 
@@ -565,6 +586,12 @@ export function AdminStatsDashboard({
     for (const m of allMatches) {
       totalControlWards += m.controlWardsBought ?? 0;
     }
+    const totalGameMinutes = durationSource.reduce(
+      (s, m) => s + m.gameDuration / 60,
+      0
+    );
+    const controlWardsPerMin =
+      totalGameMinutes > 0 ? totalControlWards / totalGameMinutes : 0;
 
     return {
       totalGames,
@@ -588,6 +615,7 @@ export function AdminStatsDashboard({
       topPentaPlayer,
       topStealPlayer,
       totalControlWards,
+      controlWardsPerMin,
     };
   }, [filteredPlayers]);
 
@@ -1806,10 +1834,20 @@ export function AdminStatsDashboard({
           >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <HelpCircle className="w-3.5 h-3.5 text-[#f0c020]" />
-              <span>Toxic Ping Leader?</span>
+              <span>Most Toxic?</span>
             </div>
-            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
-              {overview.topPingPlayer ? overview.topPingPlayer.name : "—"}
+            <div className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0">
+              {overview.topPingPlayer?.teamLogoUrl && (
+                <img
+                  src={overview.topPingPlayer.teamLogoUrl}
+                  alt={overview.topPingPlayer.teamName}
+                  crossOrigin="anonymous"
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+              )}
+              <span className="truncate">
+                {overview.topPingPlayer ? overview.topPingPlayer.name : "—"}
+              </span>
             </div>
             <div className="text-[10px] text-[#f0c020] font-bold tabular-nums">
               {overview.topPingPlayer
@@ -1826,8 +1864,20 @@ export function AdminStatsDashboard({
               <Crown className="w-3.5 h-3.5 text-[#f0c020]" />
               <span>Most Pentakills</span>
             </div>
-            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
-              {overview.topPentaPlayer ? overview.topPentaPlayer.name : "None yet"}
+            <div className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0">
+              {overview.topPentaPlayer?.teamLogoUrl && (
+                <img
+                  src={overview.topPentaPlayer.teamLogoUrl}
+                  alt={overview.topPentaPlayer.teamName}
+                  crossOrigin="anonymous"
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+              )}
+              <span className="truncate">
+                {overview.topPentaPlayer
+                  ? overview.topPentaPlayer.name
+                  : "None yet"}
+              </span>
             </div>
             <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
               {overview.topPentaPlayer
@@ -1848,8 +1898,20 @@ export function AdminStatsDashboard({
               <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
               <span>Most Objective Steals</span>
             </div>
-            <div className="text-base font-black text-[#f0ede0] mt-1 truncate">
-              {overview.topStealPlayer ? overview.topStealPlayer.name : "None yet"}
+            <div className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0">
+              {overview.topStealPlayer?.teamLogoUrl && (
+                <img
+                  src={overview.topStealPlayer.teamLogoUrl}
+                  alt={overview.topStealPlayer.teamName}
+                  crossOrigin="anonymous"
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+              )}
+              <span className="truncate">
+                {overview.topStealPlayer
+                  ? overview.topStealPlayer.name
+                  : "None yet"}
+              </span>
             </div>
             <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
               {overview.topStealPlayer
@@ -1866,12 +1928,16 @@ export function AdminStatsDashboard({
           >
             <div className="text-[10px] font-bold uppercase text-[#a6a89e] flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-[#00b8c9]" />
-              <span>Control Wards</span>
+              <span>Wards Bought / Min</span>
             </div>
             <div className="text-2xl font-black text-white mt-1 tabular-nums">
-              {overview.totalControlWards}
+              {overview.totalGames > 0
+                ? overview.controlWardsPerMin.toFixed(2)
+                : "—"}
             </div>
-            <div className="text-[10px] text-[#a6a89e]">Total bought</div>
+            <div className="text-[10px] text-[#a6a89e]">
+              {overview.totalControlWards} total bought
+            </div>
           </div>
         </div>
 
