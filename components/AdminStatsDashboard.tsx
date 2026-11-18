@@ -1772,23 +1772,29 @@ export function AdminStatsDashboard({
                 ? formatMinutesSeconds(overview.longestGame.durationMin)
                 : "—"}
             </div>
-            {(() => {
-              const longestText = overview.longestGame
-                ? `${overview.longestGame.winner} def. ${overview.longestGame.loser}${
-                    overview.longestGame.roundLabel
-                      ? ` • ${overview.longestGame.roundLabel}`
-                      : ""
-                  }`
-                : "No match data";
-              return (
-                <div
-                  title={longestText}
-                  className="text-[11px] leading-tight text-[#a6a89e]"
-                >
-                  {longestText}
+            {overview.longestGame ? (
+              <div
+                title={`${overview.longestGame.winner} def. ${overview.longestGame.loser}${
+                  overview.longestGame.roundLabel
+                    ? ` • ${overview.longestGame.roundLabel}`
+                    : ""
+                }`}
+                className="text-[11px] leading-tight text-[#a6a89e]"
+              >
+                <div className="truncate">
+                  {overview.longestGame.winner} def. {overview.longestGame.loser}
                 </div>
-              );
-            })()}
+                {overview.longestGame.roundLabel && (
+                  <div className="text-[#8e9286]">
+                    {overview.longestGame.roundLabel}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-[11px] leading-tight text-[#a6a89e]">
+                No match data
+              </div>
+            )}
           </div>
 
           <div
