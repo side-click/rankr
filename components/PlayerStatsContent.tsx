@@ -555,9 +555,9 @@ export async function PlayerStatsContent({
         </div>
 
         {/* 12-Col Champion & Mastery Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-6">
           {/* 1. This Season Champions */}
-          <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-4">
+          <div className="xp-panel p-3.5 space-y-2.5 md:col-span-1 lg:col-span-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
                 This Season
@@ -610,7 +610,7 @@ export async function PlayerStatsContent({
           </div>
 
           {/* 2. Role-Filtered SoloQ Top 7 */}
-          <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-5">
+          <div className="xp-panel p-3.5 space-y-2.5 md:col-span-1 lg:col-span-5">
             <h3
               title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
               className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-flex items-center gap-1.5"
@@ -647,13 +647,15 @@ export async function PlayerStatsContent({
                           {c.name}
                         </span>
                       </div>
-                      <span className="inline-flex items-center tabular-nums text-[11px] shrink-0 tabular-nums">
-                        <span className="w-7 text-right text-[#c7c5b8]">
+                      <span className="inline-flex items-center text-xs shrink-0 tabular-nums">
+                        <span className="w-6 text-right text-[#c7c5b8]">
                           {c.games}
                         </span>
-                        <span className="text-[#a6a89e]/50 mx-1">/</span>
+                        <span className="w-4 text-center text-[#a6a89e]/50">
+                          /
+                        </span>
                         <span
-                          className={`w-10 text-right font-bold ${
+                          className={`w-8 text-right font-bold ${
                             wr >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
                           }`}
                         >
@@ -672,7 +674,7 @@ export async function PlayerStatsContent({
           </div>
 
           {/* 3. Account Mastery Top 4 (2x2 Grid) */}
-          <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-3">
+          <div className="xp-panel p-3.5 space-y-2.5 md:col-span-2 lg:col-span-3">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
               Account Mastery Top 4
             </h3>

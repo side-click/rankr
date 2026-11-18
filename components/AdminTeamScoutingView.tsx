@@ -573,11 +573,13 @@ export function AdminTeamScoutingView({
                                   {c.name}
                                 </span>
                               </div>
-                              <span className="inline-flex items-center tabular-nums text-xs text-[#c7c5b8] shrink-0 tabular-nums">
-                                <span className="w-7 text-right">{c.games}</span>
-                                <span className="text-[#a6a89e]/50 mx-1">/</span>
+                              <span className="inline-flex items-center text-xs text-[#c7c5b8] shrink-0 tabular-nums">
+                                <span className="w-6 text-right">{c.games}</span>
+                                <span className="w-4 text-center text-[#a6a89e]/50">
+                                  /
+                                </span>
                                 <strong
-                                  className={`w-10 text-right ${
+                                  className={`w-8 text-right ${
                                     c.winRate >= 50
                                       ? "text-[#7cd438]"
                                       : "text-[#ff857a]"
