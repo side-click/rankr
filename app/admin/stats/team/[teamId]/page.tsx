@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AdminTeamScoutingView } from "@/components/AdminTeamScoutingView";
+import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
 import {
   fetchAllScdlSeries,
@@ -71,9 +72,10 @@ export default async function AdminTeamStatsPage({
 
   // Compute each player's rank at their role within this division by Rankr Rating (leagueRating)
   const roleRankByPlayerKey: Record<string, number> = {};
-  const divPlayers = (sheetSummary?.players ?? []).filter(
+  const rawDivPlayers = (sheetSummary?.players ?? []).filter(
     (p) => p.divisionId === team.divisionId && p.games > 0
   );
+  const divPlayers = computeRoleNormalizedRatings(rawDivPlayers);
   const byRole = new Map<string, typeof divPlayers>();
   for (const p of divPlayers) {
     const list = byRole.get(p.role) ?? [];
