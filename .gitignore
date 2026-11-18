@@ -1,6 +1,7 @@
 /node_modules
 /.next/
 /out/
+/temp/
 .env*.local
 .DS_Store
 *.tsbuildinfo
