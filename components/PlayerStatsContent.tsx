@@ -75,8 +75,8 @@ function isHighPriorityPick(
   allCounts: number[],
   totalGames: number
 ): boolean {
-  const minGames = totalGames <= 10 ? 2 : 4;
-  if (games < minGames || totalGames <= 0 || allCounts.length < 2) return false;
+  const minGames = 4;
+  if (games < minGames || totalGames < 12 || allCounts.length < 2) return false;
   const wr = wins / games;
   if (wr < 0.45) return false;
 
@@ -196,31 +196,8 @@ export async function PlayerStatsContent({
   );
   const roleRank = roleRankIdx >= 0 ? roleRankIdx + 1 : null;
 
-  // Flex champions across teammates
-  const teamSolo = ctx.teams.find((t) => t.teamId === soloPlayer.teamId);
   const teamLeague = sheetSummary?.teams.find(
     (t) => t.teamId === soloPlayer.teamId
-  );
-  const champPlayersMap = new Map<string, Set<string>>();
-  for (const mate of teamSolo?.players ?? []) {
-    const mateLeague = teamLeague?.players.find(
-      (mp) => mp.playerKey === mate.playerKey
-    );
-    for (const c of mateLeague?.topChampions ?? []) {
-      const s = champPlayersMap.get(c.name) ?? new Set<string>();
-      s.add(mate.playerKey);
-      champPlayersMap.set(c.name, s);
-    }
-    for (const c of getRoleFilteredSoloChampions(mate.matches, mate.role, 7)) {
-      const s = champPlayersMap.get(c.name) ?? new Set<string>();
-      s.add(mate.playerKey);
-      champPlayersMap.set(c.name, s);
-    }
-  }
-  const flexChamps = new Set(
-    [...champPlayersMap.entries()]
-      .filter(([, s]) => s.size >= 2)
-      .map(([n]) => n)
   );
 
   // Player's official league games + draft scouting (bans against team, R5 counterpicks, B1/R1-2)
@@ -586,15 +563,12 @@ export async function PlayerStatsContent({
                 This Season
               </h3>
               <div className="flex items-center gap-2 text-[11px] text-[#a6a89e]">
-                <span className="text-[#00b8c9]">Flex</span>
-                <span>•</span>
                 <span className="text-[#ff5a52]">High Priority</span>
               </div>
             </div>
             {leagueChamps.length > 0 ? (
               <div className="space-y-1.5">
                 {leagueChamps.map((c) => {
-                  const isFlex = flexChamps.has(c.name);
                   const isPriority = isHighPriorityPick(
                     c.games,
                     c.wins,
@@ -605,18 +579,9 @@ export async function PlayerStatsContent({
                   return (
                     <div
                       key={c.name}
-                      style={
-                        isPriority && isFlex
-                          ? DUAL_PRIORITY_FLEX_STYLE
-                          : undefined
-                      }
                       className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] ${
-                        isPriority && isFlex
-                          ? ""
-                          : isPriority
+                        isPriority
                           ? "border-[#ff5a52] bg-[#ff5a52]/12"
-                          : isFlex
-                          ? "border-[#00b8c9]/80 bg-[#00b8c9]/10"
                           : "border-white/10 bg-black/30"
                       }`}
                     >
@@ -646,13 +611,15 @@ export async function PlayerStatsContent({
 
           {/* 2. Role-Filtered SoloQ Top 7 */}
           <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-5">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
+            <h3
+              title="Analyzes only the most recent 100 SoloQ games"
+              className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-block"
+            >
               SoloQ Top 7 ({roleMeta.label})
             </h3>
             {soloChamps.length > 0 ? (
               <div className="space-y-1.5">
                 {soloChamps.map((c) => {
-                  const isFlex = flexChamps.has(c.name);
                   const isPriority = isHighPriorityPick(
                     c.games,
                     c.wins,
@@ -663,18 +630,9 @@ export async function PlayerStatsContent({
                   return (
                     <div
                       key={c.name}
-                      style={
-                        isPriority && isFlex
-                          ? DUAL_PRIORITY_FLEX_STYLE
-                          : undefined
-                      }
                       className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] ${
-                        isPriority && isFlex
-                          ? ""
-                          : isPriority
+                        isPriority
                           ? "border-[#ff5a52] bg-[#ff5a52]/12"
-                          : isFlex
-                          ? "border-[#00b8c9]/80 bg-[#00b8c9]/10"
                           : "border-white/10 bg-black/30"
                       }`}
                     >

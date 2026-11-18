@@ -76,8 +76,8 @@ function isHighPriorityPick(
   allCounts: number[],
   totalGames: number
 ): boolean {
-  const minGames = totalGames <= 10 ? 2 : 4;
-  if (games < minGames || totalGames <= 0 || allCounts.length < 2) return false;
+  const minGames = 4;
+  if (games < minGames || totalGames < 12 || allCounts.length < 2) return false;
   const wr = wins / games;
   if (wr < 0.45) return false;
 
@@ -528,7 +528,10 @@ export function AdminTeamScoutingView({
 
                   {/* 2. SoloQ Ranked Top 7 (Role-Filtered) */}
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5">
+                    <div
+                      title="Analyzes only the most recent 100 SoloQ games"
+                      className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-block"
+                    >
                       SoloQ Top 7 ({roleMeta.label})
                     </div>
                     {soloChamps.length > 0 ? (
