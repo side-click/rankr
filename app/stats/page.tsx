@@ -36,8 +36,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function PublicStatsPage() {
-  const ctx = await loadPublicStatsContext();
+export default async function PublicStatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string }>;
+}) {
+  const params = await searchParams;
+  const ctx = await loadPublicStatsContext(params.season);
   const sheetSummary = await fetchScdlSheetStats(ctx.players, ctx.teams).catch(
     () => null
   );

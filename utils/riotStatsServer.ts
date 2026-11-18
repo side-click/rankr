@@ -67,7 +67,9 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
   });
 }
 
-export async function loadPublicStatsContext(): Promise<LoadedAdminStatsContext> {
+export async function loadPublicStatsContext(
+  seasonSlug?: string
+): Promise<LoadedAdminStatsContext> {
   const supabase = await createClient();
   const ddVersion = await getLatestDdragonVersion();
   return loadStatsContextInternal(supabase, {
@@ -75,6 +77,7 @@ export async function loadPublicStatsContext(): Promise<LoadedAdminStatsContext>
     hasRiotKey: false,
     ddVersion,
     stripAdminFields: true,
+    seasonSlug,
   });
 }
 
@@ -85,9 +88,11 @@ async function loadStatsContextInternal(
     hasRiotKey: boolean;
     ddVersion: string;
     stripAdminFields: boolean;
+    seasonSlug?: string;
   }
 ): Promise<LoadedAdminStatsContext> {
-  const { authorized, hasRiotKey, ddVersion, stripAdminFields } = opts;
+  const { authorized, hasRiotKey, ddVersion, stripAdminFields, seasonSlug } =
+    opts;
 
   const [
     { data: seasons },
@@ -98,7 +103,7 @@ async function loadStatsContextInternal(
   ] = await Promise.all([
     supabase
       .from("seasons")
-      .select("id, name, is_active, created_at, leagues ( name, logo_url )")
+      .select("id, name, slug, is_active, created_at, leagues ( name, logo_url )")
       .order("created_at", { ascending: false }),
     supabase
       .from("divisions")
@@ -123,7 +128,12 @@ async function loadStatsContextInternal(
   );
 
   const activeSeason =
-    (seasons ?? []).find((s) => s.is_active) ?? (seasons ?? [])[0] ?? null;
+    (seasonSlug
+      ? (seasons ?? []).find((s) => s.slug === seasonSlug)
+      : null) ??
+    (seasons ?? []).find((s) => s.is_active) ??
+    (seasons ?? [])[0] ??
+    null;
 
   const leagueInfo = (
     activeSeason as unknown as {
