@@ -225,6 +225,47 @@ export function AdminStatsDashboard({
   const leaderboardCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const divParam = sp.get("division");
+    if (
+      divParam &&
+      (divParam === "all" || divisions.some((d) => d.id === divParam))
+    ) {
+      setDivisionFilter(divParam);
+    }
+    const tabParam = sp.get("tab");
+    if (
+      tabParam === "players" ||
+      tabParam === "teams" ||
+      tabParam === "division"
+    ) {
+      setActiveSection(tabParam);
+    }
+  }, [divisions]);
+
+  function updateUrlParams(updates: { division?: string; tab?: string }) {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (updates.division !== undefined) {
+      url.searchParams.set("division", updates.division);
+    }
+    if (updates.tab !== undefined) {
+      url.searchParams.set("tab", updates.tab);
+    }
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }
+
+  function selectDivision(nextDivision: string) {
+    setDivisionFilter(nextDivision);
+    updateUrlParams({ division: nextDivision });
+  }
+
+  function selectSection(nextSection: "players" | "teams" | "division") {
+    setActiveSection(nextSection);
+    updateUrlParams({ tab: nextSection });
+  }
+
+  useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
       if (
         selectorContainerRef.current &&
@@ -1023,7 +1064,7 @@ export function AdminStatsDashboard({
                     key={div.id}
                     type="button"
                     onClick={() => {
-                      setDivisionFilter(div.id);
+                      selectDivision(div.id);
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
@@ -1056,7 +1097,7 @@ export function AdminStatsDashboard({
               <button
                 type="button"
                 onClick={() => {
-                  setDivisionFilter("all");
+                  selectDivision("all");
                   setOpenDropdown(null);
                 }}
                 className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
@@ -1110,7 +1151,7 @@ export function AdminStatsDashboard({
           <button
             key={sec.key}
             type="button"
-            onClick={() => setActiveSection(sec.key)}
+            onClick={() => selectSection(sec.key)}
             className={`xp-btn !py-3 sm:!py-4 !px-2 sm:!px-4 !min-h-[54px] sm:!min-h-[66px] !text-xs sm:!text-lg !gap-1.5 sm:!gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl ${
               activeSection === sec.key ? "xp-btn-primary" : ""
             }`}
