@@ -574,7 +574,8 @@ export function AdminTeamScoutingView({
                                 </span>
                               </div>
                               <span className="font-mono text-xs text-[#c7c5b8] shrink-0">
-                                {c.games}G{" "}
+                                {c.games}
+                                <span className="text-[#a6a89e]/50 mx-1">/</span>
                                 <strong
                                   className={
                                     c.winRate >= 50

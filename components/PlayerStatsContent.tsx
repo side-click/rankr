@@ -648,9 +648,10 @@ export async function PlayerStatsContent({
                         </span>
                       </div>
                       <span className="font-mono text-[11px] shrink-0">
-                        <span className="text-[#c7c5b8] mr-1.5">
-                          {c.games}G
+                        <span className="text-[#c7c5b8]">
+                          {c.games}
                         </span>
+                        <span className="text-[#a6a89e]/50 mx-1">/</span>
                         <span
                           className={`font-bold ${
                             wr >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
