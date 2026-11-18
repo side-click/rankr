@@ -301,42 +301,50 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                           </span>
                         </div>
                         <div className="space-y-1.5">
-                          {div.teams.map((t, idx) => (
-                            <Link
-                              key={t.teamId}
-                              href={`/stats/team/${encodeURIComponent(t.teamId)}`}
-                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
-                                idx === 0
-                                  ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
-                                  : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="w-5 text-center font-bold text-[#f0c020] tabular-nums shrink-0">
-                                  #{t.seed ?? idx + 1}
-                                </span>
-                                {t.logoUrl && (
-                                  <img
-                                    src={t.logoUrl}
-                                    alt={t.teamName}
-                                    className="w-5 h-5 object-contain shrink-0"
-                                  />
-                                )}
-                                <span className="font-bold text-[#f0ede0] truncate">
-                                  {t.teamName}
-                                </span>
-                              </div>
-                              <span
-                                className={`font-bold tabular-nums shrink-0 ${
-                                  t.seriesWins >= t.seriesLosses
-                                    ? "text-[#7cd438]"
-                                    : "text-[#ff857a]"
+                          {div.teams.map((t, idx) => {
+                            const leader = div.teams[0];
+                            const isLeader =
+                              idx === 0 ||
+                              (Boolean(leader) &&
+                                t.seriesWins === leader.seriesWins &&
+                                t.seriesLosses === leader.seriesLosses);
+                            return (
+                              <Link
+                                key={t.teamId}
+                                href={`/stats/team/${encodeURIComponent(t.teamId)}`}
+                                className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
+                                  isLeader
+                                    ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
+                                    : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
                                 }`}
                               >
-                                {t.seriesWins}-{t.seriesLosses}
-                              </span>
-                            </Link>
-                          ))}
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-5 text-center font-bold text-[#f0c020] tabular-nums shrink-0">
+                                    #{t.seed ?? idx + 1}
+                                  </span>
+                                  {t.logoUrl && (
+                                    <img
+                                      src={t.logoUrl}
+                                      alt={t.teamName}
+                                      className="w-5 h-5 object-contain shrink-0"
+                                    />
+                                  )}
+                                  <span className="font-bold text-[#f0ede0] truncate">
+                                    {t.teamName}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`font-bold tabular-nums shrink-0 ${
+                                    t.seriesWins >= t.seriesLosses
+                                      ? "text-[#7cd438]"
+                                      : "text-[#ff857a]"
+                                  }`}
+                                >
+                                  {t.seriesWins}-{t.seriesLosses}
+                                </span>
+                              </Link>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -379,6 +387,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         <div className="space-y-1.5">
                           {div.players.map((p, idx) => {
                             const roleMeta = getRoleMeta(p.role as LeagueRole);
+                            const topRating = div.players[0]?.rating;
+                            const isLeader =
+                              idx === 0 ||
+                              (topRating !== undefined &&
+                                p.rating.toFixed(1) === topRating.toFixed(1));
                             return (
                               <Link
                                 key={p.playerKey}
@@ -386,7 +399,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                   p.playerKey
                                 )}`}
                                 className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
-                                  idx === 0
+                                  isLeader
                                     ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
                                     : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
                                 }`}
@@ -561,15 +574,21 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 </div>
 
                 <div className="space-y-2">
-                  {snap.topTeams.map((t, idx) => (
-                    <div
-                      key={`${snap.divisionSlug}-${t.rank}`}
-                      className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded border transition ${
-                        idx === 0
-                          ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)]"
-                          : "bg-black/30 border-white/10"
-                      }`}
-                    >
+                  {snap.topTeams.map((t, idx) => {
+                    const topAvg = snap.topTeams[0]?.averageRank;
+                    const isLeader =
+                      idx === 0 ||
+                      (topAvg !== undefined &&
+                        t.averageRank.toFixed(2) === topAvg.toFixed(2));
+                    return (
+                      <div
+                        key={`${snap.divisionSlug}-${t.rank}-${t.teamName}`}
+                        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded border transition ${
+                          isLeader
+                            ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)]"
+                            : "bg-black/30 border-white/10"
+                        }`}
+                      >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="w-7 text-base sm:text-lg font-black text-[#f0c020] tabular-nums shrink-0">
                           #{t.rank}
@@ -592,7 +611,8 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         </span>
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
