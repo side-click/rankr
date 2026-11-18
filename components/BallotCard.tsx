@@ -183,7 +183,7 @@ export function BallotCard({
                 {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
               </span>
             )}
-            <span className="text-xs font-bold text-[#f0c020] truncate">
+            <span className="text-sm sm:text-[15px] font-bold text-[#f0c020] truncate">
               {profile?.username ?? "Unknown"}
             </span>
           </div>

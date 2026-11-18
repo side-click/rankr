@@ -795,12 +795,14 @@ export function PlayerTierShareView({
         <ScaledGraphicFrame designWidth={1080}>
           <div ref={cardRef} className="w-[1080px] p-2.5">
             <div
-              style={
-                exporting
-                  ? { borderRadius: "44px", boxShadow: "none" }
-                  : { borderRadius: "44px" }
-              }
-              className={`relative w-full bg-[#141918] border-[6px] border-[#5c6662] overflow-hidden ${
+              style={{
+                borderRadius: "44px",
+                borderColor: isDivisionless
+                  ? "#5c6662"
+                  : resolvedTheme.primary_color,
+                ...(exporting ? { boxShadow: "none" } : {}),
+              }}
+              className={`relative w-full bg-[#141918] border-[6px] overflow-hidden ${
                 exporting ? "" : "shadow-lg"
               }`}
             >

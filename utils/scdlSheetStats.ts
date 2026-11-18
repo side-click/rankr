@@ -693,7 +693,15 @@ export interface ScdlGameDetail {
   redTeam: string;
   winnerTeam: string;
   blueKills: number;
+  blueDeaths: number;
+  blueAssists: number;
+  blueDragons: number;
+  blueBarons: number;
   redKills: number;
+  redDeaths: number;
+  redAssists: number;
+  redDragons: number;
+  redBarons: number;
   draft: DraftRecord | null;
   players: ScdlGamePlayerRow[];
 }
@@ -796,7 +804,15 @@ export async function fetchAllScdlSeries(): Promise<ScdlSeriesDetail[]> {
       redTeam,
       winnerTeam,
       blueKills: blueRows.reduce((s, r) => s + r.kills, 0),
+      blueDeaths: blueRows.reduce((s, r) => s + r.deaths, 0),
+      blueAssists: blueRows.reduce((s, r) => s + r.assists, 0),
+      blueDragons: blueRows.reduce((s, r) => s + r.dragons, 0),
+      blueBarons: blueRows.reduce((s, r) => s + r.barons, 0),
       redKills: redRows.reduce((s, r) => s + r.kills, 0),
+      redDeaths: redRows.reduce((s, r) => s + r.deaths, 0),
+      redAssists: redRows.reduce((s, r) => s + r.assists, 0),
+      redDragons: redRows.reduce((s, r) => s + r.dragons, 0),
+      redBarons: redRows.reduce((s, r) => s + r.barons, 0),
       draft: DRAFTS_BY_GAME_ID[gameId] ?? null,
       players,
     };

@@ -71,7 +71,7 @@ export default async function AdminTeamStatsPage({
     ctx.divisions.find((d) => d.id === team.divisionId)?.theme_key ?? "scdl";
 
   // Compute each player's rank at their role within this division by Rankr Rating (leagueRating)
-  const roleRankByPlayerKey: Record<string, number> = {};
+  const roleRankByPlayerKey: Record<string, { rank: number; total: number }> = {};
   const rawDivPlayers = (sheetSummary?.players ?? []).filter(
     (p) => p.divisionId === team.divisionId && p.games > 0
   );
@@ -85,7 +85,7 @@ export default async function AdminTeamStatsPage({
   for (const list of byRole.values()) {
     list.sort((a, b) => b.leagueRating - a.leagueRating);
     list.forEach((p, idx) => {
-      roleRankByPlayerKey[p.playerKey] = idx + 1;
+      roleRankByPlayerKey[p.playerKey] = { rank: idx + 1, total: list.length };
     });
   }
 

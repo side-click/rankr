@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Clock, Shield, Swords } from "lucide-react";
+import { ArrowLeft, Ban, Calendar, Clock } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -24,7 +24,8 @@ interface AdminTeamScoutingViewProps {
   leagueTeam: AggregatedTeamStats | null;
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
-  roleRankByPlayerKey: Record<string, number>;
+  roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
+  basePath?: string;
 }
 
 function deriveLeaguePrefix(leagueName?: string): string {
@@ -69,20 +70,65 @@ function formatStyledSoloRank(
   return { label, className: color };
 }
 
-function isOutlierChamp(
+function isHighPriorityPick(
   games: number,
+  wins: number,
   allCounts: number[],
   totalGames: number
 ): boolean {
-  if (games < 2 || totalGames <= 0 || allCounts.length < 2) return false;
+  const minGames = totalGames <= 10 ? 2 : 4;
+  if (games < minGames || totalGames <= 0 || allCounts.length < 2) return false;
+  const wr = wins / games;
+  if (wr < 0.45) return false;
+
+  const wrBoost = (wr - 0.5) * 2.0;
+  const reqZ = Math.min(2.0, Math.max(0.65, 1.15 - wrBoost));
+  const reqShare = Math.max(0.16, 0.23 - (wr - 0.5) * 0.25);
+  const reqMeanMult = Math.max(1.4, 1.75 - wrBoost * 0.4);
+
   const share = games / totalGames;
   const mean = allCounts.reduce((a, b) => a + b, 0) / allCounts.length;
   const variance =
     allCounts.reduce((acc, v) => acc + (v - mean) ** 2, 0) / allCounts.length;
   const stdDev = Math.sqrt(variance);
   const z = stdDev > 0 ? (games - mean) / stdDev : 0;
-  return share >= 0.25 && (z >= 1.5 || games >= mean * 2);
+  return share >= reqShare && (z >= reqZ || games >= mean * reqMeanMult);
 }
+
+function getRoleRankBadgeStyle(
+  rank: number,
+  total: number
+): React.CSSProperties {
+  const t = total <= 1 ? 0 : Math.min(1, Math.max(0, (rank - 1) / (total - 1)));
+  // Green (74,222,128) -> Gray (166,168,158) -> Red (248,113,113)
+  let r: number;
+  let g: number;
+  let b: number;
+  if (t <= 0.5) {
+    const u = t / 0.5;
+    r = Math.round(74 + (166 - 74) * u);
+    g = Math.round(222 + (168 - 222) * u);
+    b = Math.round(128 + (158 - 128) * u);
+  } else {
+    const u = (t - 0.5) / 0.5;
+    r = Math.round(166 + (248 - 166) * u);
+    g = Math.round(168 + (113 - 168) * u);
+    b = Math.round(158 + (113 - 158) * u);
+  }
+  return {
+    color: `rgb(${r}, ${g}, ${b})`,
+    borderColor: `rgba(${r}, ${g}, ${b}, 0.45)`,
+    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.12)`,
+  };
+}
+
+const DUAL_PRIORITY_FLEX_STYLE: React.CSSProperties = {
+  border: "1px solid transparent",
+  backgroundImage:
+    "linear-gradient(90deg, rgba(255, 90, 82, 0.22), rgba(0, 184, 201, 0.22)), linear-gradient(90deg, #141816, #141816), linear-gradient(90deg, #ff5a52, #00b8c9)",
+  backgroundOrigin: "padding-box, padding-box, border-box",
+  backgroundClip: "padding-box, padding-box, border-box",
+};
 
 function formatMasteryPoints(pts: number): string {
   if (pts >= 1_000_000) return `${(pts / 1_000_000).toFixed(1)}M`;
@@ -100,6 +146,7 @@ export function AdminTeamScoutingView({
   seriesHistory,
   teamLogoMap,
   roleRankByPlayerKey,
+  basePath = "/admin/stats",
 }: AdminTeamScoutingViewProps) {
   const leaguePrefix = deriveLeaguePrefix(leagueName);
   const divTheme = resolveDivisionTheme(divisionThemeKey);
@@ -238,9 +285,9 @@ export function AdminTeamScoutingView({
   const sLosses = displayTeam.seriesLosses ?? gLosses;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-[min(1560px,94vw)] relative left-1/2 -translate-x-1/2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/admin/stats" className="xp-btn text-xs">
+        <Link href={basePath} className="xp-btn text-xs">
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Stats Dashboard</span>
         </Link>
@@ -266,7 +313,6 @@ export function AdminTeamScoutingView({
         title="Team Stats"
         theme={windowTheme}
         customTheme={divTheme}
-        iconSrc={team.logoUrl ?? undefined}
       >
         {/* Team Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-white/10">
@@ -283,7 +329,10 @@ export function AdminTeamScoutingView({
                 {team.teamName}
               </h1>
               <div className="text-xs font-bold text-[#f0c020]">
-                {team.divisionName} • {leaguePrefix} {seasonName}
+                <span style={{ color: divTheme.accent_text_color }}>
+                  {team.divisionName}
+                </span>{" "}
+                • {leaguePrefix} {seasonName}
               </div>
             </div>
           </div>
@@ -328,18 +377,15 @@ export function AdminTeamScoutingView({
 
         {/* Roster Scouting Cards (5 Players) */}
         <div className="mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
-              Roster Scouting Breakdown
-            </h2>
+          <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
             <div className="flex items-center gap-3 text-[10px] text-[#a6a89e]">
               <span className="inline-flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-xs border border-[#00b8c9] bg-[#00b8c9]/25 inline-block" />
                 Flex (2+ players)
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs border border-[#f0c020] bg-[#f0c020]/25 inline-block" />
-                High-Frequency Outlier
+                <span className="w-2.5 h-2.5 rounded-xs border border-[#ff5a52] bg-[#ff5a52]/25 inline-block" />
+                High Priority Picks
               </span>
             </div>
           </div>
@@ -378,7 +424,7 @@ export function AdminTeamScoutingView({
                   {/* Top Row: Role Icon + Larger Player Name + Rank & Division Role Rank */}
                   <div className="min-w-0">
                     <Link
-                      href={`/admin/stats/player/${encodeURIComponent(
+                      href={`${basePath}/player/${encodeURIComponent(
                         soloPlayer.playerKey
                       )}`}
                       className="flex items-center gap-2 hover:text-[#f0c020] transition"
@@ -393,13 +439,24 @@ export function AdminTeamScoutingView({
                         {soloPlayer.displayName}
                       </span>
                     </Link>
-                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1.5">
-                      <span className={`text-xs font-bold ${styledRank.className}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mt-1.5">
+                      <span className={`text-xs font-bold whitespace-nowrap ${styledRank.className}`}>
                         {styledRank.label}
                       </span>
                       {roleRank !== null && (
-                        <span className="text-xs sm:text-[13px] font-extrabold text-[#f0c020] bg-black/45 border border-[#f0c020]/40 rounded px-2 py-0.5">
-                          #{roleRank} {roleMeta.label}
+                        <span
+                          style={getRoleRankBadgeStyle(
+                            roleRank.rank,
+                            roleRank.total
+                          )}
+                          className="text-xs font-extrabold border rounded px-1.5 py-0.5 whitespace-nowrap shrink-0"
+                        >
+                          #{roleRank.rank}{" "}
+                          {soloPlayer.role === "jungle"
+                            ? "Jgl"
+                            : soloPlayer.role === "support"
+                            ? "Sup"
+                            : roleMeta.label}
                         </span>
                       )}
                     </div>
@@ -407,15 +464,16 @@ export function AdminTeamScoutingView({
 
                   {/* 1. This Season (League Prefix) */}
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020] mb-1.5">
-                      This Season ({leaguePrefix})
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#f0c020] mb-1.5">
+                      This Season
                     </div>
                     {leagueChamps.length > 0 ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {leagueChamps.map((c) => {
                           const isFlex = flexChamps.has(c.name);
-                          const isOutlier = isOutlierChamp(
+                          const isPriority = isHighPriorityPick(
                             c.games,
+                            c.wins,
                             leagueCounts,
                             leagueTotal
                           );
@@ -423,28 +481,30 @@ export function AdminTeamScoutingView({
                           return (
                             <div
                               key={c.name}
-                              className={`flex items-center justify-between gap-1.5 px-1.5 py-1 rounded border text-[11px] ${
-                                isOutlier
-                                  ? "border-[#f0c020] bg-[#f0c020]/10"
+                              style={
+                                isPriority && isFlex
+                                  ? DUAL_PRIORITY_FLEX_STYLE
+                                  : undefined
+                              }
+                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] ${
+                                isPriority && isFlex
+                                  ? ""
+                                  : isPriority
+                                  ? "border-[#ff5a52] bg-[#ff5a52]/12"
                                   : isFlex
                                   ? "border-[#00b8c9]/80 bg-[#00b8c9]/10"
                                   : "border-white/10 bg-black/30"
                               }`}
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <img
                                   src={getChampionIconUrl(c.name, ddVersion)}
                                   alt={c.name}
-                                  className="w-5 h-5 rounded object-cover shrink-0"
+                                  className="w-6 h-6 rounded object-cover shrink-0"
                                 />
                                 <span className="font-bold text-[#f0ede0] truncate">
                                   {c.name}
                                 </span>
-                                {isFlex && (
-                                  <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-[#00b8c9]/25 text-[#5eead4] shrink-0">
-                                    Flex
-                                  </span>
-                                )}
                               </div>
                               <span
                                 className={`font-mono font-bold shrink-0 ${
@@ -468,40 +528,48 @@ export function AdminTeamScoutingView({
 
                   {/* 2. SoloQ Ranked Top 7 (Role-Filtered) */}
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5">
                       SoloQ Top 7 ({roleMeta.label})
                     </div>
                     {soloChamps.length > 0 ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {soloChamps.map((c) => {
                           const isFlex = flexChamps.has(c.name);
-                          const isOutlier = isOutlierChamp(
+                          const isPriority = isHighPriorityPick(
                             c.games,
+                            c.wins,
                             soloCounts,
                             soloTotal
                           );
                           return (
                             <div
                               key={c.name}
-                              className={`flex items-center justify-between gap-1.5 px-1.5 py-1 rounded border text-[11px] ${
-                                isOutlier
-                                  ? "border-[#f0c020] bg-[#f0c020]/10"
+                              style={
+                                isPriority && isFlex
+                                  ? DUAL_PRIORITY_FLEX_STYLE
+                                  : undefined
+                              }
+                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] ${
+                                isPriority && isFlex
+                                  ? ""
+                                  : isPriority
+                                  ? "border-[#ff5a52] bg-[#ff5a52]/12"
                                   : isFlex
                                   ? "border-[#00b8c9]/70 bg-[#00b8c9]/10"
                                   : "border-white/10 bg-black/25"
                               }`}
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <img
                                   src={getChampionIconUrl(c.name, ddVersion)}
                                   alt={c.name}
-                                  className="w-5 h-5 rounded object-cover shrink-0"
+                                  className="w-6 h-6 rounded object-cover shrink-0"
                                 />
                                 <span className="font-semibold text-[#e8e5d8] truncate">
                                   {c.name}
                                 </span>
                               </div>
-                              <span className="font-mono text-[10px] text-[#c7c5b8] shrink-0">
+                              <span className="font-mono text-xs text-[#c7c5b8] shrink-0">
                                 {c.games}G{" "}
                                 <strong
                                   className={
@@ -518,7 +586,7 @@ export function AdminTeamScoutingView({
                         })}
                       </div>
                     ) : (
-                      <div className="text-[11px] text-[#a6a89e] italic">
+                      <div className="text-xs text-[#a6a89e] italic">
                         No SoloQ games synced
                       </div>
                     )}
@@ -526,7 +594,7 @@ export function AdminTeamScoutingView({
 
                   {/* 3. Account Mastery Top 4 */}
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5">
                       Account Mastery Top 4
                     </div>
                     {soloPlayer.masteryTop4.length > 0 ? (
@@ -547,7 +615,7 @@ export function AdminTeamScoutingView({
                               alt={m.championName}
                               className="w-full aspect-square object-cover block"
                             />
-                            <div className="text-[9px] font-bold text-[#f0c020] py-0.5">
+                            <div className="text-[11px] font-bold text-[#f0c020] py-0.5">
                               {formatMasteryPoints(m.championPoints)}
                             </div>
                           </div>
@@ -569,7 +637,7 @@ export function AdminTeamScoutingView({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
           <div className="xp-panel p-3 lg:col-span-5">
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#ff857a] mb-2.5 flex items-center gap-1.5">
-              <Shield className="w-4 h-4" />
+              <Ban className="w-4 h-4" />
               <span>Banned Against ({bannedAgainstList.length} Champs)</span>
             </h2>
             {bannedAgainstList.length > 0 ? (
@@ -577,7 +645,7 @@ export function AdminTeamScoutingView({
                 {bannedAgainstList.slice(0, 12).map((b) => (
                   <div
                     key={b.name}
-                    className="flex items-center justify-between gap-2 bg-black/35 border border-white/10 rounded px-2 py-1.5 text-xs"
+                    className="flex items-center justify-between gap-2 bg-black/35 border border-white/10 rounded px-2.5 py-2 text-xs sm:text-[13px]"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <img
@@ -589,7 +657,7 @@ export function AdminTeamScoutingView({
                         {b.name}
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-[#ff857a] shrink-0">
+                    <span className="text-base sm:text-lg font-mono font-black text-[#ff857a] leading-none shrink-0">
                       {b.total}
                     </span>
                   </div>
@@ -603,29 +671,28 @@ export function AdminTeamScoutingView({
           </div>
 
           <div className="xp-panel p-3 space-y-3 lg:col-span-7">
-            <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-              <Swords className="w-4 h-4" />
-              <span>Draft Tendencies</span>
+            <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
+              Draft Tendencies
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs sm:text-[13px]">
               <div className="bg-black/35 border border-white/10 rounded p-2.5">
-                <div className="text-[10px] font-bold uppercase text-[#5ea3ff] mb-1.5">
+                <div className="text-[11px] font-bold uppercase text-[#5ea3ff] mb-2">
                   Blue 1st Picks (B1)
                 </div>
                 {b1Picks.length > 0 ? (
                   <div className="space-y-2">
                     {b1Picks.map((p, idx) => (
-                      <div key={idx} className="flex items-start gap-1.5">
+                      <div key={idx} className="flex items-start gap-2">
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
-                          className="w-5 h-5 rounded object-cover shrink-0 mt-0.5"
+                          className="w-6 h-6 rounded object-cover shrink-0 mt-0.5"
                         />
                         <div className="min-w-0">
                           <div className="font-bold text-[#f0ede0] leading-tight">
                             {p.champ}
                           </div>
-                          <div className="text-[9px] text-[#a6a89e] leading-snug">
+                          <div className="text-[11px] text-[#a6a89e] leading-snug">
                             {p.round} vs {p.vs}
                           </div>
                         </div>
@@ -633,45 +700,45 @@ export function AdminTeamScoutingView({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[11px] text-[#a6a89e] italic">—</div>
+                  <div className="text-xs text-[#a6a89e] italic">—</div>
                 )}
               </div>
 
               <div className="bg-black/35 border border-white/10 rounded p-2.5">
-                <div className="text-[10px] font-bold uppercase text-[#ff7b72] mb-1.5">
+                <div className="text-[11px] font-bold uppercase text-[#ff7b72] mb-2">
                   Red Openings (R1-2)
                 </div>
                 {r12Picks.length > 0 ? (
                   <div className="space-y-2">
                     {r12Picks.map((p, idx) => (
                       <div key={idx} className="space-y-0.5">
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {p.champs.map((ch) => (
                             <img
                               key={ch}
                               src={getChampionIconUrl(ch, ddVersion)}
                               alt={ch}
                               title={ch}
-                              className="w-5 h-5 rounded object-cover shrink-0"
+                              className="w-6 h-6 rounded object-cover shrink-0"
                             />
                           ))}
-                          <span className="font-bold text-[#f0ede0] text-[11px] leading-tight">
+                          <span className="font-bold text-[#f0ede0] leading-tight">
                             {p.champs.join(" + ")}
                           </span>
                         </div>
-                        <div className="text-[9px] text-[#a6a89e] leading-snug">
+                        <div className="text-[11px] text-[#a6a89e] leading-snug">
                           {p.round} vs {p.vs}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[11px] text-[#a6a89e] italic">—</div>
+                  <div className="text-xs text-[#a6a89e] italic">—</div>
                 )}
               </div>
 
               <div className="bg-black/35 border border-white/10 rounded p-2.5">
-                <div className="text-[10px] font-bold uppercase text-[#f0c020] mb-1">
+                <div className="text-[11px] font-bold uppercase text-[#f0c020] mb-1.5">
                   R5 Counterpicks
                 </div>
                 {r5Picks.length > 0 ? (
@@ -689,7 +756,7 @@ export function AdminTeamScoutingView({
                         .map(([name, cnt]) => `${name} (${cnt}/${r5Picks.length})`)
                         .join(", ");
                       return (
-                        <div className="text-[9px] text-[#a6a89e] pb-1 border-b border-white/10 leading-snug">
+                        <div className="text-[11px] text-[#a6a89e] pb-1.5 border-b border-white/10 leading-snug">
                           Usually R5:{" "}
                           <span className="text-[#f0ede0] font-semibold">
                             {topSummary}
@@ -698,38 +765,38 @@ export function AdminTeamScoutingView({
                       );
                     })()}
                     {r5Picks.map((p, idx) => (
-                      <div key={idx} className="flex items-start gap-1.5">
+                      <div key={idx} className="flex items-start gap-2">
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
-                          className="w-5 h-5 rounded object-cover shrink-0 mt-0.5"
+                          className="w-6 h-6 rounded object-cover shrink-0 mt-0.5"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-[#f0ede0] flex flex-wrap items-center gap-1 leading-tight">
                             <span>{p.champ}</span>
                             {p.role && (
-                              <span className="text-[10px] text-[#f0c020]">
+                              <span className="text-xs text-[#f0c020]">
                                 ({p.role})
                               </span>
                             )}
                             {p.vsChamp && (
                               <>
-                                <span className="text-[10px] text-[#a6a89e] font-normal">
+                                <span className="text-xs text-[#a6a89e] font-normal">
                                   vs
                                 </span>
                                 <img
                                   src={getChampionIconUrl(p.vsChamp, ddVersion)}
                                   alt={p.vsChamp}
                                   title={`Counterpicked into ${p.vsChamp}`}
-                                  className="w-4 h-4 rounded object-cover shrink-0"
+                                  className="w-5 h-5 rounded object-cover shrink-0"
                                 />
-                                <span className="text-[10px] text-[#ff857a] font-semibold">
+                                <span className="text-xs text-[#ff857a] font-semibold">
                                   {p.vsChamp}
                                 </span>
                               </>
                             )}
                           </div>
-                          <div className="text-[9px] text-[#a6a89e] leading-snug mt-0.5">
+                          <div className="text-[11px] text-[#a6a89e] leading-snug mt-0.5">
                             {p.player} • {p.round} vs {p.vs}
                           </div>
                         </div>
@@ -737,7 +804,7 @@ export function AdminTeamScoutingView({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[11px] text-[#a6a89e] italic">—</div>
+                  <div className="text-xs text-[#a6a89e] italic">—</div>
                 )}
               </div>
             </div>
@@ -769,7 +836,7 @@ export function AdminTeamScoutingView({
                 return (
                   <Link
                     key={s.seriesKey}
-                    href={`/admin/stats/match/${encodeURIComponent(
+                    href={`${basePath}/match/${encodeURIComponent(
                       s.seriesKey
                     )}`}
                     className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3"
@@ -832,32 +899,28 @@ export function AdminTeamScoutingView({
                       return (
                         <div
                           key={g.gameId}
-                          className="mt-2 pt-2 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]"
+                          className="mt-2 pt-2.5 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-0 text-xs"
                         >
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
+                          {/* Blue Side */}
+                          <div className="space-y-1.5 md:pr-5 md:border-r md:border-white/15">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <span className="font-bold text-[#5ea3ff]">
                                 {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Blue:{" "}
                                 {g.blueTeam}
                               </span>
-                              {g.draft && g.draft.blueBans.length > 0 && (
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-[9px] text-[#a6a89e] mr-1">
-                                    Bans:
-                                  </span>
-                                  {g.draft.blueBans.map((b, i) => (
-                                    <img
-                                      key={`${b}-${i}`}
-                                      src={getChampionIconUrl(b, ddVersion)}
-                                      alt={b}
-                                      title={`Blue Ban: ${b}`}
-                                      className="w-4 h-4 rounded-xs grayscale opacity-75 object-cover"
-                                    />
-                                  ))}
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2.5 font-mono text-xs">
+                                <span className="font-bold text-[#f0ede0]">
+                                  {g.blueKills}/{g.blueDeaths}/{g.blueAssists}
+                                </span>
+                                <span className="text-[#f0c020]" title="Dragons">
+                                  Drg {g.blueDragons}
+                                </span>
+                                <span className="text-[#c084fc]" title="Barons">
+                                  Brn {g.blueBarons}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-1">
                               {blueChamps.map((ch, i) => (
                                 <img
                                   key={`${ch}-${i}`}
@@ -867,33 +930,43 @@ export function AdminTeamScoutingView({
                                   className="w-6 h-6 rounded border border-[#5ea3ff]/40 object-cover"
                                 />
                               ))}
+                              {g.draft && g.draft.blueBans.length > 0 && (
+                                <>
+                                  <span className="h-5 w-px bg-white/15 mx-1" />
+                                  {g.draft.blueBans.map((b, i) => (
+                                    <img
+                                      key={`bb-${b}-${i}`}
+                                      src={getChampionIconUrl(b, ddVersion)}
+                                      alt={b}
+                                      title={`Blue Ban: ${b}`}
+                                      className="w-6 h-6 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                    />
+                                  ))}
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
+                          {/* Red Side */}
+                          <div className="space-y-1.5 md:pl-5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <span className="font-bold text-[#ff7b72]">
                                 {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Red:{" "}
                                 {g.redTeam}
                               </span>
-                              {g.draft && g.draft.redBans.length > 0 && (
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-[9px] text-[#a6a89e] mr-1">
-                                    Bans:
-                                  </span>
-                                  {g.draft.redBans.map((b, i) => (
-                                    <img
-                                      key={`${b}-${i}`}
-                                      src={getChampionIconUrl(b, ddVersion)}
-                                      alt={b}
-                                      title={`Red Ban: ${b}`}
-                                      className="w-4 h-4 rounded-xs grayscale opacity-75 object-cover"
-                                    />
-                                  ))}
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2.5 font-mono text-xs">
+                                <span className="font-bold text-[#f0ede0]">
+                                  {g.redKills}/{g.redDeaths}/{g.redAssists}
+                                </span>
+                                <span className="text-[#f0c020]" title="Dragons">
+                                  Drg {g.redDragons}
+                                </span>
+                                <span className="text-[#c084fc]" title="Barons">
+                                  Brn {g.redBarons}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-1">
                               {redChamps.map((ch, i) => (
                                 <img
                                   key={`${ch}-${i}`}
@@ -903,6 +976,20 @@ export function AdminTeamScoutingView({
                                   className="w-6 h-6 rounded border border-[#ff7b72]/40 object-cover"
                                 />
                               ))}
+                              {g.draft && g.draft.redBans.length > 0 && (
+                                <>
+                                  <span className="h-5 w-px bg-white/15 mx-1" />
+                                  {g.draft.redBans.map((b, i) => (
+                                    <img
+                                      key={`rb-${b}-${i}`}
+                                      src={getChampionIconUrl(b, ddVersion)}
+                                      alt={b}
+                                      title={`Red Ban: ${b}`}
+                                      className="w-6 h-6 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                    />
+                                  ))}
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>

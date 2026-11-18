@@ -2,6 +2,7 @@ import { ShieldAlert } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
+import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export default async function AdminStatsPage() {
     );
   }
 
+  const sheetSummary = await fetchScdlSheetStats(ctx.players, ctx.teams).catch(
+    () => null
+  );
+
   return (
     <AdminStatsDashboard
       missingTable={ctx.missingTable}
@@ -38,6 +43,7 @@ export default async function AdminStatsPage() {
       divisions={ctx.divisions}
       players={ctx.players}
       teams={ctx.teams}
+      initialSheetData={sheetSummary}
     />
   );
 }

@@ -59,6 +59,36 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
     };
   }
 
+  return loadStatsContextInternal(supabase, {
+    authorized: true,
+    hasRiotKey,
+    ddVersion,
+    stripAdminFields: false,
+  });
+}
+
+export async function loadPublicStatsContext(): Promise<LoadedAdminStatsContext> {
+  const supabase = await createClient();
+  const ddVersion = await getLatestDdragonVersion();
+  return loadStatsContextInternal(supabase, {
+    authorized: true,
+    hasRiotKey: false,
+    ddVersion,
+    stripAdminFields: true,
+  });
+}
+
+async function loadStatsContextInternal(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  opts: {
+    authorized: boolean;
+    hasRiotKey: boolean;
+    ddVersion: string;
+    stripAdminFields: boolean;
+  }
+): Promise<LoadedAdminStatsContext> {
+  const { authorized, hasRiotKey, ddVersion, stripAdminFields } = opts;
+
   const [
     { data: seasons },
     { data: divisions },
@@ -148,6 +178,10 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
         altAccounts: slot.alt_accounts ?? [],
       });
 
+      if (stripAdminFields) {
+        agg.syncError = null;
+      }
+
       aggregatedPlayers.push(agg);
       teamPlayers.push(agg);
     }
@@ -206,7 +240,7 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
   }
 
   return {
-    authorized: true,
+    authorized,
     missingTable,
     hasRiotKey,
     ddVersion,

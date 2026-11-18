@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Eye, History, ListOrdered, Menu, Shield, Trophy, X } from "lucide-react";
+import { BarChart3, Eye, History, ListOrdered, Menu, Shield, Trophy, X } from "lucide-react";
 
 interface HeaderNavProps {
   isLoggedIn: boolean;
@@ -50,6 +50,13 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         >
           <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
           <span>Consensus</span>
+        </Link>
+        <Link
+          href="/stats"
+          className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
+        >
+          <BarChart3 className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+          <span>Stats</span>
         </Link>
         {isLoggedIn && (
           <Link
@@ -112,6 +119,14 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           >
             <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
             <span>Consensus</span>
+          </Link>
+          <Link
+            href="/stats"
+            onClick={() => setMobileMenuOpen(false)}
+            className="min-[740px]:hidden flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+          >
+            <BarChart3 className="w-4 h-4 text-[#f0c020] shrink-0" />
+            <span>Stats</span>
           </Link>
           {isLoggedIn && (
             <Link

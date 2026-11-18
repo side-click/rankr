@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   Award,
   BarChart3,
+  ChevronDown,
+  ChevronRight,
   Clock,
   Coins,
   Copy,
@@ -22,7 +24,6 @@ import {
   RefreshCw,
   Shield,
   Skull,
-  Square,
   Sword,
   Swords,
   Trophy,
@@ -52,6 +53,52 @@ interface DivisionItem {
   theme_key: string;
 }
 
+function RankrLogoIcon({ className = "w-6 h-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 28 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.45}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <defs>
+        <mask id="rankr-lineart-mask">
+          <rect width="28" height="24" fill="white" />
+          {/* Cut out behind the two overlapping blocky arrows */}
+          <polygon
+            points="5,5.6 1.4,10.5 3.3,10.5 3.3,18 6.7,18 6.7,10.5 8.6,10.5"
+            fill="black"
+            stroke="black"
+            strokeWidth={1.5}
+          />
+          <polygon
+            points="21.3,6 24.7,6 24.7,13.5 26.6,13.5 23,18.4 19.4,13.5 21.3,13.5"
+            fill="black"
+            stroke="black"
+            strokeWidth={1.5}
+          />
+        </mask>
+      </defs>
+      {/* 5 wide stacked bars */}
+      <g mask="url(#rankr-lineart-mask)">
+        <rect x="5.5" y="3" width="17" height="18" rx="1.4" />
+        <line x1="5.5" y1="6.6" x2="22.5" y2="6.6" />
+        <line x1="5.5" y1="10.2" x2="22.5" y2="10.2" />
+        <line x1="5.5" y1="13.8" x2="22.5" y2="13.8" />
+        <line x1="5.5" y1="17.4" x2="22.5" y2="17.4" />
+      </g>
+      {/* Left blocky up-arrow */}
+      <polygon points="5,6 1.8,10.2 3.7,10.2 3.7,17.5 6.3,17.5 6.3,10.2 8.2,10.2" />
+      {/* Right blocky down-arrow */}
+      <polygon points="21.7,6.5 24.3,6.5 24.3,13.8 26.2,13.8 23,18 19.8,13.8 21.7,13.8" />
+    </svg>
+  );
+}
+
 interface AdminStatsDashboardProps {
   missingTable: boolean;
   hasRiotKey: boolean;
@@ -64,11 +111,20 @@ interface AdminStatsDashboardProps {
   divisions: DivisionItem[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
+  isAdminView?: boolean;
+  initialSheetData?: {
+    players: AggregatedPlayerStats[];
+    teams: AggregatedTeamStats[];
+    unrosteredPlayers?: UnrosteredSheetPlayer[];
+    fetchedAt: string;
+    rowCount: number;
+    matchCount: number;
+  } | null;
 }
 
 type SortKey =
   | "leagueRating"
-  | "winRate"
+  | "avgGoldDiff15"
   | "kda"
   | "dpm"
   | "gpm"
@@ -103,28 +159,45 @@ create policy "Admins can manage riot_player_stats" on public.riot_player_stats 
 
 export function AdminStatsDashboard({
   missingTable,
-  hasRiotKey,
   ddVersion,
   leagueName,
   leagueLogoUrl,
   seasonName,
-  seasonId,
   currentEditionName,
   divisions,
   players,
   teams,
+  isAdminView = true,
+  initialSheetData = null,
 }: AdminStatsDashboardProps) {
   const router = useRouter();
+  const basePath = isAdminView ? "/admin/stats" : "/stats";
   const [divisionFilter, setDivisionFilter] = useState<string>(
     divisions[0]?.id ?? "all"
   );
+  const [activeSection, setActiveSection] = useState<
+    "players" | "teams" | "division"
+  >("players");
+  const [leaderboardStyle, setLeaderboardStyle] = useState<
+    "standard" | "shareable"
+  >("standard");
+  const [shareableCardKeys, setShareableCardKeys] = useState<string[]>([
+    "KDA",
+    "Damage / Min",
+    "Kill Participation",
+    "Vision / Min",
+    "Gold Diff / Game",
+    "Gold / Min",
+  ]);
+  const [openDropdown, setOpenDropdown] = useState<
+    "league" | "division" | null
+  >(null);
+  const selectorContainerRef = useRef<HTMLDivElement>(null);
+
   const [roleFilter, setRoleFilter] = useState<LeagueRole | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("leagueRating");
   const [sortAsc, setSortAsc] = useState(false);
   const [showAllPlayers, setShowAllPlayers] = useState(false);
-  const [showAllLeaderboards, setShowAllLeaderboards] = useState(false);
-  const [matchCount, setMatchCount] = useState<number>(5);
-  const [dataSource, setDataSource] = useState<"riot" | "sheet">("sheet");
   const [sheetData, setSheetData] = useState<{
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
@@ -132,29 +205,36 @@ export function AdminStatsDashboard({
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
-  } | null>(null);
+  } | null>(
+    initialSheetData
+      ? {
+          ...initialSheetData,
+          unrosteredPlayers: initialSheetData.unrosteredPlayers ?? [],
+        }
+      : null
+  );
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [showUnrosteredModal, setShowUnrosteredModal] = useState(false);
   const [copiedUnrosteredId, setCopiedUnrosteredId] = useState<string | null>(
     null
   );
-
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{
-    done: number;
-    total: number;
-    currentLabel: string;
-  } | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [syncLogs, setSyncLogs] = useState<
-    { time: string; level: "ok" | "warn" | "err"; text: string }[]
-  >([]);
-  const [showSyncLog, setShowSyncLog] = useState(true);
   const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
   const [copiedRatingBlurb, setCopiedRatingBlurb] = useState(false);
-  const cancelSyncRef = useRef(false);
   const leaderboardCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        selectorContainerRef.current &&
+        !selectorContainerRef.current.contains(e.target as Node)
+      ) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const selectedDivision = useMemo(
     () =>
@@ -204,8 +284,7 @@ export function AdminStatsDashboard({
       });
       const link = document.createElement("a");
       const divPart = selectedDivision?.slug || "league";
-      const srcPart = dataSource === "sheet" ? "scdl" : "soloq";
-      link.download = `${divPart}-${srcPart}-leaderboards.png`
+      link.download = `${divPart}-scdl-leaderboards.png`
         .toLowerCase()
         .replace(/[^a-z0-9-_]+/g, "-");
       link.href = dataUrl;
@@ -213,16 +292,6 @@ export function AdminStatsDashboard({
     } finally {
       setExportingLeaderboard(false);
     }
-  }
-
-  function appendSyncLog(level: "ok" | "warn" | "err", text: string) {
-    const time = new Date().toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    setSyncLogs((prev) => [{ time, level, text }, ...prev].slice(0, 120));
   }
 
   async function loadSheetStats(force = false) {
@@ -263,18 +332,19 @@ export function AdminStatsDashboard({
   }
 
   useEffect(() => {
+    if (!isAdminView || initialSheetData) return;
     void loadSheetStats(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdminView]);
 
   const activePlayers = useMemo(
-    () => (dataSource === "sheet" && sheetData ? sheetData.players : players),
-    [dataSource, sheetData, players]
+    () => (sheetData ? sheetData.players : players),
+    [sheetData, players]
   );
 
   const activeTeams = useMemo(
-    () => (dataSource === "sheet" && sheetData ? sheetData.teams : teams),
-    [dataSource, sheetData, teams]
+    () => (sheetData ? sheetData.teams : teams),
+    [sheetData, teams]
   );
 
   const filteredPlayers = useMemo(() => {
@@ -307,30 +377,20 @@ export function AdminStatsDashboard({
       });
   }, [activeTeams, divisionFilter]);
 
-  const syncedCount = useMemo(
-    () => filteredPlayers.filter((p) => p.syncedAt !== null).length,
-    [filteredPlayers]
-  );
-
   const overview = useMemo(() => {
     const allMatches = filteredPlayers.flatMap((p) => p.matches);
-    const totalMatchRows = allMatches.length;
 
     const uniqueMatchMap = new Map<string, typeof allMatches[number]>();
     const uniqueSideMap = new Map<string, typeof allMatches[number]>();
-    if (dataSource === "sheet") {
-      for (const m of allMatches) {
-        if (!uniqueMatchMap.has(m.matchId)) uniqueMatchMap.set(m.matchId, m);
-        const sideKey = `${m.matchId}::${m.teamId}`;
-        if (!uniqueSideMap.has(sideKey)) uniqueSideMap.set(sideKey, m);
-      }
+    for (const m of allMatches) {
+      if (!uniqueMatchMap.has(m.matchId)) uniqueMatchMap.set(m.matchId, m);
+      const sideKey = `${m.matchId}::${m.teamId}`;
+      if (!uniqueSideMap.has(sideKey)) uniqueSideMap.set(sideKey, m);
     }
 
-    const totalGames =
-      dataSource === "sheet" ? uniqueMatchMap.size : totalMatchRows;
+    const totalGames = uniqueMatchMap.size;
 
-    const durationSource =
-      dataSource === "sheet" ? [...uniqueMatchMap.values()] : allMatches;
+    const durationSource = [...uniqueMatchMap.values()];
     const avgDurationMin =
       durationSource.length > 0
         ? durationSource.reduce((s, m) => s + m.gameDuration, 0) /
@@ -338,8 +398,7 @@ export function AdminStatsDashboard({
           durationSource.length
         : 0;
 
-    const sideSource =
-      dataSource === "sheet" ? [...uniqueSideMap.values()] : allMatches;
+    const sideSource = [...uniqueSideMap.values()];
     const avgKillsPerGame =
       sideSource.length > 0
         ? sideSource.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
@@ -529,7 +588,7 @@ export function AdminStatsDashboard({
       topStealPlayer,
       totalControlWards,
     };
-  }, [filteredPlayers, dataSource]);
+  }, [filteredPlayers]);
 
   const leaderboardPlayers = useMemo(
     () => filteredPlayers.filter((p) => p.games > 0),
@@ -643,6 +702,46 @@ export function AdminStatsDashboard({
     });
   }, [filteredPlayers, roleFilter, sortKey, sortAsc]);
 
+  const sortColorByPlayerKey = useMemo(() => {
+    const map = new Map<string, string>();
+    const valid = tablePlayers
+      .filter((p) => p.games > 0)
+      .map((p) => ({
+        key: p.playerKey,
+        val: p[sortKey] as number | null | undefined,
+      }))
+      .filter(
+        (x): x is { key: string; val: number } =>
+          typeof x.val === "number" && Number.isFinite(x.val)
+      );
+    if (valid.length === 0) return map;
+    valid.sort((a, b) => b.val - a.val);
+    const total = valid.length;
+    for (let i = 0; i < total; i++) {
+      let rank = i + 1;
+      while (rank > 1 && valid[rank - 2].val === valid[i].val) {
+        rank--;
+      }
+      const t = total <= 1 ? 0 : Math.min(1, Math.max(0, (rank - 1) / (total - 1)));
+      let r: number;
+      let g: number;
+      let b: number;
+      if (t <= 0.5) {
+        const u = t / 0.5;
+        r = Math.round(74 + (166 - 74) * u);
+        g = Math.round(222 + (168 - 222) * u);
+        b = Math.round(128 + (158 - 128) * u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = Math.round(166 + (248 - 166) * u);
+        g = Math.round(168 + (113 - 168) * u);
+        b = Math.round(158 + (113 - 158) * u);
+      }
+      map.set(valid[i].key, `rgb(${r}, ${g}, ${b})`);
+    }
+    return map;
+  }, [tablePlayers, sortKey]);
+
   function handleSort(nextKey: SortKey) {
     if (sortKey === nextKey) {
       setSortAsc((prev) => !prev);
@@ -652,200 +751,102 @@ export function AdminStatsDashboard({
     }
   }
 
-  async function runBatchSync(onlyUnsynced: boolean) {
-    if (syncing) return;
-    const queue = (
-      onlyUnsynced
-        ? filteredPlayers.filter((p) => p.syncedAt === null)
-        : filteredPlayers
-    ).map((p) => ({
-      playerKey: p.playerKey,
-      riotId: p.riotId,
-      seasonId,
-      divisionId: p.divisionId,
-      teamId: p.teamId,
-      role: p.role,
-    }));
-
-    if (queue.length === 0) {
-      setSyncError("All players in this view are already synced.");
-      return;
-    }
-
-    cancelSyncRef.current = false;
-    setSyncing(true);
-    setSyncError(null);
-    setShowSyncLog(true);
-    setSyncLogs([]);
-    appendSyncLog(
-      "ok",
-      `Started sync for ${queue.length} player(s) (${matchCount} games/player)`
-    );
-    setSyncProgress({
-      done: 0,
-      total: queue.length,
-      currentLabel: queue[0].riotId,
-    });
-
-    const maxReqsPerPlayer = 4 + matchCount;
-    const windowMs = 122_000;
-    const maxReqsPerWindow = 92;
-    const reqTimestamps: number[] = [];
-
-    async function waitForCountdown(seconds: number, reason: string) {
-      const targetEnd = Date.now() + seconds * 1000;
-      while (!cancelSyncRef.current) {
-        const remainingMs = targetEnd - Date.now();
-        if (remainingMs <= 0) break;
-        const rem = Math.ceil(remainingMs / 1000);
-        setSyncProgress((prev) =>
-          prev
-            ? { ...prev, currentLabel: `${reason} (${rem}s)` }
-            : prev
-        );
-        await new Promise((r) => setTimeout(r, Math.min(1000, remainingMs)));
-      }
-    }
-
-    try {
-      let i = 0;
-      while (i < queue.length) {
-        if (cancelSyncRef.current) break;
-
-        // Prune requests older than 2m02s from our sliding window
-        const now = Date.now();
-        while (reqTimestamps.length > 0 && now - reqTimestamps[0] >= windowMs) {
-          reqTimestamps.shift();
-        }
-
-        // If adding this player could exceed 85 reqs in 2 mins, pause until window frees up
-        if (
-          reqTimestamps.length > 0 &&
-          reqTimestamps.length + maxReqsPerPlayer > maxReqsPerWindow
-        ) {
-          const waitSec = Math.max(
-            2,
-            Math.ceil((windowMs - (now - reqTimestamps[0])) / 1000)
-          );
-          appendSyncLog(
-            "warn",
-            `Rate-limit safe pause (${waitSec}s) to stay under 100 req / 2 min`
-          );
-          await waitForCountdown(waitSec, "Rate-limit safe pause");
-          continue;
-        }
-
-        const playerItem = queue[i];
-        setSyncProgress({
-          done: i,
-          total: queue.length,
-          currentLabel: playerItem.riotId.split("#")[0],
-        });
-
-        for (let r = 0; r < maxReqsPerPlayer; r++) {
-          reqTimestamps.push(Date.now());
-        }
-
-        const res = await fetch("/api/admin/riot-sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ players: [playerItem], matchCount }),
-        });
-
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          retryAfterSeconds?: number;
-          results?: {
-            riot_id: string;
-            solo_tier: string | null;
-            solo_rank: string | null;
-            matches: unknown[];
-            sync_error: string | null;
-          }[];
-        };
-
-        if (res.status === 429) {
-          const waitSec = Math.max(2, Number(data.retryAfterSeconds ?? 30) + 2);
-          appendSyncLog("warn", `Riot 429 Retry-After pause (${waitSec}s)`);
-          await waitForCountdown(waitSec, "Riot Retry-After pause");
-          continue;
-        }
-
-        if (!res.ok) {
-          throw new Error(data.error || `Sync failed (${res.status})`);
-        }
-
-        const syncedRow = data.results?.[0];
-        if (syncedRow?.sync_error) {
-          appendSyncLog(
-            "err",
-            `${playerItem.riotId} — ${syncedRow.sync_error}`
-          );
-        } else if (syncedRow) {
-          const tierLabel = syncedRow.solo_tier
-            ? `${syncedRow.solo_tier} ${syncedRow.solo_rank ?? ""}`.trim()
-            : "Unranked";
-          appendSyncLog(
-            "ok",
-            `${syncedRow.riot_id} — ${tierLabel} • ${syncedRow.matches.length}G`
-          );
-        }
-
-        i += 1;
-        setSyncProgress({
-          done: i,
-          total: queue.length,
-          currentLabel: playerItem.riotId.split("#")[0],
-        });
-      }
-      if (cancelSyncRef.current) {
-        appendSyncLog("warn", "Sync stopped by admin.");
-      } else {
-        appendSyncLog("ok", "Sync finished.");
-      }
-      router.refresh();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Sync failed.";
-      appendSyncLog("err", msg);
-      setSyncError(msg);
-    } finally {
-      setSyncing(false);
-    }
-  }
+  const missingDataPlayers = useMemo(() => {
+    if (!sheetData) return [];
+    return filteredPlayers.filter((p) => p.games === 0);
+  }, [sheetData, filteredPlayers]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <Link href="/admin" className="xp-btn text-xs justify-center sm:justify-start">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Admin Console</span>
-        </Link>
-        <div className="grid grid-cols-2 sm:flex items-center gap-1 bg-black/40 p-1 rounded border border-white/15 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setDataSource("sheet");
-              void loadSheetStats(false);
-            }}
-            className={`xp-btn text-xs justify-center ${
-              dataSource === "sheet" ? "xp-btn-primary" : ""
-            }`}
-          >
-            SCDL League (Import)
-          </button>
-          <button
-            type="button"
-            onClick={() => setDataSource("riot")}
-            className={`xp-btn text-xs justify-center ${
-              dataSource === "riot" ? "xp-btn-primary" : ""
-            }`}
-          >
-            SoloQ (Riot API)
-          </button>
-        </div>
-      </div>
+      {/* Admin Controls WinXP Window (Admin View Only) */}
+      {isAdminView && (
+      <RetroWindow title="Admin Controls" theme="xp">
+        <div className="space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center">
+              <Link
+                href="/admin"
+                className="xp-btn text-xs justify-center sm:justify-start"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Admin Console</span>
+              </Link>
+            </div>
 
-      {missingTable && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {sheetData && (
+                <span className="text-[11px] text-[#a6a89e]">
+                  Loaded{" "}
+                  <strong className="text-[#f0ede0]">
+                    {sheetData.matchCount}
+                  </strong>{" "}
+                  league games ({sheetData.rowCount} rows)
+                </span>
+              )}
+              {sheetData && sheetData.unrosteredPlayers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowUnrosteredModal(true)}
+                  title="View unrostered sub / alt summoner names found in the sheet"
+                  className="xp-btn text-xs justify-center"
+                >
+                  <Users className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <span>
+                    Unrostered ({sheetData.unrosteredPlayers.length})
+                  </span>
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={sheetLoading}
+                onClick={() => void loadSheetStats(true)}
+                title="Fetch latest SCDL League stats from the public Google Sheet"
+                className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${sheetLoading ? "animate-spin" : ""}`}
+                />
+                <span>
+                  {sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {sheetError && (
+            <div className="p-2 bg-[#451717] border border-[#9e3535] rounded text-xs text-[#ff857a] font-bold">
+              {sheetError}
+            </div>
+          )}
+
+          {missingDataPlayers.length > 0 && (() => {
+            const preview = missingDataPlayers
+              .slice(0, 6)
+              .map((p) => `${p.displayName} (${p.teamName})`)
+              .join(", ");
+            const remainder = missingDataPlayers.length - 6;
+            return (
+              <div
+                title={missingDataPlayers
+                  .map((p) => `${p.displayName} (${p.teamName})`)
+                  .join(", ")}
+                className="px-3 py-1.5 bg-[#2a2210]/80 border border-[#c89b3c]/40 rounded text-[11px] text-[#f0c020] flex items-center gap-2"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <strong>{missingDataPlayers.length}</strong> rostered{" "}
+                  {missingDataPlayers.length === 1 ? "player has" : "players have"}{" "}
+                  no match data yet: {preview}
+                  {remainder > 0 ? ` +${remainder} more` : ""}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+      </RetroWindow>
+      )}
+
+      {isAdminView && missingTable && (
         <RetroWindow title="Setup Required — Create Stats Cache Table" theme="xp">
           <div className="space-y-3 text-xs text-[#e8e5d8]">
             <div className="flex items-start gap-2 text-[#f0c020] font-bold">
@@ -863,291 +864,250 @@ export function AdminStatsDashboard({
         </RetroWindow>
       )}
 
-      {!hasRiotKey && (
-        <div className="xp-panel p-3 border border-[#9e3535] bg-[#451717]/60 text-xs text-[#ff857a] font-bold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          <span>
-            <code>RIOT_API_KEY</code> is not set in server environment
-            variables. Add it to <code>.env.local</code> and Vercel to sync live
-            Riot data.
-          </span>
-        </div>
-      )}
-
-      <RetroWindow
-        title={
-          dataSource === "sheet"
-            ? `Stats Dashboard (SCDL League (Import)) - SCDL ${seasonName}`
-            : `Stats Dashboard (SoloQ API) - SCDL ${seasonName}`
-        }
-        theme={
-          selectedDivision
-            ? selectedDivision.theme_key === "dragon"
-              ? "dragon"
-              : selectedDivision.theme_key === "baron"
-              ? "baron"
-              : "scdl"
-            : "scdl"
-        }
-        customTheme={selectedDivisionTheme}
-        iconSrc={selectedDivision?.logo_url ?? undefined}
+      {/* Modern Consensus-Style League & Division Selectors */}
+      <div
+        ref={selectorContainerRef}
+        className="grid grid-cols-1 md:grid-cols-2 gap-3"
       >
-        {/* Division Toggle + Riot Sync Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10">
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 w-full lg:w-auto">
-            {divisions.map((div) => {
-              const count = activePlayers.filter(
-                (p) => p.divisionId === div.id
-              ).length;
-              return (
-                <button
-                  key={div.id}
-                  type="button"
-                  onClick={() => setDivisionFilter(div.id)}
-                  className={`xp-btn text-xs justify-center ${
-                    divisionFilter === div.id ? "xp-btn-primary" : ""
-                  }`}
-                >
-                  {div.logo_url && (
-                    <img
-                      src={div.logo_url}
-                      alt={div.name}
-                      className="w-4 h-4 object-contain"
-                    />
-                  )}
-                  <span>
-                    {div.name} ({count})
-                  </span>
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setDivisionFilter("all")}
-              className={`xp-btn text-xs justify-center col-span-2 sm:col-span-1 ${
-                divisionFilter === "all" ? "xp-btn-primary" : ""
-              }`}
-            >
-              All Divisions ({activePlayers.length})
-            </button>
-          </div>
-
-          {dataSource === "sheet" ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between lg:justify-end gap-2 w-full lg:w-auto">
-              {sheetData && (
-                <span className="text-[11px] text-[#a6a89e] text-center sm:text-left">
-                  Loaded{" "}
-                  <strong className="text-[#f0ede0]">
-                    {sheetData.matchCount}
-                  </strong>{" "}
-                  league games ({sheetData.rowCount} rows)
-                </span>
+        {/* League Selector Card */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() =>
+              setOpenDropdown((prev) => (prev === "league" ? null : "league"))
+            }
+            className="w-full text-left rounded-xl border border-white/15 bg-[#151d1a]/95 hover:border-[#c89b3c]/70 px-3.5 py-3 flex items-center justify-between gap-3 transition shadow-md cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              {leagueLogoUrl ? (
+                <img
+                  src={leagueLogoUrl}
+                  alt={leagueName}
+                  className="w-10 h-10 object-contain shrink-0"
+                />
+              ) : (
+                <Award className="w-9 h-9 text-[#f0c020] shrink-0" />
               )}
-              <div
-                className={`grid gap-2 w-full sm:w-auto sm:flex sm:items-center ${
-                  sheetData && sheetData.unrosteredPlayers.length > 0
-                    ? "grid-cols-2"
-                    : "grid-cols-1"
-                }`}
-              >
-                {sheetData && sheetData.unrosteredPlayers.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowUnrosteredModal(true)}
-                    title="View unrostered sub / alt summoner names found in the sheet"
-                    className="xp-btn text-xs justify-center"
-                  >
-                    <Users className="w-3.5 h-3.5 text-[#f0c020]" />
-                    <span>
-                      Unrostered ({sheetData.unrosteredPlayers.length})
-                    </span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={sheetLoading}
-                  onClick={() => void loadSheetStats(true)}
-                  title="Fetch latest SCDL League stats from the public Google Sheet"
-                  className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
-                >
-                  <RefreshCw
-                    className={`w-3.5 h-3.5 ${
-                      sheetLoading ? "animate-spin" : ""
-                    }`}
-                  />
-                  <span>
-                    {sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}
-                  </span>
-                </button>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] truncate">
+                  {leagueName}
+                </div>
+                <div className="text-sm font-extrabold text-white truncate">
+                  {seasonName}
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
-              <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-                <span className="text-[11px] text-[#a6a89e]">
-                  Synced:{" "}
-                  <strong className="text-[#f0ede0]">{syncedCount}</strong>/
-                  {filteredPlayers.length}
-                </span>
-                <select
-                  value={matchCount}
-                  disabled={syncing}
-                  onChange={(e) => setMatchCount(Number(e.target.value))}
-                  className="xp-inset px-2 py-1 text-[11px] font-bold"
-                  title="Recent non-tournament games to pull per player"
-                >
-                  <option value={3}>3 games / player</option>
-                  <option value={5}>5 games / player</option>
-                  <option value={10}>10 games / player</option>
-                </select>
-              </div>
-              {!syncing ? (
-                <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    disabled={
-                      !hasRiotKey ||
-                      missingTable ||
-                      filteredPlayers.length - syncedCount === 0
-                    }
-                    onClick={() => void runBatchSync(true)}
-                    title="Sync only players in this view who have never been synced"
-                    className="xp-btn text-xs justify-center disabled:opacity-50"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-[#7cd438]" />
-                    <span>
-                      Sync Missing ({filteredPlayers.length - syncedCount})
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!hasRiotKey || missingTable}
-                    onClick={() => void runBatchSync(false)}
-                    title="Force-refresh all players in the current division view"
-                    className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Re-Sync All ({filteredPlayers.length})</span>
-                  </button>
+            <ChevronDown className="w-4 h-4 text-[#c89b3c] shrink-0" />
+          </button>
+
+          {openDropdown === "league" && (
+            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-[#c89b3c]/60 bg-[#121816] shadow-2xl p-1.5 max-h-72 overflow-y-auto space-y-1">
+              <button
+                type="button"
+                onClick={() => setOpenDropdown(null)}
+                className="w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer bg-[#2a2210] border border-[#c89b3c]/70 text-[#f0c020]"
+              >
+                {leagueLogoUrl ? (
+                  <img
+                    src={leagueLogoUrl}
+                    alt={leagueName}
+                    className="w-7 h-7 object-contain shrink-0"
+                  />
+                ) : (
+                  <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                    {leagueName}
+                  </div>
+                  <div className="text-xs font-bold truncate">
+                    {seasonName}
+                  </div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    cancelSyncRef.current = true;
-                  }}
-                  className="xp-btn xp-btn-danger text-xs justify-center w-full sm:w-auto"
-                >
-                  <Square className="w-3 h-3" />
-                  <span>Stop Sync</span>
-                </button>
-              )}
+              </button>
             </div>
           )}
         </div>
 
-        {syncProgress && (
-          <div className="mb-4 xp-inset p-3 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-[#f0c020] font-bold">
-                {syncing
-                  ? `Syncing Riot API (${syncProgress.currentLabel})...`
-                  : "Sync Complete"}
-              </span>
-              <span className="text-[#c7c5b8] font-mono">
-                {syncProgress.done} / {syncProgress.total}
-              </span>
-            </div>
-            <div className="w-full h-2 rounded bg-black/50 overflow-hidden">
-              <div
-                className="h-full bg-[#7cd438] transition-all"
-                style={{
-                  width: `${
-                    syncProgress.total > 0
-                      ? (syncProgress.done / syncProgress.total) * 100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {sheetError && dataSource === "sheet" && (
-          <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
-            {sheetError}
-          </div>
-        )}
-
-        {syncError && dataSource === "riot" && (
-          <div className="mb-4 p-2.5 bg-[#451717] border border-[#9e3535] text-xs text-[#ff857a] font-bold">
-            {syncError}
-          </div>
-        )}
-
-        {(() => {
-          const missingDataPlayers = filteredPlayers.filter(
-            (p) => p.games === 0
-          );
-          if (missingDataPlayers.length === 0) return null;
-          if (dataSource === "sheet" && !sheetData) return null;
-          const preview = missingDataPlayers
-            .slice(0, 6)
-            .map((p) => `${p.displayName} (${p.teamName})`)
-            .join(", ");
-          const remainder = missingDataPlayers.length - 6;
-          return (
-            <div
-              title={missingDataPlayers
-                .map((p) => `${p.displayName} (${p.teamName})`)
-                .join(", ")}
-              className="mb-4 px-3 py-2 bg-[#2a2210]/80 border border-[#c89b3c]/40 rounded text-[11px] text-[#f0c020] flex items-center gap-2"
-            >
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>
-                <strong>{missingDataPlayers.length}</strong> rostered{" "}
-                {missingDataPlayers.length === 1 ? "player has" : "players have"}{" "}
-                no match data yet: {preview}
-                {remainder > 0 ? ` +${remainder} more` : ""}
-              </span>
-            </div>
-          );
-        })()}
-
-        {syncLogs.length > 0 && (
-          <div className="mb-4 xp-panel overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowSyncLog((prev) => !prev)}
-              className="w-full bg-[#121615] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-[11px] font-bold text-[#c7c5b8] hover:text-white cursor-pointer"
-            >
-              <span>Sync Activity Log ({syncLogs.length})</span>
-              <span>{showSyncLog ? "Hide ▲" : "Show ▼"}</span>
-            </button>
-            {showSyncLog && (
-              <div className="max-h-36 overflow-y-auto p-2 space-y-1 font-mono text-[11px] bg-black/40">
-                {syncLogs.map((entry, idx) => (
-                  <div
-                    key={idx}
-                    className={
-                      entry.level === "err"
-                        ? "text-[#ff857a]"
-                        : entry.level === "warn"
-                        ? "text-[#f0c020]"
-                        : "text-[#7cd438]"
-                    }
-                  >
-                    <span className="text-[#a6a89e] mr-2">[{entry.time}]</span>
-                    {entry.text}
-                  </div>
-                ))}
+        {/* Division Selector Card */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() =>
+              setOpenDropdown((prev) =>
+                prev === "division" ? null : "division"
+              )
+            }
+            style={
+              selectedDivisionTheme
+                ? { borderColor: `${selectedDivisionTheme.primary_color}88` }
+                : undefined
+            }
+            className="w-full text-left rounded-xl border border-white/15 bg-[#151d1a]/95 hover:brightness-110 px-3.5 py-3 flex items-center justify-between gap-3 transition shadow-md cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              {selectedDivision?.logo_url ? (
+                <img
+                  src={selectedDivision.logo_url}
+                  alt={selectedDivision.name}
+                  className="w-10 h-10 object-contain shrink-0"
+                />
+              ) : leagueLogoUrl ? (
+                <img
+                  src={leagueLogoUrl}
+                  alt={leagueName}
+                  className="w-10 h-10 object-contain shrink-0"
+                />
+              ) : (
+                <Award className="w-9 h-9 text-[#7cd438] shrink-0" />
+              )}
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                  Division
+                </div>
+                <div
+                  style={
+                    selectedDivisionTheme
+                      ? { color: selectedDivisionTheme.accent_text_color }
+                      : undefined
+                  }
+                  className="text-sm font-extrabold text-white truncate"
+                >
+                  {selectedDivision
+                    ? `${selectedDivision.name} (${filteredPlayers.length})`
+                    : `All Divisions (${activePlayers.length})`}
+                </div>
               </div>
-            )}
+            </div>
+            <ChevronDown className="w-4 h-4 text-[#c89b3c] shrink-0" />
+          </button>
+
+          {openDropdown === "division" && (
+            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-[#c89b3c]/60 bg-[#121816] shadow-2xl p-1.5 max-h-72 overflow-y-auto space-y-1">
+              {divisions.map((div) => {
+                const divTheme = resolveDivisionTheme(div.theme_key);
+                const count = activePlayers.filter(
+                  (p) => p.divisionId === div.id
+                ).length;
+                return (
+                  <button
+                    key={div.id}
+                    type="button"
+                    onClick={() => {
+                      setDivisionFilter(div.id);
+                      setOpenDropdown(null);
+                    }}
+                    className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
+                      divisionFilter === div.id
+                        ? "bg-white/10 border border-[#c89b3c]/70"
+                        : "hover:bg-white/5"
+                    }`}
+                  >
+                    {div.logo_url ? (
+                      <img
+                        src={div.logo_url}
+                        alt={div.name}
+                        className="w-7 h-7 object-contain shrink-0"
+                      />
+                    ) : (
+                      <Award className="w-6 h-6 text-[#7cd438] shrink-0" />
+                    )}
+                    <span
+                      style={{ color: divTheme.accent_text_color }}
+                      className="text-xs font-extrabold truncate flex-1"
+                    >
+                      {div.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-[#a6a89e]">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => {
+                  setDivisionFilter("all");
+                  setOpenDropdown(null);
+                }}
+                className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
+                  divisionFilter === "all"
+                    ? "bg-white/10 border border-[#c89b3c]/70"
+                    : "hover:bg-white/5"
+                }`}
+              >
+                {leagueLogoUrl ? (
+                  <img
+                    src={leagueLogoUrl}
+                    alt={leagueName}
+                    className="w-7 h-7 object-contain shrink-0"
+                  />
+                ) : (
+                  <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
+                )}
+                <span className="text-xs font-extrabold text-[#f0ede0] truncate flex-1">
+                  All Divisions
+                </span>
+                <span className="text-[10px] font-mono text-[#a6a89e]">
+                  {activePlayers.length}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Section Toggle Buttons: Players | Teams | Division */}
+      <div className="grid grid-cols-3 gap-2.5">
+        {(
+          [
+            {
+              key: "players",
+              label: "Players",
+              icon: <User className="w-5 h-5 sm:w-6 sm:h-6" />,
+            },
+            {
+              key: "teams",
+              label: "Teams",
+              icon: <TeamGroupIcon className="w-5 h-5 sm:w-6 sm:h-6" />,
+            },
+            {
+              key: "division",
+              label: "Division",
+              icon: <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6" />,
+            },
+          ] as const
+        ).map((sec) => (
+          <button
+            key={sec.key}
+            type="button"
+            onClick={() => setActiveSection(sec.key)}
+            className={`xp-btn !py-4 !min-h-[66px] !text-base sm:!text-lg !gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl ${
+              activeSection === sec.key ? "xp-btn-primary" : ""
+            }`}
+          >
+            {sec.icon}
+            <span>{sec.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {!sheetData ? (
+        <div className="xp-panel p-8 text-center text-xs text-[#a6a89e] flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-[#f0c020]" />
+          <span>Loading league stats...</span>
+        </div>
+      ) : (
+        <>
+        {/* Players Section: All Divisions prompt */}
+        {activeSection === "players" && !showLeaderboards && (
+          <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
+            Select a specific division above to view division player leaderboards and rankings.
           </div>
         )}
 
-        {/* Stat Leaderboards Grid (Top 5 cards) */}
-        {showLeaderboards && leaderboardPlayers.length > 0 && (() => {
+        {/* Stat Leaderboards (Standard 4x3 or Shareable 2x3 with Export Frame) */}
+        {activeSection === "players" && showLeaderboards && leaderboardPlayers.length > 0 && (() => {
           const RANKR_RATING_BLURB = [
             "Rankr Rating (0–100) is a role-normalized composite score.",
             "Each player is compared strictly against peers in the same role within the current division using Z-scores across role-specific stats:",
@@ -1171,7 +1131,7 @@ export function AdminStatsDashboard({
 
           const ratingCard: LeaderboardCard = {
             title: "Rankr Rating",
-            icons: <Award className="w-4 h-4 text-[#f0c020]" />,
+            icons: <RankrLogoIcon className="w-6 h-5 text-[#f0c020]" />,
             rows: topRating,
             fmt: (p) => p.leagueRating.toFixed(1),
             headerTooltip: "Click to copy Rankr Rating algorithm summary",
@@ -1313,14 +1273,53 @@ export function AdminStatsDashboard({
             },
           ];
 
-          const renderCard = (card: LeaderboardCard) => (
+          const allGridCards: LeaderboardCard[] = [
+            ...defaultGridCards,
+            ...expandedGridCards,
+          ];
+
+          const selectedShareableCards = allGridCards
+            .filter((c) => shareableCardKeys.includes(c.title))
+            .slice(0, 6);
+
+          function toggleShareableKey(title: string) {
+            setShareableCardKeys((prev) => {
+              if (prev.includes(title)) {
+                return prev.filter((k) => k !== title);
+              }
+              if (prev.length < 6) {
+                return [...prev, title];
+              }
+              return [...prev.slice(1), title];
+            });
+          }
+
+          const renderCard = (card: LeaderboardCard, fullWidth = false) => (
             <div
               key={card.title}
-              className="xp-panel border-2 border-white/20 overflow-hidden w-[calc(50%-8px)]"
+              style={
+                selectedDivisionTheme
+                  ? {
+                      borderColor: `${selectedDivisionTheme.primary_color}66`,
+                      backgroundImage: `linear-gradient(135deg, ${selectedDivisionTheme.primary_color}22 0%, rgba(18, 22, 21, 0.94) 65%)`,
+                    }
+                  : undefined
+              }
+              className={`xp-panel border-2 border-white/20 overflow-hidden ${
+                fullWidth ? "w-full" : "w-[calc(50%-8px)]"
+              }`}
             >
               <div
                 onClick={card.onHeaderClick}
                 title={card.headerTooltip}
+                style={
+                  selectedDivisionTheme
+                    ? {
+                        background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}45 0%, rgba(22, 24, 21, 0.9) 100%)`,
+                        borderBottomColor: `${selectedDivisionTheme.primary_color}70`,
+                      }
+                    : undefined
+                }
                 className={`bg-[#2a2210] border-b-2 border-[#c89b3c]/70 px-3 py-1.5 text-[11px] font-bold uppercase text-[#f0c020] flex items-center justify-between gap-2 ${
                   card.onHeaderClick ? "cursor-pointer hover:bg-[#362c16]" : ""
                 }`}
@@ -1343,7 +1342,7 @@ export function AdminStatsDashboard({
                 {card.rows.map((p, idx) => (
                   <Link
                     key={p.playerKey}
-                    href={`/admin/stats/player/${encodeURIComponent(
+                    href={`${basePath}/player/${encodeURIComponent(
                       p.playerKey
                     )}`}
                     className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
@@ -1379,188 +1378,273 @@ export function AdminStatsDashboard({
             ? getThemeGradients(selectedDivisionTheme).bannerGradient
             : "linear-gradient(135deg, #1b3626 0%, #121615 100%)";
 
-          return (
-            <div className="mb-6 space-y-3">
-              <div className="max-w-[800px] mx-auto w-full">
-                <ScaledGraphicFrame designWidth={800}>
-                <div ref={leaderboardCardRef} className="w-[800px] p-2.5">
-                  <div
-                    style={{
-                      borderRadius: "44px",
-                    }}
-                    className={`w-full border-[6px] border-[#5c6662] rounded-[44px] overflow-hidden bg-[#171b19] ${
-                      exportingLeaderboard ? "" : "shadow-2xl"
+          const featuredRatingCard = (
+            <div
+              className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-[#171b19]"
+              style={{
+                boxShadow: "0 0 28px rgba(240, 192, 32, 0.28)",
+                ...(selectedDivisionTheme
+                  ? {
+                      backgroundImage: `linear-gradient(135deg, ${selectedDivisionTheme.primary_color}38 0%, rgba(23, 27, 25, 0.94) 65%)`,
+                    }
+                  : {}),
+              }}
+            >
+              <div
+                onClick={ratingCard.onHeaderClick}
+                title={ratingCard.headerTooltip}
+                style={
+                  selectedDivisionTheme
+                    ? {
+                        background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}55 0%, rgba(42, 34, 16, 0.92) 100%)`,
+                      }
+                    : undefined
+                }
+                className="bg-[#2a2210] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span>{ratingCard.title}</span>
+                  {ratingCard.copiedBadge && !exportingLeaderboard && (
+                    <span className="text-[10px] text-[#7cd438] normal-case font-semibold">
+                      Copied!
+                    </span>
+                  )}
+                </span>
+                <span className="inline-flex items-center gap-1.5 shrink-0">
+                  {ratingCard.icons}
+                </span>
+              </div>
+              <div className="divide-y divide-[#f0c020]/15">
+                {ratingCard.rows.map((p, idx) => (
+                  <Link
+                    key={p.playerKey}
+                    href={`${basePath}/player/${encodeURIComponent(
+                      p.playerKey
+                    )}`}
+                    className={`px-6 py-2.5 flex items-center justify-between gap-4 transition hover:bg-[#f0c020]/10 ${
+                      idx === 0 ? "bg-[#f0c020]/10" : ""
                     }`}
                   >
-                  {/* Consensus-Style Graphic Header Banner */}
-                  <div
-                    style={{ background: bannerGradient }}
-                    className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-7 py-5"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      {leagueLogoUrl && (
-                        <img
-                          src={leagueLogoUrl}
-                          alt={leagueName}
-                          crossOrigin="anonymous"
-                          className="w-16 h-12 object-contain drop-shadow shrink-0"
-                        />
-                      )}
-                      {selectedDivision?.logo_url && (
-                        <img
-                          src={selectedDivision.logo_url}
-                          alt={selectedDivision.name}
-                          crossOrigin="anonymous"
-                          className="w-12 h-12 object-contain drop-shadow shrink-0"
-                        />
-                      )}
-                      <div>
-                        <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
-                          {leagueName} ({seasonName})
-                        </div>
-                        <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight">
-                          <span>
-                            {selectedDivision
-                              ? selectedDivision.name
-                              : "League"}
-                          </span>{" "}
-                          <span className="inline-block whitespace-nowrap">
-                            Stat Leaderboards
-                          </span>
-                        </h2>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 bg-black/45 px-3.5 py-2 rounded-xl border border-[#f0c020]/50 shrink-0">
-                      <div className="text-right">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
-                          Current Edition
-                        </div>
-                        <div className="text-sm font-extrabold text-white leading-tight">
-                          {currentEditionName}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="px-5 py-5 bg-[#171b19]">
-                    <div className="space-y-4">
-                      {/* Featured Golden Rankr Rating Card */}
-                      <div
-                        className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-[#171b19]"
-                        style={{
-                          boxShadow: "0 0 28px rgba(240, 192, 32, 0.25)",
-                        }}
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span
+                        className={`text-lg font-extrabold tabular-nums w-5 text-center ${
+                          idx === 0 ? "text-[#f0c020]" : "text-[#c89b3c]"
+                        }`}
                       >
-                        <div
-                          onClick={ratingCard.onHeaderClick}
-                          title={ratingCard.headerTooltip}
-                          className="bg-[#2a2210] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-between gap-2 cursor-pointer hover:bg-[#362c16] transition"
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <span>{ratingCard.title}</span>
-                            {ratingCard.copiedBadge && !exportingLeaderboard && (
-                              <span className="text-[10px] text-[#7cd438] normal-case font-semibold">
-                                Copied!
-                              </span>
-                            )}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 shrink-0">
-                            {ratingCard.icons}
-                          </span>
-                        </div>
-                        <div className="divide-y divide-[#f0c020]/15">
-                          {ratingCard.rows.map((p, idx) => (
-                            <Link
-                              key={p.playerKey}
-                              href={`/admin/stats/player/${encodeURIComponent(
-                                p.playerKey
-                              )}`}
-                              className={`px-6 py-2.5 flex items-center justify-between gap-4 transition hover:bg-[#f0c020]/10 ${
-                                idx === 0 ? "bg-[#f0c020]/10" : ""
-                              }`}
-                            >
-                              <div className="flex items-center gap-4 min-w-0">
-                                <span
-                                  className={`text-lg font-extrabold tabular-nums w-5 text-center ${
-                                    idx === 0
-                                      ? "text-[#f0c020]"
-                                      : "text-[#c89b3c]"
-                                  }`}
-                                >
-                                  {idx + 1}
-                                </span>
-                                {p.teamLogoUrl && (
-                                  <img
-                                    src={p.teamLogoUrl}
-                                    alt={p.teamName}
-                                    crossOrigin="anonymous"
-                                    className="w-7 h-7 object-contain shrink-0"
-                                  />
-                                )}
-                                <span
-                                  className={`text-xl font-extrabold truncate flex items-center gap-2 ${
-                                    idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
-                                  }`}
-                                >
-                                  <span>{p.displayName}</span>
-                                  {idx === 0 && (
-                                    <Crown className="w-5 h-5 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
-                                  )}
-                                </span>
-                              </div>
-                              <span
-                                className={`font-black text-xl tabular-nums shrink-0 ${
-                                  idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
-                                }`}
-                              >
-                                {ratingCard.fmt(p)}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 2-by-2 Grid */}
-                      <div className="flex flex-wrap justify-center gap-4">
-                        {defaultGridCards.map(renderCard)}
-                        {showAllLeaderboards &&
-                          expandedGridCards.map(renderCard)}
-                      </div>
+                        {idx + 1}
+                      </span>
+                      {p.teamLogoUrl && (
+                        <img
+                          src={p.teamLogoUrl}
+                          alt={p.teamName}
+                          crossOrigin="anonymous"
+                          className="w-7 h-7 object-contain shrink-0"
+                        />
+                      )}
+                      <span
+                        className={`text-xl font-extrabold truncate flex items-center gap-2 ${
+                          idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
+                        }`}
+                      >
+                        <span>{p.displayName}</span>
+                        {idx === 0 && (
+                          <Crown className="w-5 h-5 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                        )}
+                      </span>
                     </div>
-                  </div>
+                    <span
+                      className={`font-black text-xl tabular-nums shrink-0 ${
+                        idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
+                      }`}
+                    >
+                      {ratingCard.fmt(p)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          );
+
+          return (
+            <div
+              style={
+                selectedDivisionTheme
+                  ? {
+                      borderColor: `${selectedDivisionTheme.primary_color}66`,
+                      borderTopWidth: "3px",
+                      borderTopColor: selectedDivisionTheme.primary_color,
+                    }
+                  : undefined
+              }
+              className="mb-6 xp-panel overflow-hidden"
+            >
+              {/* Leaderboards Header Bar: Standard (4x3) vs Shareable (2x3 + Export Frame) */}
+              <div
+                style={
+                  selectedDivisionTheme
+                    ? {
+                        background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}38 0%, #121615 70%)`,
+                      }
+                    : undefined
+                }
+                className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2"
+              >
+                <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  <span>Stat Leaderboards</span>
+                </h2>
+                <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardStyle("standard")}
+                    className={`xp-btn text-xs px-3 py-1 ${
+                      leaderboardStyle === "standard" ? "xp-btn-primary" : ""
+                    }`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardStyle("shareable")}
+                    className={`xp-btn text-xs px-3 py-1 ${
+                      leaderboardStyle === "shareable" ? "xp-btn-primary" : ""
+                    }`}
+                  >
+                    Shareable
+                  </button>
                 </div>
-                </div>
-              </ScaledGraphicFrame>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAllLeaderboards((prev) => !prev)}
-                  className="xp-btn text-xs px-3 py-1.5"
-                >
-                  {showAllLeaderboards
-                    ? "Show Fewer Leaderboards ▲"
-                    : "Show More Leaderboards ▼"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleExportLeaderboardPng()}
-                  disabled={exportingLeaderboard}
-                  className="xp-btn xp-btn-gold text-xs disabled:opacity-50"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>
-                    {exportingLeaderboard ? "Exporting..." : "Export PNG"}
-                  </span>
-                </button>
+              <div className="p-3 sm:p-4">
+
+              {leaderboardStyle === "standard" ? (
+                <div className="space-y-4">
+                  <div className="py-4">{featuredRatingCard}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {allGridCards.map((card) => renderCard(card, true))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* 6-Card Picker (left) + Export PNG (bottom right) */}
+                  <div className="xp-panel p-3 flex flex-col md:flex-row md:items-end justify-between gap-3">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
+                        Select 6 Cards (
+                        <strong className="text-[#f0c020]">
+                          {selectedShareableCards.length}/6
+                        </strong>
+                        )
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {allGridCards.map((card) => {
+                          const active = shareableCardKeys.includes(card.title);
+                          return (
+                            <button
+                              key={card.title}
+                              type="button"
+                              onClick={() => toggleShareableKey(card.title)}
+                              className={`xp-btn text-[10px] px-2 py-0.5 ${
+                                active ? "xp-btn-primary" : "opacity-75"
+                              }`}
+                            >
+                              {card.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleExportLeaderboardPng()}
+                      disabled={exportingLeaderboard}
+                      className="xp-btn xp-btn-gold text-xs disabled:opacity-50 shrink-0 self-end"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>
+                        {exportingLeaderboard ? "Exporting..." : "Export PNG"}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="max-w-[800px] mx-auto w-full">
+                    <ScaledGraphicFrame designWidth={800}>
+                      <div ref={leaderboardCardRef} className="w-[800px] p-2.5">
+                        <div
+                          style={{ borderRadius: "44px" }}
+                          className={`w-full border-[6px] border-[#c89b3c]/85 rounded-[44px] overflow-hidden bg-[#171b19] ${
+                            exportingLeaderboard ? "" : "shadow-2xl"
+                          }`}
+                        >
+                          {/* Graphic Header Banner */}
+                          <div
+                            style={{ background: bannerGradient }}
+                            className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-7 py-5"
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              {leagueLogoUrl && (
+                                <img
+                                  src={leagueLogoUrl}
+                                  alt={leagueName}
+                                  crossOrigin="anonymous"
+                                  className="w-16 h-12 object-contain drop-shadow shrink-0"
+                                />
+                              )}
+                              {selectedDivision?.logo_url && (
+                                <img
+                                  src={selectedDivision.logo_url}
+                                  alt={selectedDivision.name}
+                                  crossOrigin="anonymous"
+                                  className="w-12 h-12 object-contain drop-shadow shrink-0"
+                                />
+                              )}
+                              <div>
+                                <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
+                                  {leagueName} ({seasonName})
+                                </div>
+                                <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight">
+                                  <span>
+                                    {selectedDivision
+                                      ? selectedDivision.name
+                                      : "League"}
+                                  </span>{" "}
+                                  <span className="inline-block whitespace-nowrap">
+                                    Stat Leaderboards
+                                  </span>
+                                </h2>
+                                <div className="text-xs font-bold text-[#c7c5b8] mt-0.5">
+                                  As of {currentEditionName}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card Body: Rankr Rating + 2x3 Selected Cards */}
+                          <div className="px-5 py-5 bg-[#171b19]">
+                            <div className="space-y-4">
+                              {featuredRatingCard}
+                              <div className="flex flex-wrap justify-center gap-4">
+                                {selectedShareableCards.map((c) =>
+                                  renderCard(c, false)
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </ScaledGraphicFrame>
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           );
         })()}
 
+        {/* Division Section: 10 Overview Cards + Champions Played & Most Banned */}
+        {activeSection === "division" && (
+        <>
         {/* Top Overview KPI Strip (10 Cards) */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <div
@@ -1575,9 +1659,7 @@ export function AdminStatsDashboard({
               {overview.totalGames}
             </div>
             <div className="text-[10px] text-[#a6a89e]">
-              {dataSource === "sheet"
-                ? "Official SCDL league games"
-                : "Non-tournament personal games"}
+              Official SCDL league games
             </div>
           </div>
 
@@ -1778,8 +1860,28 @@ export function AdminStatsDashboard({
 
         {/* Most Picked Champions Grid */}
         {overview.champs.length > 0 && (
-          <div className="mb-6 xp-panel p-3">
-            <div className="flex items-center justify-between mb-3">
+          <div
+            style={
+              selectedDivisionTheme
+                ? {
+                    borderColor: `${selectedDivisionTheme.primary_color}66`,
+                    borderTopWidth: "3px",
+                    borderTopColor: selectedDivisionTheme.primary_color,
+                  }
+                : undefined
+            }
+            className="mb-6 xp-panel overflow-hidden"
+          >
+            <div
+              style={
+                selectedDivisionTheme
+                  ? {
+                      background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}38 0%, #121615 70%)`,
+                    }
+                  : undefined
+              }
+              className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between"
+            >
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Champions Played ({overview.champs.length})
               </h2>
@@ -1787,6 +1889,7 @@ export function AdminStatsDashboard({
                 Top 36 by pick count
               </span>
             </div>
+            <div className="p-3">
             <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
               {overview.champs.slice(0, 36).map((c) => (
                 <div
@@ -1849,13 +1952,36 @@ export function AdminStatsDashboard({
                 </div>
               </div>
             )}
+            </div>
           </div>
+        )}
+        </>
         )}
 
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
-        {showLeaderboards && (
-        <div className="mb-6 xp-panel overflow-hidden">
-          <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        {activeSection === "players" && showLeaderboards && (
+        <div
+          style={
+            selectedDivisionTheme
+              ? {
+                  borderColor: `${selectedDivisionTheme.primary_color}66`,
+                  borderTopWidth: "3px",
+                  borderTopColor: selectedDivisionTheme.primary_color,
+                }
+              : undefined
+          }
+          className="mb-6 xp-panel overflow-hidden"
+        >
+          <div
+            style={
+              selectedDivisionTheme
+                ? {
+                    background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}38 0%, #121615 70%)`,
+                  }
+                : undefined
+            }
+            className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2"
+          >
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
               <User className="w-4 h-4" />
               <span>Top Players ({tablePlayers.length})</span>
@@ -1897,70 +2023,93 @@ export function AdminStatsDashboard({
                   <th className="px-3 py-2">Player</th>
                   <th className="px-2 py-2">Team</th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "leagueRating" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("leagueRating")}
                     title="Role-normalized 0–100 Rankr Rating"
                   >
                     Rating
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "games" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("games")}
                   >
                     Games
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
-                    onClick={() => handleSort("winRate")}
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "avgGoldDiff15" ? "text-[#f0c020]" : ""
+                    }`}
+                    onClick={() => handleSort("avgGoldDiff15")}
+                    title="Average Gold Diff at 15 Minutes vs Lane Opponent"
                   >
-                    WR%
+                    GD@15
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "kda" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("kda")}
                   >
                     KDA
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "dpm" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("dpm")}
                   >
                     DPM
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "gpm" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("gpm")}
                   >
                     GPM
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "csPerMin" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("csPerMin")}
                   >
                     CS/m
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "kpPct" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("kpPct")}
                   >
                     KP%
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "damageSharePct" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("damageSharePct")}
                     title="Team Damage Share %"
                   >
                     DMG%
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "visionPerMin" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("visionPerMin")}
                     title="Vision Score / Min"
                   >
                     VS/m
                   </th>
                   <th
-                    className="px-2 py-2 text-right cursor-pointer hover:text-white"
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "avgGoldDiff" ? "text-[#f0c020]" : ""
+                    }`}
                     onClick={() => handleSort("avgGoldDiff")}
                     title="Average Gold Diff vs Lane Opponent"
                   >
@@ -1973,12 +2122,17 @@ export function AdminStatsDashboard({
                 {(showAllPlayers ? tablePlayers : tablePlayers.slice(0, 15)).map(
                   (p) => {
                   const roleMeta = getRoleMeta(p.role as LeagueRole);
+                  const sortColor = sortColorByPlayerKey.get(p.playerKey);
+                  const sortCellStyle = (col: SortKey) =>
+                    sortKey === col && sortColor
+                      ? { color: sortColor }
+                      : undefined;
                   return (
                     <tr
                       key={p.playerKey}
                       onClick={() =>
                         router.push(
-                          `/admin/stats/player/${encodeURIComponent(
+                          `${basePath}/player/${encodeURIComponent(
                             p.playerKey
                           )}`
                         )
@@ -2008,56 +2162,119 @@ export function AdminStatsDashboard({
                         </div>
                       </td>
                       <td
-                        className={`px-2 py-2 text-right font-mono font-bold ${
-                          p.games <= 0
-                            ? "text-[#a6a89e]"
-                            : p.leagueRating >= 60
-                            ? "text-[#7cd438]"
-                            : p.leagueRating >= 45
-                            ? "text-[#f0c020]"
-                            : "text-[#ff857a]"
-                        }`}
+                        style={sortCellStyle("leagueRating")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "leagueRating"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
                         {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("games")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "games"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        }`}
+                      >
                         {p.games}
                       </td>
                       <td
-                        className={`px-2 py-2 text-right font-mono font-bold ${
-                          p.winRate >= 50 ? "text-[#7cd438]" : "text-[#ff857a]"
+                        style={sortCellStyle("avgGoldDiff15")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "avgGoldDiff15"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${
+                          p.avgGoldDiff15 === null ||
+                          p.avgGoldDiff15 === undefined ||
+                          p.games <= 0
+                            ? "text-[#a6a89e]"
+                            : ""
                         }`}
                       >
-                        {p.games > 0 ? `${p.winRate.toFixed(0)}%` : "—"}
+                        {p.games > 0 &&
+                        p.avgGoldDiff15 !== null &&
+                        p.avgGoldDiff15 !== undefined
+                          ? `${p.avgGoldDiff15 >= 0 ? "+" : ""}${Math.round(
+                              p.avgGoldDiff15
+                            )}`
+                          : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono font-bold">
+                      <td
+                        style={sortCellStyle("kda")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "kda" ? "font-bold" : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? p.kda.toFixed(2) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("dpm")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "dpm" ? "font-bold" : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? Math.round(p.dpm) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("gpm")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "gpm" ? "font-bold" : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? Math.round(p.gpm) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("csPerMin")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "csPerMin"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? p.csPerMin.toFixed(1) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("kpPct")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "kpPct" ? "font-bold" : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("damageSharePct")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "damageSharePct"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? `${p.damageSharePct.toFixed(0)}%` : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-mono">
+                      <td
+                        style={sortCellStyle("visionPerMin")}
+                        className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "visionPerMin"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
                         {p.games > 0 ? p.visionPerMin.toFixed(2) : "—"}
                       </td>
                       <td
+                        style={sortCellStyle("avgGoldDiff")}
                         className={`px-2 py-2 text-right font-mono ${
+                          sortKey === "avgGoldDiff"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${
                           p.avgGoldDiff === null || p.games <= 0
                             ? "text-[#a6a89e]"
-                            : p.avgGoldDiff >= 0
-                            ? "text-[#7cd438]"
-                            : "text-[#ff857a]"
+                            : ""
                         }`}
                       >
                         {p.games > 0 && p.avgGoldDiff !== null
@@ -2107,113 +2324,131 @@ export function AdminStatsDashboard({
           )}
         </div>
         )}
-        {/* Teams Table (Click through to Team Page) */}
-        {showLeaderboards && (
-        <div className="xp-panel overflow-hidden">
-          <div className="bg-[#121615] border-b border-white/10 px-3 py-2.5 flex items-center justify-between">
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-              <TeamGroupIcon className="w-4 h-4" />
-              <span>Teams ({filteredTeams.length})</span>
-            </h2>
-            <span className="text-[10px] text-[#a6a89e]">
-              Click any team for full roster breakdown
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-black/35 text-[10px] uppercase text-[#a6a89e] border-b border-white/10">
-                <tr>
-                  <th className="px-3 py-2 text-center w-10">Seed</th>
-                  <th className="px-3 py-2">Team</th>
-                  <th className="px-3 py-2">Division</th>
-                  <th className="px-3 py-2 text-right">Series</th>
-                  <th className="px-3 py-2 text-right">Games</th>
-                  <th className="px-3 py-2 text-right">KDA</th>
-                  <th className="px-3 py-2 text-right">DPM</th>
-                  <th className="px-3 py-2 text-right">GPM</th>
-                  <th className="px-3 py-2 text-right">Avg Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {filteredTeams.map((t) => {
-                  const gWins = t.wins;
-                  const gLosses = Math.max(0, t.games - t.wins);
-                  const sWins = t.seriesWins ?? gWins;
-                  const sLosses = t.seriesLosses ?? gLosses;
-                  return (
-                  <tr
-                    key={t.teamId}
-                    className="hover:bg-white/5 transition cursor-pointer"
-                    onClick={() =>
-                      router.push(
-                        `/admin/stats/team/${encodeURIComponent(t.teamId)}`
-                      )
-                    }
-                  >
-                    <td className="px-3 py-2 text-center font-mono font-extrabold text-[#f0c020]">
-                      {t.seed != null ? `#${t.seed}` : "—"}
-                    </td>
-                    <td className="px-3 py-2 font-bold text-[#f0ede0]">
-                      <div className="flex items-center gap-2">
-                        {t.logoUrl && (
-                          <img
-                            src={t.logoUrl}
-                            alt={t.teamName}
-                            className="w-5 h-5 object-contain shrink-0"
-                          />
-                        )}
-                        <span>{t.teamName}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-[#c7c5b8]">
-                      {t.divisionName}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right font-mono font-bold ${
-                        t.games <= 0
-                          ? "text-[#a6a89e]"
-                          : sWins >= sLosses
-                          ? "text-[#7cd438]"
-                          : "text-[#ff857a]"
-                      }`}
-                    >
-                      {t.games > 0 ? `${sWins}-${sLosses}` : "—"}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right font-mono font-bold ${
-                        t.games <= 0
-                          ? "text-[#a6a89e]"
-                          : gWins >= gLosses
-                          ? "text-[#7cd438]"
-                          : "text-[#ff857a]"
-                      }`}
-                    >
-                      {t.games > 0 ? `${gWins}-${gLosses}` : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? t.avgKda.toFixed(2) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? Math.round(t.avgDpm) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0 ? Math.round(t.avgGpm) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {t.games > 0
-                        ? formatMinutesSeconds(t.avgGameMinutes)
-                        : "—"}
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        )}
+        {/* Teams Standings (Seeded, Larger Buttonized Rows) */}
+        {activeSection === "teams" && (() => {
+          const divisionGroups = selectedDivision
+            ? [{ division: selectedDivision, list: filteredTeams, isSingle: true }]
+            : divisions.map((d) => ({
+                division: d,
+                isSingle: false,
+                list: activeTeams
+                  .filter((t) => t.divisionId === d.id)
+                  .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999)),
+              }));
 
-        {showUnrosteredModal && sheetData && (
+          return (
+            <div className="space-y-5">
+              {divisionGroups.map(({ division, list, isSingle }) => {
+                const divTheme = resolveDivisionTheme(division.theme_key);
+                return (
+                <div
+                  key={division.id}
+                  style={{
+                    borderColor: `${divTheme.primary_color}66`,
+                    borderTopWidth: "3px",
+                    borderTopColor: divTheme.primary_color,
+                  }}
+                  className="xp-panel overflow-hidden"
+                >
+                  <div
+                    style={{
+                      background: `linear-gradient(90deg, ${divTheme.primary_color}38 0%, #121615 70%)`,
+                    }}
+                    className="bg-[#121615] border-b border-white/10 px-4 py-3 flex items-center justify-between gap-2"
+                  >
+                    <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
+                      <TeamGroupIcon className="w-4 h-4" />
+                      <span>
+                        {isSingle ? "Team Standings" : `${division.name} Standings`}
+                      </span>
+                    </h2>
+                    <span className="text-[11px] text-[#a6a89e]">
+                      Click any team for full scouting sheet
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 space-y-2.5">
+                    {list.map((t) => {
+                      const gWins = t.wins;
+                      const gLosses = Math.max(0, t.games - t.wins);
+                      const sWins = t.seriesWins ?? gWins;
+                      const sLosses = t.seriesLosses ?? gLosses;
+                      return (
+                        <button
+                          key={t.teamId}
+                          type="button"
+                          onClick={() =>
+                            router.push(
+                              `${basePath}/team/${encodeURIComponent(t.teamId)}`
+                            )
+                          }
+                          className="group w-full text-left rounded-lg border border-white/15 bg-black/40 hover:!bg-[#f0c020]/10 hover:!border-[#f0c020]/80 hover:shadow-[0_0_18px_rgba(240,192,32,0.18)] transition-all duration-150 px-3 py-3 sm:px-8 sm:py-6 flex items-center justify-between gap-2.5 sm:gap-6 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 sm:gap-7 min-w-0 flex-1">
+                            <span className="text-base sm:text-3xl font-mono font-black text-[#f0c020] w-7 sm:w-14 text-center shrink-0">
+                              {t.seed != null ? `#${t.seed}` : "—"}
+                            </span>
+                            {t.logoUrl && (
+                              <img
+                                src={t.logoUrl}
+                                alt={t.teamName}
+                                className="w-9 h-9 sm:w-16 sm:h-16 object-contain shrink-0 group-hover:scale-105 transition-transform"
+                              />
+                            )}
+                            <span className="text-sm sm:text-2xl md:text-3xl font-extrabold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
+                              {t.teamName}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 sm:gap-12 shrink-0">
+                            <div className="text-right">
+                              <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
+                                Series
+                              </div>
+                              <div
+                                className={`text-base sm:text-3xl font-mono font-black ${
+                                  t.games <= 0
+                                    ? "text-[#a6a89e]"
+                                    : sWins >= sLosses
+                                    ? "text-[#7cd438]"
+                                    : "text-[#ff857a]"
+                                }`}
+                              >
+                                {t.games > 0 ? `${sWins}-${sLosses}` : "—"}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
+                                Games
+                              </div>
+                              <div
+                                className={`text-base sm:text-3xl font-mono font-black ${
+                                  t.games <= 0
+                                    ? "text-[#a6a89e]"
+                                    : gWins >= gLosses
+                                    ? "text-[#7cd438]"
+                                    : "text-[#ff857a]"
+                                }`}
+                              >
+                                {t.games > 0 ? `${gWins}-${gLosses}` : "—"}
+                              </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 sm:w-7 sm:h-7 text-[#a6a89e] group-hover:text-[#f0c020] group-hover:translate-x-1 transition-all" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        </>
+      )}
+
+        {isAdminView && showUnrosteredModal && sheetData && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <div className="xp-window xp-window-scdl w-full max-w-xl overflow-hidden shadow-2xl">
             <div className="xp-titlebar xp-titlebar-scdl flex items-center justify-between px-3 py-2">
@@ -2284,7 +2519,6 @@ export function AdminStatsDashboard({
           </div>
         </div>
       )}
-    </RetroWindow>
     </div>
   );
 }

@@ -55,6 +55,7 @@ export interface AggregatedPlayerStats {
   goldSharePct: number;
   avgGameMinutes: number;
   avgGoldDiff: number | null;
+  avgGoldDiff15: number | null;
   soloKills: number;
   hasSoloKillsData: boolean;
   firstBloodPct: number | null;
@@ -171,6 +172,8 @@ export function aggregatePlayerStats(
   let goldShareSum = 0;
   let goldDiffSum = 0;
   let goldDiffCount = 0;
+  let goldDiff15Sum = 0;
+  let goldDiff15Count = 0;
   let soloKills = 0;
   let soloKillsCount = 0;
   let firstBloodCount = 0;
@@ -198,6 +201,10 @@ export function aggregatePlayerStats(
     if (typeof m.goldDiff === "number" && Number.isFinite(m.goldDiff)) {
       goldDiffSum += m.goldDiff;
       goldDiffCount += 1;
+    }
+    if (typeof m.goldDiff15 === "number" && Number.isFinite(m.goldDiff15)) {
+      goldDiff15Sum += m.goldDiff15;
+      goldDiff15Count += 1;
     }
     if (typeof m.soloKills === "number" && Number.isFinite(m.soloKills)) {
       soloKills += m.soloKills;
@@ -269,6 +276,7 @@ export function aggregatePlayerStats(
     goldSharePct: games > 0 ? (goldShareSum / games) * 100 : 0,
     avgGameMinutes: games > 0 ? totalMinutes / games : 0,
     avgGoldDiff: goldDiffCount > 0 ? goldDiffSum / goldDiffCount : null,
+    avgGoldDiff15: goldDiff15Count > 0 ? goldDiff15Sum / goldDiff15Count : null,
     soloKills,
     hasSoloKillsData: soloKillsCount > 0,
     firstBloodPct:

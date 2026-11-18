@@ -636,8 +636,20 @@
       "Zyra",
       "Olaf"
     ],
-    "bluePicks": [],
-    "redPicks": [],
+    "bluePicks": [
+      "Ezreal",
+      "Karma",
+      "Trundle",
+      "Cassiopeia",
+      "DrMundo"
+    ],
+    "redPicks": [
+      "Ashe",
+      "Seraphine",
+      "JarvanIV",
+      "Locke",
+      "Ambessa"
+    ],
     "bans": [
       "KSante",
       "Blitzcrank",
@@ -712,8 +724,20 @@
       "Ambessa",
       "Mordekaiser"
     ],
-    "bluePicks": [],
-    "redPicks": [],
+    "bluePicks": [
+      "Syndra",
+      "Yunara",
+      "Lulu",
+      "Vi",
+      "Ornn"
+    ],
+    "redPicks": [
+      "Hwei",
+      "JarvanIV",
+      "Rell",
+      "Caitlyn",
+      "Urgot"
+    ],
     "bans": [
       "MonkeyKing",
       "Ahri",
@@ -831,8 +855,20 @@
       "MonkeyKing",
       "Sivir"
     ],
-    "bluePicks": [],
-    "redPicks": [],
+    "bluePicks": [
+      "Hwei",
+      "Nautilus",
+      "Kaisa",
+      "Ornn",
+      "Khazix"
+    ],
+    "redPicks": [
+      "Ashe",
+      "Seraphine",
+      "Locke",
+      "Qiyana",
+      "Camille"
+    ],
     "bans": [
       "Jayce",
       "Graves",
@@ -909,8 +945,20 @@
       "Sivir",
       "Aphelios"
     ],
-    "bluePicks": [],
-    "redPicks": [],
+    "bluePicks": [
+      "MonkeyKing",
+      "Yunara",
+      "Lulu",
+      "Ambessa",
+      "Ahri"
+    ],
+    "redPicks": [
+      "Ezreal",
+      "Karma",
+      "Vi",
+      "Jayce",
+      "Viktor"
+    ],
     "bans": [
       "Kayn",
       "MissFortune",
@@ -986,8 +1034,20 @@
       "Amumu",
       "Graves"
     ],
-    "bluePicks": [],
-    "redPicks": [],
+    "bluePicks": [
+      "Syndra",
+      "Sylas",
+      "KSante",
+      "Xayah",
+      "Rakan"
+    ],
+    "redPicks": [
+      "Jhin",
+      "Ahri",
+      "XinZhao",
+      "Renekton",
+      "Nautilus"
+    ],
     "bans": [
       "Kayn",
       "Akali",
