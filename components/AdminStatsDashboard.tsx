@@ -2414,14 +2414,20 @@ export function AdminStatsDashboard({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 sm:gap-10 shrink-0">
-                            <div className="w-11 sm:w-14 text-center shrink-0">
+                          <div className="flex items-start gap-3 sm:gap-10 shrink-0">
+                            <div
+                              className={`text-center shrink-0 ${
+                                (t.seriesStreak ?? 0) >= 2
+                                  ? "w-10 sm:w-14"
+                                  : "hidden sm:block sm:w-14"
+                              }`}
+                            >
                               {(t.seriesStreak ?? 0) >= 2 && (
                                 <>
                                   <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
                                     Streak
                                   </div>
-                                  <div className="inline-flex items-center justify-center gap-0.5 sm:gap-1 text-base sm:text-2xl tabular-nums font-black text-[#fb923c]">
+                                  <div className="inline-flex items-center justify-center gap-0.5 sm:gap-1 text-base sm:text-2xl tabular-nums font-black text-[#fb923c] mt-0.5">
                                     <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-[#fb923c] fill-[#fb923c]/25 shrink-0" />
                                     <span>{t.seriesStreak}</span>
                                   </div>
@@ -2449,7 +2455,7 @@ export function AdminStatsDashboard({
                                 Games
                               </div>
                               <div
-                                className={`text-sm sm:text-xl tabular-nums font-bold ${
+                                className={`text-sm sm:text-xl tabular-nums font-bold mt-0.5 sm:mt-1 ${
                                   t.games <= 0
                                     ? "text-[#a6a89e]"
                                     : "text-[#f0ede0]"
@@ -2458,7 +2464,7 @@ export function AdminStatsDashboard({
                                 {t.games > 0 ? `${gWins}-${gLosses}` : "—"}
                               </div>
                             </div>
-                            <ChevronRight className="w-5 h-5 sm:w-7 sm:h-7 text-[#a6a89e] group-hover:text-[#f0c020] group-hover:translate-x-1 transition-all" />
+                            <ChevronRight className="w-5 h-5 sm:w-7 sm:h-7 self-center text-[#a6a89e] group-hover:text-[#f0c020] group-hover:translate-x-1 transition-all" />
                           </div>
                         </button>
                       );
