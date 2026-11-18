@@ -2414,7 +2414,20 @@ export function AdminStatsDashboard({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 sm:gap-12 shrink-0">
+                          <div className="flex items-center gap-3 sm:gap-10 shrink-0">
+                            <div className="w-11 sm:w-14 text-center shrink-0">
+                              {(t.seriesStreak ?? 0) >= 2 && (
+                                <>
+                                  <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
+                                    Streak
+                                  </div>
+                                  <div className="inline-flex items-center justify-center gap-0.5 sm:gap-1 text-base sm:text-2xl tabular-nums font-black text-[#fb923c]">
+                                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-[#fb923c] fill-[#fb923c]/25 shrink-0" />
+                                    <span>{t.seriesStreak}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                             <div className="text-right">
                               <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
                                 Series
@@ -2436,12 +2449,10 @@ export function AdminStatsDashboard({
                                 Games
                               </div>
                               <div
-                                className={`text-base sm:text-3xl tabular-nums font-black ${
+                                className={`text-sm sm:text-xl tabular-nums font-bold ${
                                   t.games <= 0
                                     ? "text-[#a6a89e]"
-                                    : gWins >= gLosses
-                                    ? "text-[#7cd438]"
-                                    : "text-[#ff857a]"
+                                    : "text-[#f0ede0]"
                                 }`}
                               >
                                 {t.games > 0 ? `${gWins}-${gLosses}` : "—"}

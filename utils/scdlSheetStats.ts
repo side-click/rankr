@@ -454,19 +454,38 @@ export async function fetchScdlSheetStats(
     const games = distinctMatches.length;
     const wins = distinctMatches.filter((m) => m.win).length;
 
-    const seriesBuckets = new Map<string, { w: number; l: number }>();
-    for (const m of distinctMatches) {
+    const seriesBuckets = new Map<
+      string,
+      { w: number; l: number; order: number }
+    >();
+    distinctMatches.forEach((m, idx) => {
       const sKey = m.matchLabel?.trim() || m.matchId;
-      const b = seriesBuckets.get(sKey) ?? { w: 0, l: 0 };
+      const roundMatch = sKey.match(/(\d+)/);
+      const order = roundMatch
+        ? Number(roundMatch[1]) * 1_000_000 + idx
+        : m.gameCreation || idx;
+      const b = seriesBuckets.get(sKey) ?? { w: 0, l: 0, order };
       if (m.win) b.w += 1;
       else b.l += 1;
+      b.order = Math.max(b.order, order);
       seriesBuckets.set(sKey, b);
-    }
+    });
     let seriesWins = 0;
     let seriesLosses = 0;
     for (const b of seriesBuckets.values()) {
       if (b.w > b.l) seriesWins += 1;
       else if (b.l > b.w) seriesLosses += 1;
+    }
+    let seriesStreak = 0;
+    const orderedSeries = [...seriesBuckets.values()].sort(
+      (a, b) => b.order - a.order
+    );
+    for (const b of orderedSeries) {
+      if (b.w > b.l) {
+        seriesStreak += 1;
+      } else if (b.l > b.w) {
+        break;
+      }
     }
 
     const totalKills = teamMatches.reduce((s, m) => s + m.kills, 0);
@@ -505,6 +524,7 @@ export async function fetchScdlSheetStats(
       wins,
       seriesWins,
       seriesLosses,
+      seriesStreak,
       winRate: games > 0 ? (wins / games) * 100 : 0,
       avgKda:
         totalDeaths > 0

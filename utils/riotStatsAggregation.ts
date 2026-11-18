@@ -83,6 +83,7 @@ export interface AggregatedTeamStats {
   seed?: number;
   seriesWins?: number;
   seriesLosses?: number;
+  seriesStreak?: number;
   winRate: number;
   avgKda: number;
   avgDpm: number;
