@@ -77,73 +77,75 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         )}
       </nav>
 
-      <button
-        type="button"
-        onClick={() => setMobileMenuOpen((prev) => !prev)}
-        aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-        aria-expanded={mobileMenuOpen}
-        className="lg:hidden ml-auto inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white text-xs font-bold shrink-0"
-      >
-        {mobileMenuOpen ? <X className="w-4 h-4 shrink-0" /> : <Menu className="w-4 h-4 shrink-0" />}
-        <span>Menu</span>
-      </button>
+      <div className="relative ml-auto lg:hidden shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileMenuOpen}
+          className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded bg-black/25 hover:bg-black/40 border border-white/25 text-white text-xs font-bold shrink-0"
+        >
+          {mobileMenuOpen ? <X className="w-4 h-4 shrink-0" /> : <Menu className="w-4 h-4 shrink-0" />}
+          <span>Menu</span>
+        </button>
 
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed left-0 right-0 top-16 z-50 bg-[#14201a] border-b-2 border-[#c89b3c] shadow-2xl p-3 space-y-1 text-xs font-bold">
-          <Link
-            href="/rank"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
-          >
-            <ListOrdered className="w-4 h-4 text-[#f0c020] shrink-0" />
-            <span>Create New</span>
-          </Link>
-          <Link
-            href="/browse"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
-          >
-            <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
-            <span>Browse Rankings</span>
-          </Link>
-          <Link
-            href="/consensus"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
-          >
-            <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
-            <span>Consensus</span>
-          </Link>
-          <Link
-            href="/stats"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
-          >
-            <BarChart3 className="w-4 h-4 text-[#f0c020] shrink-0" />
-            <span>Stats</span>
-          </Link>
-          {isLoggedIn && (
+        {mobileMenuOpen && (
+          <div className="absolute right-0 top-full mt-2 w-56 z-50 bg-[#14201a] border-2 border-[#c89b3c] rounded-lg shadow-2xl p-2 space-y-1 text-xs font-bold">
             <Link
-              href="/my-rankings"
+              href="/rank"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+              className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
             >
-              <History className="w-4 h-4 text-[#f0c020] shrink-0" />
-              <span>My History</span>
+              <ListOrdered className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Create New</span>
             </Link>
-          )}
-          {isAdmin && (
             <Link
-              href="/admin"
+              href="/browse"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded bg-black/35 hover:bg-black/50 text-[#ffe57f] border border-[#f0c020]/60"
+              className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
             >
-              <Shield className="w-4 h-4 text-[#f0c020] shrink-0" />
-              <span>Admin</span>
+              <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Browse Rankings</span>
             </Link>
-          )}
-        </div>
-      )}
+            <Link
+              href="/consensus"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            >
+              <Trophy className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Consensus</span>
+            </Link>
+            <Link
+              href="/stats"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+            >
+              <BarChart3 className="w-4 h-4 text-[#f0c020] shrink-0" />
+              <span>Stats</span>
+            </Link>
+            {isLoggedIn && (
+              <Link
+                href="/my-rankings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
+              >
+                <History className="w-4 h-4 text-[#f0c020] shrink-0" />
+                <span>My History</span>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 rounded bg-black/35 hover:bg-black/50 text-[#ffe57f] border border-[#f0c020]/60"
+              >
+                <Shield className="w-4 h-4 text-[#f0c020] shrink-0" />
+                <span>Admin</span>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
