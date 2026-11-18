@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Calendar, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, HelpCircle } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -613,9 +613,10 @@ export async function PlayerStatsContent({
           <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-5">
             <h3
               title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
-              className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-block"
+              className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-flex items-center gap-1.5"
             >
-              SoloQ Top 7 ({roleMeta.label})
+              <span>SoloQ Top 7 ({roleMeta.label})</span>
+              <HelpCircle className="w-3.5 h-3.5 text-[#a6a89e]/80" />
             </h3>
             {soloChamps.length > 0 ? (
               <div className="space-y-1.5">

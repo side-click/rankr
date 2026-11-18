@@ -127,11 +127,16 @@ for (const team of seasonTeams) {
   for (const slot of roster) {
     const name = typeof slot === "string" ? slot : slot?.name;
     const role = typeof slot === "object" && slot?.role ? slot.role : null;
+    const altAccounts =
+      typeof slot === "object" && Array.isArray(slot?.alt_accounts)
+        ? slot.alt_accounts.map((a) => String(a).trim()).filter(Boolean)
+        : [];
     if (!name || !name.trim()) continue;
     const clean = name.trim();
     players.push({
       playerKey: clean.toLowerCase(),
       riotId: clean,
+      altAccounts,
       seasonId: activeSeason?.id ?? null,
       divisionId: team.division_id,
       teamId: team.id,
@@ -186,14 +191,14 @@ for (let idx = 0; idx < players.length; idx++) {
       }))
       .slice(0, 4);
 
-    async function fetchMatchIds(typeParam) {
+    async function fetchMatchIds(targetPuuid, typeParam) {
       const ids = [];
       for (let start = 0; start < MATCH_COUNT; start += 100) {
         const count = Math.min(100, MATCH_COUNT - start);
         const typeQuery = typeParam ? `type=${typeParam}&` : "";
         const page = await riotFetch(
           `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
-            puuid
+            targetPuuid
           )}/ids?${typeQuery}start=${start}&count=${count}&startTime=${startTimeSec}`
         );
         if (!Array.isArray(page) || page.length === 0) break;
@@ -203,30 +208,54 @@ for (let idx = 0; idx < players.length; idx++) {
       return ids;
     }
 
-    let matchIds = await fetchMatchIds("ranked");
-    if (matchIds.length === 0) {
-      matchIds = await fetchMatchIds(null);
+    const accountSources = [{ puuid, riotId: p.riotId }];
+    const seenPuuids = new Set([puuid]);
+    for (const altId of p.altAccounts ?? []) {
+      if (!altId || altId.toLowerCase() === p.riotId.toLowerCase()) continue;
+      const altParsed = parseRiotId(altId);
+      try {
+        const altAccount = await riotFetch(
+          `https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(
+            altParsed.gameName
+          )}/${encodeURIComponent(altParsed.tagLine)}`
+        );
+        if (altAccount?.puuid && !seenPuuids.has(altAccount.puuid)) {
+          seenPuuids.add(altAccount.puuid);
+          accountSources.push({ puuid: altAccount.puuid, riotId: altId });
+        }
+      } catch (altErr) {
+        if (altErr instanceof RiotAuthError) throw altErr;
+        console.warn(`  [skip alt ${altId}] ${altErr.message}`);
+      }
     }
 
     const prevMap = new Map(
       (existingByKey.get(p.playerKey) ?? []).map((m) => [m.matchId, m])
     );
 
-    const matches = [];
+    const matchesMap = new Map();
     let fetchedNew = 0;
-    for (const matchId of matchIds) {
-      if (prevMap.has(matchId)) {
-        matches.push(prevMap.get(matchId));
-        continue;
+    for (const src of accountSources) {
+      let srcIds = await fetchMatchIds(src.puuid, "ranked");
+      if (srcIds.length === 0) {
+        srcIds = await fetchMatchIds(src.puuid, null);
       }
-      try {
-        const matchData = await riotFetch(
-          `https://americas.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(
-            matchId
-          )}`
-        );
-        fetchedNew += 1;
-        const me = matchData.info.participants.find((x) => x.puuid === puuid);
+      for (const matchId of srcIds) {
+        if (matchesMap.has(matchId)) continue;
+        if (prevMap.has(matchId)) {
+          matchesMap.set(matchId, prevMap.get(matchId));
+          continue;
+        }
+        try {
+          const matchData = await riotFetch(
+            `https://americas.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(
+              matchId
+            )}`
+          );
+          fetchedNew += 1;
+          const me = matchData.info.participants.find(
+            (x) => x.puuid === src.puuid
+          );
         if (!me || matchData.info.gameDuration < 180) continue;
 
         const allies = matchData.info.participants.filter(
@@ -258,52 +287,57 @@ for (let idx = 0; idx < players.length; idx++) {
           }
         }
 
-        matches.push({
-          matchId: matchData.metadata.matchId,
-          gameCreation: matchData.info.gameCreation,
-          gameDuration: matchData.info.gameDuration,
-          gameVersion: matchData.info.gameVersion,
-          queueId: matchData.info.queueId,
-          win: me.win,
-          championName: me.championName,
-          teamId: me.teamId,
-          teamPosition: me.teamPosition,
-          champLevel: me.champLevel,
-          kills: me.kills,
-          deaths: me.deaths,
-          assists: me.assists,
-          cs: meCs,
-          totalDamageDealtToChampions: me.totalDamageDealtToChampions,
-          totalDamageTaken: me.totalDamageTaken,
-          damageSelfMitigated: me.damageSelfMitigated,
-          damageDealtToObjectives: me.damageDealtToObjectives,
-          damageDealtToTurrets: me.damageDealtToTurrets,
-          timeCCingOthers: me.timeCCingOthers,
-          goldEarned: me.goldEarned,
-          visionScore: me.visionScore,
-          wardsPlaced: me.wardsPlaced,
-          wardsKilled: me.wardsKilled,
-          controlWardsBought: me.visionWardsBoughtInGame,
-          teamKills,
-          teamDamage,
-          teamGold,
-          opponentChampion: opp?.championName,
-          goldDiff: opp ? me.goldEarned - opp.goldEarned : undefined,
-          csDiff: oppCs !== undefined ? meCs - oppCs : undefined,
-          soloKills: me.challenges?.soloKills,
-          firstBlood: Boolean(me.firstBloodKill || me.firstBloodAssist),
-          bans,
-          flashKey:
-            me.summoner1Id === 4
-              ? "D"
-              : me.summoner2Id === 4
-              ? "F"
-              : undefined,
-        });
-      } catch (e) {
-        console.warn(`  [skip match ${matchId}] ${e.message}`);
+          matchesMap.set(matchData.metadata.matchId, {
+            matchId: matchData.metadata.matchId,
+            gameCreation: matchData.info.gameCreation,
+            gameDuration: matchData.info.gameDuration,
+            gameVersion: matchData.info.gameVersion,
+            queueId: matchData.info.queueId,
+            win: me.win,
+            championName: me.championName,
+            teamId: me.teamId,
+            teamPosition: me.teamPosition,
+            champLevel: me.champLevel,
+            kills: me.kills,
+            deaths: me.deaths,
+            assists: me.assists,
+            cs: meCs,
+            totalDamageDealtToChampions: me.totalDamageDealtToChampions,
+            totalDamageTaken: me.totalDamageTaken,
+            damageSelfMitigated: me.damageSelfMitigated,
+            damageDealtToObjectives: me.damageDealtToObjectives,
+            damageDealtToTurrets: me.damageDealtToTurrets,
+            timeCCingOthers: me.timeCCingOthers,
+            goldEarned: me.goldEarned,
+            visionScore: me.visionScore,
+            wardsPlaced: me.wardsPlaced,
+            wardsKilled: me.wardsKilled,
+            controlWardsBought: me.visionWardsBoughtInGame,
+            teamKills,
+            teamDamage,
+            teamGold,
+            opponentChampion: opp?.championName,
+            goldDiff: opp ? me.goldEarned - opp.goldEarned : undefined,
+            csDiff: oppCs !== undefined ? meCs - oppCs : undefined,
+            soloKills: me.challenges?.soloKills,
+            firstBlood: Boolean(me.firstBloodKill || me.firstBloodAssist),
+            bans,
+            flashKey:
+              me.summoner1Id === 4
+                ? "D"
+                : me.summoner2Id === 4
+                ? "F"
+                : undefined,
+          });
+        } catch (e) {
+          console.warn(`  [skip match ${matchId}] ${e.message}`);
+        }
       }
     }
+
+    const matches = [...matchesMap.values()]
+      .sort((a, b) => (b.gameCreation ?? 0) - (a.gameCreation ?? 0))
+      .slice(0, MATCH_COUNT);
 
     const { error } = await supabase.from("riot_player_stats").upsert(
       {

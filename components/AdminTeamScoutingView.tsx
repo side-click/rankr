@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Ban, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Ban, Calendar, Clock, HelpCircle } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -530,9 +530,10 @@ export function AdminTeamScoutingView({
                   <div>
                     <div
                       title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
-                      className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-block"
+                      className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-flex items-center gap-1"
                     >
-                      SoloQ Top 7 ({roleMeta.label})
+                      <span>SoloQ Top 7 ({roleMeta.label})</span>
+                      <HelpCircle className="w-3 h-3 text-[#a6a89e]/80" />
                     </div>
                     {soloChamps.length > 0 ? (
                       <div className="space-y-1.5">
