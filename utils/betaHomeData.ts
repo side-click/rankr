@@ -61,6 +61,15 @@ export interface BetaTopPerformer {
   dpm: number;
 }
 
+export interface BetaDivisionTopPerformers {
+  divisionId: string;
+  divisionName: string;
+  divisionSlug: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  players: BetaTopPerformer[];
+}
+
 export interface BetaRecentMatch {
   seriesKey: string;
   roundLabel: string;
@@ -98,6 +107,7 @@ export interface BetaHomeData {
   focusedSeason: BetaSeasonSummary | null;
   recentBallots: BallotCardData[];
   divisionStandings: BetaDivisionStandings[];
+  divisionTopPerformers: BetaDivisionTopPerformers[];
   topPerformers: BetaTopPerformer[];
   recentMatches: BetaRecentMatch[];
   consensusSnapshots: BetaConsensusSnapshot[];
@@ -263,6 +273,7 @@ export async function loadBetaHomeData(
     ]);
 
   let divisionStandings: BetaDivisionStandings[] = [];
+  let divisionTopPerformers: BetaDivisionTopPerformers[] = [];
   let topPerformers: BetaTopPerformer[] = [];
   let recentMatches: BetaRecentMatch[] = [];
 
@@ -315,6 +326,37 @@ export async function loadBetaHomeData(
       };
     });
 
+    divisionTopPerformers = statsCtx.divisions.map((d) => {
+      const divTheme = resolveDivisionTheme(d.theme_key, divisionThemesRaw);
+      const divRated = computeRoleNormalizedRatings(
+        rawPlayers.filter((p) => p.divisionId === d.id)
+      );
+      const topDivPlayers = divRated
+        .filter((p) => p.games > 0)
+        .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
+        .slice(0, 4)
+        .map((p) => ({
+          playerKey: p.playerKey,
+          displayName: p.displayName,
+          role: p.role,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+          rating: p.leagueRating ?? 0,
+          games: p.games,
+          kda: p.kda,
+          dpm: p.dpm,
+        }));
+
+      return {
+        divisionId: d.id,
+        divisionName: d.name,
+        divisionSlug: d.slug,
+        logoUrl: d.logo_url,
+        primaryColor: divTheme.primary_color,
+        players: topDivPlayers,
+      };
+    });
+
     topPerformers = ratedPlayers
       .filter((p) => p.games > 0)
       .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
@@ -362,6 +404,7 @@ export async function loadBetaHomeData(
     focusedSeason,
     recentBallots: (recentBallotsRaw ?? []) as unknown as BallotCardData[],
     divisionStandings,
+    divisionTopPerformers,
     topPerformers,
     recentMatches,
     consensusSnapshots: consensusRaw.filter(

@@ -261,95 +261,16 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
         </div>
       </div>
 
-      {/* 2. Live Stats & Match Results Spotlight */}
+      {/* 2. League Stats */}
       {(data.recentMatches.length > 0 ||
         data.divisionStandings.length > 0 ||
-        data.topPerformers.length > 0) && (
-        <RetroWindow title="League Stats & Match Spotlight" theme="scdl">
-          <div className="space-y-4">
-            {/* Recent Match Results */}
-            {data.recentMatches.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-                    <Swords className="w-3.5 h-3.5" />
-                    <span>Recent Match Results</span>
-                  </h2>
-                  <Link
-                    href={statsHref}
-                    className="text-xs text-[#c7c5b8] hover:text-[#f0c020] underline"
-                  >
-                    Full Stats Hub →
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  {data.recentMatches.map((m) => (
-                    <Link
-                      key={m.seriesKey}
-                      href={`/stats/match/${encodeURIComponent(m.seriesKey)}`}
-                      style={{ borderTopColor: m.divisionColor }}
-                      className="xp-panel p-2.5 border-t-2 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition block space-y-2"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                        <span>{m.roundLabel}</span>
-                        {m.divisionName && (
-                          <span style={{ color: m.divisionColor }}>
-                            {m.divisionName}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          {m.teamALogoUrl && (
-                            <img
-                              src={m.teamALogoUrl}
-                              alt={m.teamA}
-                              className="w-6 h-6 object-contain shrink-0"
-                            />
-                          )}
-                          <span
-                            className={`text-xs font-bold truncate ${
-                              m.teamAWins > m.teamBWins
-                                ? "text-[#7cd438]"
-                                : "text-[#e8e5d8]"
-                            }`}
-                          >
-                            {m.teamA}
-                          </span>
-                        </div>
-                        <span className="text-sm font-black text-[#f0c020] tabular-nums shrink-0 px-1.5">
-                          {m.teamAWins}-{m.teamBWins}
-                        </span>
-                        <div className="flex items-center justify-end gap-1.5 min-w-0 flex-1">
-                          <span
-                            className={`text-xs font-bold truncate text-right ${
-                              m.teamBWins > m.teamAWins
-                                ? "text-[#7cd438]"
-                                : "text-[#e8e5d8]"
-                            }`}
-                          >
-                            {m.teamB}
-                          </span>
-                          {m.teamBLogoUrl && (
-                            <img
-                              src={m.teamBLogoUrl}
-                              alt={m.teamB}
-                              className="w-6 h-6 object-contain shrink-0"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 2-Col: Standings Snapshot + Top Performers */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* Division Standings */}
+        data.divisionTopPerformers.length > 0) && (
+        <RetroWindow title="League Stats" theme="scdl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left Col: Division Standings (top) + Division Top Performers (bottom) */}
+            <div className="lg:col-span-7 space-y-4">
               {data.divisionStandings.length > 0 && (
-                <div className="lg:col-span-7 space-y-3">
+                <div className="space-y-2.5">
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
                     Division Standings (Top 4)
                   </h2>
@@ -360,22 +281,20 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         style={{ borderTopColor: div.primaryColor }}
                         className="xp-panel p-3 border-t-2 space-y-2"
                       >
-                        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {div.logoUrl && (
-                              <img
-                                src={div.logoUrl}
-                                alt={div.divisionName}
-                                className="w-5 h-5 object-contain shrink-0"
-                              />
-                            )}
-                            <span
-                              style={{ color: div.primaryColor }}
-                              className="text-xs font-extrabold uppercase tracking-wider truncate"
-                            >
-                              {div.divisionName}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
+                          {div.logoUrl && (
+                            <img
+                              src={div.logoUrl}
+                              alt={div.divisionName}
+                              className="w-5 h-5 object-contain shrink-0"
+                            />
+                          )}
+                          <span
+                            style={{ color: div.primaryColor }}
+                            className="text-xs font-extrabold uppercase tracking-wider truncate"
+                          >
+                            {div.divisionName}
+                          </span>
                         </div>
                         <div className="space-y-1.5">
                           {div.teams.map((t, idx) => (
@@ -417,58 +336,161 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 </div>
               )}
 
-              {/* Top Rankr Rating Performers */}
-              {data.topPerformers.length > 0 && (
-                <div className="lg:col-span-5 space-y-3">
+              {data.divisionTopPerformers.length > 0 && (
+                <div className="space-y-2.5">
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
                     <Crown className="w-3.5 h-3.5" />
                     <span>Top Performers (Rankr Rating)</span>
                   </h2>
-                  <div className="xp-panel p-3 space-y-1.5">
-                    {data.topPerformers.map((p, idx) => {
-                      const roleMeta = getRoleMeta(p.role as LeagueRole);
-                      return (
-                        <Link
-                          key={p.playerKey}
-                          href={`/stats/player/${encodeURIComponent(p.playerKey)}`}
-                          className="flex items-center justify-between gap-2 px-2.5 py-2 rounded bg-black/30 hover:bg-[#f0c020]/10 border border-white/10 hover:border-[#f0c020]/50 transition text-xs"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-4 font-extrabold text-[#f0c020] tabular-nums shrink-0">
-                              {idx + 1}
-                            </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {data.divisionTopPerformers.map((div) => (
+                      <div
+                        key={div.divisionId}
+                        style={{ borderTopColor: div.primaryColor }}
+                        className="xp-panel p-3 border-t-2 space-y-2"
+                      >
+                        <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
+                          {div.logoUrl && (
                             <img
-                              src={roleMeta.icon}
-                              alt={roleMeta.label}
-                              className="w-4 h-4 object-contain shrink-0"
+                              src={div.logoUrl}
+                              alt={div.divisionName}
+                              className="w-5 h-5 object-contain shrink-0"
                             />
-                            {p.teamLogoUrl && (
-                              <img
-                                src={p.teamLogoUrl}
-                                alt={p.teamName}
-                                className="w-5 h-5 object-contain shrink-0"
-                              />
-                            )}
-                            <div className="min-w-0">
-                              <div className="font-bold text-[#f0ede0] truncate">
-                                {p.displayName}
-                              </div>
-                              <div className="text-[11px] text-[#a6a89e] truncate">
-                                {p.teamName} • {p.kda.toFixed(2)} KDA •{" "}
-                                {Math.round(p.dpm)} DPM
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-sm font-black text-[#7cd438] tabular-nums shrink-0">
-                            {p.rating.toFixed(1)}
+                          )}
+                          <span
+                            style={{ color: div.primaryColor }}
+                            className="text-xs font-extrabold uppercase tracking-wider truncate"
+                          >
+                            {div.divisionName}
                           </span>
-                        </Link>
-                      );
-                    })}
+                        </div>
+                        <div className="space-y-1.5">
+                          {div.players.map((p, idx) => {
+                            const roleMeta = getRoleMeta(p.role as LeagueRole);
+                            return (
+                              <Link
+                                key={p.playerKey}
+                                href={`/stats/player/${encodeURIComponent(
+                                  p.playerKey
+                                )}`}
+                                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-black/30 hover:bg-[#f0c020]/10 border border-white/10 hover:border-[#f0c020]/50 transition text-xs"
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="w-4 font-extrabold text-[#f0c020] tabular-nums shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <img
+                                    src={roleMeta.icon}
+                                    alt={roleMeta.label}
+                                    className="w-3.5 h-3.5 object-contain shrink-0"
+                                  />
+                                  {p.teamLogoUrl && (
+                                    <img
+                                      src={p.teamLogoUrl}
+                                      alt={p.teamName}
+                                      className="w-4 h-4 object-contain shrink-0"
+                                    />
+                                  )}
+                                  <span className="font-bold text-[#f0ede0] truncate">
+                                    {p.displayName}
+                                  </span>
+                                </div>
+                                <span className="font-black text-[#7cd438] tabular-nums shrink-0">
+                                  {p.rating.toFixed(1)}
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Right Col: Vertically Stacked Recent Match Results */}
+            {data.recentMatches.length > 0 && (
+              <div className="lg:col-span-5 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Recent Match Results</span>
+                  </h2>
+                  <Link
+                    href={statsHref}
+                    className="text-xs text-[#c7c5b8] hover:text-[#f0c020] underline"
+                  >
+                    Full Stats Hub →
+                  </Link>
+                </div>
+                <div className="space-y-2.5">
+                  {data.recentMatches.map((m) => (
+                    <Link
+                      key={m.seriesKey}
+                      href={`/stats/match/${encodeURIComponent(m.seriesKey)}`}
+                      style={{ borderLeftColor: m.divisionColor }}
+                      className="xp-panel p-3 border-l-4 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition grid grid-cols-3 items-center gap-2"
+                    >
+                      <div className="flex flex-col items-center text-center gap-1 min-w-0">
+                        {m.teamALogoUrl && (
+                          <img
+                            src={m.teamALogoUrl}
+                            alt={m.teamA}
+                            className="w-9 h-9 object-contain"
+                          />
+                        )}
+                        <span
+                          className={`text-xs font-bold truncate w-full ${
+                            m.teamAWins > m.teamBWins
+                              ? "text-[#7cd438]"
+                              : "text-[#e8e5d8]"
+                          }`}
+                        >
+                          {m.teamA}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center space-y-0.5">
+                        {m.divisionName && (
+                          <span
+                            style={{ color: m.divisionColor }}
+                            className="text-[10px] font-extrabold uppercase tracking-wider leading-tight"
+                          >
+                            {m.divisionName}
+                          </span>
+                        )}
+                        <span className="text-xl font-black text-[#f0c020] tabular-nums leading-none">
+                          {m.teamAWins} - {m.teamBWins}
+                        </span>
+                        <span className="text-[10px] font-semibold uppercase text-[#8e9286]">
+                          {m.roundLabel}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center gap-1 min-w-0">
+                        {m.teamBLogoUrl && (
+                          <img
+                            src={m.teamBLogoUrl}
+                            alt={m.teamB}
+                            className="w-9 h-9 object-contain"
+                          />
+                        )}
+                        <span
+                          className={`text-xs font-bold truncate w-full ${
+                            m.teamBWins > m.teamAWins
+                              ? "text-[#7cd438]"
+                              : "text-[#e8e5d8]"
+                          }`}
+                        >
+                          {m.teamB}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </RetroWindow>
       )}
