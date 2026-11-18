@@ -612,7 +612,7 @@ export async function PlayerStatsContent({
           {/* 2. Role-Filtered SoloQ Top 7 */}
           <div className="xp-panel p-3.5 space-y-2.5 lg:col-span-5">
             <h3
-              title="Analyzes only the most recent 100 SoloQ games"
+              title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
               className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-block"
             >
               SoloQ Top 7 ({roleMeta.label})

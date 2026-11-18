@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       match_count:
-        description: "Recent ranked games per player (max 100)"
+        description: "Recent ranked games per player (max 200)"
         required: false
-        default: "100"
+        default: "200"
   schedule:
     # Nightly incremental sync at 09:00 UTC (04:00 EST)
     - cron: "0 9 * * *"
@@ -27,7 +27,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
-          DEEP_SYNC_MATCH_COUNT: ${{ github.event.inputs.match_count || '100' }}
+          DEEP_SYNC_MATCH_COUNT: ${{ github.event.inputs.match_count || '200' }}
         run: node scripts/riot-deep-sync.mjs
       - name: Notify Discord on failure
         if: failure()

@@ -529,7 +529,7 @@ export function AdminTeamScoutingView({
                   {/* 2. SoloQ Ranked Top 7 (Role-Filtered) */}
                   <div>
                     <div
-                      title="Analyzes only the most recent 100 SoloQ games"
+                      title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
                       className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-block"
                     >
                       SoloQ Top 7 ({roleMeta.label})

@@ -6,10 +6,10 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RIOT_API_KEY = process.env.RIOT_API_KEY?.trim();
 
 const MATCH_COUNT = Math.min(
-  100,
-  Math.max(5, Number(process.env.DEEP_SYNC_MATCH_COUNT ?? "100"))
+  200,
+  Math.max(5, Number(process.env.DEEP_SYNC_MATCH_COUNT ?? "200"))
 );
-const MAX_AGE_DAYS = 180;
+const MAX_AGE_DAYS = 365;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !RIOT_API_KEY) {
   console.error(
@@ -186,17 +186,26 @@ for (let idx = 0; idx < players.length; idx++) {
       }))
       .slice(0, 4);
 
-    let matchIds = await riotFetch(
-      `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
-        puuid
-      )}/ids?type=ranked&start=0&count=${MATCH_COUNT}&startTime=${startTimeSec}`
-    );
+    async function fetchMatchIds(typeParam) {
+      const ids = [];
+      for (let start = 0; start < MATCH_COUNT; start += 100) {
+        const count = Math.min(100, MATCH_COUNT - start);
+        const typeQuery = typeParam ? `type=${typeParam}&` : "";
+        const page = await riotFetch(
+          `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
+            puuid
+          )}/ids?${typeQuery}start=${start}&count=${count}&startTime=${startTimeSec}`
+        );
+        if (!Array.isArray(page) || page.length === 0) break;
+        ids.push(...page);
+        if (page.length < count) break;
+      }
+      return ids;
+    }
+
+    let matchIds = await fetchMatchIds("ranked");
     if (matchIds.length === 0) {
-      matchIds = await riotFetch(
-        `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(
-          puuid
-        )}/ids?start=0&count=${MATCH_COUNT}&startTime=${startTimeSec}`
-      );
+      matchIds = await fetchMatchIds(null);
     }
 
     const prevMap = new Map(
