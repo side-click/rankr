@@ -182,7 +182,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                 season.slug
                               )}&division=${encodeURIComponent(div.slug)}`}
                               style={{ borderLeftColor: div.primaryColor }}
-                              className="xp-inset p-2.5 border-l-4 flex items-center gap-2.5 hover:bg-white/5 transition"
+                              className="xp-inset p-2.5 border-l-4 flex items-center gap-2.5 hover:!border-[#f0c020]/70 hover:!bg-[#f0c020]/10 hover:shadow-[0_0_12px_rgba(240,192,32,0.2)] transition-all"
                             >
                               {div.logoUrl && (
                                 <img
@@ -441,7 +441,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         borderLeftColor: m.divisionColor,
                         background: `linear-gradient(90deg, ${m.divisionColor}24 0%, #121615 55%)`,
                       }}
-                      className="xp-panel p-3 border-l-4 hover:border-[#f0c020]/70 transition grid grid-cols-3 items-center gap-2"
+                      className="xp-panel p-3 border-l-4 hover:brightness-125 hover:!border-[#f0c020]/80 hover:shadow-[0_0_14px_rgba(240,192,32,0.22)] transition-all grid grid-cols-3 items-center gap-2"
                     >
                       <div className="flex flex-col items-center text-center gap-1 min-w-0">
                         {m.teamALogoUrl && (
@@ -560,29 +560,36 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                   </Link>
                 </div>
 
-                <div className="space-y-1.5">
-                  {snap.topTeams.map((t) => (
+                <div className="space-y-2">
+                  {snap.topTeams.map((t, idx) => (
                     <div
                       key={`${snap.divisionSlug}-${t.rank}`}
-                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-black/30 border border-white/10 text-xs"
+                      className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded border transition ${
+                        idx === 0
+                          ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)]"
+                          : "bg-black/30 border-white/10"
+                      }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-5 font-black text-[#f0c020] tabular-nums shrink-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-7 text-base sm:text-lg font-black text-[#f0c020] tabular-nums shrink-0">
                           #{t.rank}
                         </span>
                         {t.teamLogoUrl && (
                           <img
                             src={t.teamLogoUrl}
                             alt={t.teamName}
-                            className="w-5 h-5 object-contain shrink-0"
+                            className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                           />
                         )}
-                        <span className="font-bold text-[#f0ede0] truncate">
+                        <span className="text-sm sm:text-base font-extrabold text-[#f0ede0] truncate">
                           {t.teamName}
                         </span>
                       </div>
-                      <span className="text-[11px] font-semibold text-[#c7c5b8] tabular-nums shrink-0">
-                        {t.averageRank.toFixed(2)} avg
+                      <span className="text-sm sm:text-base font-bold text-[#e8e5d8] tabular-nums shrink-0">
+                        {t.averageRank.toFixed(2)}{" "}
+                        <span className="text-xs font-semibold text-[#a6a89e]">
+                          avg
+                        </span>
                       </span>
                     </div>
                   ))}
