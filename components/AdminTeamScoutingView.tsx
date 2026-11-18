@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft, Ban, Calendar, Clock, HelpCircle } from "lucide-react";
+import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -296,16 +297,7 @@ export function AdminTeamScoutingView({
           <span>
             Last SoloQ Sync:{" "}
             <strong className="text-[#f0ede0]">
-              {latestSyncIso
-                ? new Date(latestSyncIso).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    timeZone: "America/New_York",
-                    timeZoneName: "short",
-                  })
-                : "Not synced yet"}
+              <LocalTimestamp iso={latestSyncIso} fallback="Not synced yet" />
             </strong>
           </span>
         </div>

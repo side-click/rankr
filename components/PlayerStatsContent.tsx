@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Calendar, ExternalLink, HelpCircle } from "lucide-react";
+import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -317,16 +318,7 @@ export async function PlayerStatsContent({
           <span>
             Last SoloQ Sync:{" "}
             <strong className="text-[#f0ede0]">
-              {syncIso
-                ? new Date(syncIso).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    timeZone: "America/New_York",
-                    timeZoneName: "short",
-                  })
-                : "Not synced yet"}
+              <LocalTimestamp iso={syncIso} fallback="Not synced yet" />
             </strong>
           </span>
         </div>

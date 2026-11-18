@@ -12,6 +12,7 @@ import { Navbar } from "@/components/Navbar";
 import { AuthNoticeBanner } from "@/components/AuthNoticeBanner";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
+import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { ShieldAlert } from "lucide-react";
 
 const siteTitle = "Rankr — League Rankings & Tier Lists";
@@ -182,10 +183,10 @@ export default async function RootLayout({
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 text-[11px] font-mono text-[#9aa39d] hover:text-[#f0c020] hover:border-[#c89b3c]/50 transition"
             >
               <span className="text-[#f0c020] font-semibold">{shortSha}</span>
-              {buildTimeLabel && (
+              {buildTimeIso && (
                 <>
                   <span className="text-white/25">•</span>
-                  <span>{buildTimeLabel}</span>
+                  <LocalTimestamp iso={buildTimeIso} />
                 </>
               )}
             </a>
