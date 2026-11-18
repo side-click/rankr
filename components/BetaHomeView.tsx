@@ -7,12 +7,9 @@ import {
   BarChart3,
   Crown,
   Eye,
-  Filter,
-  Globe,
   ListOrdered,
   Swords,
   Trophy,
-  X,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
@@ -52,154 +49,207 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
 
   return (
     <div className="space-y-5">
-      {/* 1. Season Focus Bar & 4-Pillar Quick Actions */}
-      <RetroWindow title="Rankr Hub (Beta)" theme="scdl">
-        <div className="space-y-4">
-          {/* Season Focus Control */}
-          <div className="xp-panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {data.focusedSeason?.leagueLogoUrl ? (
-                <img
-                  src={data.focusedSeason.leagueLogoUrl}
-                  alt={data.focusedSeason.leagueName}
-                  className="w-8 h-8 object-contain shrink-0"
-                />
-              ) : (
-                <Globe className="w-6 h-6 text-[#f0c020] shrink-0" />
-              )}
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] flex items-center gap-1.5">
-                  <Filter className="w-3 h-3 text-[#f0c020]" />
-                  <span>
-                    {data.focusedSeason
-                      ? "Focused Season"
-                      : `All Live Seasons (${data.liveSeasons.length})`}
-                  </span>
-                  {data.focusedSeason && (
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                        data.focusedSeason.isActive
-                          ? "bg-[#4ade80]/15 text-[#7cd438] border border-[#4ade80]/30"
-                          : "bg-white/10 text-[#a6a89e] border border-white/15"
-                      }`}
-                    >
-                      {data.focusedSeason.isActive ? "Live" : "Archived"}
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm sm:text-base font-extrabold text-[#f0ede0]">
-                  {data.focusedSeason
-                    ? `${data.focusedSeason.leagueName} — ${data.focusedSeason.name}`
-                    : "Showing stats, rankings & matches across all active leagues"}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <select
-                aria-label="Focus season"
-                value={focusedSlug}
-                onChange={(e) => setFocus(e.target.value)}
-                className="bg-[#121614] border border-white/20 rounded px-2.5 py-1.5 text-xs font-bold text-[#f0ede0] focus:outline-none focus:border-[#f0c020]"
+      {/* 1. Top Row: Rankr Hub (left, stacked in navbar order) + Seasons Directory (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-5 flex flex-col">
+          <RetroWindow title="Rankr Hub (Beta)" theme="scdl" className="h-full">
+            <div className="space-y-2.5">
+              <Link
+                href={rankHref}
+                className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
               >
-                <option value="">All Live Seasons (Default)</option>
-                {data.liveSeasons.length > 0 && (
-                  <optgroup label="Live Seasons (Open)">
-                    {data.liveSeasons.map((s) => (
-                      <option key={s.id} value={s.slug}>
-                        {s.leagueShortName} — {s.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {data.archivedSeasons.length > 0 && (
-                  <optgroup label="Archived / Past">
-                    {data.archivedSeasons.map((s) => (
-                      <option key={s.id} value={s.slug}>
-                        {s.leagueShortName} — {s.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              {data.focusedSeason && (
-                <button
-                  type="button"
-                  onClick={() => setFocus("")}
-                  title="Clear season focus (return to All Live Seasons)"
-                  className="xp-btn text-xs px-2 py-1.5"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Clear</span>
-                </button>
-              )}
+                <ListOrdered className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="min-w-0">
+                  <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
+                    Create New
+                  </div>
+                  <div className="text-xs text-[#a6a89e] mt-0.5">
+                    Build & share Team Power Rankings or Player Tier Lists
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href={browseHref}
+                className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
+              >
+                <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="min-w-0">
+                  <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
+                    Browse Rankings
+                  </div>
+                  <div className="text-xs text-[#a6a89e] mt-0.5">
+                    Explore all community ballots and export shareable cards
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href={consensusHref}
+                className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
+              >
+                <Trophy className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="min-w-0">
+                  <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
+                    Consensus
+                  </div>
+                  <div className="text-xs text-[#a6a89e] mt-0.5">
+                    Community-averaged team power rankings & movement
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href={statsHref}
+                className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
+              >
+                <BarChart3 className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <div className="min-w-0">
+                  <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
+                    Stats
+                  </div>
+                  <div className="text-xs text-[#a6a89e] mt-0.5">
+                    Standings, player leaderboards, SoloQ scouting & box scores
+                  </div>
+                </div>
+              </Link>
             </div>
-          </div>
-
-          {/* 4-Pillar Action Hub */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link
-              href={statsHref}
-              className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
-            >
-              <BarChart3 className="w-6 h-6 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                  Stats Dashboard
-                </div>
-                <div className="text-xs text-[#a6a89e] mt-0.5">
-                  Standings, player leaderboards, SoloQ scouting & box scores
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href={consensusHref}
-              className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
-            >
-              <Trophy className="w-6 h-6 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                  Consensus Rankings
-                </div>
-                <div className="text-xs text-[#a6a89e] mt-0.5">
-                  Community-averaged team power rankings & movement
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href={rankHref}
-              className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
-            >
-              <ListOrdered className="w-6 h-6 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                  Create New
-                </div>
-                <div className="text-xs text-[#a6a89e] mt-0.5">
-                  Build & share Team Power Rankings or Player Tier Lists
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href={browseHref}
-              className="xp-panel p-3.5 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group flex items-start gap-3"
-            >
-              <Eye className="w-6 h-6 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                  Browse Published
-                </div>
-                <div className="text-xs text-[#a6a89e] mt-0.5">
-                  Explore all community ballots and export shareable cards
-                </div>
-              </div>
-            </Link>
-          </div>
+          </RetroWindow>
         </div>
-      </RetroWindow>
+
+        <div className="lg:col-span-7 flex flex-col">
+          <RetroWindow title="Seasons Directory" theme="scdl" className="h-full">
+            <div className="space-y-4">
+              <div className="space-y-2.5">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#7cd438]">
+                  Live Seasons (Open for Rankings & Stats)
+                </div>
+                {data.liveSeasons.length === 0 ? (
+                  <div className="xp-inset p-4 text-xs text-[#a6a89e]">
+                    No live seasons.
+                  </div>
+                ) : (
+                  data.liveSeasons.map((season) => (
+                    <div key={season.id} className="xp-panel p-3 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {season.leagueLogoUrl && (
+                            <img
+                              src={season.leagueLogoUrl}
+                              alt={season.leagueName}
+                              className="w-9 h-9 object-contain shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                              {season.leagueName}
+                            </div>
+                            <div className="text-sm font-bold text-[#f0ede0]">
+                              {season.name}{" "}
+                              <span className="text-xs font-normal text-[#a6a89e]">
+                                ({season.playerCount} players)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFocus(
+                              focusedSlug === season.slug ? "" : season.slug
+                            )
+                          }
+                          className={`xp-btn text-xs shrink-0 ${
+                            focusedSlug === season.slug ? "xp-btn-primary" : ""
+                          }`}
+                        >
+                          {focusedSlug === season.slug ? "Focused ✓" : "Focus"}
+                        </button>
+                      </div>
+
+                      {season.divisions.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {season.divisions.map((div) => (
+                            <Link
+                              key={div.id}
+                              href={`/browse?season=${encodeURIComponent(
+                                season.slug
+                              )}&division=${encodeURIComponent(div.slug)}`}
+                              style={{ borderLeftColor: div.primaryColor }}
+                              className="xp-inset p-2.5 border-l-4 flex items-center gap-2.5 hover:bg-white/5 transition"
+                            >
+                              {div.logoUrl && (
+                                <img
+                                  src={div.logoUrl}
+                                  alt={div.name}
+                                  className="w-8 h-8 object-contain shrink-0"
+                                />
+                              )}
+                              <div className="min-w-0">
+                                <div
+                                  style={{ color: div.primaryColor }}
+                                  className="text-xs font-extrabold truncate"
+                                >
+                                  {div.name}
+                                </div>
+                                <div className="text-[11px] text-[#a6a89e]">
+                                  {div.teamCount} teams
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
+                  Archived / Past Seasons
+                </div>
+                {data.archivedSeasons.length === 0 ? (
+                  <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                    No archived seasons yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {data.archivedSeasons.map((season) => (
+                      <div
+                        key={season.id}
+                        className="xp-panel p-2.5 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                            {season.leagueName}
+                          </div>
+                          <div className="text-xs font-bold text-[#f0ede0] truncate">
+                            {season.name}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFocus(
+                              focusedSlug === season.slug ? "" : season.slug
+                            )
+                          }
+                          className={`xp-btn text-xs shrink-0 ${
+                            focusedSlug === season.slug ? "xp-btn-primary" : ""
+                          }`}
+                        >
+                          {focusedSlug === season.slug ? "Focused ✓" : "Focus"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </RetroWindow>
+        </div>
+      </div>
 
       {/* 2. Live Stats & Match Results Spotlight */}
       {(data.recentMatches.length > 0 ||
@@ -501,134 +551,6 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             browseHref={browseHref}
           />
         )}
-      </RetroWindow>
-
-      {/* 5. Seasons Directory (Live vs. Archived) */}
-      <RetroWindow title="Seasons Directory" theme="scdl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-[#7cd438]">
-              Live Seasons (Open for Rankings & Stats)
-            </div>
-            {data.liveSeasons.length === 0 ? (
-              <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-                No live seasons.
-              </div>
-            ) : (
-              data.liveSeasons.map((season) => (
-                <div key={season.id} className="xp-panel p-3 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {season.leagueLogoUrl && (
-                        <img
-                          src={season.leagueLogoUrl}
-                          alt={season.leagueName}
-                          className="w-9 h-9 object-contain shrink-0"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
-                          {season.leagueName}
-                        </div>
-                        <div className="text-sm font-bold text-[#f0ede0]">
-                          {season.name}{" "}
-                          <span className="text-xs font-normal text-[#a6a89e]">
-                            ({season.playerCount} players)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFocus(focusedSlug === season.slug ? "" : season.slug)
-                      }
-                      className={`xp-btn text-xs shrink-0 ${
-                        focusedSlug === season.slug ? "xp-btn-primary" : ""
-                      }`}
-                    >
-                      {focusedSlug === season.slug ? "Focused ✓" : "Focus"}
-                    </button>
-                  </div>
-
-                  {season.divisions.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {season.divisions.map((div) => (
-                        <Link
-                          key={div.id}
-                          href={`/browse?season=${encodeURIComponent(
-                            season.slug
-                          )}&division=${encodeURIComponent(div.slug)}`}
-                          style={{ borderLeftColor: div.primaryColor }}
-                          className="xp-inset p-2.5 border-l-4 flex items-center gap-2.5 hover:bg-white/5 transition"
-                        >
-                          {div.logoUrl && (
-                            <img
-                              src={div.logoUrl}
-                              alt={div.name}
-                              className="w-8 h-8 object-contain shrink-0"
-                            />
-                          )}
-                          <div className="min-w-0">
-                            <div
-                              style={{ color: div.primaryColor }}
-                              className="text-xs font-extrabold truncate"
-                            >
-                              {div.name}
-                            </div>
-                            <div className="text-[11px] text-[#a6a89e]">
-                              {div.teamCount} teams
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="lg:col-span-4 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
-              Archived / Past Seasons
-            </div>
-            {data.archivedSeasons.length === 0 ? (
-              <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-                No archived seasons yet.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {data.archivedSeasons.map((season) => (
-                  <div
-                    key={season.id}
-                    className="xp-panel p-2.5 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
-                        {season.leagueName}
-                      </div>
-                      <div className="text-xs font-bold text-[#f0ede0] truncate">
-                        {season.name}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFocus(focusedSlug === season.slug ? "" : season.slug)
-                      }
-                      className={`xp-btn text-xs shrink-0 ${
-                        focusedSlug === season.slug ? "xp-btn-primary" : ""
-                      }`}
-                    >
-                      {focusedSlug === season.slug ? "Focused ✓" : "Focus"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </RetroWindow>
     </div>
   );
