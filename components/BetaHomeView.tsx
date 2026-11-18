@@ -47,12 +47,14 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
   const rankHref = `/rank${qSeason}`;
   const browseHref = `/browse${qSeason}`;
 
+  const shouldGlowFocus = !focusedSlug && data.liveSeasons.length > 1;
+
   return (
     <div className="space-y-5">
-      {/* 1. Top Row: Rankr Hub (left, stacked in navbar order) + Seasons Directory (right) */}
+      {/* 1. Top Row: Start Menu (left, stacked in navbar order) + Seasons Directory (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         <div className="lg:col-span-5 flex flex-col">
-          <RetroWindow title="Rankr Hub (Beta)" theme="scdl" className="h-full">
+          <RetroWindow title="Start Menu" theme="scdl" className="h-full">
             <div className="space-y-2.5">
               <Link
                 href={rankHref}
@@ -64,7 +66,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Create New
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build & share Team Power Rankings or Player Tier Lists
+                    Build and share power rankings and tier lists
                   </div>
                 </div>
               </Link>
@@ -79,7 +81,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Browse Rankings
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Explore all community ballots and export shareable cards
+                    Explore everything published on Rankr
                   </div>
                 </div>
               </Link>
@@ -94,7 +96,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Consensus
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Community-averaged team power rankings & movement
+                    Find common ground through aggregated opinion
                   </div>
                 </div>
               </Link>
@@ -109,7 +111,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Stats
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Standings, player leaderboards, SoloQ scouting & box scores
+                    Leaderboards, standings, scouting sheets and more
                   </div>
                 </div>
               </Link>
@@ -122,7 +124,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             <div className="space-y-4">
               <div className="space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-[#7cd438]">
-                  Live Seasons (Open for Rankings & Stats)
+                  Live Seasons
                 </div>
                 {data.liveSeasons.length === 0 ? (
                   <div className="xp-inset p-4 text-xs text-[#a6a89e]">
@@ -160,7 +162,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                             )
                           }
                           className={`xp-btn text-xs shrink-0 ${
-                            focusedSlug === season.slug ? "xp-btn-primary" : ""
+                            focusedSlug === season.slug
+                              ? "xp-btn-primary"
+                              : shouldGlowFocus
+                              ? "xp-btn-gold shadow-[0_0_14px_rgba(240,192,32,0.5)] animate-pulse"
+                              : ""
                           }`}
                         >
                           {focusedSlug === season.slug ? "Focused ✓" : "Focus"}
@@ -207,11 +213,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
 
               <div className="space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
-                  Archived / Past Seasons
+                  Past Seasons
                 </div>
                 {data.archivedSeasons.length === 0 ? (
                   <div className="xp-inset p-3 text-xs text-[#a6a89e]">
-                    No archived seasons yet.
+                    No past seasons yet.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -236,7 +242,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                             )
                           }
                           className={`xp-btn text-xs shrink-0 ${
-                            focusedSlug === season.slug ? "xp-btn-primary" : ""
+                            focusedSlug === season.slug
+                              ? "xp-btn-primary"
+                              : shouldGlowFocus
+                              ? "xp-btn-gold shadow-[0_0_14px_rgba(240,192,32,0.5)] animate-pulse"
+                              : ""
                           }`}
                         >
                           {focusedSlug === season.slug ? "Focused ✓" : "Focus"}

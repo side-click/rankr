@@ -183,6 +183,8 @@ export async function loadBetaHomeData(
 
   const focusedSeason = focusedSeasonSlug
     ? allSeasons.find((s) => s.slug === focusedSeasonSlug) ?? null
+    : liveSeasons.length === 1
+    ? liveSeasons[0]
     : null;
 
   const targetSeasons = focusedSeason
