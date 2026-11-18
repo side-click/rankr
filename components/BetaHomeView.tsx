@@ -502,7 +502,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             {data.consensusSnapshots.map((snap) => (
               <div
                 key={`${snap.seasonSlug}-${snap.divisionSlug}`}
-                style={{ borderTopColor: snap.primaryColor }}
+                style={{
+                  borderColor: `${snap.primaryColor}55`,
+                  borderTopColor: snap.primaryColor,
+                  background: `linear-gradient(135deg, ${snap.primaryColor}26 0%, #121615 65%)`,
+                }}
                 className="xp-panel p-3.5 border-t-2 space-y-2.5"
               >
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
@@ -524,7 +528,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                       <div className="text-[11px] text-[#a6a89e]">
                         {snap.editionName} • {snap.seasonName} •{" "}
                         {snap.submissionCount}{" "}
-                        {snap.submissionCount === 1 ? "ballot" : "ballots"}
+                        {snap.submissionCount === 1 ? "ranking" : "rankings"}
                       </div>
                     </div>
                   </div>
@@ -534,7 +538,8 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     )}&division=${encodeURIComponent(snap.divisionSlug)}`}
                     className="xp-btn text-xs shrink-0"
                   >
-                    Full Consensus
+                    <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+                    <span>View All</span>
                   </Link>
                 </div>
 
