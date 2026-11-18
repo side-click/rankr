@@ -1064,17 +1064,17 @@ export function AdminStatsDashboard({
             {
               key: "players",
               label: "Players",
-              icon: <User className="w-5 h-5 sm:w-6 sm:h-6" />,
+              icon: <User className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />,
             },
             {
               key: "teams",
               label: "Teams",
-              icon: <TeamGroupIcon className="w-5 h-5 sm:w-6 sm:h-6" />,
+              icon: <TeamGroupIcon className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />,
             },
             {
               key: "division",
               label: "Division",
-              icon: <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6" />,
+              icon: <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />,
             },
           ] as const
         ).map((sec) => (
@@ -1082,7 +1082,7 @@ export function AdminStatsDashboard({
             key={sec.key}
             type="button"
             onClick={() => setActiveSection(sec.key)}
-            className={`xp-btn !py-4 !min-h-[66px] !text-base sm:!text-lg !gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl ${
+            className={`xp-btn !py-3 sm:!py-4 !px-2 sm:!px-4 !min-h-[54px] sm:!min-h-[66px] !text-xs sm:!text-lg !gap-1.5 sm:!gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl ${
               activeSection === sec.key ? "xp-btn-primary" : ""
             }`}
           >
