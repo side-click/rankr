@@ -1772,15 +1772,23 @@ export function AdminStatsDashboard({
                 ? formatMinutesSeconds(overview.longestGame.durationMin)
                 : "—"}
             </div>
-            <div className="text-[10px] text-[#a6a89e] truncate">
-              {overview.longestGame
+            {(() => {
+              const longestText = overview.longestGame
                 ? `${overview.longestGame.winner} def. ${overview.longestGame.loser}${
                     overview.longestGame.roundLabel
                       ? ` • ${overview.longestGame.roundLabel}`
                       : ""
                   }`
-                : "No match data"}
-            </div>
+                : "No match data";
+              return (
+                <div
+                  title={longestText}
+                  className="text-[11px] leading-tight text-[#a6a89e]"
+                >
+                  {longestText}
+                </div>
+              );
+            })()}
           </div>
 
           <div
