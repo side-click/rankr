@@ -155,8 +155,10 @@ export async function PlayerStatsContent({
   }
 
   const [sheetSummary, allSeries] = await Promise.all([
-    fetchScdlSheetStats(ctx.players, ctx.teams).catch(() => null),
-    fetchAllScdlSeries().catch(() => []),
+    fetchScdlSheetStats(ctx.players, ctx.teams, ctx.sheetConfig).catch(
+      () => null
+    ),
+    fetchAllScdlSeries(ctx.sheetConfig).catch(() => []),
   ]);
 
   const rawDivPlayers = (sheetSummary?.players ?? []).filter(

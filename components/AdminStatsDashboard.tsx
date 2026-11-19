@@ -5,13 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import {
-  Activity,
   AlertTriangle,
   ArrowLeft,
   Award,
   BarChart3,
   ChevronDown,
-  ChevronRight,
   Clock,
   Coins,
   Copy,
@@ -21,7 +19,6 @@ import {
   Droplet,
   Eye,
   Flame,
-  HelpCircle,
   RefreshCw,
   Shield,
   Skull,

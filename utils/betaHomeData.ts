@@ -264,14 +264,13 @@ export async function loadBetaHomeData(
   const statsSeasonSlug =
     focusedSeason?.slug ?? liveSeasons[0]?.slug ?? allSeasons[0]?.slug;
 
-  const [{ data: recentBallotsRaw }, consensusRaw, statsCtx, allSeries] =
+  const [{ data: recentBallotsRaw }, consensusRaw, statsCtx] =
     await Promise.all([
       ballotsQuery,
       Promise.all(consensusPromises),
       loadPublicStatsContext(statsSeasonSlug, {
         includeRiotStats: false,
       }).catch(() => null),
-      fetchAllScdlSeries().catch(() => []),
     ]);
 
   let divisionStandings: BetaDivisionStandings[] = [];
@@ -280,11 +279,14 @@ export async function loadBetaHomeData(
   let recentMatches: BetaRecentMatch[] = [];
 
   if (statsCtx && statsCtx.teams.length > 0) {
-    const sheetSummary = await fetchScdlSheetStats(
-      statsCtx.players,
-      statsCtx.teams,
-      statsCtx.sheetConfig
-    ).catch(() => null);
+    const [sheetSummary, allSeries] = await Promise.all([
+      fetchScdlSheetStats(
+        statsCtx.players,
+        statsCtx.teams,
+        statsCtx.sheetConfig
+      ).catch(() => null),
+      fetchAllScdlSeries(statsCtx.sheetConfig).catch(() => []),
+    ]);
 
     const activeTeams = sheetSummary?.teams ?? statsCtx.teams;
     const rawPlayers = sheetSummary?.players ?? statsCtx.players;

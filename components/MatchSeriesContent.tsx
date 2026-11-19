@@ -353,7 +353,7 @@ export async function MatchSeriesContent({
   decodedKey: string;
   basePath?: string;
 }) {
-  const allSeries = await fetchAllScdlSeries().catch(() => []);
+  const allSeries = await fetchAllScdlSeries(ctx.sheetConfig).catch(() => []);
   const series = allSeries.find((s) => s.seriesKey === decodedKey);
 
   if (!series) {
