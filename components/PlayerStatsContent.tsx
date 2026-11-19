@@ -468,15 +468,15 @@ export async function PlayerStatsContent({
                     : null,
               },
               {
-                label: "Avg GD",
+                label: "GD@15",
                 val:
-                  lp && lp.games > 0 ? formatSigned(lp.avgGoldDiff) : "—",
+                  lp && lp.games > 0 ? formatSigned(lp.avgGoldDiff15) : "—",
                 rankInfo:
                   lp && lp.games > 0
                     ? computeStatRank(
                         sameRoleDiv,
                         lp.playerKey,
-                        (p) => p.avgGoldDiff
+                        (p) => p.avgGoldDiff15
                       )
                     : null,
               },
@@ -760,9 +760,6 @@ export async function PlayerStatsContent({
                         {g.row.cs} CS ({(g.row.cs / mins).toFixed(1)}/m)
                       </div>
                       <div className="text-[#ff857a] font-bold">{dpm} DPM</div>
-                      <div className="text-[#f0c020] font-bold">
-                        GD {formatSigned(g.row.goldDiff)}
-                      </div>
                       <div className="text-[#f0c020] font-bold">
                         GD@15 {formatSigned(g.row.goldDiff15)}
                       </div>
