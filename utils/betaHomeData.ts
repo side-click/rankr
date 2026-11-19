@@ -339,7 +339,7 @@ export async function loadBetaHomeData(
       const topDivPlayers = divRated
         .filter((p) => p.games > 0)
         .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
-        .slice(0, 4)
+        .slice(0, 5)
         .map((p) => ({
           playerKey: p.playerKey,
           displayName: p.displayName,

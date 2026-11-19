@@ -120,16 +120,16 @@ export default function HomeLoading() {
             <div className="space-y-2.5">
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
                 <Crown className="w-3.5 h-3.5" />
-                <span>Top Performers (Rankr Rating)</span>
+                <span>Top Performers</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[0, 1].map((i) => (
                   <div
                     key={i}
-                    className="xp-panel p-3 h-[196px] space-y-2 animate-pulse"
+                    className="rounded-lg border-2 border-[#f0c020]/50 bg-[#171b19] p-3 h-[232px] space-y-2 animate-pulse"
                   >
                     <div className="h-5 w-32 rounded bg-white/15" />
-                    {Array.from({ length: 4 }).map((__, r) => (
+                    {Array.from({ length: 5 }).map((__, r) => (
                       <div key={r} className="h-7 rounded bg-black/35" />
                     ))}
                   </div>

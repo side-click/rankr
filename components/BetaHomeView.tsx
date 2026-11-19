@@ -292,24 +292,19 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         }}
                         className="xp-panel p-3 border-t-2 space-y-2"
                       >
-                        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {div.logoUrl && (
-                              <img
-                                src={div.logoUrl}
-                                alt={div.divisionName}
-                                className="w-5 h-5 object-contain shrink-0"
-                              />
-                            )}
-                            <span
-                              style={{ color: div.primaryColor }}
-                              className="text-xs font-extrabold uppercase tracking-wider truncate"
-                            >
-                              {div.divisionName}
-                            </span>
-                          </div>
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#a6a89e] pr-4 shrink-0">
-                            Series
+                        <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
+                          {div.logoUrl && (
+                            <img
+                              src={div.logoUrl}
+                              alt={div.divisionName}
+                              className="w-5 h-5 object-contain shrink-0"
+                            />
+                          )}
+                          <span
+                            style={{ color: div.primaryColor }}
+                            className="text-xs font-extrabold uppercase tracking-wider truncate"
+                          >
+                            {div.divisionName}
                           </span>
                         </div>
                         <div className="space-y-1.5">
@@ -359,7 +354,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 <div className="space-y-2.5">
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
                     <Crown className="w-3.5 h-3.5" />
-                    <span>Top Performers (Rankr Rating)</span>
+                    <span>Top Performers</span>
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {data.divisionTopPerformers.map((div) => (
@@ -583,12 +578,22 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     )}
                     <div className="min-w-0">
                       <div className="wow-heading text-sm font-extrabold text-white tracking-wide truncate">
-                        {snap.divisionName}
+                        {snap.divisionName} Consensus
                       </div>
-                      <div className="text-[11px] font-semibold text-[#d6d3c4]">
-                        {snap.seasonName} • {snap.editionName} •{" "}
-                        {snap.submissionCount}{" "}
-                        {snap.submissionCount === 1 ? "ranking" : "rankings"}
+                      <div className="text-[11px] font-semibold text-[#d6d3c4] leading-snug">
+                        <div>
+                          {snap.seasonName} • {snap.editionName}
+                          <span className="hidden sm:inline">
+                            {" "}• {snap.submissionCount}{" "}
+                            {snap.submissionCount === 1
+                              ? "ranking"
+                              : "rankings"}
+                          </span>
+                        </div>
+                        <div className="sm:hidden">
+                          {snap.submissionCount}{" "}
+                          {snap.submissionCount === 1 ? "ranking" : "rankings"}
+                        </div>
                       </div>
                     </div>
                   </div>
