@@ -296,10 +296,10 @@ export function AdminTeamScoutingView({
               />
             )}
             <div>
-              <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white">
+              <h1 className="wow-heading text-3xl sm:text-4xl font-extrabold text-white">
                 {team.teamName}
               </h1>
-              <div className="text-xs font-bold text-[#f0c020]">
+              <div className="mt-1 text-sm font-bold text-[#f0c020]">
                 <span style={{ color: divTheme.accent_text_color }}>
                   {team.divisionName}
                 </span>{" "}
