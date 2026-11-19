@@ -13,6 +13,7 @@ import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
   type ScdlSeriesDetail,
+  type SheetSourceConfig,
 } from "@/utils/scdlSheetStats";
 
 export interface StatsContextQueryOptions {
@@ -34,6 +35,7 @@ export interface LoadedAdminStatsContext {
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
+  sheetConfig?: SheetSourceConfig;
 }
 
 export async function loadAdminStatsContext(
@@ -135,7 +137,7 @@ async function loadStatsContextInternal(
   ] = await Promise.all([
     supabase
       .from("seasons")
-      .select("id, name, slug, is_active, created_at, leagues ( name, logo_url )")
+      .select("*, leagues ( name, logo_url )")
       .order("created_at", { ascending: false }),
     supabase
       .from("divisions")
@@ -281,6 +283,18 @@ async function loadStatsContextInternal(
     });
   }
 
+  const seasonSheetRow = activeSeason as unknown as {
+    stats_sheet_id?: string | null;
+    stats_sheet_gids?: string[] | null;
+  } | null;
+  const sheetConfig: SheetSourceConfig | undefined =
+    seasonSheetRow?.stats_sheet_id || seasonSheetRow?.stats_sheet_gids?.length
+      ? {
+          sheetId: seasonSheetRow.stats_sheet_id,
+          gids: seasonSheetRow.stats_sheet_gids,
+        }
+      : undefined;
+
   return {
     authorized,
     missingTable,
@@ -300,6 +314,7 @@ async function loadStatsContextInternal(
     })),
     players: aggregatedPlayers,
     teams: aggregatedTeams,
+    sheetConfig,
   };
 }
 
@@ -320,8 +335,10 @@ export async function loadTeamScoutingData(
   if (!team) return null;
 
   const [sheetSummary, allSeries] = await Promise.all([
-    fetchScdlSheetStats(ctx.players, ctx.teams).catch(() => null),
-    fetchAllScdlSeries().catch(() => []),
+    fetchScdlSheetStats(ctx.players, ctx.teams, ctx.sheetConfig).catch(
+      () => null
+    ),
+    fetchAllScdlSeries(ctx.sheetConfig).catch(() => []),
   ]);
 
   const leagueTeam =

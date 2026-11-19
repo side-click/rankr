@@ -51,9 +51,11 @@ export default async function PublicStatsPage({
       : undefined;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
   const ctx = await loadPublicStatsContext(effectiveSeason);
-  const sheetSummary = await fetchScdlSheetStats(ctx.players, ctx.teams).catch(
-    () => null
-  );
+  const sheetSummary = await fetchScdlSheetStats(
+    ctx.players,
+    ctx.teams,
+    ctx.sheetConfig
+  ).catch(() => null);
 
   return (
     <AdminStatsDashboard

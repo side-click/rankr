@@ -17,6 +17,7 @@ export async function GET() {
   try {
     const ctx = await loadAdminStatsContext({ includeRiotStats: false });
     const summary = await fetchScdlSheetStats(ctx.players, ctx.teams, {
+      ...ctx.sheetConfig,
       bypassCache: true,
     });
     return NextResponse.json(summary);

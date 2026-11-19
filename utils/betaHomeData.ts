@@ -282,7 +282,8 @@ export async function loadBetaHomeData(
   if (statsCtx && statsCtx.teams.length > 0) {
     const sheetSummary = await fetchScdlSheetStats(
       statsCtx.players,
-      statsCtx.teams
+      statsCtx.teams,
+      statsCtx.sheetConfig
     ).catch(() => null);
 
     const activeTeams = sheetSummary?.teams ?? statsCtx.teams;
