@@ -103,7 +103,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Consensus
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    See what the hivemind is saying.
+                    See what the hivemind is saying
                   </div>
                 </div>
               </Link>

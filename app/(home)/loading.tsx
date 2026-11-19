@@ -26,7 +26,7 @@ export default function HomeLoading() {
                 },
                 {
                   title: "Consensus",
-                  desc: "See what the hivemind is saying.",
+                  desc: "See what the hivemind is saying",
                   icon: (
                     <Trophy className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),
