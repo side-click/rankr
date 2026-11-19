@@ -1,4 +1,11 @@
-import { Trophy } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  Copy,
+  Download,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 export default function ConsensusLoading() {
   return (
@@ -18,15 +25,21 @@ export default function ConsensusLoading() {
 
       {/* 3-Dropdown Selector Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {["League / Season", "Division", "Week / Edition"].map((label) => (
+        {[
+          { label: "League / Season", hasIcon: true },
+          { label: "Division", hasIcon: true },
+          { label: "Edition", hasIcon: false },
+        ].map((item) => (
           <div
-            key={label}
+            key={item.label}
             className="rounded-xl border border-white/15 bg-[#151d1a]/95 px-3.5 py-3 flex items-center gap-3 animate-pulse"
           >
-            <div className="w-9 h-9 rounded-lg bg-white/10 shrink-0" />
+            {item.hasIcon && (
+              <div className="w-9 h-9 rounded-lg bg-white/10 shrink-0" />
+            )}
             <div className="space-y-1.5 flex-1">
               <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                {label}
+                {item.label}
               </div>
               <div className="h-3.5 w-32 rounded bg-white/15" />
             </div>
@@ -37,18 +50,23 @@ export default function ConsensusLoading() {
       {/* Voting Panel + Action Toolbar Skeleton */}
       <div className="h-10 rounded-lg border border-white/10 bg-black/30 animate-pulse" />
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="xp-btn text-xs px-3 py-1.5 pointer-events-none opacity-65">
-          Hide Change
+      <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+        <span className="xp-btn xp-btn-primary text-xs pointer-events-none opacity-75">
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          <span>Hide Change</span>
         </span>
-        <span className="xp-btn text-xs px-3 py-1.5 pointer-events-none opacity-65">
-          Show Voter Ranks
+        <span className="xp-btn text-xs pointer-events-none opacity-75">
+          <Users className="w-3.5 h-3.5" />
+          <span>Show Voter Ranks</span>
+          <ChevronDown className="w-3.5 h-3.5" />
         </span>
-        <span className="xp-btn text-xs px-3 py-1.5 pointer-events-none opacity-65">
-          Copy Link
+        <span className="xp-btn text-xs pointer-events-none opacity-75">
+          <Copy className="w-3.5 h-3.5" />
+          <span>Copy Link</span>
         </span>
-        <span className="xp-btn xp-btn-gold text-xs px-3 py-1.5 pointer-events-none opacity-65">
-          Export PNG
+        <span className="xp-btn xp-btn-gold text-xs pointer-events-none opacity-75">
+          <Download className="w-3.5 h-3.5" />
+          <span>Export PNG</span>
         </span>
       </div>
 

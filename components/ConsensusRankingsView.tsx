@@ -514,10 +514,8 @@ export function ConsensusRankingsView({
               <button
                 type="button"
                 onClick={() => setShowChange((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
-                  showChange
-                    ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
-                    : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                className={`xp-btn text-xs ${
+                  showChange ? "xp-btn-primary" : ""
                 }`}
               >
                 <ArrowUpDown className="w-3.5 h-3.5" />
@@ -526,10 +524,8 @@ export function ConsensusRankingsView({
               <button
                 type="button"
                 onClick={() => setShowBreakdown((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
-                  showBreakdown
-                    ? "bg-[#2a2210] border-[#f0c020] text-[#f0c020]"
-                    : "bg-black/40 border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white"
+                className={`xp-btn text-xs ${
+                  showBreakdown ? "xp-btn-primary" : ""
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
@@ -545,7 +541,7 @@ export function ConsensusRankingsView({
           <button
             type="button"
             onClick={handleCopyLink}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-black/40 border border-white/15 text-[#d6d3c4] hover:border-white/35 hover:text-white transition cursor-pointer"
+            className="xp-btn text-xs"
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-[#7cd438]" />
@@ -559,7 +555,7 @@ export function ConsensusRankingsView({
               type="button"
               onClick={handleExportPng}
               disabled={exporting}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold bg-gradient-to-b from-[#f0c020] to-[#c89b3c] text-[#141714] hover:brightness-110 transition shadow-[0_0_16px_rgba(240,192,32,0.28)] cursor-pointer disabled:opacity-60"
+              className="xp-btn xp-btn-gold text-xs disabled:opacity-60"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{exporting ? "Exporting..." : "Export PNG"}</span>
