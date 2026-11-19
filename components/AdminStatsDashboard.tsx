@@ -176,6 +176,15 @@ create policy "Admins can manage riot_player_stats" on public.riot_player_stats 
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));`;
 
+const DEFAULT_SHAREABLE_CARD_KEYS: string[] = [
+  "KDA",
+  "Kill Participation",
+  "CS / Min",
+  "Vision / Min",
+  "Gold Diff @15",
+  "Solo Kills",
+];
+
 export function AdminStatsDashboard({
   missingTable,
   ddVersion,
@@ -215,14 +224,9 @@ export function AdminStatsDashboard({
   const [leaderboardStyle, setLeaderboardStyle] = useState<
     "standard" | "shareable"
   >("standard");
-  const [shareableCardKeys, setShareableCardKeys] = useState<(string | null)[]>([
-    "KDA",
-    "Kill Participation",
-    "CS / Min",
-    "Vision / Min",
-    "Gold Diff @15",
-    "Solo Kills",
-  ]);
+  const [shareableCardKeys, setShareableCardKeys] = useState<(string | null)[]>(
+    DEFAULT_SHAREABLE_CARD_KEYS
+  );
   const [draggedPill, setDraggedPill] = useState<{
     title: string;
     fromSlot: number | null;
@@ -1691,12 +1695,24 @@ export function AdminStatsDashboard({
                   <div className="xp-panel p-3 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                     <div className="flex flex-col sm:flex-row gap-4 flex-1 min-w-0">
                       <div className="space-y-1.5 shrink-0 sm:w-[270px]">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
-                          Shareable 2×3 Layout (
-                          <strong className="text-[#f0c020]">
-                            {selectedShareableCards.length}/6
-                          </strong>
-                          )
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
+                            Shareable 2×3 Layout (
+                            <strong className="text-[#f0c020]">
+                              {selectedShareableCards.length}/6
+                            </strong>
+                            )
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShareableCardKeys(DEFAULT_SHAREABLE_CARD_KEYS)
+                            }
+                            title="Reset to default 2×3 layout"
+                            className="xp-btn text-[10px] px-2 py-0.5"
+                          >
+                            Reset
+                          </button>
                         </div>
                         <div className="grid grid-cols-2 gap-1.5 bg-black/35 p-2 rounded border border-white/10">
                           {shareableCardKeys.map((slotKey, slotIdx) => {
@@ -1789,7 +1805,7 @@ export function AdminStatsDashboard({
                         className="space-y-1.5 flex-1 min-w-0"
                       >
                         <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
-                          Available Stat Pills — drag into a slot (or click)
+                          Available Stat Cards - Drag and Drop
                         </div>
                         <div className="flex flex-wrap gap-1.5 p-2 rounded border border-white/10 bg-black/25 min-h-[58px] items-start content-start">
                           {availableShareableCards.length > 0 ? (
