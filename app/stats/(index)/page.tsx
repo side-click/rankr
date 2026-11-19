@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
-import { loadPublicStatsContext } from "@/utils/riotStatsServer";
+import {
+  loadPublicSoloPrioMap,
+  loadPublicStatsContext,
+} from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
@@ -53,11 +56,12 @@ export default async function PublicStatsPage({
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     includeRiotStats: false,
   });
-  const sheetSummary = await fetchScdlSheetStats(
-    ctx.players,
-    ctx.teams,
-    ctx.sheetConfig
-  ).catch(() => null);
+  const [sheetSummary, soloPrioMap] = await Promise.all([
+    fetchScdlSheetStats(ctx.players, ctx.teams, ctx.sheetConfig).catch(
+      () => null
+    ),
+    loadPublicSoloPrioMap(ctx.players).catch(() => undefined),
+  ]);
 
   return (
     <AdminStatsDashboard
@@ -72,6 +76,7 @@ export default async function PublicStatsPage({
       divisions={ctx.divisions}
       players={sheetSummary ? [] : ctx.players}
       teams={sheetSummary ? [] : ctx.teams}
+      soloPrioMap={soloPrioMap}
       isAdminView={false}
       initialDivision={params.division}
       initialTab={initialTab}

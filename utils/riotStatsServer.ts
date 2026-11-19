@@ -6,6 +6,8 @@ import { getLatestDdragonVersion } from "@/utils/riotApi";
 import {
   aggregatePlayerStats,
   computeRoleNormalizedRatings,
+  getPriorityPickRanks,
+  getRoleFilteredSoloChampions,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
   type RiotPlayerStatRow,
@@ -101,6 +103,79 @@ const loadCachedPublicStatsContext = unstable_cache(
   ["public-stats-context"],
   { revalidate: 60, tags: ["public-stats"] }
 );
+
+export interface SoloPrioEntry {
+  soloTopPrioChamp: string | null;
+  masteryTop4?: { championName: string; championPoints: number }[];
+}
+
+const loadCachedSoloPrioMap = unstable_cache(
+  async (
+    rosterKeyRoles: string[]
+  ): Promise<Record<string, SoloPrioEntry>> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("riot_player_stats")
+      .select("player_key, role, matches, mastery_top4");
+
+    const rowByKey = new Map(
+      (data ?? []).map((r) => [
+        String(r.player_key ?? "").toLowerCase(),
+        {
+          role: (r.role as string | null) ?? null,
+          matches: Array.isArray(r.matches)
+            ? (r.matches as RiotPlayerStatRow["matches"])
+            : [],
+          masteryTop4: Array.isArray(r.mastery_top4)
+            ? (r.mastery_top4 as {
+                championName: string;
+                championPoints: number;
+              }[])
+            : undefined,
+        },
+      ])
+    );
+
+    const result: Record<string, SoloPrioEntry> = {};
+    for (const entry of rosterKeyRoles) {
+      const sep = entry.lastIndexOf(":");
+      const playerKey = sep >= 0 ? entry.slice(0, sep) : entry;
+      const role = sep >= 0 ? entry.slice(sep + 1) : "";
+      const row = rowByKey.get(playerKey.toLowerCase());
+      if (!row) continue;
+
+      const soloChamps = getRoleFilteredSoloChampions(
+        row.matches,
+        role || row.role || "mid",
+        7
+      );
+      const soloPrio = getPriorityPickRanks(soloChamps, row.masteryTop4, "solo");
+      let soloTopPrioChamp: string | null = null;
+      for (const [champ, rank] of soloPrio.entries()) {
+        if (rank === 1) {
+          soloTopPrioChamp = champ;
+          break;
+        }
+      }
+      result[playerKey] = {
+        soloTopPrioChamp,
+        masteryTop4: row.masteryTop4,
+      };
+    }
+    return result;
+  },
+  ["public-solo-prio-map-v1"],
+  { revalidate: 300, tags: ["public-stats"] }
+);
+
+export async function loadPublicSoloPrioMap(
+  players: { playerKey: string; role: string }[]
+): Promise<Record<string, SoloPrioEntry>> {
+  const rosterKeyRoles = players
+    .map((p) => `${p.playerKey}:${p.role}`)
+    .sort();
+  return loadCachedSoloPrioMap(rosterKeyRoles);
+}
 
 export async function loadPublicStatsContext(
   seasonSlug?: string,

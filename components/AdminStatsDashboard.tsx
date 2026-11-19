@@ -41,9 +41,12 @@ import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import {
   computeRoleNormalizedRatings,
   formatMinutesSeconds,
+  getPriorityPickRanks,
+  getRoleFilteredSoloChampions,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
 } from "@/utils/riotStatsAggregation";
+import type { SoloPrioEntry } from "@/utils/riotStatsServer";
 import type { UnrosteredSheetPlayer } from "@/utils/scdlSheetStats";
 
 interface DivisionItem {
@@ -129,6 +132,7 @@ interface AdminStatsDashboardProps {
   divisions: DivisionItem[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
+  soloPrioMap?: Record<string, SoloPrioEntry>;
   isAdminView?: boolean;
   initialDivision?: string;
   initialTab?: "players" | "teams" | "division";
@@ -196,6 +200,7 @@ export function AdminStatsDashboard({
   divisions,
   players,
   teams,
+  soloPrioMap,
   isAdminView = true,
   initialDivision,
   initialTab,
@@ -1307,7 +1312,53 @@ export function AdminStatsDashboard({
               <div className="p-3">
                 <div className="flex overflow-x-auto snap-x snap-mandatory gap-2.5 pb-1 md:grid md:grid-cols-5 md:overflow-visible md:pb-0">
                   {firstTeamAllPro.map(({ roleMeta, player }) => {
-                    const signatureChamp = player.topChampions[0]?.name;
+                    const soloEntry = soloPrioMap?.[player.playerKey];
+                    const soloPlayerFallback =
+                      !soloEntry && players.length > 0
+                        ? players.find((p) => p.playerKey === player.playerKey)
+                        : undefined;
+                    const masteryTop4 =
+                      soloEntry?.masteryTop4 ?? soloPlayerFallback?.masteryTop4;
+
+                    const leaguePrio = getPriorityPickRanks(
+                      player.topChampions,
+                      masteryTop4,
+                      "league"
+                    );
+                    let signatureChamp: string | undefined;
+                    for (const [champ, rank] of leaguePrio.entries()) {
+                      if (rank === 1) {
+                        signatureChamp = champ;
+                        break;
+                      }
+                    }
+
+                    if (!signatureChamp) {
+                      if (soloEntry?.soloTopPrioChamp) {
+                        signatureChamp = soloEntry.soloTopPrioChamp;
+                      } else if (soloPlayerFallback) {
+                        const soloChamps = getRoleFilteredSoloChampions(
+                          soloPlayerFallback.matches,
+                          soloPlayerFallback.role,
+                          7
+                        );
+                        const soloPrio = getPriorityPickRanks(
+                          soloChamps,
+                          masteryTop4,
+                          "solo"
+                        );
+                        for (const [champ, rank] of soloPrio.entries()) {
+                          if (rank === 1) {
+                            signatureChamp = champ;
+                            break;
+                          }
+                        }
+                      }
+                    }
+
+                    if (!signatureChamp) {
+                      signatureChamp = player.topChampions[0]?.name;
+                    }
                     return (
                       <Link
                         key={roleMeta.key}
