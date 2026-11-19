@@ -100,6 +100,23 @@ function RankrLogoIcon({ className = "w-6 h-5" }: { className?: string }) {
   );
 }
 
+function CreepScoreIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 2.2L20.5 13.5L12 21.8L3.5 13.5L12 2.2ZM7.4 11.4L10.6 12.6L9.1 14.9L7.4 11.4ZM16.6 11.4L14.9 14.9L13.4 12.6L16.6 11.4ZM10.4 15.8L12 18.4L13.6 15.8H10.4Z"
+      />
+    </svg>
+  );
+}
+
 interface AdminStatsDashboardProps {
   missingTable: boolean;
   hasRiotKey: boolean;
@@ -1236,12 +1253,24 @@ export function AdminStatsDashboard({
             fmt: (p) => p.kda.toFixed(2),
           };
 
-          const defaultGridCards: LeaderboardCard[] = [
+          const standardGridCards: LeaderboardCard[] = [
+            // Row 1 (per min): Gold/min, CS/min, Damage/min, Vision/min
+            {
+              title: "Gold / Min",
+              icons: (
+                <>
+                  <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
+              rows: topGpm,
+              fmt: (p) => Math.round(p.gpm).toString(),
+            },
             {
               title: "CS / Min",
               icons: (
                 <>
-                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <CreepScoreIcon className="w-3.5 h-3.5 text-[#f0c020]" />
                   <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
                 </>
               ),
@@ -1260,17 +1289,6 @@ export function AdminStatsDashboard({
               fmt: (p) => Math.round(p.dpm).toString(),
             },
             {
-              title: "Kill Participation",
-              icons: (
-                <>
-                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
-                </>
-              ),
-              rows: topKp,
-              fmt: (p) => `${p.kpPct.toFixed(1)}%`,
-            },
-            {
               title: "Vision / Min",
               icons: (
                 <>
@@ -1281,6 +1299,7 @@ export function AdminStatsDashboard({
               rows: topVision,
               fmt: (p) => p.visionPerMin.toFixed(2),
             },
+            // Row 2: Gold Diff @15, First Blood %, Team Damage %, Kill Participation
             ...(topGoldDiff15.length > 0
               ? [
                   {
@@ -1299,20 +1318,17 @@ export function AdminStatsDashboard({
                   },
                 ]
               : []),
-            {
-              title: "Gold / Min",
-              icons: (
-                <>
-                  <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
-                </>
-              ),
-              rows: topGpm,
-              fmt: (p) => Math.round(p.gpm).toString(),
-            },
-          ];
-
-          const expandedGridCards: LeaderboardCard[] = [
+            ...(topFirstBlood.length > 0
+              ? [
+                  {
+                    title: "First Blood %",
+                    icons: <Droplet className="w-3.5 h-3.5 text-[#f0c020]" />,
+                    rows: topFirstBlood,
+                    fmt: (p: AggregatedPlayerStats) =>
+                      `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
+                  },
+                ]
+              : []),
             {
               title: "Team Damage %",
               icons: (
@@ -1324,6 +1340,18 @@ export function AdminStatsDashboard({
               rows: topDmgShare,
               fmt: (p) => `${p.damageSharePct.toFixed(1)}%`,
             },
+            {
+              title: "Kill Participation",
+              icons: (
+                <>
+                  <TeamGroupIcon className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
+              rows: topKp,
+              fmt: (p) => `${p.kpPct.toFixed(1)}%`,
+            },
+            // Row 3: Solo Kills, Kills/Game, Deaths/Game, Assists/Game
             ...(topSoloKills.length > 0
               ? [
                   {
@@ -1336,17 +1364,6 @@ export function AdminStatsDashboard({
                     ),
                     rows: topSoloKills,
                     fmt: (p: AggregatedPlayerStats) => `${p.soloKills}`,
-                  },
-                ]
-              : []),
-            ...(topFirstBlood.length > 0
-              ? [
-                  {
-                    title: "First Blood %",
-                    icons: <Droplet className="w-3.5 h-3.5 text-[#f0c020]" />,
-                    rows: topFirstBlood,
-                    fmt: (p: AggregatedPlayerStats) =>
-                      `${(p.firstBloodPct ?? 0).toFixed(0)}%`,
                   },
                 ]
               : []),
@@ -1368,11 +1385,6 @@ export function AdminStatsDashboard({
               rows: topAssists,
               fmt: (p) => p.assistsPerGame.toFixed(1),
             },
-          ];
-
-          const standardGridCards: LeaderboardCard[] = [
-            ...defaultGridCards,
-            ...expandedGridCards,
           ];
 
           const allGridCards: LeaderboardCard[] = [
