@@ -326,12 +326,12 @@ export async function PlayerStatsContent({
                 </span>
               </div>
               <div className="mt-1 space-y-0.5 text-sm">
-                <div className="flex items-center gap-1.5 font-extrabold text-[#f0ede0]">
+                <div className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-[#f0ede0]">
                   {soloPlayer.teamLogoUrl && (
                     <img
                       src={soloPlayer.teamLogoUrl}
                       alt={soloPlayer.teamName}
-                      className="w-4 h-4 object-contain shrink-0"
+                      className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
                     />
                   )}
                   <span>{soloPlayer.teamName}</span>
