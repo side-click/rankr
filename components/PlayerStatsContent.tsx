@@ -299,7 +299,7 @@ export async function PlayerStatsContent({
         <div className="flex items-center gap-1.5 text-[11px] text-[#a6a89e]">
           <Calendar className="w-3.5 h-3.5 text-[#f0c020]" />
           <span>
-            Last SoloQ Sync:{" "}
+            Last Solo/Duo Sync:{" "}
             <strong className="text-[#f0ede0]">
               <LocalTimestamp iso={syncIso} fallback="Not synced yet" />
             </strong>
@@ -587,7 +587,7 @@ export async function PlayerStatsContent({
           {/* 2. Role-Filtered SoloQ Top 7 */}
           <div className="xp-panel p-3.5 space-y-2.5 md:col-span-1 lg:col-span-5">
             <h3
-              title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
+              title="Analyzes up to the 200 most recent Solo/Duo games (within the last year)"
               className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-flex items-center gap-1.5"
             >
               <span>Solo/Duo Top 7 ({roleMeta.label})</span>
@@ -638,7 +638,7 @@ export async function PlayerStatsContent({
               </div>
             ) : (
               <div className="text-xs text-[#a6a89e] italic">
-                No {roleMeta.label} SoloQ games synced.
+                No {roleMeta.label} Solo/Duo games synced.
               </div>
             )}
           </div>

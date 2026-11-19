@@ -272,7 +272,7 @@ export function AdminTeamScoutingView({
         <div className="text-[11px] text-[#a6a89e] flex items-center gap-1.5">
           <Calendar className="w-3.5 h-3.5 text-[#f0c020]" />
           <span>
-            Last SoloQ Sync:{" "}
+            Last Solo/Duo Sync:{" "}
             <strong className="text-[#f0ede0]">
               <LocalTimestamp iso={latestSyncIso} fallback="Not synced yet" />
             </strong>
@@ -497,7 +497,7 @@ export function AdminTeamScoutingView({
                   {/* 2. SoloQ Ranked Top 7 (Role-Filtered) */}
                   <div>
                     <div
-                      title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
+                      title="Analyzes up to the 200 most recent Solo/Duo games (within the last year)"
                       className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-flex items-center gap-1"
                     >
                       <span>Solo/Duo Top 7 ({roleMeta.label})</span>
@@ -558,7 +558,7 @@ export function AdminTeamScoutingView({
                       </div>
                     ) : (
                       <div className="text-xs text-[#a6a89e] italic">
-                        No SoloQ games synced
+                        No Solo/Duo games synced
                       </div>
                     )}
                   </div>
