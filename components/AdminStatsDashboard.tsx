@@ -1833,11 +1833,11 @@ export function AdminStatsDashboard({
 
               {leaderboardStyle === "standard" ? (
                 <div className="space-y-4">
-                  <div className="flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 py-2">
-                    <div className="w-full max-w-[460px]">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 lg:gap-8 py-2">
+                    <div className="w-full md:flex-1 max-w-[460px]">
                       {featuredRatingCard}
                     </div>
-                    <div className="w-full sm:max-w-[270px]">
+                    <div className="w-full sm:max-w-[270px] md:w-[240px] lg:w-[270px] md:shrink-0">
                       {renderCard(kdaCard, true)}
                     </div>
                   </div>

@@ -195,9 +195,9 @@ function StatsLoadingSkeletonInner() {
             </div>
 
             <div className="p-3 sm:p-4 space-y-4">
-              <div className="flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 py-2">
-                <div className="w-full max-w-[460px] h-[196px] rounded-lg border-2 border-[#f0c020]/50 bg-[#171b19] animate-pulse" />
-                <div className="w-full sm:max-w-[270px] h-[170px] rounded border border-white/15 bg-black/30 animate-pulse" />
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 lg:gap-8 py-2">
+                <div className="w-full md:flex-1 max-w-[460px] h-[196px] rounded-lg border-2 border-[#f0c020]/50 bg-[#171b19] animate-pulse" />
+                <div className="w-full sm:max-w-[270px] md:w-[240px] lg:w-[270px] md:shrink-0 h-[170px] rounded border border-white/15 bg-black/30 animate-pulse" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
