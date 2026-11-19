@@ -817,11 +817,11 @@ export function AdminTeamScoutingView({
                     )}`}
                     className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3.5"
                   >
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2.5">
-                      {/* Left half: <winlossbadge> on left, Blue: <logo> <name> centered */}
-                      <div className="flex flex-wrap items-center justify-between lg:justify-center lg:relative lg:px-28 gap-2 min-h-[28px] min-w-0">
+                    {/* Mobile / Tablet Header (< lg) */}
+                    <div className="lg:hidden space-y-2 mb-2.5">
+                      <div className="flex items-center justify-between gap-2">
                         <span
-                          className={`lg:absolute lg:left-0 px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase shrink-0 ${
+                          className={`px-2.5 py-0.5 rounded text-xs font-extrabold uppercase shrink-0 ${
                             seriesWon
                               ? "bg-[#7cd438]/20 text-[#7cd438] border border-[#7cd438]/40"
                               : "bg-[#ff857a]/20 text-[#ff857a] border border-[#ff857a]/40"
@@ -829,7 +829,62 @@ export function AdminTeamScoutingView({
                         >
                           {seriesWon ? "Win" : "Loss"} {myWins}-{oppWins}
                         </span>
-                        <span className="inline-flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-[#5ea3ff] min-w-0">
+                        <div className="flex items-center gap-2.5 text-xs text-[#a6a89e] shrink-0">
+                          <span className="font-bold text-[#f0c020]">
+                            {s.roundLabel}
+                          </span>
+                          {firstGame && (
+                            <span className="inline-flex items-center gap-1 tabular-nums">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatMinutesSeconds(
+                                firstGame.gameDuration / 60
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm sm:text-base">
+                        <span className="inline-flex items-center gap-1.5 font-extrabold text-[#5ea3ff]">
+                          <span>Blue:</span>
+                          {blueLogo && (
+                            <img
+                              src={blueLogo}
+                              alt={blueTeamName}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                            />
+                          )}
+                          <span>{blueTeamName}</span>
+                        </span>
+                        <span className="font-bold text-[#a6a89e]">vs.</span>
+                        <span className="inline-flex items-center gap-1.5 font-extrabold text-[#ff7b72]">
+                          <span>Red:</span>
+                          {redLogo && (
+                            <img
+                              src={redLogo}
+                              alt={redTeamName}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                            />
+                          )}
+                          <span>{redTeamName}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Desktop Header (lg+) */}
+                    <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2.5">
+                      {/* Left half: <winlossbadge> on left, Blue: <logo> <name> centered */}
+                      <div className="flex items-center justify-center relative px-28 gap-2 min-h-[28px] min-w-0">
+                        <span
+                          className={`absolute left-0 px-2.5 py-0.5 rounded text-sm font-extrabold uppercase shrink-0 ${
+                            seriesWon
+                              ? "bg-[#7cd438]/20 text-[#7cd438] border border-[#7cd438]/40"
+                              : "bg-[#ff857a]/20 text-[#ff857a] border border-[#ff857a]/40"
+                          }`}
+                        >
+                          {seriesWon ? "Win" : "Loss"} {myWins}-{oppWins}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-base font-extrabold text-[#5ea3ff] min-w-0">
                           <span className="shrink-0">Blue:</span>
                           {blueLogo && (
                             <img
@@ -843,13 +898,13 @@ export function AdminTeamScoutingView({
                       </div>
 
                       {/* Center: vs. */}
-                      <span className="text-sm sm:text-base font-bold text-[#a6a89e] lg:text-center">
+                      <span className="text-base font-bold text-[#a6a89e] text-center">
                         vs.
                       </span>
 
                       {/* Right half: Red: <logo> <name> centered, <round#> <gametime> on right */}
-                      <div className="flex flex-wrap items-center justify-between lg:justify-center lg:relative lg:px-32 gap-2 min-h-[28px] min-w-0">
-                        <span className="inline-flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-[#ff7b72] min-w-0">
+                      <div className="flex items-center justify-center relative px-32 gap-2 min-h-[28px] min-w-0">
+                        <span className="inline-flex items-center gap-1.5 text-base font-extrabold text-[#ff7b72] min-w-0">
                           <span className="shrink-0">Red:</span>
                           {redLogo && (
                             <img
@@ -860,7 +915,7 @@ export function AdminTeamScoutingView({
                           )}
                           <span className="truncate">{redTeamName}</span>
                         </span>
-                        <div className="lg:absolute lg:right-0 flex items-center gap-2.5 text-xs sm:text-sm text-[#a6a89e] shrink-0">
+                        <div className="absolute right-0 flex items-center gap-2.5 text-sm text-[#a6a89e] shrink-0">
                           <span className="font-bold text-[#f0c020]">
                             {s.roundLabel}
                           </span>
@@ -898,27 +953,29 @@ export function AdminTeamScoutingView({
                           className="mt-2.5 pt-3 border-t border-white/10 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-0"
                         >
                           {/* Blue Side Picks & Bans (centered in left half) */}
-                          <div className="flex flex-wrap items-center justify-center gap-1 lg:pr-5 lg:border-r lg:border-white/15">
-                            {s.games.length > 1 && (
-                              <span className="text-xs font-extrabold text-[#5ea3ff] mr-1">
-                                G{gIdx + 1}
+                          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 lg:pr-5 lg:border-r lg:border-white/15">
+                            <div className="flex items-center gap-1 shrink-0">
+                              {s.games.length > 1 && (
+                                <span className="text-xs font-extrabold text-[#5ea3ff] mr-1">
+                                  G{gIdx + 1}
+                                </span>
+                              )}
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#5ea3ff] mr-1">
+                                Picks:
                               </span>
-                            )}
-                            <span className="text-xs font-bold uppercase tracking-wider text-[#5ea3ff] mr-1">
-                              Picks:
-                            </span>
-                            {blueChamps.map((ch, i) => (
-                              <img
-                                key={`${ch}-${i}`}
-                                src={getChampionIconUrl(ch, ddVersion)}
-                                alt={ch}
-                                title={ch}
-                                className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#5ea3ff]/40 object-cover"
-                              />
-                            ))}
+                              {blueChamps.map((ch, i) => (
+                                <img
+                                  key={`${ch}-${i}`}
+                                  src={getChampionIconUrl(ch, ddVersion)}
+                                  alt={ch}
+                                  title={ch}
+                                  className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#5ea3ff]/40 object-cover"
+                                />
+                              ))}
+                            </div>
                             {g.draft && g.draft.blueBans.length > 0 && (
-                              <>
-                                <span className="h-7 w-px bg-white/15 mx-1.5" />
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="hidden sm:inline-block h-7 w-px bg-white/15 mr-1.5" />
                                 <span className="text-xs font-bold uppercase tracking-wider text-[#a6a89e] mr-1">
                                   Bans:
                                 </span>
@@ -931,27 +988,29 @@ export function AdminTeamScoutingView({
                                     className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                   />
                                 ))}
-                              </>
+                              </div>
                             )}
                           </div>
 
                           {/* Red Side Picks & Bans (centered in right half) */}
-                          <div className="flex flex-wrap items-center justify-center gap-1 lg:pl-5">
-                            <span className="text-xs font-bold uppercase tracking-wider text-[#ff7b72] mr-1">
-                              Picks:
-                            </span>
-                            {redChamps.map((ch, i) => (
-                              <img
-                                key={`${ch}-${i}`}
-                                src={getChampionIconUrl(ch, ddVersion)}
-                                alt={ch}
-                                title={ch}
-                                className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#ff7b72]/40 object-cover"
-                              />
-                            ))}
+                          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 lg:pl-5">
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#ff7b72] mr-1">
+                                Picks:
+                              </span>
+                              {redChamps.map((ch, i) => (
+                                <img
+                                  key={`${ch}-${i}`}
+                                  src={getChampionIconUrl(ch, ddVersion)}
+                                  alt={ch}
+                                  title={ch}
+                                  className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#ff7b72]/40 object-cover"
+                                />
+                              ))}
+                            </div>
                             {g.draft && g.draft.redBans.length > 0 && (
-                              <>
-                                <span className="h-7 w-px bg-white/15 mx-1.5" />
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="hidden sm:inline-block h-7 w-px bg-white/15 mr-1.5" />
                                 <span className="text-xs font-bold uppercase tracking-wider text-[#a6a89e] mr-1">
                                   Bans:
                                 </span>
@@ -964,7 +1023,7 @@ export function AdminTeamScoutingView({
                                     className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                   />
                                 ))}
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>
