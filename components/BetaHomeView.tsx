@@ -268,7 +268,110 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
         </div>
       </div>
 
-      {/* 2. League Stats */}
+      {/* 2. Consensus Power Rankings Snapshot */}
+      {data.consensusSnapshots.length > 0 && (
+        <RetroWindow title="Consensus Power Rankings" theme="scdl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {data.consensusSnapshots.map((snap) => (
+              <div
+                key={`${snap.seasonSlug}-${snap.divisionSlug}`}
+                className="rounded-2xl border-2 border-[#c89b3c]/80 overflow-hidden bg-[#181e1c] shadow-lg"
+              >
+                <div
+                  style={{
+                    background: `linear-gradient(135deg, ${snap.primaryColor}66 0%, #121615 72%)`,
+                  }}
+                  className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#c89b3c]/45"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {snap.divisionLogoUrl && (
+                      <img
+                        src={snap.divisionLogoUrl}
+                        alt={snap.divisionName}
+                        className="w-7 h-7 object-contain shrink-0 drop-shadow"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="wow-heading text-sm font-extrabold text-white tracking-wide truncate">
+                        {snap.divisionName}
+                      </div>
+                      <div className="text-[11px] font-semibold text-[#d6d3c4] leading-snug">
+                        <div>
+                          {snap.seasonName} • {snap.editionName}
+                          <span className="hidden sm:inline">
+                            {" "}• {snap.submissionCount}{" "}
+                            {snap.submissionCount === 1
+                              ? "ranking"
+                              : "rankings"}
+                          </span>
+                        </div>
+                        <div className="sm:hidden">
+                          {snap.submissionCount}{" "}
+                          {snap.submissionCount === 1 ? "ranking" : "rankings"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/consensus?season=${encodeURIComponent(
+                      snap.seasonSlug
+                    )}&division=${encodeURIComponent(snap.divisionSlug)}`}
+                    className="xp-btn text-xs shrink-0"
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
+                    <span>View All</span>
+                  </Link>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {snap.topTeams.map((t, idx) => {
+                    const rankColor = getRankColor(idx, 8);
+                    return (
+                      <div
+                        key={`${snap.divisionSlug}-${t.rank}-${t.teamName}`}
+                        style={{ backgroundColor: rankColor.rowBg }}
+                        className="flex items-center justify-between gap-3 px-4 py-2.5"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative flex flex-col items-center shrink-0">
+                            {idx === 0 && (
+                              <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5 drop-shadow" />
+                            )}
+                            <span
+                              style={{ backgroundColor: rankColor.badgeBg }}
+                              className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-sm font-black text-white tabular-nums shadow-sm"
+                            >
+                              {t.rank}
+                            </span>
+                          </div>
+                          {t.teamLogoUrl && (
+                            <img
+                              src={t.teamLogoUrl}
+                              alt={t.teamName}
+                              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0 drop-shadow"
+                            />
+                          )}
+                          <span className="text-sm sm:text-base font-extrabold text-white truncate">
+                            {t.teamName}
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-lg bg-black/45 border border-white/15 text-sm font-bold text-[#f0ede0] tabular-nums shrink-0">
+                          {t.averageRank.toFixed(2)}{" "}
+                          <span className="text-[11px] font-semibold text-[#a6a89e]">
+                            avg
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </RetroWindow>
+      )}
+
+      {/* 3. Season Stats */}
       {(data.recentMatches.length > 0 ||
         data.divisionStandings.length > 0 ||
         data.divisionTopPerformers.length > 0) && (
@@ -548,109 +651,6 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
               <BarChart3 className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
               <span>Full Stats Dashboard</span>
             </Link>
-          </div>
-        </RetroWindow>
-      )}
-
-      {/* 3. Consensus Power Rankings Snapshot */}
-      {data.consensusSnapshots.length > 0 && (
-        <RetroWindow title="Consensus Power Rankings" theme="scdl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.consensusSnapshots.map((snap) => (
-              <div
-                key={`${snap.seasonSlug}-${snap.divisionSlug}`}
-                className="rounded-2xl border-2 border-[#c89b3c]/80 overflow-hidden bg-[#181e1c] shadow-lg"
-              >
-                <div
-                  style={{
-                    background: `linear-gradient(135deg, ${snap.primaryColor}66 0%, #121615 72%)`,
-                  }}
-                  className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#c89b3c]/45"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {snap.divisionLogoUrl && (
-                      <img
-                        src={snap.divisionLogoUrl}
-                        alt={snap.divisionName}
-                        className="w-7 h-7 object-contain shrink-0 drop-shadow"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <div className="wow-heading text-sm font-extrabold text-white tracking-wide truncate">
-                        {snap.divisionName}
-                      </div>
-                      <div className="text-[11px] font-semibold text-[#d6d3c4] leading-snug">
-                        <div>
-                          {snap.seasonName} • {snap.editionName}
-                          <span className="hidden sm:inline">
-                            {" "}• {snap.submissionCount}{" "}
-                            {snap.submissionCount === 1
-                              ? "ranking"
-                              : "rankings"}
-                          </span>
-                        </div>
-                        <div className="sm:hidden">
-                          {snap.submissionCount}{" "}
-                          {snap.submissionCount === 1 ? "ranking" : "rankings"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/consensus?season=${encodeURIComponent(
-                      snap.seasonSlug
-                    )}&division=${encodeURIComponent(snap.divisionSlug)}`}
-                    className="xp-btn text-xs shrink-0"
-                  >
-                    <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
-                    <span>View All</span>
-                  </Link>
-                </div>
-
-                <div className="divide-y divide-white/10">
-                  {snap.topTeams.map((t, idx) => {
-                    const rankColor = getRankColor(idx, 8);
-                    return (
-                      <div
-                        key={`${snap.divisionSlug}-${t.rank}-${t.teamName}`}
-                        style={{ backgroundColor: rankColor.rowBg }}
-                        className="flex items-center justify-between gap-3 px-4 py-2.5"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative flex flex-col items-center shrink-0">
-                            {idx === 0 && (
-                              <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5 drop-shadow" />
-                            )}
-                            <span
-                              style={{ backgroundColor: rankColor.badgeBg }}
-                              className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-sm font-black text-white tabular-nums shadow-sm"
-                            >
-                              {t.rank}
-                            </span>
-                          </div>
-                          {t.teamLogoUrl && (
-                            <img
-                              src={t.teamLogoUrl}
-                              alt={t.teamName}
-                              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0 drop-shadow"
-                            />
-                          )}
-                          <span className="text-sm sm:text-base font-extrabold text-white truncate">
-                            {t.teamName}
-                          </span>
-                        </div>
-                        <span className="px-2.5 py-1 rounded-lg bg-black/45 border border-white/15 text-sm font-bold text-[#f0ede0] tabular-nums shrink-0">
-                          {t.averageRank.toFixed(2)}{" "}
-                          <span className="text-[11px] font-semibold text-[#a6a89e]">
-                            avg
-                          </span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
           </div>
         </RetroWindow>
       )}
