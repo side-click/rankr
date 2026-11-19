@@ -1288,10 +1288,10 @@ export function AdminStatsDashboard({
                           <img
                             src={getChampionCenteredSplashUrl(signatureChamp)}
                             alt={signatureChamp}
-                            className="absolute inset-0 w-full h-full object-cover object-top opacity-45 group-hover:opacity-60 group-hover:scale-105 transition duration-300"
+                            className="absolute inset-0 w-full h-full object-cover object-top opacity-70 group-hover:opacity-85 group-hover:scale-105 transition duration-300"
                           />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b100e] via-[#0b100e]/65 to-black/30" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b100e]/90 via-[#0b100e]/40 to-transparent" />
 
                         <div className="relative z-10 flex items-center justify-between gap-1.5">
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/65 border border-white/15 text-[10px] font-extrabold uppercase tracking-wider text-[#e8e5d8]">
