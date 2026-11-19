@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Calendar, ExternalLink, HelpCircle } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink } from "lucide-react";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getChampionIconUrl } from "@/utils/riotApi";
@@ -586,12 +587,12 @@ export async function PlayerStatsContent({
 
           {/* 2. Role-Filtered SoloQ Top 7 */}
           <div className="xp-panel p-3.5 space-y-2.5 md:col-span-1 lg:col-span-5">
-            <h3
-              title="Analyzes up to the 200 most recent Solo/Duo games (within the last year)"
-              className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-flex items-center gap-1.5"
-            >
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] inline-flex items-center gap-1.5">
               <span>Solo/Duo Top 7 ({roleMeta.label})</span>
-              <HelpCircle className="w-3.5 h-3.5 text-[#a6a89e]/80" />
+              <InfoTooltip
+                text="Analyzes up to the 200 most recent Solo/Duo games (within the last year)"
+                label="Solo/Duo Top 7 info"
+              />
             </h3>
             {soloChamps.length > 0 ? (
               <div className="space-y-1.5">
