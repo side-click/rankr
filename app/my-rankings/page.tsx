@@ -252,9 +252,16 @@ export default async function MyRankingsPage() {
                     >
                       {hasDivision ? divName : "All Divisions"}
                     </div>
-                    <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate">
-                      {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
-                      <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
+                    <div className="lg:hidden text-[11px] text-[#c7c5b8] leading-snug">
+                      <div className="truncate">
+                        {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                        <span className="hidden sm:inline text-[#a6a89e]">
+                          {" "}• {leagueSeasonLabel}
+                        </span>
+                      </div>
+                      <div className="sm:hidden text-[#a6a89e] truncate">
+                        {leagueSeasonLabel}
+                      </div>
                     </div>
                   </div>
                 </div>
