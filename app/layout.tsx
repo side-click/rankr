@@ -79,6 +79,18 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link
+          rel="preconnect"
+          href="https://ddragon.leagueoflegends.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://cdn.discordapp.com"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="min-h-screen flex flex-col antialiased">
         <Navbar
           requireAllowlist={requireAllowlist}

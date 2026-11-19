@@ -1289,6 +1289,7 @@ export function AdminStatsDashboard({
                           <img
                             src={getChampionCenteredSplashUrl(signatureChamp)}
                             alt={signatureChamp}
+                            fetchPriority="high"
                             className="absolute inset-0 w-full h-full object-cover object-top opacity-70 group-hover:opacity-85 group-hover:scale-105 transition duration-300"
                           />
                         )}
