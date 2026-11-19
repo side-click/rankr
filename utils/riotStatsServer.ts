@@ -113,10 +113,21 @@ const loadCachedSoloPrioMap = unstable_cache(
   async (
     rosterKeyRoles: string[]
   ): Promise<Record<string, SoloPrioEntry>> => {
+    if (rosterKeyRoles.length === 0) return {};
+    const playerKeys = rosterKeyRoles.map((entry) => {
+      const sep = entry.lastIndexOf(":");
+      return (sep >= 0 ? entry.slice(0, sep) : entry).toLowerCase();
+    });
+
     const supabase = createPublicClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("riot_player_stats")
-      .select("player_key, role, matches, mastery_top4");
+      .select("player_key, role, matches, mastery_top4")
+      .in("player_key", playerKeys);
+
+    if (error) {
+      throw new Error(`loadCachedSoloPrioMap failed: ${error.message}`);
+    }
 
     const rowByKey = new Map(
       (data ?? []).map((r) => [
@@ -164,7 +175,7 @@ const loadCachedSoloPrioMap = unstable_cache(
     }
     return result;
   },
-  ["public-solo-prio-map-v1"],
+  ["public-solo-prio-map-v2"],
   { revalidate: 300, tags: ["public-stats"] }
 );
 

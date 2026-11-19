@@ -6,6 +6,8 @@ import {
 } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
+import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
+import { LEAGUE_ROLES } from "@/utils/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +58,43 @@ export default async function PublicStatsPage({
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     includeRiotStats: false,
   });
-  const [sheetSummary, soloPrioMap] = await Promise.all([
-    fetchScdlSheetStats(ctx.players, ctx.teams, ctx.sheetConfig).catch(
-      () => null
-    ),
-    loadPublicSoloPrioMap(ctx.players).catch(() => undefined),
-  ]);
+  const sheetSummary = await fetchScdlSheetStats(
+    ctx.players,
+    ctx.teams,
+    ctx.sheetConfig
+  ).catch(() => null);
+
+  const allProCandidatesMap = new Map<
+    string,
+    { playerKey: string; role: string }
+  >();
+  if (sheetSummary) {
+    const scopes = ["all", ...ctx.divisions.map((d) => d.id)];
+    for (const scope of scopes) {
+      const scoped = sheetSummary.players.filter((p) =>
+        scope === "all" ? true : p.divisionId === scope
+      );
+      const rated = computeRoleNormalizedRatings(scoped).filter(
+        (p) => p.games > 0
+      );
+      for (const roleDef of LEAGUE_ROLES) {
+        const top = rated
+          .filter((p) => p.role === roleDef.key)
+          .sort((a, b) => b.leagueRating - a.leagueRating)[0];
+        if (top) {
+          allProCandidatesMap.set(top.playerKey, {
+            playerKey: top.playerKey,
+            role: top.role,
+          });
+        }
+      }
+    }
+  }
+  const soloPrioMap = await loadPublicSoloPrioMap(
+    allProCandidatesMap.size > 0
+      ? [...allProCandidatesMap.values()]
+      : ctx.players
+  ).catch(() => undefined);
 
   return (
     <AdminStatsDashboard
