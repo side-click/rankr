@@ -25,21 +25,21 @@ interface StatsTeamsTabProps {
 
 export function StatsTeamsTab({
   selectedDivision,
-  divisions,
   filteredTeams,
-  activeTeams,
   basePath,
   onNavigateTeam,
 }: StatsTeamsTabProps) {
-  const divisionGroups = selectedDivision
-    ? [{ division: selectedDivision, list: filteredTeams, isSingle: true }]
-    : divisions.map((d) => ({
-        division: d,
-        isSingle: false,
-        list: activeTeams
-          .filter((t) => t.divisionId === d.id)
-          .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999)),
-      }));
+  if (!selectedDivision) {
+    return (
+      <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
+        Select a specific division above to view division team standings and scouting sheets.
+      </div>
+    );
+  }
+
+  const divisionGroups = [
+    { division: selectedDivision, list: filteredTeams, isSingle: true },
+  ];
 
   return (
     <div className="space-y-5">

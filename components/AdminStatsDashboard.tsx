@@ -180,6 +180,8 @@ export function AdminStatsDashboard({
     initialTab === "teams" ||
     initialTab === "division"
       ? initialTab
+      : initialDivision === "all"
+      ? "division"
       : "players"
   );
   const [leaderboardStyle, setLeaderboardStyle] = useState<
@@ -243,6 +245,8 @@ export function AdminStatsDashboard({
       tabParam === "division"
     ) {
       setActiveSection(tabParam);
+    } else if (divParam === "all") {
+      setActiveSection("division");
     }
   }, [divisions]);
 
@@ -260,7 +264,12 @@ export function AdminStatsDashboard({
 
   function selectDivision(nextDivision: string) {
     setDivisionFilter(nextDivision);
-    updateUrlParams({ division: nextDivision });
+    if (nextDivision === "all") {
+      setActiveSection("division");
+      updateUrlParams({ division: nextDivision, tab: "division" });
+    } else {
+      updateUrlParams({ division: nextDivision });
+    }
   }
 
   function selectSection(nextSection: "players" | "teams" | "division") {
