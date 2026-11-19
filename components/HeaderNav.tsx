@@ -89,8 +89,14 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           <span>Menu</span>
         </button>
 
-        {mobileMenuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-56 z-50 bg-[#14201a] border-2 border-[#c89b3c] rounded-lg shadow-2xl p-2 space-y-1 text-xs font-bold">
+        <div
+          aria-hidden={!mobileMenuOpen}
+          className={`absolute right-0 top-full mt-2 w-56 z-50 bg-[#14201a] border-2 border-[#c89b3c] rounded-lg shadow-2xl p-2 space-y-1 text-xs font-bold transition-opacity duration-100 ${
+            mobileMenuOpen
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none invisible"
+          }`}
+        >
             <Link
               href="/rank"
               onClick={() => setMobileMenuOpen(false)}
@@ -143,8 +149,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
                 <span>Admin</span>
               </Link>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
