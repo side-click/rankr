@@ -26,14 +26,14 @@ export default function HomeLoading() {
                 },
                 {
                   title: "Consensus",
-                  desc: "Find common ground through aggregated opinion",
+                  desc: "See what the hivemind is saying.",
                   icon: (
                     <Trophy className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),
                 },
                 {
                   title: "Stats",
-                  desc: "Leaderboards, standings, scouting sheets and more",
+                  desc: "Leaderboards, standings, scouting and more",
                   icon: (
                     <BarChart3 className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),

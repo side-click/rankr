@@ -103,7 +103,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Consensus
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Find common ground through aggregated opinion
+                    See what the hivemind is saying.
                   </div>
                 </div>
               </Link>
@@ -118,7 +118,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Stats
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Leaderboards, standings, scouting sheets and more
+                    Leaderboards, standings, scouting and more
                   </div>
                 </div>
               </Link>
