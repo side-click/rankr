@@ -134,7 +134,6 @@ type SortKey =
   | "csPerMin"
   | "kpPct"
   | "visionPerMin"
-  | "avgGoldDiff"
   | "damageSharePct"
   | "games";
 
@@ -204,7 +203,7 @@ export function AdminStatsDashboard({
     "Damage / Min",
     "Kill Participation",
     "Vision / Min",
-    "Gold Diff / Game",
+    "Gold Diff @15",
     "Gold / Min",
   ]);
   const [openDropdown, setOpenDropdown] = useState<
@@ -748,11 +747,13 @@ export function AdminStatsDashboard({
         .slice(0, 5),
     [leaderboardPlayers]
   );
-  const topGoldDiff = useMemo(
+  const topGoldDiff15 = useMemo(
     () =>
       leaderboardPlayers
-        .filter((p) => p.avgGoldDiff !== null)
-        .sort((a, b) => (b.avgGoldDiff ?? 0) - (a.avgGoldDiff ?? 0))
+        .filter(
+          (p) => p.avgGoldDiff15 !== null && p.avgGoldDiff15 !== undefined
+        )
+        .sort((a, b) => (b.avgGoldDiff15 ?? 0) - (a.avgGoldDiff15 ?? 0))
         .slice(0, 5),
     [leaderboardPlayers]
   );
@@ -1228,12 +1229,24 @@ export function AdminStatsDashboard({
             },
           };
 
+          const kdaCard: LeaderboardCard = {
+            title: "KDA",
+            icons: <Swords className="w-3.5 h-3.5 text-[#f0c020]" />,
+            rows: topKda,
+            fmt: (p) => p.kda.toFixed(2),
+          };
+
           const defaultGridCards: LeaderboardCard[] = [
             {
-              title: "KDA",
-              icons: <Swords className="w-3.5 h-3.5 text-[#f0c020]" />,
-              rows: topKda,
-              fmt: (p) => p.kda.toFixed(2),
+              title: "CS / Min",
+              icons: (
+                <>
+                  <Sword className="w-3.5 h-3.5 text-[#f0c020]" />
+                  <Clock className="w-3.5 h-3.5 text-[#f0c020]" />
+                </>
+              ),
+              rows: topCs,
+              fmt: (p) => p.csPerMin.toFixed(1),
             },
             {
               title: "Damage / Min",
@@ -1268,19 +1281,19 @@ export function AdminStatsDashboard({
               rows: topVision,
               fmt: (p) => p.visionPerMin.toFixed(2),
             },
-            ...(topGoldDiff.length > 0
+            ...(topGoldDiff15.length > 0
               ? [
                   {
-                    title: "Gold Diff / Game",
+                    title: "Gold Diff @15",
                     icons: (
                       <>
                         <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
                         <Diff className="w-3.5 h-3.5 text-[#f0c020]" />
                       </>
                     ),
-                    rows: topGoldDiff,
+                    rows: topGoldDiff15,
                     fmt: (p: AggregatedPlayerStats) => {
-                      const val = Math.round(p.avgGoldDiff ?? 0);
+                      const val = Math.round(p.avgGoldDiff15 ?? 0);
                       return val >= 0 ? `+${val}` : `${val}`;
                     },
                   },
@@ -1357,9 +1370,14 @@ export function AdminStatsDashboard({
             },
           ];
 
-          const allGridCards: LeaderboardCard[] = [
+          const standardGridCards: LeaderboardCard[] = [
             ...defaultGridCards,
             ...expandedGridCards,
+          ];
+
+          const allGridCards: LeaderboardCard[] = [
+            kdaCard,
+            ...standardGridCards,
           ];
 
           const selectedShareableCards = allGridCards
@@ -1603,9 +1621,14 @@ export function AdminStatsDashboard({
 
               {leaderboardStyle === "standard" ? (
                 <div className="space-y-4">
-                  <div className="py-4">{featuredRatingCard}</div>
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 items-center py-2">
+                    <div className="lg:col-span-3 flex justify-center">
+                      <div className="w-full">{featuredRatingCard}</div>
+                    </div>
+                    <div>{renderCard(kdaCard, true)}</div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {allGridCards.map((card) => renderCard(card, true))}
+                    {standardGridCards.map((card) => renderCard(card, true))}
                   </div>
                 </div>
               ) : (
@@ -1802,20 +1825,20 @@ export function AdminStatsDashboard({
                   <th className="px-2 py-2">Team</th>
                   <th
                     className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
+                      sortKey === "games" ? "text-[#f0c020]" : ""
+                    }`}
+                    onClick={() => handleSort("games")}
+                  >
+                    Games
+                  </th>
+                  <th
+                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
                       sortKey === "leagueRating" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("leagueRating")}
                     title="Role-normalized 0–100 Rankr Rating"
                   >
                     Rating
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "games" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("games")}
-                  >
-                    Games
                   </th>
                   <th
                     className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
@@ -1877,15 +1900,6 @@ export function AdminStatsDashboard({
                   </th>
                   <th
                     className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "avgGoldDiff" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("avgGoldDiff")}
-                    title="Average Gold Diff vs Lane Opponent"
-                  >
-                    GD
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
                       sortKey === "avgGoldDiff15" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("avgGoldDiff15")}
@@ -1940,16 +1954,6 @@ export function AdminStatsDashboard({
                         </div>
                       </td>
                       <td
-                        style={sortCellStyle("leagueRating")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "leagueRating"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
-                      </td>
-                      <td
                         style={sortCellStyle("games")}
                         className={`px-2 py-2 text-right tabular-nums ${
                           sortKey === "games"
@@ -1958,6 +1962,16 @@ export function AdminStatsDashboard({
                         }`}
                       >
                         {p.games}
+                      </td>
+                      <td
+                        style={sortCellStyle("leagueRating")}
+                        className={`px-2 py-2 text-right tabular-nums ${
+                          sortKey === "leagueRating"
+                            ? "font-bold"
+                            : "text-[#e8e5d8]"
+                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
+                      >
+                        {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
                       </td>
                       <td
                         style={sortCellStyle("kda")}
@@ -2020,24 +2034,6 @@ export function AdminStatsDashboard({
                         } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
                       >
                         {p.games > 0 ? p.visionPerMin.toFixed(2) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("avgGoldDiff")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "avgGoldDiff"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${
-                          p.avgGoldDiff === null || p.games <= 0
-                            ? "text-[#a6a89e]"
-                            : ""
-                        }`}
-                      >
-                        {p.games > 0 && p.avgGoldDiff !== null
-                          ? `${p.avgGoldDiff >= 0 ? "+" : ""}${Math.round(
-                              p.avgGoldDiff
-                            )}`
-                          : "—"}
                       </td>
                       <td
                         style={sortCellStyle("avgGoldDiff15")}
