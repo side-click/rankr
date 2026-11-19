@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BarChart3,
+  ChevronRight,
   Crown,
   Eye,
   ListOrdered,
@@ -291,56 +292,51 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         }}
                         className="xp-panel p-3 border-t-2 space-y-2"
                       >
-                        <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
-                          {div.logoUrl && (
-                            <img
-                              src={div.logoUrl}
-                              alt={div.divisionName}
-                              className="w-5 h-5 object-contain shrink-0"
-                            />
-                          )}
-                          <span
-                            style={{ color: div.primaryColor }}
-                            className="text-xs font-extrabold uppercase tracking-wider truncate"
-                          >
-                            {div.divisionName}
+                        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {div.logoUrl && (
+                              <img
+                                src={div.logoUrl}
+                                alt={div.divisionName}
+                                className="w-5 h-5 object-contain shrink-0"
+                              />
+                            )}
+                            <span
+                              style={{ color: div.primaryColor }}
+                              className="text-xs font-extrabold uppercase tracking-wider truncate"
+                            >
+                              {div.divisionName}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#a6a89e] pr-4 shrink-0">
+                            Series
                           </span>
                         </div>
                         <div className="space-y-1.5">
-                          {div.teams.map((t, idx) => {
-                            const leader = div.teams[0];
-                            const isLeader =
-                              idx === 0 ||
-                              (Boolean(leader) &&
-                                t.seriesWins === leader.seriesWins &&
-                                t.seriesLosses === leader.seriesLosses);
-                            return (
-                              <Link
-                                key={t.teamId}
-                                href={`/stats/team/${encodeURIComponent(t.teamId)}`}
-                                className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
-                                  isLeader
-                                    ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
-                                    : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="w-5 text-center font-bold text-[#f0c020] tabular-nums shrink-0">
-                                    #{t.seed ?? idx + 1}
-                                  </span>
-                                  {t.logoUrl && (
-                                    <img
-                                      src={t.logoUrl}
-                                      alt={t.teamName}
-                                      className="w-5 h-5 object-contain shrink-0"
-                                    />
-                                  )}
-                                  <span className="font-bold text-[#f0ede0] truncate">
-                                    {t.teamName}
-                                  </span>
-                                </div>
+                          {div.teams.map((t, idx) => (
+                            <Link
+                              key={t.teamId}
+                              href={`/stats/team/${encodeURIComponent(t.teamId)}`}
+                              className="group flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border border-white/15 bg-black/40 hover:!bg-[#f0c020]/10 hover:!border-[#f0c020]/80 transition text-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-5 text-center font-black text-[#f0c020] tabular-nums shrink-0">
+                                  #{t.seed ?? idx + 1}
+                                </span>
+                                {t.logoUrl && (
+                                  <img
+                                    src={t.logoUrl}
+                                    alt={t.teamName}
+                                    className="w-5 h-5 object-contain shrink-0 group-hover:scale-105 transition-transform"
+                                  />
+                                )}
+                                <span className="font-extrabold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
+                                  {t.teamName}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <span
-                                  className={`font-bold tabular-nums shrink-0 ${
+                                  className={`font-black tabular-nums ${
                                     t.seriesWins >= t.seriesLosses
                                       ? "text-[#7cd438]"
                                       : "text-[#ff857a]"
@@ -348,9 +344,10 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                 >
                                   {t.seriesWins}-{t.seriesLosses}
                                 </span>
-                              </Link>
-                            );
-                          })}
+                                <ChevronRight className="w-3.5 h-3.5 text-[#a6a89e] group-hover:text-[#f0c020] group-hover:translate-x-0.5 transition-all" />
+                              </div>
+                            </Link>
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -369,28 +366,37 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                       <div
                         key={div.divisionId}
                         style={{
-                          borderColor: `${div.primaryColor}55`,
-                          borderTopColor: div.primaryColor,
-                          background: `linear-gradient(135deg, ${div.primaryColor}26 0%, #121615 65%)`,
+                          boxShadow: "0 0 18px rgba(240, 192, 32, 0.16)",
+                          backgroundImage: `linear-gradient(135deg, ${div.primaryColor}2e 0%, rgba(23, 27, 25, 0.95) 65%)`,
                         }}
-                        className="xp-panel p-3 border-t-2 space-y-2"
+                        className="rounded-lg border-2 border-[#f0c020]/80 overflow-hidden bg-[#171b19]"
                       >
-                        <div className="flex items-center gap-2 pb-1.5 border-b border-white/10">
-                          {div.logoUrl && (
-                            <img
-                              src={div.logoUrl}
-                              alt={div.divisionName}
-                              className="w-5 h-5 object-contain shrink-0"
-                            />
-                          )}
-                          <span
-                            style={{ color: div.primaryColor }}
-                            className="text-xs font-extrabold uppercase tracking-wider truncate"
-                          >
-                            {div.divisionName}
+                        <div
+                          style={{
+                            background: `linear-gradient(90deg, ${div.primaryColor}48 0%, rgba(42, 34, 16, 0.92) 100%)`,
+                          }}
+                          className="bg-[#2a2210] border-b-2 border-[#f0c020]/70 px-3 py-2 flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {div.logoUrl && (
+                              <img
+                                src={div.logoUrl}
+                                alt={div.divisionName}
+                                className="w-5 h-5 object-contain shrink-0"
+                              />
+                            )}
+                            <span
+                              style={{ color: div.primaryColor }}
+                              className="text-xs font-extrabold uppercase tracking-wider truncate"
+                            >
+                              {div.divisionName}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#f0c020]/90 shrink-0">
+                            Rating
                           </span>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="divide-y divide-[#f0c020]/15">
                           {div.players.map((p, idx) => {
                             const roleMeta = getRoleMeta(p.role as LeagueRole);
                             const topRating = div.players[0]?.rating;
@@ -404,14 +410,18 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                 href={`/stats/player/${encodeURIComponent(
                                   p.playerKey
                                 )}`}
-                                className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border transition text-xs ${
-                                  isLeader
-                                    ? "bg-[#f0c020]/10 border-[#f0c020]/70 shadow-[0_0_12px_rgba(240,192,32,0.28)] hover:bg-[#f0c020]/15"
-                                    : "bg-black/30 border-white/10 hover:bg-[#f0c020]/10 hover:border-[#f0c020]/50"
+                                className={`px-3 py-2 flex items-center justify-between gap-2 transition hover:bg-[#f0c020]/10 text-xs ${
+                                  isLeader ? "bg-[#f0c020]/10" : ""
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="w-4 font-extrabold text-[#f0c020] tabular-nums shrink-0">
+                                  <span
+                                    className={`w-4 text-center font-extrabold tabular-nums shrink-0 ${
+                                      isLeader
+                                        ? "text-[#f0c020]"
+                                        : "text-[#c89b3c]"
+                                    }`}
+                                  >
                                     {idx + 1}
                                   </span>
                                   <img
@@ -426,11 +436,28 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                                       className="w-4 h-4 object-contain shrink-0"
                                     />
                                   )}
-                                  <span className="font-bold text-[#f0ede0] truncate">
-                                    {p.displayName}
+                                  <span
+                                    className={`font-extrabold truncate flex items-center gap-1 ${
+                                      isLeader
+                                        ? "text-[#fff4cc]"
+                                        : "text-[#f0ede0]"
+                                    }`}
+                                  >
+                                    <span className="truncate">
+                                      {p.displayName}
+                                    </span>
+                                    {isLeader && (
+                                      <Crown className="w-3.5 h-3.5 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                                    )}
                                   </span>
                                 </div>
-                                <span className="font-black text-[#7cd438] tabular-nums shrink-0">
+                                <span
+                                  className={`font-black tabular-nums shrink-0 ${
+                                    isLeader
+                                      ? "text-[#f0c020]"
+                                      : "text-[#7cd438]"
+                                  }`}
+                                >
                                   {p.rating.toFixed(1)}
                                 </span>
                               </Link>
