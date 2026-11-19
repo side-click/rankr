@@ -3,6 +3,7 @@ import { ArrowLeft, Calendar, ExternalLink } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import {
@@ -797,6 +798,13 @@ export async function PlayerStatsContent({
               No {leaguePrefix} games recorded yet.
             </div>
           )}
+        </div>
+        <div className="mt-4">
+          <StatsDataCredits
+            leagueName={ctx.leagueName}
+            seasonName={ctx.seasonName}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>

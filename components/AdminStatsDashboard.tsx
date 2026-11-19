@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -2488,6 +2489,12 @@ export function AdminStatsDashboard({
         )}
         </>
       )}
+
+      <StatsDataCredits
+        leagueName={leagueName}
+        seasonName={seasonName}
+        variant="full"
+      />
 
       {isAdminView && showUnrosteredModal && sheetData && (
         <StatsUnrosteredModal
