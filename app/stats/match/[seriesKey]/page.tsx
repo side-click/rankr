@@ -12,7 +12,9 @@ export default async function PublicMatchSeriesPage({
   const { seriesKey } = await params;
   const decodedKey = decodeURIComponent(seriesKey);
   const effectiveSeason = await getFocusedSeasonSlug();
-  const ctx = await loadPublicStatsContext(effectiveSeason);
+  const ctx = await loadPublicStatsContext(effectiveSeason, {
+    includeRiotStats: false,
+  });
 
   return (
     <MatchSeriesContent ctx={ctx} decodedKey={decodedKey} basePath="/stats" />

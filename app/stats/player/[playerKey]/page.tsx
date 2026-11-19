@@ -12,7 +12,9 @@ export default async function PublicPlayerStatsPage({
   const { playerKey } = await params;
   const decodedKey = decodeURIComponent(playerKey).toLowerCase();
   const effectiveSeason = await getFocusedSeasonSlug();
-  const ctx = await loadPublicStatsContext(effectiveSeason);
+  const ctx = await loadPublicStatsContext(effectiveSeason, {
+    playerKeyFilter: decodedKey,
+  });
 
   return (
     <PlayerStatsContent ctx={ctx} decodedKey={decodedKey} basePath="/stats" />

@@ -268,7 +268,9 @@ export async function loadBetaHomeData(
     await Promise.all([
       ballotsQuery,
       Promise.all(consensusPromises),
-      loadPublicStatsContext(statsSeasonSlug).catch(() => null),
+      loadPublicStatsContext(statsSeasonSlug, {
+        includeRiotStats: false,
+      }).catch(() => null),
       fetchAllScdlSeries().catch(() => []),
     ]);
 

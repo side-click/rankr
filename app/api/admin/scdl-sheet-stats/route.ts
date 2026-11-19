@@ -1,30 +1,21 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getServerAuthContext();
 
-  if (!user) {
+  if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_admin) {
+  if (!auth.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const ctx = await loadAdminStatsContext();
+    const ctx = await loadAdminStatsContext({ includeRiotStats: false });
     const summary = await fetchScdlSheetStats(ctx.players, ctx.teams, {
       bypassCache: true,
     });

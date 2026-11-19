@@ -1,12 +1,25 @@
 import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { normalizeRoster } from "@/utils/roles";
 import { getLatestDdragonVersion } from "@/utils/riotApi";
 import {
   aggregatePlayerStats,
+  computeRoleNormalizedRatings,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
   type RiotPlayerStatRow,
 } from "@/utils/riotStatsAggregation";
+import {
+  fetchAllScdlSeries,
+  fetchScdlSheetStats,
+  type ScdlSeriesDetail,
+} from "@/utils/scdlSheetStats";
+
+export interface StatsContextQueryOptions {
+  includeRiotStats?: boolean;
+  teamIdFilter?: string;
+  playerKeyFilter?: string;
+}
 
 export interface LoadedAdminStatsContext {
   authorized: boolean;
@@ -23,26 +36,16 @@ export interface LoadedAdminStatsContext {
   teams: AggregatedTeamStats[];
 }
 
-export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .maybeSingle();
-    isAdmin = Boolean(profile?.is_admin);
-  }
-
+export async function loadAdminStatsContext(
+  queryOpts?: StatsContextQueryOptions
+): Promise<LoadedAdminStatsContext> {
+  const [auth, ddVersion] = await Promise.all([
+    getServerAuthContext(),
+    getLatestDdragonVersion(),
+  ]);
   const hasRiotKey = Boolean(process.env.RIOT_API_KEY?.trim());
-  const ddVersion = await getLatestDdragonVersion();
 
-  if (!user || !isAdmin) {
+  if (!auth.user || !auth.isAdmin) {
     return {
       authorized: false,
       missingTable: false,
@@ -59,25 +62,31 @@ export async function loadAdminStatsContext(): Promise<LoadedAdminStatsContext> 
     };
   }
 
+  const supabase = await createClient();
   return loadStatsContextInternal(supabase, {
     authorized: true,
     hasRiotKey,
     ddVersion,
     stripAdminFields: false,
+    ...queryOpts,
   });
 }
 
 export async function loadPublicStatsContext(
-  seasonSlug?: string
+  seasonSlug?: string,
+  queryOpts?: StatsContextQueryOptions
 ): Promise<LoadedAdminStatsContext> {
-  const supabase = await createClient();
-  const ddVersion = await getLatestDdragonVersion();
+  const [supabase, ddVersion] = await Promise.all([
+    createClient(),
+    getLatestDdragonVersion(),
+  ]);
   return loadStatsContextInternal(supabase, {
     authorized: true,
     hasRiotKey: false,
     ddVersion,
     stripAdminFields: true,
     seasonSlug,
+    ...queryOpts,
   });
 }
 
@@ -89,10 +98,33 @@ async function loadStatsContextInternal(
     ddVersion: string;
     stripAdminFields: boolean;
     seasonSlug?: string;
+    includeRiotStats?: boolean;
+    teamIdFilter?: string;
+    playerKeyFilter?: string;
   }
 ): Promise<LoadedAdminStatsContext> {
-  const { authorized, hasRiotKey, ddVersion, stripAdminFields, seasonSlug } =
-    opts;
+  const {
+    authorized,
+    hasRiotKey,
+    ddVersion,
+    stripAdminFields,
+    seasonSlug,
+    includeRiotStats = true,
+    teamIdFilter,
+    playerKeyFilter,
+  } = opts;
+
+  const statsPromise = includeRiotStats
+    ? (() => {
+        let q = supabase.from("riot_player_stats").select("*");
+        if (playerKeyFilter) {
+          q = q.eq("player_key", playerKeyFilter);
+        } else if (teamIdFilter) {
+          q = q.eq("team_id", teamIdFilter);
+        }
+        return q;
+      })()
+    : Promise.resolve({ data: [] as RiotPlayerStatRow[], error: null });
 
   const [
     { data: seasons },
@@ -118,7 +150,7 @@ async function loadStatsContextInternal(
       .select("id, name, season_id, is_open, sort_order, created_at")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
-    supabase.from("riot_player_stats").select("*"),
+    statsPromise,
   ]);
 
   const missingTable = Boolean(
@@ -268,5 +300,73 @@ async function loadStatsContextInternal(
     })),
     players: aggregatedPlayers,
     teams: aggregatedTeams,
+  };
+}
+
+export interface TeamScoutingPayload {
+  team: AggregatedTeamStats;
+  leagueTeam: AggregatedTeamStats | null;
+  seriesHistory: ScdlSeriesDetail[];
+  teamLogoMap: Record<string, string | null>;
+  divisionThemeKey: string;
+  roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
+}
+
+export async function loadTeamScoutingData(
+  ctx: LoadedAdminStatsContext,
+  teamId: string
+): Promise<TeamScoutingPayload | null> {
+  const team = ctx.teams.find((t) => t.teamId === teamId);
+  if (!team) return null;
+
+  const [sheetSummary, allSeries] = await Promise.all([
+    fetchScdlSheetStats(ctx.players, ctx.teams).catch(() => null),
+    fetchAllScdlSeries().catch(() => []),
+  ]);
+
+  const leagueTeam =
+    sheetSummary?.teams.find((t) => t.teamId === team.teamId) ?? null;
+
+  const teamNameLower = team.teamName.toLowerCase();
+  const seriesHistory = allSeries.filter(
+    (s) =>
+      s.teamA.toLowerCase() === teamNameLower ||
+      s.teamB.toLowerCase() === teamNameLower
+  );
+
+  const teamLogoMap: Record<string, string | null> = {};
+  for (const t of ctx.teams) {
+    teamLogoMap[t.teamName.toLowerCase()] = t.logoUrl;
+  }
+
+  const divisionThemeKey =
+    ctx.divisions.find((d) => d.id === team.divisionId)?.theme_key ?? "scdl";
+
+  const roleRankByPlayerKey: Record<string, { rank: number; total: number }> =
+    {};
+  const rawDivPlayers = (sheetSummary?.players ?? []).filter(
+    (p) => p.divisionId === team.divisionId && p.games > 0
+  );
+  const divPlayers = computeRoleNormalizedRatings(rawDivPlayers);
+  const byRole = new Map<string, typeof divPlayers>();
+  for (const p of divPlayers) {
+    const list = byRole.get(p.role) ?? [];
+    list.push(p);
+    byRole.set(p.role, list);
+  }
+  for (const list of byRole.values()) {
+    list.sort((a, b) => b.leagueRating - a.leagueRating);
+    list.forEach((p, idx) => {
+      roleRankByPlayerKey[p.playerKey] = { rank: idx + 1, total: list.length };
+    });
+  }
+
+  return {
+    team,
+    leagueTeam,
+    seriesHistory,
+    teamLogoMap,
+    divisionThemeKey,
+    roleRankByPlayerKey,
   };
 }

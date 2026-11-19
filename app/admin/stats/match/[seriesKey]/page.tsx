@@ -12,7 +12,7 @@ export default async function AdminMatchSeriesPage({
 }) {
   const { seriesKey } = await params;
   const decodedKey = decodeURIComponent(seriesKey);
-  const ctx = await loadAdminStatsContext();
+  const ctx = await loadAdminStatsContext({ includeRiotStats: false });
 
   if (!ctx.authorized) {
     return (

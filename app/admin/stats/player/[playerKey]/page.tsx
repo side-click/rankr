@@ -12,7 +12,7 @@ export default async function AdminPlayerStatsPage({
 }) {
   const { playerKey } = await params;
   const decodedKey = decodeURIComponent(playerKey).toLowerCase();
-  const ctx = await loadAdminStatsContext();
+  const ctx = await loadAdminStatsContext({ playerKeyFilter: decodedKey });
 
   if (!ctx.authorized) {
     return (

@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AuthNoticeBanner } from "@/components/AuthNoticeBanner";
 import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { RetroWindow } from "@/components/RetroWindow";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { ShieldAlert } from "lucide-react";
@@ -52,25 +53,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const [{ data: settings }, { data: authData }] = await Promise.all([
+  const [{ data: settings }, auth] = await Promise.all([
     supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
-    supabase.auth.getUser(),
+    getServerAuthContext(),
   ]);
 
-  let profile: {
-    username: string;
-    avatar_url: string | null;
-    is_admin: boolean;
-  } | null = null;
-  if (authData.user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, is_admin")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-    profile = data;
-  }
-  const isAdmin = Boolean(profile?.is_admin);
+  const profile = auth.profile;
+  const isAdmin = auth.isAdmin;
+  const authUser = auth.user;
 
   const maintenanceMode = Boolean(settings?.maintenance_mode);
   const requireAllowlist = Boolean(settings?.require_allowlist);
@@ -94,17 +84,17 @@ export default async function RootLayout({
           requireAllowlist={requireAllowlist}
           isAdmin={isAdmin}
           user={
-            authData.user
+            authUser
               ? {
-                  id: authData.user.id,
+                  id: authUser.id,
                   username:
                     profile?.username ??
-                    authData.user.user_metadata?.full_name ??
-                    authData.user.user_metadata?.name ??
+                    (authUser.user_metadata?.full_name as string | undefined) ??
+                    (authUser.user_metadata?.name as string | undefined) ??
                     "Discord User",
                   avatarUrl:
                     profile?.avatar_url ??
-                    authData.user.user_metadata?.avatar_url ??
+                    (authUser.user_metadata?.avatar_url as string | undefined) ??
                     null,
                 }
               : null
