@@ -7,7 +7,7 @@ export const contentType = "image/png";
 
 export default async function OpenGraphImage() {
   const [logoUrl, fonts] = await Promise.all([
-    resolveOgImageSrc("/images/rankr_crop.png"),
+    resolveOgImageSrc("/images/brand/rankr-icon.png"),
     loadOgFonts(),
   ]);
 
