@@ -2,7 +2,8 @@
 
 import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { BarChart3, Crown, Loader2, Trophy, Users } from "lucide-react";
+import { BarChart3, Crown, Trophy, User } from "lucide-react";
+import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 
 function StatsLoadingSkeletonInner() {
   const searchParams = useSearchParams();
@@ -31,27 +32,27 @@ function StatsLoadingSkeletonInner() {
         ))}
       </div>
 
-      {/* Players / Teams / Division Section Switcher (exact xp-btn styling) */}
+      {/* Players / Teams / Division Section Switcher (exact icons & xp-btn styling) */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         <div
           className={`xp-btn !py-3 sm:!py-4 !px-2 sm:!px-4 !min-h-[54px] sm:!min-h-[66px] !text-xs sm:!text-lg !gap-1.5 sm:!gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl pointer-events-none ${
-            activeTab === "players" ? "xp-btn-primary" : "opacity-80"
+            activeTab === "players" ? "xp-btn-primary" : ""
           }`}
         >
-          <Users className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />
+          <User className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />
           <span>Players</span>
         </div>
         <div
           className={`xp-btn !py-3 sm:!py-4 !px-2 sm:!px-4 !min-h-[54px] sm:!min-h-[66px] !text-xs sm:!text-lg !gap-1.5 sm:!gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl pointer-events-none ${
-            activeTab === "teams" ? "xp-btn-primary" : "opacity-80"
+            activeTab === "teams" ? "xp-btn-primary" : ""
           }`}
         >
-          <Trophy className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />
+          <TeamGroupIcon className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />
           <span>Teams</span>
         </div>
         <div
           className={`xp-btn !py-3 sm:!py-4 !px-2 sm:!px-4 !min-h-[54px] sm:!min-h-[66px] !text-xs sm:!text-lg !gap-1.5 sm:!gap-2.5 font-extrabold uppercase tracking-wider justify-center rounded-xl pointer-events-none ${
-            activeTab === "division" ? "xp-btn-primary" : "opacity-80"
+            activeTab === "division" ? "xp-btn-primary" : ""
           }`}
         >
           <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />
@@ -63,7 +64,7 @@ function StatsLoadingSkeletonInner() {
         <div className="xp-panel overflow-hidden">
           <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex items-center justify-between gap-2">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <TeamGroupIcon className="w-4 h-4" />
               <span>Team Standings</span>
             </h2>
             <span className="text-[11px] text-[#a6a89e]">
@@ -105,21 +106,40 @@ function StatsLoadingSkeletonInner() {
           </div>
           <div className="xp-panel overflow-hidden">
             <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex items-center justify-between gap-2">
-              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Champions Played</span>
+              <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Champions Played
               </h2>
               <span className="text-[11px] text-[#a6a89e]">
                 Top 36 by pick count
               </span>
             </div>
-            <div className="p-3 grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
-              {Array.from({ length: 24 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="aspect-square rounded border border-white/10 bg-black/35 animate-pulse"
-                />
-              ))}
+            <div className="p-3 space-y-4">
+              <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
+                {Array.from({ length: 36 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="aspect-square rounded border border-white/10 bg-black/35 animate-pulse"
+                  />
+                ))}
+              </div>
+              <div className="pt-3 border-t border-white/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#ff857a]">
+                    Most Banned Champions
+                  </span>
+                  <span className="text-[11px] text-[#a6a89e]">
+                    Top 12 by ban count
+                  </span>
+                </div>
+                <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
+                  {Array.from({ length: 12 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="aspect-square rounded border border-white/10 bg-black/35 animate-pulse"
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </>
@@ -161,14 +181,14 @@ function StatsLoadingSkeletonInner() {
           <div className="xp-panel overflow-hidden">
             <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Trophy className="w-4 h-4" />
                 <span>Stat Leaderboards</span>
               </h2>
               <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded border border-white/15">
                 <span className="xp-btn xp-btn-primary text-xs px-3 py-1 pointer-events-none">
                   Standard
                 </span>
-                <span className="xp-btn text-xs px-3 py-1 pointer-events-none opacity-80">
+                <span className="xp-btn text-xs px-3 py-1 pointer-events-none">
                   Shareable
                 </span>
               </div>
