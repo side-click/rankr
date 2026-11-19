@@ -136,6 +136,7 @@ interface AdminStatsDashboardProps {
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
     unrosteredPlayers?: UnrosteredSheetPlayer[];
+    missingDraftGames?: { gameId: string; matchLabel: string }[];
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
@@ -246,6 +247,7 @@ export function AdminStatsDashboard({
     players: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
     unrosteredPlayers: UnrosteredSheetPlayer[];
+    missingDraftGames: { gameId: string; matchLabel: string }[];
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
@@ -254,6 +256,7 @@ export function AdminStatsDashboard({
       ? {
           ...initialSheetData,
           unrosteredPlayers: initialSheetData.unrosteredPlayers ?? [],
+          missingDraftGames: initialSheetData.missingDraftGames ?? [],
         }
       : null
   );
@@ -389,6 +392,7 @@ export function AdminStatsDashboard({
         players?: AggregatedPlayerStats[];
         teams?: AggregatedTeamStats[];
         unrosteredPlayers?: UnrosteredSheetPlayer[];
+        missingDraftGames?: { gameId: string; matchLabel: string }[];
         fetchedAt?: string;
         rowCount?: number;
         matchCount?: number;
@@ -400,6 +404,7 @@ export function AdminStatsDashboard({
         players: json.players,
         teams: json.teams,
         unrosteredPlayers: json.unrosteredPlayers ?? [],
+        missingDraftGames: json.missingDraftGames ?? [],
         fetchedAt: json.fetchedAt ?? new Date().toISOString(),
         rowCount: json.rowCount ?? 0,
         matchCount: json.matchCount ?? 0,
@@ -969,6 +974,32 @@ export function AdminStatsDashboard({
                   <strong>{missingDataPlayers.length}</strong> rostered{" "}
                   {missingDataPlayers.length === 1 ? "player has" : "players have"}{" "}
                   no match data yet: {preview}
+                  {remainder > 0 ? ` +${remainder} more` : ""}
+                </span>
+              </div>
+            );
+          })()}
+
+          {sheetData && sheetData.missingDraftGames.length > 0 && (() => {
+            const missing = sheetData.missingDraftGames;
+            const preview = missing
+              .slice(0, 6)
+              .map((g) => g.matchLabel)
+              .join(", ");
+            const remainder = missing.length - 6;
+            return (
+              <div
+                title={missing
+                  .map((g) => `${g.matchLabel} (${g.gameId})`)
+                  .join("\n")}
+                className="px-3 py-1.5 bg-[#451717]/90 border border-[#9e3535] rounded text-[11px] text-[#ff857a] flex items-center gap-2"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <strong>{missing.length}</strong>{" "}
+                  {missing.length === 1 ? "game is" : "games are"} missing draft
+                  info (picks/bans in <code>data/scdl_drafts.json</code>):{" "}
+                  {preview}
                   {remainder > 0 ? ` +${remainder} more` : ""}
                 </span>
               </div>

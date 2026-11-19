@@ -39,6 +39,7 @@ export interface SheetSyncSummary {
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   unrosteredPlayers: UnrosteredSheetPlayer[];
+  missingDraftGames: { gameId: string; matchLabel: string }[];
   fetchedAt: string;
   rowCount: number;
   matchCount: number;
@@ -436,6 +437,7 @@ export async function fetchScdlSheetStats(
 
   const uniqueGames = new Set<string>();
   const unrosteredMap = new Map<string, UnrosteredSheetPlayer>();
+  const missingDraftMap = new Map<string, { gameId: string; matchLabel: string }>();
 
   for (const r of uniqueRows) {
     uniqueGames.add(r.gameId);
@@ -476,6 +478,14 @@ export async function fetchScdlSheetStats(
         o.teamName.toLowerCase() !== r.teamName.toLowerCase() &&
         o.role === r.role
     );
+
+    const draftRecord = DRAFTS_BY_GAME_ID[r.gameId];
+    if (!draftRecord && r.gameId && !missingDraftMap.has(r.gameId)) {
+      missingDraftMap.set(r.gameId, {
+        gameId: r.gameId,
+        matchLabel: r.matchLabel || r.gameId,
+      });
+    }
 
     const compact: CompactRiotMatch = {
       matchId: `SCDL_${r.gameId}`,
@@ -887,10 +897,15 @@ export async function fetchScdlSheetStats(
       a.riotId.localeCompare(b.riotId)
   );
 
+  const missingDraftGames = [...missingDraftMap.values()].sort((a, b) =>
+    a.matchLabel.localeCompare(b.matchLabel)
+  );
+
   return {
     players: aggregatedPlayers,
     teams: aggregatedTeams,
     unrosteredPlayers,
+    missingDraftGames,
     fetchedAt: nowIso,
     rowCount: uniqueRows.length,
     matchCount: uniqueGames.size,

@@ -50,7 +50,9 @@ export default async function PublicStatsPage({
       ? params.tab
       : undefined;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
-  const ctx = await loadPublicStatsContext(effectiveSeason);
+  const ctx = await loadPublicStatsContext(effectiveSeason, {
+    includeRiotStats: false,
+  });
   const sheetSummary = await fetchScdlSheetStats(
     ctx.players,
     ctx.teams,
@@ -68,8 +70,8 @@ export default async function PublicStatsPage({
       seasonId={ctx.seasonId}
       currentEditionName={ctx.currentEditionName}
       divisions={ctx.divisions}
-      players={ctx.players}
-      teams={ctx.teams}
+      players={sheetSummary ? [] : ctx.players}
+      teams={sheetSummary ? [] : ctx.teams}
       isAdminView={false}
       initialDivision={params.division}
       initialTab={initialTab}
