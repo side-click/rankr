@@ -1,4 +1,4 @@
-import { Lock, User } from "lucide-react";
+import { Lock, Save, Send, User } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
@@ -50,7 +50,7 @@ export default async function RankLoading() {
       <RetroWindow title="Team Power Rankings Editor" theme="scdl">
         <div className="space-y-4">
           {/* Exact xp-panel framing around Season / Division / Edition */}
-          <div className="xp-panel p-3 space-y-3">
+          <div className="xp-panel p-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {["Season", "Division", "Edition"].map((label) => (
                 <div key={label}>
@@ -61,23 +61,25 @@ export default async function RankLoading() {
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="flex flex-wrap gap-2">
-              <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
-                + Custom Author Name
-              </div>
-              <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
-                + Add General Notes
-              </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
+              + Custom Author Name
+            </div>
+            <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
+              + Add General Notes
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-2">
             <div className="xp-btn text-xs px-3 py-1.5 pointer-events-none opacity-55">
-              Save Draft
+              <Save className="w-3.5 h-3.5" />
+              <span>Save Draft</span>
             </div>
             <div className="xp-btn xp-btn-primary text-xs px-3 py-1.5 pointer-events-none opacity-55">
-              Publish Ranking
+              <Send className="w-3.5 h-3.5" />
+              <span>Publish Ranking</span>
             </div>
           </div>
 
