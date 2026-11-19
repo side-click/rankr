@@ -48,11 +48,10 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
     router.push(slug ? `/?season=${encodeURIComponent(slug)}` : "/");
   }
 
-  const qSeason = focusedSlug ? `?season=${encodeURIComponent(focusedSlug)}` : "";
-  const statsHref = `/stats${qSeason}`;
-  const consensusHref = `/consensus${qSeason}`;
-  const rankHref = `/rank${qSeason}`;
-  const browseHref = `/browse${qSeason}`;
+  const statsHref = "/stats";
+  const consensusHref = "/consensus";
+  const rankHref = "/rank";
+  const browseHref = "/browse";
 
   const shouldGlowFocus = !focusedSlug && data.liveSeasons.length > 1;
 
