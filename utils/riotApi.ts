@@ -166,6 +166,14 @@ export function getChampionIconUrl(
   )}.png`;
 }
 
+export function getChampionCenteredSplashUrl(championName: string): string {
+  const normalized =
+    championName === "FiddleSticks" ? "Fiddlesticks" : championName;
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${encodeURIComponent(
+    normalized
+  )}_0.jpg`;
+}
+
 export function parseRiotId(raw: string): { gameName: string; tagLine: string } {
   const trimmed = raw.trim();
   const hashIdx = trimmed.indexOf("#");

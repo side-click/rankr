@@ -35,7 +35,7 @@ import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { StatsDivisionTab } from "@/components/stats/StatsDivisionTab";
 import { StatsTeamsTab } from "@/components/stats/StatsTeamsTab";
 import { StatsUnrosteredModal } from "@/components/stats/StatsUnrosteredModal";
-import { getChampionIconUrl } from "@/utils/riotApi";
+import { getChampionCenteredSplashUrl, getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import {
@@ -704,6 +704,26 @@ export function AdminStatsDashboard({
     [filteredPlayers]
   );
 
+  const firstTeamAllPro = useMemo(
+    () =>
+      LEAGUE_ROLES.map((roleDef) => {
+        const candidates = leaderboardPlayers
+          .filter((p) => p.role === roleDef.key)
+          .sort((a, b) => b.leagueRating - a.leagueRating);
+        return candidates[0]
+          ? { roleMeta: roleDef, player: candidates[0] }
+          : null;
+      }).filter(
+        (
+          x
+        ): x is {
+          roleMeta: (typeof LEAGUE_ROLES)[number];
+          player: AggregatedPlayerStats;
+        } => Boolean(x)
+      ),
+    [leaderboardPlayers]
+  );
+
   const topRating = useMemo(
     () =>
       [...leaderboardPlayers]
@@ -1216,6 +1236,101 @@ export function AdminStatsDashboard({
             Select a specific division above to view division player leaderboards and rankings.
           </div>
         )}
+
+        {/* First Team All-Pro (Top player per role by Rankr Rating) */}
+        {activeSection === "players" &&
+          showLeaderboards &&
+          firstTeamAllPro.length > 0 && (
+            <div
+              style={
+                selectedDivisionTheme
+                  ? {
+                      borderColor: `${selectedDivisionTheme.primary_color}66`,
+                      borderTopWidth: "3px",
+                      borderTopColor: selectedDivisionTheme.primary_color,
+                    }
+                  : undefined
+              }
+              className="mb-6 xp-panel overflow-hidden"
+            >
+              <div
+                style={
+                  selectedDivisionTheme
+                    ? {
+                        background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}38 0%, #121615 70%)`,
+                      }
+                    : undefined
+                }
+                className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[54px] flex flex-wrap items-center justify-between gap-2"
+              >
+                <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
+                  <Crown className="w-4 h-4" />
+                  <span>First Team All-Pro</span>
+                </h2>
+                <span className="text-[11px] text-[#a6a89e]">
+                  Top-rated player per role
+                </span>
+              </div>
+
+              <div className="p-3">
+                <div className="flex overflow-x-auto snap-x snap-mandatory gap-2.5 pb-1 md:grid md:grid-cols-5 md:overflow-visible md:pb-0">
+                  {firstTeamAllPro.map(({ roleMeta, player }) => {
+                    const signatureChamp = player.topChampions[0]?.name;
+                    return (
+                      <Link
+                        key={roleMeta.key}
+                        href={`${basePath}/player/${encodeURIComponent(
+                          player.playerKey
+                        )}`}
+                        className="group relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 hover:border-[#f0c020]/80 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5 transition"
+                      >
+                        {signatureChamp && (
+                          <img
+                            src={getChampionCenteredSplashUrl(signatureChamp)}
+                            alt={signatureChamp}
+                            className="absolute inset-0 w-full h-full object-cover object-top opacity-45 group-hover:opacity-60 group-hover:scale-105 transition duration-300"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b100e] via-[#0b100e]/65 to-black/30" />
+
+                        <div className="relative z-10 flex items-center justify-between gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/65 border border-white/15 text-[10px] font-extrabold uppercase tracking-wider text-[#e8e5d8]">
+                            <img
+                              src={roleMeta.icon}
+                              alt={roleMeta.label}
+                              className="w-3.5 h-3.5 object-contain shrink-0"
+                            />
+                            <span>{roleMeta.label}</span>
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-black/70 border border-[#f0c020]/50 text-[11px] font-black tabular-nums text-[#f0c020]">
+                            {player.leagueRating.toFixed(1)}
+                          </span>
+                        </div>
+
+                        <div className="relative z-10 min-w-0">
+                          <div className="font-extrabold text-sm sm:text-base text-white group-hover:text-[#f0c020] transition-colors truncate drop-shadow">
+                            {player.displayName}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                            {player.teamLogoUrl && (
+                              <img
+                                src={player.teamLogoUrl}
+                                alt={player.teamName}
+                                className="w-3.5 h-3.5 object-contain shrink-0"
+                              />
+                            )}
+                            <span className="text-[11px] font-semibold text-[#c7c5b8] truncate">
+                              {player.teamName}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Stat Leaderboards (Standard 4x3 or Shareable 2x3 with Export Frame) */}
         {activeSection === "players" && showLeaderboards && leaderboardPlayers.length > 0 && (() => {
