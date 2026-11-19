@@ -257,7 +257,8 @@ export async function PlayerStatsContent({
   const leagueChamps = lp?.topChampions ?? [];
   const leaguePrioRanks = getPriorityPickRanks(
     leagueChamps,
-    soloPlayer.masteryTop4
+    soloPlayer.masteryTop4,
+    "league"
   );
 
   const soloChamps = getRoleFilteredSoloChampions(

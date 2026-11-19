@@ -448,6 +448,23 @@ export function formatMinutesSeconds(minutesDecimal: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+const PRIO_THRESHOLDS = {
+  solo: {
+    minTotalGames: 12,
+    minChampGames: 4,
+    minWr: 0.45,
+    minShare: 0.14,
+    minScore: 1.15,
+  },
+  league: {
+    minTotalGames: 3,
+    minChampGames: 2,
+    minWr: 0.45,
+    minShare: 0.1,
+    minScore: 1.0,
+  },
+} as const;
+
 /**
  * Computes up to 3 High Priority pick ranks (1 = highest, 3 = lowest) for a
  * player's champion pool using median-anchored play rate, win rate, and a
@@ -455,11 +472,13 @@ export function formatMinutesSeconds(minutesDecimal: number): string {
  */
 export function getPriorityPickRanks(
   champs: { name: string; games: number; wins: number }[],
-  masteryTop4?: { championName: string; championPoints: number }[]
+  masteryTop4?: { championName: string; championPoints: number }[],
+  mode: "solo" | "league" = "solo"
 ): Map<string, 1 | 2 | 3> {
+  const t = PRIO_THRESHOLDS[mode];
   const result = new Map<string, 1 | 2 | 3>();
   const totalGames = champs.reduce((s, c) => s + c.games, 0);
-  if (totalGames < 12 || champs.length < 2) return result;
+  if (totalGames < t.minTotalGames || champs.length < 2) return result;
 
   const sortedCounts = champs.map((c) => c.games).sort((a, b) => a - b);
   const median = sortedCounts[Math.floor(sortedCounts.length / 2)];
@@ -471,11 +490,11 @@ export function getPriorityPickRanks(
 
   const scored: { name: string; score: number }[] = [];
   for (const c of champs) {
-    if (c.games < 4) continue;
+    if (c.games < t.minChampGames) continue;
     const wr = c.wins / c.games;
-    if (wr < 0.45) continue;
+    if (wr < t.minWr) continue;
     const share = c.games / totalGames;
-    if (share < 0.14) continue;
+    if (share < t.minShare) continue;
 
     const relToMedian = median > 0 ? c.games / median : 1;
     const wrScore = (wr - 0.5) * 1.5;
@@ -487,7 +506,7 @@ export function getPriorityPickRanks(
 
     const score =
       share * 2.5 + Math.min(2.2, relToMedian) * 0.35 + wrScore + masteryBonus;
-    if (score >= 1.15) {
+    if (score >= t.minScore) {
       scored.push({ name: c.name, score });
     }
   }
