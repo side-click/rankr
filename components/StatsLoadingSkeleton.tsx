@@ -12,7 +12,7 @@ function StatsLoadingSkeletonInner() {
     tabParam === "teams" || tabParam === "division" ? tabParam : "players";
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Selector Bar Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         {[0, 1].map((i) => (
@@ -62,7 +62,7 @@ function StatsLoadingSkeletonInner() {
 
       {activeTab === "teams" ? (
         <div className="xp-panel overflow-hidden">
-          <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex items-center justify-between gap-2">
+          <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
               <TeamGroupIcon className="w-4 h-4" />
               <span>Team Standings</span>
@@ -105,7 +105,7 @@ function StatsLoadingSkeletonInner() {
             ))}
           </div>
           <div className="xp-panel overflow-hidden">
-            <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex items-center justify-between gap-2">
+            <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Champions Played
               </h2>
@@ -147,7 +147,7 @@ function StatsLoadingSkeletonInner() {
         <>
           {/* First Team All-Pro Skeleton */}
           <div className="mb-6 xp-panel overflow-hidden">
-            <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[54px] flex items-center justify-between gap-2">
+            <div className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[54px] flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
                 <Crown className="w-4 h-4" />
                 <span>First Team All-Pro</span>

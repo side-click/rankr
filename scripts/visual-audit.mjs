@@ -12,7 +12,7 @@ const baseUrl = args.includes("--prod")
   ? "https://leaguerankr.com"
   : argVal("--base=") || "http://localhost:3000";
 
-const widths = (argVal("--widths=") || "1440,1024,768,390")
+const widths = (argVal("--widths=") || "1440,1280,1024,768,390,360")
   .split(",")
   .map((n) => Number(n.trim()))
   .filter((n) => Number.isFinite(n) && n > 0);

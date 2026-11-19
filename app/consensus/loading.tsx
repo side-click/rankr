@@ -71,7 +71,7 @@ export default function ConsensusLoading() {
       </div>
 
       {/* Graphic Preview Inside Outer Container */}
-      <div className="max-w-[960px] mx-auto w-full rounded-[32px] border-[6px] border-[#c89b3c]/75 bg-[#181e1c] overflow-hidden">
+      <div className="max-w-[1080px] mx-auto w-full rounded-[32px] border-[6px] border-[#c89b3c]/75 bg-[#181e1c] overflow-hidden">
         <div className="h-24 bg-black/40 border-b-2 border-[#c89b3c]/50 animate-pulse" />
         <div className="p-4 sm:p-6 space-y-2.5">
           {Array.from({ length: 8 }).map((_, idx) => (
