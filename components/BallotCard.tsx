@@ -176,6 +176,8 @@ export function BallotCard({
               <img
                 src={profile.avatar_url}
                 alt={profile.username}
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
               />
             ) : (
@@ -198,6 +200,8 @@ export function BallotCard({
                   <img
                     src={displayLogo}
                     alt={hasDivision ? divName : league?.name ?? sName}
+                    width={20}
+                    height={20}
                     className="w-5 h-5 object-contain shrink-0"
                   />
                 ) : (
@@ -234,6 +238,8 @@ export function BallotCard({
             <img
               src={displayLogo}
               alt={hasDivision ? divName : league?.name ?? sName}
+              width={24}
+              height={24}
               className="w-6 h-6 object-contain shrink-0"
             />
           ) : (
@@ -273,6 +279,8 @@ export function BallotCard({
                     <img
                       src={t.logoUrl}
                       alt={t.name}
+                      width={16}
+                      height={16}
                       className="w-4 h-4 object-contain shrink-0"
                     />
                   )}
@@ -298,6 +306,8 @@ export function BallotCard({
                           <img
                             src={r.icon}
                             alt={r.label}
+                            width={14}
+                            height={14}
                             className="w-3.5 h-3.5 object-contain shrink-0"
                           />
                           <span>{r.label}</span>
@@ -332,6 +342,8 @@ export function BallotCard({
           <img
             src={displayLogo}
             alt={hasDivision ? divName : league?.name ?? sName}
+            width={24}
+            height={24}
             className="w-6 h-6 object-contain shrink-0"
           />
         ) : (
@@ -355,6 +367,8 @@ export function BallotCard({
             <img
               src={profile.avatar_url}
               alt={profile.username}
+              width={56}
+              height={56}
               className="w-12 h-12 sm:w-14 sm:h-14 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (

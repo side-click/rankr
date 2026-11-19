@@ -1,4 +1,5 @@
-import { createClient } from "@/utils/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createClient, createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { normalizeRoster } from "@/utils/roles";
 import { getLatestDdragonVersion } from "@/utils/riotApi";
@@ -74,22 +75,43 @@ export async function loadAdminStatsContext(
   });
 }
 
+const loadCachedPublicStatsContext = unstable_cache(
+  async (
+    seasonSlug: string | undefined,
+    includeRiotStats: boolean,
+    teamIdFilter: string | undefined,
+    playerKeyFilter: string | undefined
+  ): Promise<LoadedAdminStatsContext> => {
+    const supabase = createPublicClient();
+    const ddVersion = await getLatestDdragonVersion();
+    return loadStatsContextInternal(
+      supabase as unknown as Awaited<ReturnType<typeof createClient>>,
+      {
+        authorized: true,
+        hasRiotKey: false,
+        ddVersion,
+        stripAdminFields: true,
+        seasonSlug,
+        includeRiotStats,
+        teamIdFilter,
+        playerKeyFilter,
+      }
+    );
+  },
+  ["public-stats-context"],
+  { revalidate: 60, tags: ["public-stats"] }
+);
+
 export async function loadPublicStatsContext(
   seasonSlug?: string,
   queryOpts?: StatsContextQueryOptions
 ): Promise<LoadedAdminStatsContext> {
-  const [supabase, ddVersion] = await Promise.all([
-    createClient(),
-    getLatestDdragonVersion(),
-  ]);
-  return loadStatsContextInternal(supabase, {
-    authorized: true,
-    hasRiotKey: false,
-    ddVersion,
-    stripAdminFields: true,
+  return loadCachedPublicStatsContext(
     seasonSlug,
-    ...queryOpts,
-  });
+    queryOpts?.includeRiotStats ?? true,
+    queryOpts?.teamIdFilter,
+    queryOpts?.playerKeyFilter
+  );
 }
 
 async function loadStatsContextInternal(
