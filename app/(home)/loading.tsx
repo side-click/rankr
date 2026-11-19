@@ -7,7 +7,7 @@ export default function HomeLoading() {
       {/* Top Row: Start Menu + Seasons Directory */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
         <div className="md:col-span-5 flex flex-col">
-          <RetroWindow title="Start Menu" theme="scdl" className="h-full">
+          <RetroWindow title="Start" theme="scdl" className="h-full">
             <div className="space-y-2.5">
               {[
                 {
