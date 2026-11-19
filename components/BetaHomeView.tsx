@@ -9,10 +9,10 @@ import {
   Crown,
   Eye,
   ListOrdered,
-  Swords,
   Trophy,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RankrLogoIcon } from "@/components/RankrLogoIcon";
 import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
 import { getRankColor } from "@/utils/rankColors";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
@@ -279,7 +279,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
               {data.divisionStandings.length > 0 && (
                 <div className="space-y-2.5">
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
-                    Division Standings (Top 4)
+                    Standings (Top 4)
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {data.divisionStandings.map((div) => (
@@ -352,9 +352,8 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
 
               {data.divisionTopPerformers.length > 0 && (
                 <div className="space-y-2.5">
-                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-                    <Crown className="w-3.5 h-3.5" />
-                    <span>Top Performers</span>
+                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                    Top Performers
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {data.divisionTopPerformers.map((div) => (
@@ -387,8 +386,9 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                               {div.divisionName}
                             </span>
                           </div>
-                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#f0c020]/90 shrink-0">
-                            Rating
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-[#f0c020]/90 shrink-0">
+                            <RankrLogoIcon className="w-4 h-3.5 text-[#f0c020] shrink-0" />
+                            <span>Rating</span>
                           </span>
                         </div>
                         <div className="divide-y divide-[#f0c020]/15">
@@ -469,9 +469,8 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             {/* Right Col: Vertically Stacked Recent Match Results */}
             {data.recentMatches.length > 0 && (
               <div className="lg:col-span-5 space-y-2.5">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-                  <Swords className="w-3.5 h-3.5" />
-                  <span>Recent Match Results</span>
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                  Recent Match Results
                 </h2>
                 <div className="space-y-2.5">
                   {data.recentMatches.map((m) => (
@@ -578,7 +577,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     )}
                     <div className="min-w-0">
                       <div className="wow-heading text-sm font-extrabold text-white tracking-wide truncate">
-                        {snap.divisionName} Consensus
+                        {snap.divisionName}
                       </div>
                       <div className="text-[11px] font-semibold text-[#d6d3c4] leading-snug">
                         <div>

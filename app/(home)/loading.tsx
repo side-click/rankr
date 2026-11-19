@@ -100,7 +100,7 @@ export default function HomeLoading() {
           <div className="lg:col-span-7 space-y-4">
             <div className="space-y-2.5">
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
-                Division Standings (Top 4)
+                Standings (Top 4)
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[0, 1].map((i) => (
@@ -118,9 +118,8 @@ export default function HomeLoading() {
             </div>
 
             <div className="space-y-2.5">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-                <Crown className="w-3.5 h-3.5" />
-                <span>Top Performers</span>
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Top Performers
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[0, 1].map((i) => (
@@ -139,9 +138,8 @@ export default function HomeLoading() {
           </div>
 
           <div className="lg:col-span-5 space-y-2.5">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
-              <Swords className="w-3.5 h-3.5" />
-              <span>Recent Match Results</span>
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+              Recent Match Results
             </h2>
             <div className="space-y-2.5">
               {Array.from({ length: 4 }).map((_, idx) => (
