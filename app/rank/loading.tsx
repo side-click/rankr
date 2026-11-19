@@ -26,43 +26,59 @@ export default async function RankLoading() {
 
   return (
     <div className="space-y-4">
-      {/* Mode Selector: Team Power Rankings vs Player Tier List (no subtitles, matching RankWorkspace) */}
+      {/* Mode Selector: exact match to RankWorkspace */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="p-2.5 rounded-lg border-2 bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)] flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg border bg-[#382e12] border-[#f0c020] text-[#f0c020] flex items-center justify-center shrink-0">
+        <div className="text-left p-2.5 rounded-lg border-2 flex items-center gap-3 bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]">
+          <div className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 bg-[#382e12] border-[#f0c020] text-[#f0c020]">
             <TeamGroupIcon className="w-5 h-5" />
           </div>
-          <div className="text-sm font-extrabold text-[#f0c020]">
+          <span className="font-black text-sm tracking-tight text-[#f0c020]">
             Team Power Rankings
-          </div>
+          </span>
         </div>
 
-        <div className="p-2.5 rounded-lg border-2 bg-[#15181f] border-white/10 opacity-75 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg border bg-black/40 border-white/15 text-[#c7c5b8] flex items-center justify-center shrink-0">
+        <div className="text-left p-2.5 rounded-lg border-2 flex items-center gap-3 bg-[#15181f] border-white/10 opacity-75">
+          <div className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 bg-black/30 border-white/15 text-[#c89b3c]/70">
             <User className="w-5 h-5" />
           </div>
-          <div className="text-sm font-extrabold text-[#f0ede0]">
+          <span className="font-black text-sm tracking-tight text-[#f0ede0]">
             Player Tier List
-          </div>
+          </span>
         </div>
       </div>
 
       <RetroWindow title="Team Power Rankings Editor" theme="scdl">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {["Season", "Division", "Edition"].map((label) => (
-              <div key={label} className="space-y-1">
-                <div className="text-[11px] font-bold text-[#a6a89e]">
-                  {label}
+          {/* Exact xp-panel framing around Season / Division / Edition */}
+          <div className="xp-panel p-3 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {["Season", "Division", "Edition"].map((label) => (
+                <div key={label}>
+                  <div className="block text-[11px] font-bold mb-1 text-[#c7c5b8]">
+                    {label}
+                  </div>
+                  <div className="w-full xp-inset h-[30px] animate-pulse" />
                 </div>
-                <div className="h-9 rounded border border-white/15 bg-black/35 animate-pulse" />
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
+                + Custom Author Name
               </div>
-            ))}
+              <div className="xp-btn text-xs px-2.5 py-1 pointer-events-none opacity-65">
+                + Add General Notes
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <div className="h-8 w-48 rounded bg-white/10 animate-pulse" />
-            <div className="h-8 w-36 rounded bg-white/10 animate-pulse" />
+          <div className="flex items-center justify-end gap-2">
+            <div className="xp-btn text-xs px-3 py-1.5 pointer-events-none opacity-55">
+              Save Draft
+            </div>
+            <div className="xp-btn xp-btn-primary text-xs px-3 py-1.5 pointer-events-none opacity-55">
+              Publish Ranking
+            </div>
           </div>
 
           <div className="xp-inset p-6 text-center text-xs text-[#a6a89e] animate-pulse">
