@@ -30,6 +30,7 @@ import {
   RotateCcw,
   Save,
   Search,
+  Shield,
   ShieldCheck,
   Trash2,
   Unlock,
@@ -48,6 +49,7 @@ import type {
   ChampionCatalogItem,
   ChampionCatalogResponse,
 } from "@/utils/championData";
+import type { ChampionMatchupsResponse } from "@/utils/lolalyticsMatchups";
 import {
   clearStoredPassphrase,
   decryptPoolPayload,
@@ -113,12 +115,16 @@ function ChampionTileVisual({
   iconUrl,
   showRemoveButton,
   onRemove,
+  showBlindToggle,
+  onToggleBlind,
   isOverlay,
 }: {
   champion: ChampionPoolTierItem;
   iconUrl: string;
   showRemoveButton?: boolean;
   onRemove?: () => void;
+  showBlindToggle?: boolean;
+  onToggleBlind?: () => void;
   isOverlay?: boolean;
 }) {
   return (
@@ -126,9 +132,33 @@ function ChampionTileVisual({
       className={`group relative flex flex-col items-center w-[66px] p-1.5 rounded-md border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
+          : champion.isBlindable
+          ? "bg-[#14221a] border-[#7cd438]/45 text-[#f0ede0] hover:border-[#7cd438] cursor-grab"
           : "bg-[#1a1f29] border-white/15 text-[#f0ede0] hover:border-[#f0c020]/60 cursor-grab"
       }`}
     >
+      {showBlindToggle && onToggleBlind && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleBlind();
+          }}
+          title={
+            champion.isBlindable
+              ? `Unmark ${champion.name} as Blindable`
+              : `Mark ${champion.name} as Blindable`
+          }
+          className={`absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full border flex items-center justify-center transition-opacity cursor-pointer z-10 ${
+            champion.isBlindable
+              ? "bg-[#1b3827] border-[#7cd438] text-[#7cd438] opacity-100"
+              : "bg-[#1c222d] border-white/25 text-[#a6a89e] opacity-0 group-hover:opacity-100 hover:border-[#7cd438] hover:text-[#7cd438]"
+          }`}
+        >
+          <Shield className="w-2.5 h-2.5" />
+        </button>
+      )}
       {showRemoveButton && onRemove && (
         <button
           type="button"
@@ -163,11 +193,17 @@ function DraggablePlacedChampion({
   champion,
   iconUrl,
   onRemove,
+  onToggleBlind,
+  onHoverStart,
+  onHoverEnd,
 }: {
   tierId: string;
   champion: ChampionPoolTierItem;
   iconUrl: string;
   onRemove: () => void;
+  onToggleBlind: () => void;
+  onHoverStart?: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
+  onHoverEnd?: () => void;
 }) {
   const {
     attributes,
@@ -188,6 +224,7 @@ function DraggablePlacedChampion({
       kind: "tile",
       tierId,
       championId: champion.championId,
+      isBlindable: Boolean(champion.isBlindable),
     },
   });
 
@@ -204,6 +241,14 @@ function DraggablePlacedChampion({
       ref={setRefs}
       {...attributes}
       {...listeners}
+      onMouseEnter={(e) => {
+        if (!champion.isBlindable && onHoverStart) {
+          onHoverStart(champion, e.currentTarget.getBoundingClientRect());
+        }
+      }}
+      onMouseLeave={() => {
+        if (onHoverEnd) onHoverEnd();
+      }}
       className={`touch-none transition-all ${isDragging ? "opacity-30" : ""} ${
         isOver ? "ring-2 ring-[#f0c020] rounded-md" : ""
       }`}
@@ -213,6 +258,8 @@ function DraggablePlacedChampion({
         iconUrl={iconUrl}
         showRemoveButton
         onRemove={onRemove}
+        showBlindToggle
+        onToggleBlind={onToggleBlind}
       />
     </div>
   );
@@ -261,6 +308,9 @@ function DroppableTierRow({
   onMoveTier,
   onDeleteTier,
   onRemoveChampion,
+  onToggleBlind,
+  onHoverStart,
+  onHoverEnd,
 }: {
   tier: ChampionTierRowData;
   index: number;
@@ -272,16 +322,31 @@ function DroppableTierRow({
   onMoveTier: (dir: -1 | 1) => void;
   onDeleteTier: () => void;
   onRemoveChampion: (championId: string) => void;
+  onToggleBlind: (championId: string) => void;
+  onHoverStart: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
+  onHoverEnd: () => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `tier:${tier.id}`,
+  const { setNodeRef: setBlindRef, isOver: isOverBlind } = useDroppable({
+    id: `tier-blind:${tier.id}`,
     data: {
       kind: "tier",
       tierId: tier.id,
+      isBlindable: true,
+    },
+  });
+
+  const { setNodeRef: setGeneralRef, isOver: isOverGeneral } = useDroppable({
+    id: `tier-general:${tier.id}`,
+    data: {
+      kind: "tier",
+      tierId: tier.id,
+      isBlindable: false,
     },
   });
 
   const contrastColor = getTierContrastText(tier.color);
+  const blindableChamps = tier.champions.filter((c) => Boolean(c.isBlindable));
+  const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
   return (
     <div className="rounded-lg border border-white/10 bg-[#12151c] overflow-hidden">
@@ -338,36 +403,86 @@ function DroppableTierRow({
           </div>
         </div>
 
-        {/* Droppable Champion Zone */}
+        {/* Droppable Blindable (Front) + General (Main) Zones */}
         <div className="flex-1 flex flex-col">
-          <div
-            ref={setNodeRef}
-            className={`min-h-[92px] p-2.5 flex flex-wrap gap-2 items-start transition-colors ${
-              isOver ? "bg-[#f0c020]/10 ring-1 ring-inset ring-[#f0c020]/50" : ""
-            }`}
-          >
-            {tier.champions.length === 0 ? (
-              <div className="w-full h-16 flex items-center justify-center text-xs text-[#7c808b] italic select-none">
-                Drag champions here (or double-click from pool below)
+          <div className="flex flex-col md:flex-row flex-1">
+            {/* Isolated Blindable Section at Front of Tier */}
+            <div
+              ref={setBlindRef}
+              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r border-[#7cd438]/25 transition-colors flex flex-col ${
+                isOverBlind
+                  ? "bg-[#7cd438]/15 ring-1 ring-inset ring-[#7cd438]/60"
+                  : "bg-[#101c16]/70"
+              }`}
+            >
+              <div className="flex items-center gap-1 mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#7cd438]">
+                <Shield className="w-3 h-3" />
+                <span>Blindable ({blindableChamps.length})</span>
               </div>
-            ) : (
-              tier.champions.map((champ) => (
-                <DraggablePlacedChampion
-                  key={champ.championId}
-                  tierId={tier.id}
-                  champion={champ}
-                  iconUrl={iconMap.get(champ.championId) ?? ""}
-                  onRemove={() => onRemoveChampion(champ.championId)}
-                />
-              ))
-            )}
+              <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
+                {blindableChamps.length === 0 ? (
+                  <div className="w-full h-16 flex items-center justify-center text-[11px] text-[#5e7364] italic text-center px-1 select-none">
+                    Drop blind picks here
+                  </div>
+                ) : (
+                  blindableChamps.map((champ) => (
+                    <DraggablePlacedChampion
+                      key={champ.championId}
+                      tierId={tier.id}
+                      champion={champ}
+                      iconUrl={iconMap.get(champ.championId) ?? ""}
+                      onRemove={() => onRemoveChampion(champ.championId)}
+                      onToggleBlind={() => onToggleBlind(champ.championId)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* General Section */}
+            <div
+              ref={setGeneralRef}
+              className={`flex-1 min-h-[96px] p-2 transition-colors flex flex-col ${
+                isOverGeneral
+                  ? "bg-[#f0c020]/10 ring-1 ring-inset ring-[#f0c020]/50"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center gap-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8e93a0]">
+                <span>General ({generalChamps.length})</span>
+                <span className="text-[9px] font-normal text-[#666b75]">
+                  • Hover for Counters
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
+                {generalChamps.length === 0 ? (
+                  <div className="w-full h-16 flex items-center justify-center text-xs text-[#7c808b] italic select-none">
+                    Drag champions here (or double-click from pool below)
+                  </div>
+                ) : (
+                  generalChamps.map((champ) => (
+                    <DraggablePlacedChampion
+                      key={champ.championId}
+                      tierId={tier.id}
+                      champion={champ}
+                      iconUrl={iconMap.get(champ.championId) ?? ""}
+                      onRemove={() => onRemoveChampion(champ.championId)}
+                      onToggleBlind={() => onToggleBlind(champ.championId)}
+                      onHoverStart={onHoverStart}
+                      onHoverEnd={onHoverEnd}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-          <div className="px-2.5 pb-2">
+
+          <div className="px-2.5 pb-2 pt-1">
             <input
               type="text"
               value={tier.commentary}
               onChange={(e) => onCommentaryChange(e.target.value)}
-              placeholder="Optional tier notes (e.g., blind pickable, comfort, situational)..."
+              placeholder="Optional tier notes (e.g., comfort, situational, counterpicks)..."
               maxLength={180}
               className="w-full bg-black/25 border border-white/10 rounded px-2.5 py-1 text-[11px] text-[#d6d3c4] placeholder:text-[#666b75] focus:outline-none focus:border-[#f0c020]/50"
             />
@@ -457,6 +572,18 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
   // PNG export state
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
+
+  // Matchup hover popover state (General section champions)
+  const [hoveredChamp, setHoveredChamp] = useState<{
+    champion: ChampionPoolTierItem;
+    rect: { top: number; bottom: number; left: number; width: number };
+  } | null>(null);
+  const [matchupCache, setMatchupCache] = useState<
+    Record<string, ChampionMatchupsResponse>
+  >({});
+  const [matchupLoadingKey, setMatchupLoadingKey] = useState<string | null>(null);
+  const [matchupErrorKey, setMatchupErrorKey] = useState<string | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -795,7 +922,54 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
     return closestCorners(args);
   }, []);
 
+  const handleChampHoverStart = useCallback(
+    (champion: ChampionPoolTierItem, rect: DOMRect) => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      const cacheKey = `${champion.championId}:${activeRole}`;
+      setHoveredChamp({
+        champion,
+        rect: {
+          top: rect.top,
+          bottom: rect.bottom,
+          left: rect.left,
+          width: rect.width,
+        },
+      });
+
+      if (matchupCache[cacheKey]) return;
+
+      hoverTimerRef.current = setTimeout(async () => {
+        setMatchupLoadingKey(cacheKey);
+        setMatchupErrorKey(null);
+        try {
+          const res = await fetch(
+            `/api/champions/matchups?championId=${encodeURIComponent(
+              champion.championId
+            )}&role=${encodeURIComponent(activeRole)}`
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = (await res.json()) as ChampionMatchupsResponse;
+          setMatchupCache((prev) => ({ ...prev, [cacheKey]: data }));
+        } catch {
+          setMatchupErrorKey(cacheKey);
+        } finally {
+          setMatchupLoadingKey((curr) => (curr === cacheKey ? null : curr));
+        }
+      }, 150);
+    },
+    [activeRole, matchupCache]
+  );
+
+  const handleChampHoverEnd = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setHoveredChamp(null);
+  }, []);
+
   function handleDragStart(event: DragStartEvent) {
+    handleChampHoverEnd();
     const meta = event.active.data.current as DragChampMeta | undefined;
     if (meta?.champion) {
       setActiveDragChamp(meta.champion);
@@ -813,6 +987,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
           kind: "tier" | "tile" | "pool";
           tierId?: string;
           championId?: string;
+          isBlindable?: boolean;
         }
       | undefined;
 
@@ -835,6 +1010,16 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
     const targetTierId = overData.tierId;
     if (!targetTierId) return;
 
+    const nextBlindable =
+      typeof overData.isBlindable === "boolean"
+        ? overData.isBlindable
+        : Boolean(dragged.isBlindable);
+
+    const updatedDragged: ChampionPoolTierItem = {
+      ...dragged,
+      isBlindable: nextBlindable,
+    };
+
     updateActiveRoleTiers((tiers) => {
       // Remove from source tier (if coming from a tier)
       const cleaned = tiers.map((t) => ({
@@ -852,11 +1037,11 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
             (c) => c.championId === overData.championId
           );
           if (idx >= 0) {
-            list.splice(idx, 0, dragged);
+            list.splice(idx, 0, updatedDragged);
             return { ...t, champions: list };
           }
         }
-        list.push(dragged);
+        list.push(updatedDragged);
         return { ...t, champions: list };
       });
     });
@@ -1430,6 +1615,25 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                     )
                   )
                 }
+                onToggleBlind={(championId) => {
+                  handleChampHoverEnd();
+                  updateActiveRoleTiers((tiers) =>
+                    tiers.map((t) =>
+                      t.id === tier.id
+                        ? {
+                            ...t,
+                            champions: t.champions.map((c) =>
+                              c.championId === championId
+                                ? { ...c, isBlindable: !c.isBlindable }
+                                : c
+                            ),
+                          }
+                        : t
+                    )
+                  );
+                }}
+                onHoverStart={handleChampHoverStart}
+                onHoverEnd={handleChampHoverEnd}
               />
             ))}
           </div>
@@ -1519,6 +1723,148 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
               </DragOverlay>,
               document.body
             )}
+
+          {mounted &&
+            hoveredChamp &&
+            !activeDragChamp &&
+            createPortal(
+              (() => {
+                const cacheKey = `${hoveredChamp.champion.championId}:${activeRole}`;
+                const data = matchupCache[cacheKey];
+                const isLoading = matchupLoadingKey === cacheKey;
+                const isError = matchupErrorKey === cacheKey;
+
+                const popoverWidth = 280;
+                const left = Math.min(
+                  Math.max(12, hoveredChamp.rect.left + hoveredChamp.rect.width / 2 - popoverWidth / 2),
+                  typeof window !== "undefined" ? window.innerWidth - popoverWidth - 12 : 900
+                );
+                const showBelow = hoveredChamp.rect.top < 310;
+                const top = showBelow
+                  ? hoveredChamp.rect.bottom + 8
+                  : hoveredChamp.rect.top - 8;
+
+                return (
+                  <div
+                    style={{
+                      position: "fixed",
+                      left,
+                      top,
+                      width: popoverWidth,
+                      transform: showBelow ? "none" : "translateY(-100%)",
+                    }}
+                    className="pointer-events-none z-50 rounded-lg border border-[#f0c020]/50 bg-[#0d1016]/95 backdrop-blur-md shadow-2xl p-3 text-xs text-[#f0ede0] space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={iconMap.get(hoveredChamp.champion.championId) ?? ""}
+                          alt={hoveredChamp.champion.name}
+                          className="w-6 h-6 rounded border border-white/20"
+                        />
+                        <span className="font-black text-[#f0c020]">
+                          {hoveredChamp.champion.name}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#8e93a0]">
+                        Plat+ • {activeRoleMeta.label}
+                      </span>
+                    </div>
+
+                    {isLoading && !data ? (
+                      <div className="py-3 text-center text-[11px] text-[#a6a89e]">
+                        Loading Lolalytics matchups...
+                      </div>
+                    ) : isError && !data ? (
+                      <div className="py-2 text-center text-[11px] text-[#ff857a]">
+                        Could not load Lolalytics matchup data.
+                      </div>
+                    ) : data ? (
+                      <div className="space-y-2.5">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-[#7cd438] mb-1">
+                            Counters (&gt;51% WR • Top 5 Games)
+                          </p>
+                          {data.counters.length === 0 ? (
+                            <p className="text-[11px] text-[#7c808b] italic">
+                              No &gt;51% matchups found
+                            </p>
+                          ) : (
+                            <div className="space-y-1">
+                              {data.counters.map((m) => (
+                                <div
+                                  key={m.championId}
+                                  className="flex items-center justify-between text-[11px]"
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <img
+                                      src={m.iconUrl}
+                                      alt={m.name}
+                                      className="w-4 h-4 rounded shrink-0"
+                                    />
+                                    <span className="truncate font-semibold">
+                                      {m.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="font-black text-[#7cd438]">
+                                      {m.winRate.toFixed(1)}%
+                                    </span>
+                                    <span className="text-[10px] text-[#7c808b] w-12 text-right">
+                                      {m.games.toLocaleString()}g
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="pt-1.5 border-t border-white/10">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-[#ff857a] mb-1">
+                            Countered By (&lt;49% WR • Top 5 Games)
+                          </p>
+                          {data.counteredBy.length === 0 ? (
+                            <p className="text-[11px] text-[#7c808b] italic">
+                              No &lt;49% matchups found
+                            </p>
+                          ) : (
+                            <div className="space-y-1">
+                              {data.counteredBy.map((m) => (
+                                <div
+                                  key={m.championId}
+                                  className="flex items-center justify-between text-[11px]"
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <img
+                                      src={m.iconUrl}
+                                      alt={m.name}
+                                      className="w-4 h-4 rounded shrink-0"
+                                    />
+                                    <span className="truncate font-semibold">
+                                      {m.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="font-black text-[#ff857a]">
+                                      {m.winRate.toFixed(1)}%
+                                    </span>
+                                    <span className="text-[10px] text-[#7c808b] w-12 text-right">
+                                      {m.games.toLocaleString()}g
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })(),
+              document.body
+            )}
         </DndContext>
 
         {/* Off-screen Single-Role PNG Export Card */}
@@ -1551,6 +1897,9 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
             <div className="space-y-2">
               {activeSection.tiers.map((tier) => {
                 const contrast = getTierContrastText(tier.color);
+                const blindChamps = tier.champions.filter((c) => c.isBlindable);
+                const genChamps = tier.champions.filter((c) => !c.isBlindable);
+
                 return (
                   <div
                     key={tier.id}
@@ -1562,31 +1911,60 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                     >
                       {tier.label}
                     </div>
-                    <div className="flex-1 p-2.5 flex flex-wrap gap-2 items-center">
-                      {tier.champions.length === 0 ? (
-                        <span className="text-xs text-[#5d626d] italic">
-                          Empty
-                        </span>
-                      ) : (
-                        tier.champions.map((c) => (
-                          <div
-                            key={c.championId}
-                            className="flex flex-col items-center w-[64px] p-1 rounded bg-[#1b202b] border border-white/10"
-                          >
-                            <img
-                              src={iconMap.get(c.championId) ?? ""}
-                              alt={c.name}
-                              width={44}
-                              height={44}
-                              crossOrigin="anonymous"
-                              className="w-11 h-11 rounded object-cover"
-                            />
-                            <span className="mt-1 text-[10px] font-bold text-center leading-tight">
-                              {c.name}
-                            </span>
+                    <div className="flex-1 flex items-stretch">
+                      {blindChamps.length > 0 && (
+                        <div className="p-2.5 bg-[#101c16] border-r border-[#7cd438]/30 flex flex-col gap-1.5 shrink-0">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-[#7cd438]">
+                            Blindable
+                          </span>
+                          <div className="flex flex-wrap gap-2 items-center">
+                            {blindChamps.map((c) => (
+                              <div
+                                key={c.championId}
+                                className="flex flex-col items-center w-[64px] p-1 rounded bg-[#14221a] border border-[#7cd438]/40"
+                              >
+                                <img
+                                  src={iconMap.get(c.championId) ?? ""}
+                                  alt={c.name}
+                                  width={44}
+                                  height={44}
+                                  crossOrigin="anonymous"
+                                  className="w-11 h-11 rounded object-cover"
+                                />
+                                <span className="mt-1 text-[10px] font-bold text-center leading-tight">
+                                  {c.name}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))
+                        </div>
                       )}
+                      <div className="flex-1 p-2.5 flex flex-wrap gap-2 items-center">
+                        {tier.champions.length === 0 ? (
+                          <span className="text-xs text-[#5d626d] italic">
+                            Empty
+                          </span>
+                        ) : genChamps.length === 0 ? null : (
+                          genChamps.map((c) => (
+                            <div
+                              key={c.championId}
+                              className="flex flex-col items-center w-[64px] p-1 rounded bg-[#1b202b] border border-white/10"
+                            >
+                              <img
+                                src={iconMap.get(c.championId) ?? ""}
+                                alt={c.name}
+                                width={44}
+                                height={44}
+                                crossOrigin="anonymous"
+                                className="w-11 h-11 rounded object-cover"
+                              />
+                              <span className="mt-1 text-[10px] font-bold text-center leading-tight">
+                                {c.name}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

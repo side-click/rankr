@@ -199,6 +199,7 @@ export interface BallotEntry {
 export interface ChampionPoolTierItem {
   championId: string;
   name: string;
+  isBlindable?: boolean;
 }
 
 export interface ChampionTierRowData {
