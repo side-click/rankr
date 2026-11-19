@@ -1,4 +1,4 @@
-import { BarChart3, Eye, ListOrdered, Swords, Trophy } from "lucide-react";
+import { BarChart3, Crown, Eye, ListOrdered, Swords, Trophy } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 
 export default function HomeLoading() {
@@ -118,8 +118,9 @@ export default function HomeLoading() {
             </div>
 
             <div className="space-y-2.5">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
-                Top Performers (Rankr Rating)
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5" />
+                <span>Top Performers (Rankr Rating)</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[0, 1].map((i) => (
