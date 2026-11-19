@@ -25,7 +25,7 @@ export default async function ConsensusOpenGraphImage() {
           gap: "48px",
           background:
             "linear-gradient(135deg, #0b110f 0%, #14221d 55%, #1d2b24 100%)",
-          border: "8px solid #c89b3c",
+          border: "14px solid #c89b3c",
           color: "#f4f2e8",
           fontFamily: "SiteBody, sans-serif",
         }}
