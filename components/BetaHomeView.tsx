@@ -559,7 +559,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         {snap.divisionName}
                       </div>
                       <div className="text-[11px] font-semibold text-[#d6d3c4]">
-                        {snap.editionName} • {snap.seasonName} •{" "}
+                        {snap.seasonName} • {snap.editionName} •{" "}
                         {snap.submissionCount}{" "}
                         {snap.submissionCount === 1 ? "ranking" : "rankings"}
                       </div>
