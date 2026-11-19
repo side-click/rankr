@@ -1,23 +1,39 @@
-import { Loader2, User } from "lucide-react";
+import { Lock, User } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 
-export default function RankLoading() {
+export default async function RankLoading() {
+  const auth = await getServerAuthContext();
+
+  if (!auth.user) {
+    return (
+      <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
+        <div className="py-8 px-4 text-center space-y-4">
+          <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
+            <Lock className="w-6 h-6 text-[#f0c020]" />
+          </div>
+          <h1 className="text-lg font-bold text-[#f0ede0]">
+            Sign in with Discord to Create Rankings
+          </h1>
+          <div className="flex justify-center">
+            <div className="h-8 w-40 rounded bg-white/10 animate-pulse" />
+          </div>
+        </div>
+      </RetroWindow>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* Mode Selector: Team Power Rankings vs Player Tier List */}
+      {/* Mode Selector: Team Power Rankings vs Player Tier List (no subtitles, matching RankWorkspace) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="p-2.5 rounded-lg border-2 bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)] flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg border bg-[#382e12] border-[#f0c020] text-[#f0c020] flex items-center justify-center shrink-0">
             <TeamGroupIcon className="w-5 h-5" />
           </div>
-          <div className="min-w-0">
-            <div className="text-sm font-extrabold text-[#f0c020]">
-              Team Power Rankings
-            </div>
-            <div className="text-[11px] text-[#c7c5b8]">
-              Rank division teams 1–N with notes
-            </div>
+          <div className="text-sm font-extrabold text-[#f0c020]">
+            Team Power Rankings
           </div>
         </div>
 
@@ -25,44 +41,32 @@ export default function RankLoading() {
           <div className="w-9 h-9 rounded-lg border bg-black/40 border-white/15 text-[#c7c5b8] flex items-center justify-center shrink-0">
             <User className="w-5 h-5" />
           </div>
-          <div className="min-w-0">
-            <div className="text-sm font-extrabold text-[#f0ede0]">
-              Player Tier List
-            </div>
-            <div className="text-[11px] text-[#a6a89e]">
-              Tier-rank players across roles
-            </div>
+          <div className="text-sm font-extrabold text-[#f0ede0]">
+            Player Tier List
           </div>
         </div>
       </div>
 
-      <RetroWindow
-        title="Create Ranking"
-        theme="scdl"
-        statusText="Loading workspace..."
-      >
+      <RetroWindow title="Team Power Rankings Editor" theme="scdl">
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-xs text-[#f0c020] font-bold">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Loading teams and editions...</span>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-10 rounded border border-white/10 bg-black/35 animate-pulse"
-              />
+            {["Season", "Division", "Edition"].map((label) => (
+              <div key={label} className="space-y-1">
+                <div className="text-[11px] font-bold text-[#a6a89e]">
+                  {label}
+                </div>
+                <div className="h-9 rounded border border-white/15 bg-black/35 animate-pulse" />
+              </div>
             ))}
           </div>
 
-          <div className="space-y-2">
-            {Array.from({ length: 8 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="h-12 rounded border border-white/10 bg-black/30 animate-pulse"
-              />
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <div className="h-8 w-48 rounded bg-white/10 animate-pulse" />
+            <div className="h-8 w-36 rounded bg-white/10 animate-pulse" />
+          </div>
+
+          <div className="xp-inset p-6 text-center text-xs text-[#a6a89e] animate-pulse">
+            Loading editor...
           </div>
         </div>
       </RetroWindow>

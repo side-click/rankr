@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { checkUserAllowlisted } from "@/utils/allowlist";
 import { RankWorkspace } from "@/components/RankWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -21,11 +22,12 @@ export default async function RankPage({
   }>;
 }) {
   const params = await searchParams;
-  const effectiveSeason = await getFocusedSeasonSlug(params.season);
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [effectiveSeason, auth, supabase] = await Promise.all([
+    getFocusedSeasonSlug(params.season),
+    getServerAuthContext(),
+    createClient(),
+  ]);
+  const user = auth.user;
 
   if (!user) {
     const { data: appSettings } = await supabase
@@ -126,7 +128,7 @@ export default async function RankPage({
     );
   }
 
-  const meta = user.user_metadata ?? {};
+  const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
   const discordDefaultName: string =
     meta.full_name ||
     meta.name ||
