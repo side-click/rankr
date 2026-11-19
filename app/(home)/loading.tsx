@@ -95,7 +95,7 @@ export default function HomeLoading() {
       </div>
 
       {/* Second Row: League Stats (Division Standings + Top Performers + Recent Match Results) */}
-      <RetroWindow title="League Stats" theme="scdl">
+      <RetroWindow title="Season Stats" theme="scdl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-7 space-y-4">
             <div className="space-y-2.5">

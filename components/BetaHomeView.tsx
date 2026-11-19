@@ -272,7 +272,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
       {(data.recentMatches.length > 0 ||
         data.divisionStandings.length > 0 ||
         data.divisionTopPerformers.length > 0) && (
-        <RetroWindow title="League Stats" theme="scdl">
+        <RetroWindow title="Season Stats" theme="scdl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Left Col: Division Standings (top) + Division Top Performers (bottom) */}
             <div className="lg:col-span-7 space-y-4">
