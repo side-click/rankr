@@ -59,8 +59,8 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
   return (
     <div className="space-y-5">
       {/* 1. Top Row: Start Menu (left, stacked in navbar order) + Seasons Directory (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-5 flex flex-col">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+        <div className="md:col-span-5 flex flex-col">
           <RetroWindow title="Start Menu" theme="scdl" className="h-full">
             <div className="space-y-2.5">
               <Link
@@ -126,7 +126,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
           </RetroWindow>
         </div>
 
-        <div className="lg:col-span-7 flex flex-col">
+        <div className="md:col-span-7 flex flex-col">
           <RetroWindow title="Seasons Directory" theme="scdl" className="h-full">
             <div className="space-y-4">
               <div className="space-y-2.5">
@@ -376,9 +376,9 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
         data.divisionStandings.length > 0 ||
         data.divisionTopPerformers.length > 0) && (
         <RetroWindow title="Season Stats" theme="scdl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {/* Left Col: Top Performers (top) + Standings (bottom) */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="md:col-span-7 space-y-4">
               {data.divisionTopPerformers.length > 0 && (
                 <div className="space-y-2.5">
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
@@ -571,7 +571,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
 
             {/* Right Col: Vertically Stacked Recent Match Results */}
             {data.recentMatches.length > 0 && (
-              <div className="lg:col-span-5 space-y-2.5">
+              <div className="md:col-span-5 space-y-2.5">
                 <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
                   Recent Match Results
                 </h2>

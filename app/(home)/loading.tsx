@@ -5,8 +5,8 @@ export default function HomeLoading() {
   return (
     <div className="space-y-5">
       {/* Top Row: Start Menu + Seasons Directory */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-5 flex flex-col">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+        <div className="md:col-span-5 flex flex-col">
           <RetroWindow title="Start Menu" theme="scdl" className="h-full">
             <div className="space-y-2.5">
               {[
@@ -58,7 +58,7 @@ export default function HomeLoading() {
           </RetroWindow>
         </div>
 
-        <div className="lg:col-span-7 flex flex-col">
+        <div className="md:col-span-7 flex flex-col">
           <RetroWindow title="Seasons Directory" theme="scdl" className="h-full">
             <div className="space-y-4">
               <div className="space-y-2.5">
@@ -94,10 +94,48 @@ export default function HomeLoading() {
         </div>
       </div>
 
-      {/* Second Row: League Stats (Division Standings + Top Performers + Recent Match Results) */}
+      {/* Consensus Power Rankings Snapshot */}
+      <RetroWindow title="Consensus Power Rankings" theme="scdl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border-2 border-[#c89b3c]/50 overflow-hidden bg-[#181e1c] animate-pulse"
+            >
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#c89b3c]/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded bg-white/10 shrink-0" />
+                  <div className="space-y-1.5">
+                    <div className="h-3.5 w-28 rounded bg-white/15" />
+                    <div className="h-2.5 w-40 rounded bg-white/10" />
+                  </div>
+                </div>
+                <div className="h-7 w-20 rounded bg-white/10 shrink-0" />
+              </div>
+              <div className="divide-y divide-white/10">
+                {Array.from({ length: 3 }).map((__, r) => (
+                  <div
+                    key={r}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/10" />
+                      <div className="w-8 h-8 rounded bg-white/10" />
+                      <div className="h-3.5 w-28 rounded bg-white/15" />
+                    </div>
+                    <div className="h-7 w-16 rounded-lg bg-black/40" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </RetroWindow>
+
+      {/* Season Stats */}
       <RetroWindow title="Season Stats" theme="scdl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-7 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="md:col-span-7 space-y-4">
             <div className="space-y-2.5">
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Top Performers
@@ -137,7 +175,7 @@ export default function HomeLoading() {
             </div>
           </div>
 
-          <div className="lg:col-span-5 space-y-2.5">
+          <div className="md:col-span-5 space-y-2.5">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
               Recent Match Results
             </h2>
