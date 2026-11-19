@@ -148,11 +148,11 @@ export default async function BallotOpenGraphImage({
   const { bannerGradient } = getThemeGradients(theme);
 
   const ROLE_PNG_ICONS: Record<LeagueRole, string> = {
-    top: "/images/Roles/top.png",
-    jungle: "/images/Roles/jungle.png",
-    mid: "/images/Roles/mid.png",
-    bot: "/images/Roles/bot.png",
-    support: "/images/Roles/support.png",
+    top: "/images/roles/top.png",
+    jungle: "/images/roles/jungle.png",
+    mid: "/images/roles/mid.png",
+    bot: "/images/roles/bot.png",
+    support: "/images/roles/support.png",
   };
 
   function fitPlayers(
