@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Ban, Calendar, Clock, HelpCircle } from "lucide-react";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import {
@@ -1039,6 +1040,13 @@ export function AdminTeamScoutingView({
               No league matches recorded for this team yet.
             </p>
           )}
+        </div>
+        <div className="mt-4">
+          <StatsDataCredits
+            leagueName={leagueName}
+            seasonName={seasonName}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>

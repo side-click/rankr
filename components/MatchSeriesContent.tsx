@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Trophy } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
@@ -578,6 +579,13 @@ export async function MatchSeriesContent({
               </div>
             );
           })}
+        </div>
+        <div className="mt-4">
+          <StatsDataCredits
+            leagueName={ctx.leagueName}
+            seasonName={ctx.seasonName}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>
