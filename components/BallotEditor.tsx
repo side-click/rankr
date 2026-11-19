@@ -389,9 +389,13 @@ export function BallotEditor({
   const currentEdition = seasonEditions.find((e) => e.id === editionId);
   const currentSeason = seasons.find((s) => s.id === seasonId);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const didMountUrlSyncRef = useRef(false);
 
   useEffect(() => {
+    if (!didMountUrlSyncRef.current) {
+      didMountUrlSyncRef.current = true;
+      return;
+    }
     if (!currentSeason) return;
     const params = new URLSearchParams(window.location.search);
     params.delete("type");
@@ -413,7 +417,7 @@ export function BallotEditor({
     if (nextUrl !== currentUrl) {
       window.history.replaceState(null, "", nextUrl);
     }
-  }, [currentSeason, currentDivision, currentEdition, pathname, searchParams]);
+  }, [currentSeason, currentDivision, currentEdition, pathname]);
 
   const divisionTeams = useMemo(
     () =>

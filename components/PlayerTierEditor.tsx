@@ -879,7 +879,13 @@ export function PlayerTierEditor({
     selectedSplitByRole
   );
 
+  const didMountUrlSyncRef = useRef(false);
+
   useEffect(() => {
+    if (!didMountUrlSyncRef.current) {
+      didMountUrlSyncRef.current = true;
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     params.set("type", "player");
     if (currentSeason?.slug) params.set("season", currentSeason.slug);
@@ -900,14 +906,12 @@ export function PlayerTierEditor({
 
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
-    const currentQuery = searchParams.toString();
-    const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+    const currentUrl = `${pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.replaceState(null, "", nextUrl);
     }
   }, [
     pathname,
-    searchParams,
     currentSeason?.slug,
     divisionScope,
     currentDivision?.slug,
