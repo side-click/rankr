@@ -1,4 +1,4 @@
-import { BarChart3, Eye, ListOrdered, Trophy } from "lucide-react";
+import { BarChart3, Eye, ListOrdered, Swords, Trophy } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 
 export default function HomeLoading() {
@@ -20,18 +20,20 @@ export default function HomeLoading() {
                 {
                   title: "Browse Rankings",
                   desc: "Explore everything published on Rankr",
-                  icon: <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />,
+                  icon: (
+                    <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
+                  ),
                 },
                 {
                   title: "Consensus",
-                  desc: "See community power rankings across divisions",
+                  desc: "Find common ground through aggregated opinion",
                   icon: (
                     <Trophy className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),
                 },
                 {
                   title: "Stats",
-                  desc: "Dive into player, team, and division stats",
+                  desc: "Leaderboards, standings, scouting sheets and more",
                   icon: (
                     <BarChart3 className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),
@@ -57,51 +59,100 @@ export default function HomeLoading() {
         </div>
 
         <div className="lg:col-span-7 flex flex-col">
-          <RetroWindow
-            title="Seasons & Leagues"
-            theme="scdl"
-            className="h-full"
-            statusText="Loading live season data..."
-          >
-            <div className="space-y-3">
-              {[0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="xp-panel p-4 space-y-3 animate-pulse"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-white/10 shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="h-4 w-44 rounded bg-white/15" />
-                      <div className="h-3 w-32 rounded bg-white/10" />
+          <RetroWindow title="Seasons Directory" theme="scdl" className="h-full">
+            <div className="space-y-4">
+              <div className="space-y-2.5">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#7cd438]">
+                  Live Seasons
+                </div>
+                <div className="xp-panel p-3 space-y-2.5 animate-pulse">
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded bg-white/10 shrink-0" />
+                      <div className="space-y-1.5">
+                        <div className="h-2.5 w-36 rounded bg-white/10" />
+                        <div className="h-4 w-44 rounded bg-white/15" />
+                      </div>
                     </div>
+                    <div className="h-7 w-20 rounded bg-white/10 shrink-0" />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="h-9 rounded bg-black/35 border border-white/10" />
-                    <div className="h-9 rounded bg-black/35 border border-white/10" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="xp-inset p-2.5 h-12 rounded" />
+                    <div className="xp-inset p-2.5 h-12 rounded" />
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#a6a89e]">
+                  Past Seasons
+                </div>
+                <div className="xp-inset p-3 h-10 animate-pulse" />
+              </div>
             </div>
           </RetroWindow>
         </div>
       </div>
 
-      {/* Second Row: Standings + Top Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {["Standings", "Top Performers"].map((title) => (
-          <RetroWindow key={title} title={title} theme="scdl">
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, idx) => (
+      {/* Second Row: League Stats (Division Standings + Top Performers + Recent Match Results) */}
+      <RetroWindow title="League Stats" theme="scdl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-7 space-y-4">
+            <div className="space-y-2.5">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Division Standings (Top 4)
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[0, 1].map((i) => (
+                  <div
+                    key={i}
+                    className="xp-panel p-3 h-[196px] space-y-2 animate-pulse"
+                  >
+                    <div className="h-5 w-32 rounded bg-white/15" />
+                    {Array.from({ length: 4 }).map((__, r) => (
+                      <div key={r} className="h-7 rounded bg-black/35" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Top Performers (Rankr Rating)
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[0, 1].map((i) => (
+                  <div
+                    key={i}
+                    className="xp-panel p-3 h-[196px] space-y-2 animate-pulse"
+                  >
+                    <div className="h-5 w-32 rounded bg-white/15" />
+                    {Array.from({ length: 4 }).map((__, r) => (
+                      <div key={r} className="h-7 rounded bg-black/35" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-2.5">
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+              <Swords className="w-3.5 h-3.5" />
+              <span>Recent Match Results</span>
+            </h2>
+            <div className="space-y-2.5">
+              {Array.from({ length: 4 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-10 rounded border border-white/10 bg-black/30 animate-pulse"
+                  className="xp-panel p-3 h-[76px] animate-pulse"
                 />
               ))}
             </div>
-          </RetroWindow>
-        ))}
-      </div>
+          </div>
+        </div>
+      </RetroWindow>
     </div>
   );
 }
