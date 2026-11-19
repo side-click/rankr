@@ -126,7 +126,7 @@ export function StatsTeamsTab({
                           </>
                         )}
                       </div>
-                      <div className="flex flex-col items-end">
+                      <div className="flex flex-col items-center">
                         <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider leading-none text-[#a6a89e]">
                           <span className="sm:hidden">Rec</span>
                           <span className="hidden sm:inline">Series</span>
@@ -143,7 +143,7 @@ export function StatsTeamsTab({
                           {t.games > 0 ? `${sWins}-${sLosses}` : "—"}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end">
+                      <div className="flex flex-col items-center">
                         <div className="text-[9px] sm:text-xs font-bold uppercase tracking-wider leading-none text-[#a6a89e]">
                           <span className="sm:hidden">Gms</span>
                           <span className="hidden sm:inline">Games</span>
