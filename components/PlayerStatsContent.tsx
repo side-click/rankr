@@ -187,6 +187,7 @@ export async function PlayerStatsContent({
     roundLabel: string;
     oppTeam: string;
     duration: number;
+    teamKills: number;
     row: ScdlGamePlayerRow;
     oppRow: ScdlGamePlayerRow | null;
     pickSlot: string | null;
@@ -229,6 +230,7 @@ export async function PlayerStatsContent({
         roundLabel: g.roundLabel,
         oppTeam,
         duration: g.gameDuration,
+        teamKills: isBlue ? g.blueKills : g.redKills,
         row: myRow,
         oppRow,
         pickSlot,
@@ -697,6 +699,12 @@ export async function PlayerStatsContent({
                   g.row.deaths > 0
                     ? ((g.row.kills + g.row.assists) / g.row.deaths).toFixed(2)
                     : (g.row.kills + g.row.assists).toFixed(2);
+                const isSupport = soloPlayer.role === "support";
+                const kpPct =
+                  g.teamKills > 0
+                    ? ((g.row.kills + g.row.assists) / g.teamKills) * 100
+                    : 0;
+                const vspm = g.row.visionScore / mins;
                 return (
                   <Link
                     key={`${g.seriesKey}-${idx}`}
@@ -758,13 +766,26 @@ export async function PlayerStatsContent({
                         </strong>{" "}
                         <span className="text-[#a6a89e]">({kda})</span>
                       </div>
-                      <div className="text-[#c7c5b8]">
-                        {g.row.cs} CS ({(g.row.cs / mins).toFixed(1)}/m)
-                      </div>
-                      <div className="text-[#ff857a] font-bold">{dpm} DPM</div>
-                      <div className="text-[#f0c020] font-bold">
-                        GD@15 {formatSigned(g.row.goldDiff15)}
-                      </div>
+                      {isSupport ? (
+                        <>
+                          <div className="text-[#5ea3ff] font-bold">
+                            {g.teamKills > 0 ? `${kpPct.toFixed(0)}%` : "—"} KP
+                          </div>
+                          <div className="text-[#f0c020] font-bold">
+                            {vspm.toFixed(2)} VS/m
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[#c7c5b8]">
+                            {g.row.cs} CS ({(g.row.cs / mins).toFixed(1)}/m)
+                          </div>
+                          <div className="text-[#ff857a] font-bold">{dpm} DPM</div>
+                          <div className="text-[#f0c020] font-bold">
+                            GD@15 {formatSigned(g.row.goldDiff15)}
+                          </div>
+                        </>
+                      )}
                       <ExternalLink className="w-4 h-4 text-[#a6a89e]" />
                     </div>
                   </Link>
