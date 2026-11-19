@@ -275,7 +275,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
             {data.consensusSnapshots.map((snap) => (
               <div
                 key={`${snap.seasonSlug}-${snap.divisionSlug}`}
-                className="rounded-2xl border-2 border-[#c89b3c]/80 overflow-hidden bg-[#181e1c] shadow-lg"
+                className="rounded-2xl border-2 border-[#c89b3c]/80 overflow-hidden bg-[#181e1c]"
               >
                 <div
                   style={{
@@ -288,7 +288,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                       <img
                         src={snap.divisionLogoUrl}
                         alt={snap.divisionName}
-                        className="w-7 h-7 object-contain shrink-0 drop-shadow"
+                        className="w-7 h-7 object-contain shrink-0"
                       />
                     )}
                     <div className="min-w-0">
@@ -335,11 +335,11 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative flex flex-col items-center shrink-0">
                             {idx === 0 && (
-                              <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5 drop-shadow" />
+                              <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5" />
                             )}
                             <span
                               style={{ backgroundColor: rankColor.badgeBg }}
-                              className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-sm font-black text-white tabular-nums shadow-sm"
+                              className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-sm font-black text-white tabular-nums"
                             >
                               {t.rank}
                             </span>
@@ -348,7 +348,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                             <img
                               src={t.teamLogoUrl}
                               alt={t.teamName}
-                              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0 drop-shadow"
+                              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                             />
                           )}
                           <span className="text-sm sm:text-base font-extrabold text-white truncate">
