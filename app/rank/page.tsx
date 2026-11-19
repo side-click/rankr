@@ -147,7 +147,9 @@ export default async function RankPage({
       : undefined;
 
   const initialType: RankingType =
-    params.type === "player"
+    params.type === "champion_pool"
+      ? "champion_pool"
+      : params.type === "player"
       ? "player"
       : params.type === "team"
       ? "team"

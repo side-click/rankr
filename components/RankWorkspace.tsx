@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { User } from "lucide-react";
+import { Lock, ShieldCheck, User } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
   Division,
@@ -14,6 +14,7 @@ import type {
   Team,
 } from "@/types/database";
 import { BallotEditor } from "@/components/BallotEditor";
+import { ChampionPoolEditor } from "@/components/ChampionPoolEditor";
 import { PlayerTierEditor } from "@/components/PlayerTierEditor";
 
 interface RankWorkspaceProps {
@@ -61,6 +62,9 @@ export function RankWorkspace({
     );
     if (nextType === "player") {
       params.set("type", "player");
+    } else if (nextType === "champion_pool") {
+      params.set("type", "champion_pool");
+      params.delete("variant");
     } else {
       params.delete("type");
       params.delete("variant");
@@ -73,8 +77,8 @@ export function RankWorkspace({
 
   return (
     <div className="space-y-4">
-      {/* Graphical Mode Selector: Team Power Rankings vs Player Tier List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Graphical Mode Selector: Team Power Rankings vs Player Tier List vs Champion Pool */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <button
           type="button"
           onClick={() => handleSelectRankingType("team")}
@@ -128,6 +132,40 @@ export function RankWorkspace({
             Player Tier List
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectRankingType("champion_pool")}
+          className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
+            rankingType === "champion_pool"
+              ? "bg-[#11241a] border-[#7cd438] shadow-[0_0_20px_rgba(124,212,56,0.18)]"
+              : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
+          }`}
+        >
+          <div
+            className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
+              rankingType === "champion_pool"
+                ? "bg-[#1b3827] border-[#7cd438] text-[#7cd438]"
+                : "bg-black/30 border-white/15 text-[#7cd438]/70"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span
+              className={`font-black text-sm tracking-tight block ${
+                rankingType === "champion_pool"
+                  ? "text-[#7cd438]"
+                  : "text-[#f0ede0]"
+              }`}
+            >
+              Champion Pool
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#9fb89a]">
+              <Lock className="w-2.5 h-2.5" /> Private
+            </span>
+          </div>
+        </button>
       </div>
 
       {rankingType === "team" ? (
@@ -146,6 +184,8 @@ export function RankWorkspace({
           }
           initialEditionSlug={initialEditionSlug}
         />
+      ) : rankingType === "champion_pool" ? (
+        <ChampionPoolEditor userId={userId} />
       ) : (
         <PlayerTierEditor
           userId={userId}

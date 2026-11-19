@@ -82,7 +82,7 @@ export interface Edition {
   created_at: string;
 }
 
-export type RankingType = "team" | "player";
+export type RankingType = "team" | "player" | "champion_pool";
 
 export type TierPresetKey = "standard" | "draft_day" | "custom";
 
@@ -194,4 +194,40 @@ export interface BallotEntry {
   team_logo_snapshot: string | null;
   roster_snapshot: (string | RosterSlot)[];
   created_at: string;
+}
+
+export interface ChampionPoolTierItem {
+  championId: string;
+  name: string;
+}
+
+export interface ChampionTierRowData {
+  id: string;
+  label: string;
+  color: string;
+  commentary: string;
+  champions: ChampionPoolTierItem[];
+}
+
+export interface ChampionRoleSection {
+  role: LeagueRole;
+  preset: TierPresetKey;
+  tiers: ChampionTierRowData[];
+}
+
+export interface ChampionPoolPayload {
+  version: 1;
+  title: string;
+  roles: Partial<Record<LeagueRole, ChampionRoleSection>>;
+}
+
+export interface EncryptedChampionPoolRecord {
+  id: string;
+  user_id: string;
+  encrypted_payload: string;
+  encryption_salt: string;
+  encryption_iv: string;
+  encryption_version: number;
+  created_at: string;
+  updated_at: string;
 }

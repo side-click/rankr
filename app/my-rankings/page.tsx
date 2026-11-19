@@ -8,7 +8,7 @@ import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 import { getLeaguePrefix } from "@/components/BallotCard";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { Award, Edit3, Lock, User } from "lucide-react";
+import { Award, Edit3, Lock, ShieldCheck, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -66,10 +66,11 @@ export default async function MyRankingsPage() {
     );
   }
 
-  const { data: ballots } = await supabase
-    .from("ballots")
-    .select(
-      `
+  const [{ data: ballots }, { data: championPool }] = await Promise.all([
+    supabase
+      .from("ballots")
+      .select(
+        `
       id,
       title,
       status,
@@ -88,12 +89,47 @@ export default async function MyRankingsPage() {
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug, sort_order, is_open, is_archived )
     `
-    )
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("champion_pools")
+      .select("id, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
 
   return (
     <RetroWindow title="My Ranking History" theme="scdl">
+      <div className="mb-3 p-3 rounded-lg bg-[#11241a] border border-[#2f6343] flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-5 h-5 text-[#7cd438] shrink-0" />
+          <div>
+            <p className="text-xs font-black text-[#f0ede0] flex items-center gap-1.5">
+              Private Champion Pool
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 text-[10px] font-bold text-[#7cd438]">
+                <Lock className="w-2.5 h-2.5" /> Encrypted
+              </span>
+            </p>
+            <p className="text-[11px] text-[#b9cbb6]">
+              {championPool
+                ? `Last updated ${new Date(
+                    championPool.updated_at
+                  ).toLocaleDateString("en-US", {
+                    timeZone: "America/New_York",
+                  })}`
+                : "Not created yet — build your personal per-role champion tier list."}
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/rank?type=champion_pool"
+          className="xp-btn xp-btn-primary text-xs px-3 py-1.5"
+        >
+          {championPool ? "Open / Add Roles" : "Create Champion Pool"}
+        </Link>
+      </div>
+
       {!ballots || ballots.length === 0 ? (
         <div className="xp-inset p-8 text-center space-y-3">
           <p className="text-xs text-[#a6a89e]">
