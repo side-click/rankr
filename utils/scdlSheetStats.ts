@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { CompactRiotMatch } from "@/utils/riotApi";
 import draftsData from "@/data/scdl_drafts.json";
 import {
@@ -217,22 +218,106 @@ export interface SheetSourceConfig {
   bypassCache?: boolean;
 }
 
+const SNAPSHOT_WRITE_INTERVAL_MS = 5 * 60_000;
+const lastSnapshotWriteBySheet = new Map<string, number>();
+
+function getSnapshotClient(requireServiceRole: boolean) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = requireServiceRole
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function saveSheetSnapshot(
+  sheetId: string,
+  gids: string[],
+  csvTexts: string[],
+  force = false
+): Promise<void> {
+  const now = Date.now();
+  const lastWrite = lastSnapshotWriteBySheet.get(sheetId) ?? 0;
+  if (!force && now - lastWrite < SNAPSHOT_WRITE_INTERVAL_MS) return;
+  const sb = getSnapshotClient(true);
+  if (!sb) return;
+  lastSnapshotWriteBySheet.set(sheetId, now);
+  try {
+    await sb.from("sheet_snapshots").upsert(
+      {
+        sheet_id: sheetId,
+        gids,
+        csv_tabs: csvTexts,
+        fetched_at: new Date(now).toISOString(),
+      },
+      { onConflict: "sheet_id" }
+    );
+  } catch {
+    // Non-fatal if sheet_snapshots migration hasn't been applied yet
+  }
+}
+
+async function loadSheetSnapshotFallback(
+  sheetId: string
+): Promise<ParsedSheetRow[] | null> {
+  const sb = getSnapshotClient(false);
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from("sheet_snapshots")
+      .select("csv_tabs")
+      .eq("sheet_id", sheetId)
+      .maybeSingle();
+    if (error || !Array.isArray(data?.csv_tabs)) return null;
+    const csvTexts = (data.csv_tabs as unknown[]).filter(
+      (t): t is string => typeof t === "string" && t.length > 0
+    );
+    if (csvTexts.length === 0) return null;
+    return dedupeParsedRows(csvTexts);
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCsvTabsFromGoogle(
+  sheetId: string,
+  gids: string[],
+  bypassCache: boolean
+): Promise<string[]> {
+  return Promise.all(
+    gids.map(async (gid) => {
+      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+      const res = await fetch(
+        url,
+        bypassCache ? { cache: "no-store" } : { next: { revalidate: 120 } }
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to fetch SCDL sheet tab ${gid} (${res.status})`);
+      }
+      return res.text();
+    })
+  );
+}
+
 const fetchUniqueSheetRowsCached = cache(
   async (sheetId: string, gidsKey: string): Promise<ParsedSheetRow[]> => {
     const gids = gidsKey.split(",").filter(Boolean);
-    const csvTexts = await Promise.all(
-      gids.map(async (gid) => {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-        const res = await fetch(url, { next: { revalidate: 120 } });
-        if (!res.ok) {
-          throw new Error(
-            `Failed to fetch SCDL sheet tab ${gid} (${res.status})`
-          );
-        }
-        return res.text();
-      })
-    );
-    return dedupeParsedRows(csvTexts);
+    try {
+      const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
+      const rows = dedupeParsedRows(csvTexts);
+      if (rows.length > 0) {
+        void saveSheetSnapshot(sheetId, gids, csvTexts, false);
+        return rows;
+      }
+    } catch {
+      // Fall back to Supabase snapshot below
+    }
+    const fallback = await loadSheetSnapshotFallback(sheetId);
+    if (fallback) return fallback;
+    throw new Error(`Failed to load SCDL sheet ${sheetId} and no backup snapshot exists`);
   }
 );
 
@@ -264,19 +349,18 @@ async function loadUniqueSheetRows(
       : SCDL_SHEET_GIDS.map((g) => g.gid);
 
   if (config?.bypassCache) {
-    const csvTexts = await Promise.all(
-      gids.map(async (gid) => {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) {
-          throw new Error(
-            `Failed to fetch SCDL sheet tab ${gid} (${res.status})`
-          );
-        }
-        return res.text();
-      })
-    );
-    return dedupeParsedRows(csvTexts);
+    try {
+      const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, true);
+      const rows = dedupeParsedRows(csvTexts);
+      if (rows.length > 0) {
+        await saveSheetSnapshot(sheetId, gids, csvTexts, true);
+        return rows;
+      }
+    } catch (err) {
+      const fallback = await loadSheetSnapshotFallback(sheetId);
+      if (fallback) return fallback;
+      throw err;
+    }
   }
 
   return fetchUniqueSheetRowsCached(sheetId, gids.join(","));
