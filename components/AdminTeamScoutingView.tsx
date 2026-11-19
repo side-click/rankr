@@ -804,18 +804,26 @@ export function AdminTeamScoutingView({
                 const seriesWon = myWins > oppWins;
                 const oppLogo = teamLogoMap[oppName.toLowerCase()] ?? null;
 
+                const firstGame = s.games[0];
+                const mySide = firstGame
+                  ? firstGame.blueTeam.toLowerCase() ===
+                    team.teamName.toLowerCase()
+                    ? "Blue Side"
+                    : "Red Side"
+                  : null;
+
                 return (
                   <Link
                     key={s.seriesKey}
                     href={`${basePath}/match/${encodeURIComponent(
                       s.seriesKey
                     )}`}
-                    className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3"
+                    className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3.5"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                          className={`px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase ${
                             seriesWon
                               ? "bg-[#7cd438]/20 text-[#7cd438] border border-[#7cd438]/40"
                               : "bg-[#ff857a]/20 text-[#ff857a] border border-[#ff857a]/40"
@@ -823,29 +831,40 @@ export function AdminTeamScoutingView({
                         >
                           {seriesWon ? "Win" : "Loss"} {myWins}-{oppWins}
                         </span>
-                        <span className="text-xs font-bold text-[#a6a89e]">
-                          vs
+                        {mySide && (
+                          <span
+                            className={`text-sm sm:text-base font-extrabold ${
+                              mySide === "Blue Side"
+                                ? "text-[#5ea3ff]"
+                                : "text-[#ff7b72]"
+                            }`}
+                          >
+                            {mySide}
+                          </span>
+                        )}
+                        <span className="text-sm font-bold text-[#a6a89e]">
+                          vs.
                         </span>
                         {oppLogo && (
                           <img
                             src={oppLogo}
                             alt={oppName}
-                            className="w-5 h-5 object-contain"
+                            className="w-6 h-6 object-contain"
                           />
                         )}
-                        <span className="text-sm font-extrabold text-[#f0ede0]">
+                        <span className="text-base sm:text-lg font-extrabold text-[#f0ede0]">
                           {oppName}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 text-[11px] text-[#a6a89e]">
+                      <div className="flex items-center gap-3 text-xs sm:text-sm text-[#a6a89e]">
                         <span className="font-bold text-[#f0c020]">
                           {s.roundLabel}
                         </span>
-                        {s.games[0] && (
+                        {firstGame && (
                           <span className="inline-flex items-center gap-1 tabular-nums">
-                            <Clock className="w-3 h-3" />
-                            {formatMinutesSeconds(s.games[0].gameDuration / 60)}
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatMinutesSeconds(firstGame.gameDuration / 60)}
                           </span>
                         )}
                       </div>
@@ -870,27 +889,14 @@ export function AdminTeamScoutingView({
                       return (
                         <div
                           key={g.gameId}
-                          className="mt-2 pt-2.5 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-0 text-xs"
+                          className="mt-2.5 pt-3 border-t border-white/10 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-0"
                         >
                           {/* Blue Side */}
-                          <div className="space-y-1.5 md:pr-5 md:border-r md:border-white/15">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-bold text-[#5ea3ff]">
-                                {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Blue:{" "}
-                                {g.blueTeam}
-                              </span>
-                              <div className="flex items-center gap-2.5 tabular-nums text-xs">
-                                <span className="font-bold text-[#f0ede0]">
-                                  {g.blueKills}/{g.blueDeaths}/{g.blueAssists}
-                                </span>
-                                <span className="text-[#f0c020]" title="Dragons">
-                                  Drg {g.blueDragons}
-                                </span>
-                                <span className="text-[#c084fc]" title="Barons">
-                                  Brn {g.blueBarons}
-                                </span>
-                              </div>
-                            </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 lg:pr-5 lg:border-r lg:border-white/15">
+                            <span className="text-sm sm:text-base font-extrabold text-[#5ea3ff]">
+                              {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Blue:{" "}
+                              {g.blueTeam}
+                            </span>
                             <div className="flex flex-wrap items-center gap-1">
                               {blueChamps.map((ch, i) => (
                                 <img
@@ -898,19 +904,19 @@ export function AdminTeamScoutingView({
                                   src={getChampionIconUrl(ch, ddVersion)}
                                   alt={ch}
                                   title={ch}
-                                  className="w-6 h-6 rounded border border-[#5ea3ff]/40 object-cover"
+                                  className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-[#5ea3ff]/40 object-cover"
                                 />
                               ))}
                               {g.draft && g.draft.blueBans.length > 0 && (
                                 <>
-                                  <span className="h-5 w-px bg-white/15 mx-1" />
+                                  <span className="h-7 w-px bg-white/15 mx-1" />
                                   {g.draft.blueBans.map((b, i) => (
                                     <img
                                       key={`bb-${b}-${i}`}
                                       src={getChampionIconUrl(b, ddVersion)}
                                       alt={b}
                                       title={`Blue Ban: ${b}`}
-                                      className="w-6 h-6 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                      className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                     />
                                   ))}
                                 </>
@@ -919,24 +925,11 @@ export function AdminTeamScoutingView({
                           </div>
 
                           {/* Red Side */}
-                          <div className="space-y-1.5 md:pl-5">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-bold text-[#ff7b72]">
-                                {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Red:{" "}
-                                {g.redTeam}
-                              </span>
-                              <div className="flex items-center gap-2.5 tabular-nums text-xs">
-                                <span className="font-bold text-[#f0ede0]">
-                                  {g.redKills}/{g.redDeaths}/{g.redAssists}
-                                </span>
-                                <span className="text-[#f0c020]" title="Dragons">
-                                  Drg {g.redDragons}
-                                </span>
-                                <span className="text-[#c084fc]" title="Barons">
-                                  Brn {g.redBarons}
-                                </span>
-                              </div>
-                            </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 lg:pl-5">
+                            <span className="text-sm sm:text-base font-extrabold text-[#ff7b72]">
+                              {s.games.length > 1 ? `G${gIdx + 1} ` : ""}Red:{" "}
+                              {g.redTeam}
+                            </span>
                             <div className="flex flex-wrap items-center gap-1">
                               {redChamps.map((ch, i) => (
                                 <img
@@ -944,19 +937,19 @@ export function AdminTeamScoutingView({
                                   src={getChampionIconUrl(ch, ddVersion)}
                                   alt={ch}
                                   title={ch}
-                                  className="w-6 h-6 rounded border border-[#ff7b72]/40 object-cover"
+                                  className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-[#ff7b72]/40 object-cover"
                                 />
                               ))}
                               {g.draft && g.draft.redBans.length > 0 && (
                                 <>
-                                  <span className="h-5 w-px bg-white/15 mx-1" />
+                                  <span className="h-7 w-px bg-white/15 mx-1" />
                                   {g.draft.redBans.map((b, i) => (
                                     <img
                                       key={`rb-${b}-${i}`}
                                       src={getChampionIconUrl(b, ddVersion)}
                                       alt={b}
                                       title={`Red Ban: ${b}`}
-                                      className="w-6 h-6 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                      className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                     />
                                   ))}
                                 </>
