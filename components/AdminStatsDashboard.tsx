@@ -215,14 +215,19 @@ export function AdminStatsDashboard({
   const [leaderboardStyle, setLeaderboardStyle] = useState<
     "standard" | "shareable"
   >("standard");
-  const [shareableCardKeys, setShareableCardKeys] = useState<string[]>([
+  const [shareableCardKeys, setShareableCardKeys] = useState<(string | null)[]>([
     "KDA",
-    "Damage / Min",
     "Kill Participation",
+    "CS / Min",
     "Vision / Min",
     "Gold Diff @15",
-    "Gold / Min",
+    "Solo Kills",
   ]);
+  const [draggedPill, setDraggedPill] = useState<{
+    title: string;
+    fromSlot: number | null;
+  } | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [openDropdown, setOpenDropdown] = useState<
     "league" | "division" | null
   >(null);
@@ -1392,19 +1397,56 @@ export function AdminStatsDashboard({
             ...standardGridCards,
           ];
 
-          const selectedShareableCards = allGridCards
-            .filter((c) => shareableCardKeys.includes(c.title))
-            .slice(0, 6);
+          const selectedShareableCards = shareableCardKeys
+            .map((key) =>
+              key ? allGridCards.find((c) => c.title === key) : undefined
+            )
+            .filter((c): c is LeaderboardCard => Boolean(c));
 
-          function toggleShareableKey(title: string) {
+          const availableShareableCards = allGridCards.filter(
+            (c) => !shareableCardKeys.includes(c.title)
+          );
+
+          function placePillInSlot(
+            title: string,
+            targetSlot: number,
+            fromSlot: number | null
+          ) {
             setShareableCardKeys((prev) => {
-              if (prev.includes(title)) {
-                return prev.filter((k) => k !== title);
+              const next = [...prev];
+              if (fromSlot !== null) {
+                const prevTarget = next[targetSlot] ?? null;
+                next[targetSlot] = title;
+                next[fromSlot] = prevTarget;
+              } else {
+                const existingIdx = next.indexOf(title);
+                if (existingIdx !== -1) {
+                  const prevTarget = next[targetSlot] ?? null;
+                  next[targetSlot] = title;
+                  next[existingIdx] = prevTarget;
+                } else {
+                  next[targetSlot] = title;
+                }
               }
-              if (prev.length < 6) {
-                return [...prev, title];
-              }
-              return [...prev.slice(1), title];
+              return next;
+            });
+          }
+
+          function removePillFromSlot(slotIdx: number) {
+            setShareableCardKeys((prev) => {
+              const next = [...prev];
+              next[slotIdx] = null;
+              return next;
+            });
+          }
+
+          function addPillToFirstEmpty(title: string) {
+            setShareableCardKeys((prev) => {
+              const emptyIdx = prev.findIndex((k) => k === null);
+              if (emptyIdx === -1) return prev;
+              const next = [...prev];
+              next[emptyIdx] = title;
+              return next;
             });
           }
 
@@ -1645,32 +1687,141 @@ export function AdminStatsDashboard({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* 6-Card Picker (left) + Export PNG (bottom right) */}
-                  <div className="xp-panel p-3 flex flex-col md:flex-row md:items-end justify-between gap-3">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
-                        Select 6 Cards (
-                        <strong className="text-[#f0c020]">
-                          {selectedShareableCards.length}/6
-                        </strong>
-                        )
+                  {/* Mini 2x3 Drag-and-Drop Array + Stat Pill Tray + Export PNG */}
+                  <div className="xp-panel p-3 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4 flex-1 min-w-0">
+                      <div className="space-y-1.5 shrink-0 sm:w-[270px]">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
+                          Shareable 2×3 Layout (
+                          <strong className="text-[#f0c020]">
+                            {selectedShareableCards.length}/6
+                          </strong>
+                          )
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 bg-black/35 p-2 rounded border border-white/10">
+                          {shareableCardKeys.map((slotKey, slotIdx) => {
+                            const isOver = dragOverSlot === slotIdx;
+                            return (
+                              <div
+                                key={slotIdx}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  if (dragOverSlot !== slotIdx) {
+                                    setDragOverSlot(slotIdx);
+                                  }
+                                }}
+                                onDragLeave={() => {
+                                  if (dragOverSlot === slotIdx) {
+                                    setDragOverSlot(null);
+                                  }
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setDragOverSlot(null);
+                                  if (draggedPill) {
+                                    placePillInSlot(
+                                      draggedPill.title,
+                                      slotIdx,
+                                      draggedPill.fromSlot
+                                    );
+                                    setDraggedPill(null);
+                                  }
+                                }}
+                                className={`min-h-[30px] rounded border flex items-center justify-between gap-1 px-1.5 py-1 transition ${
+                                  isOver
+                                    ? "border-[#f0c020] bg-[#f0c020]/15"
+                                    : slotKey
+                                    ? "border-[#c89b3c]/60 bg-[#1b221e]"
+                                    : "border-dashed border-white/20 bg-black/30"
+                                }`}
+                              >
+                                {slotKey ? (
+                                  <>
+                                    <div
+                                      draggable
+                                      onDragStart={() =>
+                                        setDraggedPill({
+                                          title: slotKey,
+                                          fromSlot: slotIdx,
+                                        })
+                                      }
+                                      onDragEnd={() => {
+                                        setDraggedPill(null);
+                                        setDragOverSlot(null);
+                                      }}
+                                      title="Drag to swap slots or drag out to remove"
+                                      className="text-[10px] font-bold text-[#f0ede0] truncate cursor-grab active:cursor-grabbing flex-1"
+                                    >
+                                      {slotKey}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removePillFromSlot(slotIdx)
+                                      }
+                                      title="Remove from slot"
+                                      className="text-[#a6a89e] hover:text-[#ff857a] shrink-0 cursor-pointer"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-[9px] text-[#7c8078] mx-auto select-none">
+                                    Slot {slotIdx + 1}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {allGridCards.map((card) => {
-                          const active = shareableCardKeys.includes(card.title);
-                          return (
-                            <button
-                              key={card.title}
-                              type="button"
-                              onClick={() => toggleShareableKey(card.title)}
-                              className={`xp-btn text-[10px] px-2 py-0.5 ${
-                                active ? "xp-btn-primary" : "opacity-75"
-                              }`}
-                            >
-                              {card.title}
-                            </button>
-                          );
-                        })}
+
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedPill && draggedPill.fromSlot !== null) {
+                            removePillFromSlot(draggedPill.fromSlot);
+                          }
+                          setDraggedPill(null);
+                          setDragOverSlot(null);
+                        }}
+                        className="space-y-1.5 flex-1 min-w-0"
+                      >
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
+                          Available Stat Pills — drag into a slot (or click)
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 p-2 rounded border border-white/10 bg-black/25 min-h-[58px] items-start content-start">
+                          {availableShareableCards.length > 0 ? (
+                            availableShareableCards.map((card) => (
+                              <button
+                                key={card.title}
+                                type="button"
+                                draggable
+                                onDragStart={() =>
+                                  setDraggedPill({
+                                    title: card.title,
+                                    fromSlot: null,
+                                  })
+                                }
+                                onDragEnd={() => {
+                                  setDraggedPill(null);
+                                  setDragOverSlot(null);
+                                }}
+                                onClick={() => addPillToFirstEmpty(card.title)}
+                                title="Drag into a 2×3 slot, or click to fill next empty slot"
+                                className="xp-btn text-[10px] px-2 py-1 cursor-grab active:cursor-grabbing"
+                              >
+                                {card.title}
+                              </button>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-[#7c8078] italic">
+                              All available stats placed or drag a slot pill here
+                              to remove it.
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
