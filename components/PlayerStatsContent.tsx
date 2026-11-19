@@ -343,7 +343,7 @@ export async function PlayerStatsContent({
                   • {leaguePrefix} {ctx.seasonName}
                 </div>
                 <div className="font-bold text-[#a6a89e]">
-                  Solo Q:{" "}
+                  Current Rank:{" "}
                   <span className={styledRank.className}>
                     {styledRank.label}
                   </span>
@@ -590,7 +590,7 @@ export async function PlayerStatsContent({
               title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
               className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] cursor-help inline-flex items-center gap-1.5"
             >
-              <span>SoloQ Top 7 ({roleMeta.label})</span>
+              <span>Solo/Duo Top 7 ({roleMeta.label})</span>
               <HelpCircle className="w-3.5 h-3.5 text-[#a6a89e]/80" />
             </h3>
             {soloChamps.length > 0 ? (

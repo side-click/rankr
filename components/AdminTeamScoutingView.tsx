@@ -500,7 +500,7 @@ export function AdminTeamScoutingView({
                       title="Analyzes up to the 200 most recent SoloQ games (within the last year)"
                       className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e] mb-1.5 cursor-help inline-flex items-center gap-1"
                     >
-                      <span>SoloQ Top 7 ({roleMeta.label})</span>
+                      <span>Solo/Duo Top 7 ({roleMeta.label})</span>
                       <HelpCircle className="w-3 h-3 text-[#a6a89e]/80" />
                     </div>
                     {soloChamps.length > 0 ? (
