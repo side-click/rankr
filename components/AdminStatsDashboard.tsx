@@ -224,6 +224,7 @@ export function AdminStatsDashboard({
   const [leaderboardStyle, setLeaderboardStyle] = useState<
     "standard" | "shareable"
   >("standard");
+  const [showAllLeaderboardCards, setShowAllLeaderboardCards] = useState(false);
   const [shareableCardKeys, setShareableCardKeys] = useState<(string | null)[]>(
     DEFAULT_SHAREABLE_CARD_KEYS
   );
@@ -1655,9 +1656,9 @@ export function AdminStatsDashboard({
 
           const featuredRatingCard = (
             <div
-              className="max-w-[560px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-[#171b19]"
+              className="max-w-[480px] mx-auto rounded-lg border-2 border-[#f0c020] overflow-hidden bg-[#171b19]"
               style={{
-                boxShadow: "0 0 28px rgba(240, 192, 32, 0.28)",
+                boxShadow: "0 0 20px rgba(240, 192, 32, 0.22)",
                 ...(selectedDivisionTheme
                   ? {
                       backgroundImage: `linear-gradient(135deg, ${selectedDivisionTheme.primary_color}38 0%, rgba(23, 27, 25, 0.94) 65%)`,
@@ -1675,7 +1676,7 @@ export function AdminStatsDashboard({
                       }
                     : undefined
                 }
-                className="bg-[#2a2210] border-b-2 border-[#f0c020] px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
+                className="bg-[#2a2210] border-b-2 border-[#f0c020] px-4 sm:px-5 py-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center justify-between gap-2 cursor-pointer hover:brightness-110 transition"
               >
                 <span className="inline-flex items-center gap-2">
                   <span>{ratingCard.title}</span>
@@ -1696,13 +1697,13 @@ export function AdminStatsDashboard({
                     href={`${basePath}/player/${encodeURIComponent(
                       p.playerKey
                     )}`}
-                    className={`px-6 py-2.5 flex items-center justify-between gap-4 transition hover:bg-[#f0c020]/10 ${
+                    className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
                       idx === 0 ? "bg-[#f0c020]/10" : ""
                     }`}
                   >
-                    <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                       <span
-                        className={`text-lg font-extrabold tabular-nums w-5 text-center ${
+                        className={`text-sm sm:text-base font-extrabold tabular-nums w-4 sm:w-5 text-center ${
                           idx === 0 ? "text-[#f0c020]" : "text-[#c89b3c]"
                         }`}
                       >
@@ -1713,22 +1714,22 @@ export function AdminStatsDashboard({
                           src={p.teamLogoUrl}
                           alt={p.teamName}
                           crossOrigin="anonymous"
-                          className="w-7 h-7 object-contain shrink-0"
+                          className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
                         />
                       )}
                       <span
-                        className={`text-xl font-extrabold truncate flex items-center gap-2 ${
+                        className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
                           idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
                         }`}
                       >
-                        <span>{p.displayName}</span>
+                        <span className="truncate">{p.displayName}</span>
                         {idx === 0 && (
-                          <Crown className="w-5 h-5 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                          <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
                         )}
                       </span>
                     </div>
                     <span
-                      className={`font-black text-xl tabular-nums shrink-0 ${
+                      className={`font-black text-base sm:text-lg tabular-nums shrink-0 ${
                         idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
                       }`}
                     >
@@ -1794,17 +1795,50 @@ export function AdminStatsDashboard({
 
               {leaderboardStyle === "standard" ? (
                 <div className="space-y-4">
-                  <div className="flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-8 py-2">
-                    <div className="w-full max-w-[540px]">
+                  <div className="flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 py-2">
+                    <div className="w-full max-w-[460px]">
                       {featuredRatingCard}
                     </div>
-                    <div className="w-full max-w-[270px]">
+                    <div className="w-full sm:max-w-[270px]">
                       {renderCard(kdaCard, true)}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {standardGridCards.map((card) => renderCard(card, true))}
+                    {standardGridCards.map((card, idx) => (
+                      <div
+                        key={card.title}
+                        className={
+                          !showAllLeaderboardCards && idx >= 5
+                            ? "hidden sm:block"
+                            : undefined
+                        }
+                      >
+                        {renderCard(card, true)}
+                      </div>
+                    ))}
                   </div>
+                  {standardGridCards.length > 5 && (
+                    <div className="sm:hidden flex justify-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowAllLeaderboardCards((prev) => !prev)
+                        }
+                        className="xp-btn text-xs px-4 py-1.5 flex items-center gap-1.5"
+                      >
+                        <span>
+                          {showAllLeaderboardCards
+                            ? "Show Fewer Stats"
+                            : `Show All ${standardGridCards.length + 2} Stat Cards (${standardGridCards.length - 5} more)`}
+                        </span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform ${
+                            showAllLeaderboardCards ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
