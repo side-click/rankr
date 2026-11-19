@@ -817,11 +817,11 @@ export function AdminTeamScoutingView({
                     )}`}
                     className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3.5"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2.5">
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2.5">
                       {/* Left half: <winlossbadge> on left, Blue: <logo> <name> centered */}
-                      <div className="flex flex-wrap items-center justify-between md:justify-center md:relative gap-2 min-h-[28px] min-w-0">
+                      <div className="flex flex-wrap items-center justify-between lg:justify-center lg:relative lg:px-28 gap-2 min-h-[28px] min-w-0">
                         <span
-                          className={`md:absolute md:left-0 px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase shrink-0 ${
+                          className={`lg:absolute lg:left-0 px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase shrink-0 ${
                             seriesWon
                               ? "bg-[#7cd438]/20 text-[#7cd438] border border-[#7cd438]/40"
                               : "bg-[#ff857a]/20 text-[#ff857a] border border-[#ff857a]/40"
@@ -843,12 +843,12 @@ export function AdminTeamScoutingView({
                       </div>
 
                       {/* Center: vs. */}
-                      <span className="text-sm sm:text-base font-bold text-[#a6a89e] md:text-center">
+                      <span className="text-sm sm:text-base font-bold text-[#a6a89e] lg:text-center">
                         vs.
                       </span>
 
                       {/* Right half: Red: <logo> <name> centered, <round#> <gametime> on right */}
-                      <div className="flex flex-wrap items-center justify-between md:justify-center md:relative gap-2 min-h-[28px] min-w-0">
+                      <div className="flex flex-wrap items-center justify-between lg:justify-center lg:relative lg:px-32 gap-2 min-h-[28px] min-w-0">
                         <span className="inline-flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-[#ff7b72] min-w-0">
                           <span className="shrink-0">Red:</span>
                           {redLogo && (
@@ -860,7 +860,7 @@ export function AdminTeamScoutingView({
                           )}
                           <span className="truncate">{redTeamName}</span>
                         </span>
-                        <div className="md:absolute md:right-0 flex items-center gap-2.5 text-xs sm:text-sm text-[#a6a89e] shrink-0">
+                        <div className="lg:absolute lg:right-0 flex items-center gap-2.5 text-xs sm:text-sm text-[#a6a89e] shrink-0">
                           <span className="font-bold text-[#f0c020]">
                             {s.roundLabel}
                           </span>
@@ -913,7 +913,7 @@ export function AdminTeamScoutingView({
                                 src={getChampionIconUrl(ch, ddVersion)}
                                 alt={ch}
                                 title={ch}
-                                className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-[#5ea3ff]/40 object-cover"
+                                className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#5ea3ff]/40 object-cover"
                               />
                             ))}
                             {g.draft && g.draft.blueBans.length > 0 && (
@@ -928,7 +928,7 @@ export function AdminTeamScoutingView({
                                     src={getChampionIconUrl(b, ddVersion)}
                                     alt={b}
                                     title={`Blue Ban: ${b}`}
-                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                    className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                   />
                                 ))}
                               </>
@@ -946,7 +946,7 @@ export function AdminTeamScoutingView({
                                 src={getChampionIconUrl(ch, ddVersion)}
                                 alt={ch}
                                 title={ch}
-                                className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-[#ff7b72]/40 object-cover"
+                                className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-[#ff7b72]/40 object-cover"
                               />
                             ))}
                             {g.draft && g.draft.redBans.length > 0 && (
@@ -961,7 +961,7 @@ export function AdminTeamScoutingView({
                                     src={getChampionIconUrl(b, ddVersion)}
                                     alt={b}
                                     title={`Red Ban: ${b}`}
-                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
+                                    className="w-8 h-8 lg:w-7 lg:h-7 xl:w-9 xl:h-9 rounded border border-white/15 grayscale opacity-60 object-cover"
                                   />
                                 ))}
                               </>
