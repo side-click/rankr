@@ -100,25 +100,6 @@ export default function HomeLoading() {
           <div className="lg:col-span-7 space-y-4">
             <div className="space-y-2.5">
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
-                Standings (Top 4)
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[0, 1].map((i) => (
-                  <div
-                    key={i}
-                    className="xp-panel p-3 h-[196px] space-y-2 animate-pulse"
-                  >
-                    <div className="h-5 w-32 rounded bg-white/15" />
-                    {Array.from({ length: 4 }).map((__, r) => (
-                      <div key={r} className="h-7 rounded bg-black/35" />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
                 Top Performers
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -129,6 +110,25 @@ export default function HomeLoading() {
                   >
                     <div className="h-5 w-32 rounded bg-white/15" />
                     {Array.from({ length: 5 }).map((__, r) => (
+                      <div key={r} className="h-7 rounded bg-black/35" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020]">
+                Standings (Top 4)
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[0, 1].map((i) => (
+                  <div
+                    key={i}
+                    className="xp-panel p-3 h-[196px] space-y-2 animate-pulse"
+                  >
+                    <div className="h-5 w-32 rounded bg-white/15" />
+                    {Array.from({ length: 4 }).map((__, r) => (
                       <div key={r} className="h-7 rounded bg-black/35" />
                     ))}
                   </div>
