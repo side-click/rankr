@@ -347,7 +347,7 @@ export default async function BallotOpenGraphImage({
           display: "flex",
           flexDirection: "column",
           background: "#141917",
-          border: `14px solid ${theme.primary_color}`,
+          border: `14px solid ${!hasDivision ? "#5c6662" : theme.primary_color}`,
           color: "#ffffff",
           fontFamily: "SiteBody, sans-serif",
         }}

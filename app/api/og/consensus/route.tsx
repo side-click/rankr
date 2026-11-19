@@ -40,7 +40,7 @@ export async function GET(request: Request) {
           background: "#121716",
           color: "#f4f2e8",
           fontFamily: "SiteBody, sans-serif",
-          border: `14px solid ${data.divisionTheme.primary_color}`,
+          border: "14px solid #c89b3c",
         }}
       >
         {/* Header Banner */}
