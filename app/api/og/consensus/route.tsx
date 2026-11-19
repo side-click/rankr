@@ -28,10 +28,6 @@ export async function GET(request: Request) {
   const countLabel = `${data.submissionCount} ${
     data.submissionCount === 1 ? "Ranking" : "Rankings"
   }`;
-  const maxFirstPlaceVotes = Math.max(
-    0,
-    ...data.rows.map((r) => r.firstPlaceVotes)
-  );
 
   return new ImageResponse(
     (
@@ -275,43 +271,17 @@ export async function GET(request: Request) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "14px",
+                      padding: "12px 24px",
+                      borderRadius: "10px",
+                      background: "rgba(0, 0, 0, 0.45)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      fontSize: "34px",
+                      fontWeight: 700,
+                      color: "#f0ede0",
                       flexShrink: 0,
                     }}
                   >
-                    {maxFirstPlaceVotes > 0 &&
-                      row.firstPlaceVotes === maxFirstPlaceVotes && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "10px 18px",
-                            borderRadius: "999px",
-                            background: "rgba(240, 192, 32, 0.16)",
-                            border: "2px solid rgba(240, 192, 32, 0.7)",
-                            fontSize: "22px",
-                            fontWeight: 700,
-                            color: "#f0c020",
-                          }}
-                        >
-                          Most #1 Votes
-                        </div>
-                      )}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "10px 20px",
-                        borderRadius: "10px",
-                        background: "rgba(0, 0, 0, 0.45)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                        fontSize: "26px",
-                        fontWeight: 700,
-                        color: "#f0ede0",
-                      }}
-                    >
-                      {row.averageRank.toFixed(2)} avg
-                    </div>
+                    {row.averageRank.toFixed(2)} avg
                   </div>
                 </div>
               );
