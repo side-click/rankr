@@ -12,14 +12,14 @@ export default function HomeLoading() {
               {[
                 {
                   title: "Create New",
-                  desc: "Build and share power rankings and tier lists",
+                  desc: "Build and share power rankings, tier lists, and blogs",
                   icon: (
                     <ListOrdered className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),
                 },
                 {
-                  title: "Browse Rankings",
-                  desc: "Explore everything published on Rankr",
+                  title: "Browse Content",
+                  desc: "Explore rankings, tier lists, and blogs published on Rankr",
                   icon: (
                     <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
                   ),

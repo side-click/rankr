@@ -41,7 +41,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
         >
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
-          <span>Browse Rankings</span>
+          <span>Browse Content</span>
         </Link>
         <Link
           href="/consensus"
@@ -111,7 +111,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
               className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
             >
               <Eye className="w-4 h-4 text-[#f0c020] shrink-0" />
-              <span>Browse Rankings</span>
+              <span>Browse Content</span>
             </Link>
             <Link
               href="/consensus"

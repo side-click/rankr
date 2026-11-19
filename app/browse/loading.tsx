@@ -3,7 +3,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 
 export default function BrowseLoading() {
   return (
-    <RetroWindow title="Browse Published Rankings" theme="scdl">
+    <RetroWindow title="Browse Published Content" theme="scdl">
       <div className="space-y-4">
         {/* Filter Bar Skeleton (exact match to app/browse/page.tsx) */}
         <div className="xp-panel p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">

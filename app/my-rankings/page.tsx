@@ -8,7 +8,7 @@ import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 import { getLeaguePrefix } from "@/components/BallotCard";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { Award, Edit3, Lock, User } from "lucide-react";
+import { Award, Edit3, FileText, Lock, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -66,10 +66,11 @@ export default async function MyRankingsPage() {
     );
   }
 
-  const { data: ballots } = await supabase
-    .from("ballots")
-    .select(
-      `
+  const [{ data: ballots }, { data: blogs }] = await Promise.all([
+    supabase
+      .from("ballots")
+      .select(
+        `
       id,
       title,
       status,
@@ -88,24 +89,151 @@ export default async function MyRankingsPage() {
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug, sort_order, is_open, is_archived )
     `
-    )
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("blogs")
+      .select(
+        `
+      id,
+      title,
+      subtitle,
+      status,
+      published_at,
+      updated_at,
+      season_name_snapshot,
+      league_name_snapshot,
+      seasons ( name, slug, leagues ( name, short_name, slug ) )
+    `
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+  ]);
+
+  const hasBallots = Boolean(ballots && ballots.length > 0);
+  const hasBlogs = Boolean(blogs && blogs.length > 0);
 
   return (
-    <RetroWindow title="My Ranking History" theme="scdl">
-      {!ballots || ballots.length === 0 ? (
+    <RetroWindow title="My Publishing History" theme="scdl">
+
+      {!hasBallots && !hasBlogs ? (
         <div className="xp-inset p-8 text-center space-y-3">
           <p className="text-xs text-[#a6a89e]">
-            No rankings yet.
+            No published content or drafts yet.
           </p>
           <Link href="/rank" className="xp-btn xp-btn-primary text-xs">
-            Create Your First Ranking
+            Create New Content
           </Link>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {ballots.map((b) => {
+        <div className="space-y-6">
+          {hasBlogs && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[#93c5fd]">
+                  My Blogs
+                </h2>
+                <Link href="/rank?type=blog" className="xp-btn text-[11px]">
+                  <FileText className="w-3 h-3 text-[#f0c020]" />
+                  <span>New Blog</span>
+                </Link>
+              </div>
+              {(blogs ?? []).map((blog) => {
+                const season = Array.isArray(blog.seasons)
+                  ? blog.seasons[0]
+                  : blog.seasons;
+                const rawLeague = (
+                  season as {
+                    leagues?:
+                      | { name?: string; short_name?: string | null; slug?: string }
+                      | { name?: string; short_name?: string | null; slug?: string }[];
+                  } | null
+                )?.leagues;
+                const league = Array.isArray(rawLeague)
+                  ? rawLeague[0] ?? null
+                  : rawLeague ?? null;
+                const leaguePrefix = getLeaguePrefix(
+                  league,
+                  blog.league_name_snapshot
+                );
+                const sName = season?.name ?? blog.season_name_snapshot ?? "";
+                const scopeLabel = sName
+                  ? `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`
+                  : "General";
+                const isPublished = blog.status === "published";
+
+                return (
+                  <div
+                    key={`blog-${blog.id}`}
+                    style={{
+                      borderLeftWidth: "3px",
+                      borderLeftColor: "#3b82f6",
+                      backgroundImage:
+                        "linear-gradient(110deg, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0.08) 46%, rgba(18, 22, 21, 0.92) 100%)",
+                    }}
+                    className="xp-panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1c2b42] border border-[#60a5fa]/40 text-[10px] font-bold text-[#93c5fd]">
+                          <FileText className="w-2.5 h-2.5" />
+                          <span>Blog</span>
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            isPublished
+                              ? "bg-[#14301a] text-[#7cd438] border border-[#7cd438]/40"
+                              : "bg-[#2a2210] text-[#f0c020] border border-[#c89b3c]/40"
+                          }`}
+                        >
+                          {isPublished ? "Published" : "Draft"}
+                        </span>
+                        <span className="text-[11px] text-[#c7c5b8]">
+                          {scopeLabel}
+                        </span>
+                      </div>
+                      <div className="text-sm font-bold text-[#f0ede0] truncate">
+                        {blog.title}
+                      </div>
+                      {blog.subtitle && (
+                        <div className="text-xs text-[#a6a89e] truncate">
+                          {blog.subtitle}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isPublished && (
+                        <Link
+                          href={`/blog/${blog.id}`}
+                          className="xp-btn text-xs"
+                        >
+                          View
+                        </Link>
+                      )}
+                      <Link
+                        href={`/rank?type=blog&edit=${blog.id}`}
+                        className="xp-btn xp-btn-primary text-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {hasBallots && (
+            <div className="space-y-2.5">
+              {hasBlogs && (
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+                  My Rankings &amp; Tier Lists
+                </h2>
+              )}
+          {(ballots ?? []).map((b) => {
             const season = Array.isArray(b.seasons) ? b.seasons[0] : b.seasons;
             const division = Array.isArray(b.divisions)
               ? b.divisions[0]
@@ -344,6 +472,8 @@ export default async function MyRankingsPage() {
               </div>
             );
           })}
+            </div>
+          )}
         </div>
       )}
     </RetroWindow>

@@ -1,5 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import type { BallotCardData } from "@/components/BallotCard";
+import type { BlogCardData } from "@/components/BlogCard";
+import type { ContentCardItem } from "@/components/BallotListGrid";
 import { loadConsensusPageData } from "@/utils/consensusData";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
@@ -106,6 +108,7 @@ export interface BetaHomeData {
   archivedSeasons: BetaSeasonSummary[];
   focusedSeason: BetaSeasonSummary | null;
   recentBallots: BallotCardData[];
+  recentContent: ContentCardItem[];
   divisionStandings: BetaDivisionStandings[];
   divisionTopPerformers: BetaDivisionTopPerformers[];
   topPerformers: BetaTopPerformer[];
@@ -237,6 +240,35 @@ export async function loadBetaHomeData(
     ballotsQuery = ballotsQuery.in("season_id", targetSeasonIds);
   }
 
+  let blogsQuery = supabase
+    .from("blogs")
+    .select(
+      `
+      id,
+      title,
+      subtitle,
+      banner_url,
+      author_name,
+      published_at,
+      season_id,
+      season_name_snapshot,
+      league_name_snapshot,
+      profiles ( username, avatar_url ),
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) )
+    `
+    )
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(6);
+
+  if (focusedSeason) {
+    blogsQuery = blogsQuery.eq("season_id", focusedSeason.id);
+  } else if (targetSeasonIds.length > 0) {
+    blogsQuery = blogsQuery.or(
+      `season_id.in.(${targetSeasonIds.join(",")}),season_id.is.null`
+    );
+  }
+
   // Fetch consensus snapshots + stats in parallel
   const consensusPromises = targetSeasons.flatMap((s) =>
     s.divisions.map((d) =>
@@ -264,9 +296,10 @@ export async function loadBetaHomeData(
   const statsSeasonSlug =
     focusedSeason?.slug ?? liveSeasons[0]?.slug ?? allSeasons[0]?.slug;
 
-  const [{ data: recentBallotsRaw }, consensusRaw, statsCtx] =
+  const [{ data: recentBallotsRaw }, { data: recentBlogsRaw }, consensusRaw, statsCtx] =
     await Promise.all([
       ballotsQuery,
+      blogsQuery,
       Promise.all(consensusPromises),
       loadPublicStatsContext(statsSeasonSlug, {
         includeRiotStats: false,
@@ -402,12 +435,36 @@ export async function loadBetaHomeData(
       });
   }
 
+  const recentBallots = (recentBallotsRaw ?? []) as unknown as BallotCardData[];
+  const recentBlogs = (recentBlogsRaw ?? []) as unknown as BlogCardData[];
+  const recentContent: ContentCardItem[] = [
+    ...recentBallots.map((b) => ({
+      kind: "ballot" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b,
+    })),
+    ...recentBlogs.map((b) => ({
+      kind: "blog" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b,
+    })),
+  ]
+    .sort((a, b) => {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 6);
+
   return {
     allSeasons,
     liveSeasons,
     archivedSeasons,
     focusedSeason,
-    recentBallots: (recentBallotsRaw ?? []) as unknown as BallotCardData[],
+    recentBallots,
+    recentContent,
     divisionStandings,
     divisionTopPerformers,
     topPerformers,

@@ -48,10 +48,105 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     ballotId?: string;
+    blogId?: string;
   } | null;
   const ballotId = body?.ballotId;
-  if (!ballotId) {
-    return NextResponse.json({ error: "Missing ballotId" }, { status: 400 });
+  const blogId = body?.blogId;
+  if (!ballotId && !blogId) {
+    return NextResponse.json(
+      { error: "Missing ballotId or blogId" },
+      { status: 400 }
+    );
+  }
+
+  if (blogId) {
+    const [{ data: blog }, { data: profile }] = await Promise.all([
+      supabase
+        .from("blogs")
+        .select(
+          "id, title, subtitle, content, author_name, status, user_id, league_name_snapshot, season_name_snapshot"
+        )
+        .eq("id", blogId)
+        .eq("user_id", user.id)
+        .eq("status", "published")
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("username, discord_id")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
+
+    if (!blog) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const flagged = findFlaggedTerms([
+      profile?.username,
+      blog.author_name,
+      blog.title,
+      blog.subtitle,
+      blog.content,
+    ]);
+
+    if (flagged.length === 0) {
+      return NextResponse.json({ ok: true, skipped: true });
+    }
+
+    const origin = new URL(request.url).origin;
+    const blogUrl = `${origin}/blog/${blog.id}`;
+    const pingUserId = process.env.DISCORD_MOD_PING_USER_ID?.trim();
+
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(pingUserId
+          ? {
+              content: `<@${pingUserId}>`,
+              allowed_mentions: { users: [pingUserId] },
+            }
+          : {}),
+        embeds: [
+          {
+            title: "⚠️ Flagged Blog Published",
+            url: blogUrl,
+            color: 0xe84a1b,
+            description: `**${blog.title}**\n${
+              blog.season_name_snapshot
+                ? `${
+                    blog.league_name_snapshot
+                      ? `${blog.league_name_snapshot} — `
+                      : ""
+                  }${blog.season_name_snapshot}`
+                : "General"
+            }`,
+            fields: [
+              {
+                name: "Author",
+                value: `${blog.author_name || profile?.username || "Unknown"} (${
+                  profile?.discord_id ?? "N/A"
+                })`,
+                inline: true,
+              },
+              {
+                name: "Moderation Check",
+                value: `Matched terms: \`${flagged.join("`, `")}\``,
+                inline: true,
+              },
+              {
+                name: "Link",
+                value: `[Open Blog](${blogUrl})`,
+                inline: false,
+              },
+            ],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }),
+    }).catch(() => {});
+
+    return NextResponse.json({ ok: true, flagged: true });
   }
 
   const [{ data: ballot }, { data: entries }, { data: profile }] =

@@ -43,7 +43,7 @@ export function AllowlistBlockedWindow({
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
           <Link href="/browse" className="xp-btn xp-btn-primary text-xs">
-            Browse Rankings
+            Browse Content
           </Link>
           <AuthButton
             user={{

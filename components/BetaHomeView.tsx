@@ -72,7 +72,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                     Create New
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build and share power rankings and tier lists
+                    Build and share power rankings, tier lists, and blogs
                   </div>
                 </div>
               </Link>
@@ -84,10 +84,10 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div className="min-w-0">
                   <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                    Browse Rankings
+                    Browse Content
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Explore everything published on Rankr
+                    Explore rankings, tier lists, and blogs published on Rankr
                   </div>
                 </div>
               </Link>
@@ -654,15 +654,15 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
         </RetroWindow>
       )}
 
-      {/* 4. Recently Published Rankings & Tier Lists */}
-      <RetroWindow title="Recently Published Rankings" theme="scdl">
-        {data.recentBallots.length === 0 ? (
+      {/* 4. Recently Published Content */}
+      <RetroWindow title="Recently Published Content" theme="scdl">
+        {data.recentContent.length === 0 ? (
           <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-            No published rankings yet for this scope.
+            No published content yet for this scope.
           </div>
         ) : (
           <RecentBallotsPanel
-            ballots={data.recentBallots}
+            items={data.recentContent}
             browseHref={browseHref}
           />
         )}

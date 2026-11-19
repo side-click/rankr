@@ -84,6 +84,10 @@ export interface Edition {
 
 export type RankingType = "team" | "player";
 
+export type CreateContentType = RankingType | "blog";
+
+export type BlogStatus = "draft" | "published";
+
 export type TierPresetKey = "standard" | "draft_day" | "custom";
 
 export type TierVariant =
@@ -194,4 +198,23 @@ export interface BallotEntry {
   team_logo_snapshot: string | null;
   roster_snapshot: (string | RosterSlot)[];
   created_at: string;
+}
+
+export interface Blog {
+  id: string;
+  user_id: string;
+  author_name: string | null;
+  title: string;
+  subtitle: string | null;
+  banner_url: string | null;
+  content: string;
+  season_id: string | null;
+  season_name_snapshot: string | null;
+  league_name_snapshot: string | null;
+  status: BlogStatus;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: Pick<Profile, "id" | "username" | "avatar_url"> | null;
+  seasons?: Pick<Season, "id" | "name" | "slug" | "leagues"> | null;
 }

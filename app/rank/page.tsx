@@ -6,7 +6,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
-import type { RankingType } from "@/types/database";
+import type { Blog, CreateContentType } from "@/types/database";
 import { Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export default async function RankPage({
     season?: string;
     division?: string;
     edition?: string;
+    edit?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -146,14 +147,27 @@ export default async function RankPage({
         )
       : undefined;
 
-  const initialType: RankingType =
-    params.type === "player"
+  const initialType: CreateContentType =
+    params.type === "blog" || params.edit
+      ? "blog"
+      : params.type === "player"
       ? "player"
       : params.type === "team"
       ? "team"
       : matchedEdition?.is_players_only
       ? "player"
       : "team";
+
+  let initialBlog: Blog | null = null;
+  if (params.edit) {
+    const { data: existingBlog } = await supabase
+      .from("blogs")
+      .select("*")
+      .eq("id", params.edit)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    initialBlog = (existingBlog as Blog | null) ?? null;
+  }
 
   return (
     <RankWorkspace
@@ -170,6 +184,7 @@ export default async function RankPage({
       initialSeasonSlug={effectiveSeason}
       initialDivisionSlug={params.division}
       initialEditionSlug={params.edition}
+      initialBlog={initialBlog}
     />
   );
 }
