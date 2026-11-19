@@ -818,10 +818,10 @@ export function AdminTeamScoutingView({
                     className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3.5"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2.5">
-                      {/* Left justified: <winlossbadge> Blue: <blueteamlogo> <blueteamname> */}
-                      <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                      {/* Left half: <winlossbadge> on left, Blue: <logo> <name> centered */}
+                      <div className="flex flex-wrap items-center justify-between md:justify-center md:relative gap-2 min-h-[28px] min-w-0">
                         <span
-                          className={`px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase shrink-0 ${
+                          className={`md:absolute md:left-0 px-2.5 py-0.5 rounded text-xs sm:text-sm font-extrabold uppercase shrink-0 ${
                             seriesWon
                               ? "bg-[#7cd438]/20 text-[#7cd438] border border-[#7cd438]/40"
                               : "bg-[#ff857a]/20 text-[#ff857a] border border-[#ff857a]/40"
@@ -842,13 +842,13 @@ export function AdminTeamScoutingView({
                         </span>
                       </div>
 
-                      {/* Center justified: vs. */}
+                      {/* Center: vs. */}
                       <span className="text-sm sm:text-base font-bold text-[#a6a89e] md:text-center">
                         vs.
                       </span>
 
-                      {/* Right justified: Red: <redteamlogo> <redteamname> <round#> <gametime> */}
-                      <div className="flex flex-wrap items-center md:justify-end gap-3 min-w-0">
+                      {/* Right half: Red: <logo> <name> centered, <round#> <gametime> on right */}
+                      <div className="flex flex-wrap items-center justify-between md:justify-center md:relative gap-2 min-h-[28px] min-w-0">
                         <span className="inline-flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-[#ff7b72] min-w-0">
                           <span className="shrink-0">Red:</span>
                           {redLogo && (
@@ -860,7 +860,7 @@ export function AdminTeamScoutingView({
                           )}
                           <span className="truncate">{redTeamName}</span>
                         </span>
-                        <div className="flex items-center gap-2.5 text-xs sm:text-sm text-[#a6a89e] shrink-0">
+                        <div className="md:absolute md:right-0 flex items-center gap-2.5 text-xs sm:text-sm text-[#a6a89e] shrink-0">
                           <span className="font-bold text-[#f0c020]">
                             {s.roundLabel}
                           </span>
@@ -897,13 +897,16 @@ export function AdminTeamScoutingView({
                           key={g.gameId}
                           className="mt-2.5 pt-3 border-t border-white/10 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-0"
                         >
-                          {/* Blue Side Picks & Bans (left justified) */}
-                          <div className="flex flex-wrap items-center justify-start gap-1 lg:pr-5 lg:border-r lg:border-white/15">
+                          {/* Blue Side Picks & Bans (centered in left half) */}
+                          <div className="flex flex-wrap items-center justify-center gap-1 lg:pr-5 lg:border-r lg:border-white/15">
                             {s.games.length > 1 && (
                               <span className="text-xs font-extrabold text-[#5ea3ff] mr-1">
                                 G{gIdx + 1}
                               </span>
                             )}
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#5ea3ff] mr-1">
+                              Picks:
+                            </span>
                             {blueChamps.map((ch, i) => (
                               <img
                                 key={`${ch}-${i}`}
@@ -915,7 +918,10 @@ export function AdminTeamScoutingView({
                             ))}
                             {g.draft && g.draft.blueBans.length > 0 && (
                               <>
-                                <span className="h-7 w-px bg-white/15 mx-1" />
+                                <span className="h-7 w-px bg-white/15 mx-1.5" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#a6a89e] mr-1">
+                                  Bans:
+                                </span>
                                 {g.draft.blueBans.map((b, i) => (
                                   <img
                                     key={`bb-${b}-${i}`}
@@ -929,8 +935,11 @@ export function AdminTeamScoutingView({
                             )}
                           </div>
 
-                          {/* Red Side Picks & Bans (right justified) */}
-                          <div className="flex flex-wrap items-center justify-start lg:justify-end gap-1 lg:pl-5">
+                          {/* Red Side Picks & Bans (centered in right half) */}
+                          <div className="flex flex-wrap items-center justify-center gap-1 lg:pl-5">
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#ff7b72] mr-1">
+                              Picks:
+                            </span>
                             {redChamps.map((ch, i) => (
                               <img
                                 key={`${ch}-${i}`}
@@ -942,7 +951,10 @@ export function AdminTeamScoutingView({
                             ))}
                             {g.draft && g.draft.redBans.length > 0 && (
                               <>
-                                <span className="h-7 w-px bg-white/15 mx-1" />
+                                <span className="h-7 w-px bg-white/15 mx-1.5" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#a6a89e] mr-1">
+                                  Bans:
+                                </span>
                                 {g.draft.redBans.map((b, i) => (
                                   <img
                                     key={`rb-${b}-${i}`}
