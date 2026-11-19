@@ -1,21 +1,18 @@
-import { Loader2, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 export default function ConsensusLoading() {
   return (
     <div className="relative rounded-2xl border border-[#c89b3c]/50 bg-[#0d1412] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.65)] p-4 sm:p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3.5 pb-4 border-b border-[#c89b3c]/25">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f0c020]/25 to-[#8c6b16]/25 border border-[#f0c020]/60 flex items-center justify-center shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f0c020]/25 to-[#8c6b16]/25 border border-[#f0c020]/60 flex items-center justify-center shadow-[0_0_24px_rgba(240,192,32,0.22)] shrink-0">
           <Trophy className="w-6 h-6 text-[#f0c020]" />
         </div>
-        <div className="space-y-1">
-          <h1 className="wow-heading text-lg sm:text-xl font-bold text-[#f0c020] tracking-wide">
-            Consensus Power Rankings
+        <div>
+          <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+            Consensus{" "}
+            <span className="whitespace-nowrap">Power Rankings</span>
           </h1>
-          <p className="text-xs text-[#a6a89e] flex items-center gap-1.5">
-            <Loader2 className="w-3 h-3 animate-spin text-[#f0c020]" />
-            <span>Loading division consensus...</span>
-          </p>
         </div>
       </div>
 
