@@ -469,7 +469,7 @@ function DroppableTierRow({
                 <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
-              <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
+              <div className="flex flex-wrap gap-2 items-start min-h-[80px]">
                 {blindableChamps.map((champ) => (
                   <DraggablePlacedChampion
                     key={champ.championId}
@@ -494,7 +494,7 @@ function DroppableTierRow({
               <div className="flex items-center gap-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8e93a0]">
                 <span>General ({generalChamps.length})</span>
               </div>
-              <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
+              <div className="flex flex-wrap gap-2 items-start min-h-[80px]">
                 {generalChamps.map((champ) => (
                   <DraggablePlacedChampion
                     key={champ.championId}
