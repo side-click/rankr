@@ -496,7 +496,6 @@ export function StatsDivisionTab({
                       <img
                         src={getChampionIconUrl(c.id, ddVersion)}
                         alt={c.name}
-                        loading="lazy"
                         className="w-full aspect-square object-cover block grayscale opacity-50"
                       />
                     </div>

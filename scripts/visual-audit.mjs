@@ -36,7 +36,11 @@ const extraPages = [
 const customPages = argVal("--pages=")
   ? argVal("--pages=")
       .split(",")
-      .map((p, i) => ({ name: `page-${i + 1}`, path: p.trim() }))
+      .map((p, i) => ({
+        name: `page-${i + 1}`,
+        path: p.trim(),
+        statsTabs: p.trim() === "/stats",
+      }))
   : args.includes("--all")
   ? [...defaultPages, ...extraPages]
   : defaultPages;
@@ -107,7 +111,7 @@ try {
 
       if (target.statsTabs) {
         await capture("players");
-        for (const tab of ["Teams", "Division"]) {
+        for (const tab of ["Teams", "General"]) {
           const btn = page.locator("button", { hasText: new RegExp(`^${tab}$`, "i") }).first();
           if (await btn.count()) {
             await btn.click();

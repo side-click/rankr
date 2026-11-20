@@ -1,8 +1,5 @@
-import draftsData from "@/data/scdl_drafts.json";
 import type { LoadedStatsContext } from "@/utils/riotStatsServer";
-import type { DraftRecord } from "@/utils/scdlSheetStats";
-
-const DRAFTS_BY_GAME_ID = draftsData as Record<string, DraftRecord>;
+import type { ScdlGameDetail, ScdlSeriesDetail } from "@/utils/scdlSheetStats";
 
 function normChamp(name: string): string {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -48,8 +45,7 @@ export interface ChampionRecentGame {
   seriesKey: string;
   gameId: string;
   matchLabel: string;
-  division: string;
-  date: string;
+  roundLabel: string;
   side: "Blue" | "Red";
   win: boolean;
   playerName: string;
@@ -57,7 +53,7 @@ export interface ChampionRecentGame {
   kills: number;
   deaths: number;
   assists: number;
-  teamId: string;
+  teamId: string | null;
   teamName: string;
   opponentName: string;
 }
@@ -87,27 +83,33 @@ export interface ChampionStatsPayload {
   recentGames: ChampionRecentGame[];
 }
 
+/** Flatten series into games (sheet order: later = more recent). */
+export function flattenSeriesGames(series: ScdlSeriesDetail[]): ScdlGameDetail[] {
+  return series.flatMap((s) => s.games);
+}
+
 export function computeChampionStats(
   ctx: LoadedStatsContext,
+  series: ScdlSeriesDetail[],
   championName: string,
   divisionFilter?: string
 ): ChampionStatsPayload {
-  const targetNorm = normChamp(championName);
-  const divSlug = divisionFilter && divisionFilter !== "all" ? divisionFilter.toLowerCase() : null;
+  const target = normChamp(championName);
+  const divObj =
+    divisionFilter && divisionFilter !== "all"
+      ? ctx.divisions.find((d) => d.slug.toLowerCase() === divisionFilter.toLowerCase())
+      : null;
 
-  const divObj = divSlug
-    ? ctx.divisions.find((d) => d.slug.toLowerCase() === divSlug)
-    : null;
-  const teams = divObj
-    ? ctx.teams.filter((t) => t.divisionId === divObj.id)
-    : ctx.teams;
+  const teamByName = new Map(ctx.teams.map((t) => [t.teamName.trim().toLowerCase(), t]));
+  const teamMeta = (name: string) => teamByName.get(name.trim().toLowerCase()) ?? null;
 
-  const seenGameIds = new Set<string>();
-  const seenTeamGames = new Set<string>();
-  let totalLeagueGames = 0;
+  const allGames = flattenSeriesGames(series).filter((g) => {
+    if (!divObj) return true;
+    return teamMeta(g.blueTeam)?.divisionId === divObj.id;
+  });
+
   let bans = 0;
   let firstPickCount = 0;
-
   let games = 0;
   let wins = 0;
   let blueGames = 0;
@@ -116,10 +118,7 @@ export function computeChampionStats(
   let redWins = 0;
 
   const roleMap = new Map<string, { games: number; wins: number }>();
-  const bannedByMap = new Map<
-    string,
-    { teamId: string; teamName: string; logoUrl: string | null; bans: number; totalTeamGames: number }
-  >();
+  const bannedByMap = new Map<string, ChampionBannedByTeam>();
   const playerMap = new Map<
     string,
     {
@@ -138,132 +137,113 @@ export function computeChampionStats(
       totalCsPerMin: number;
     }
   >();
-  const recentGames: ChampionRecentGame[] = [];
+  const recent: { order: number; row: ChampionRecentGame }[] = [];
 
-  for (const team of teams) {
-    for (const player of team.players ?? []) {
-      for (const m of player.matches ?? []) {
-        if (!m.matchId || !m.matchId.startsWith("SCDL_")) continue;
-        const gameId = m.matchId.replace(/^SCDL_/, "");
+  allGames.forEach((g, order) => {
+    const draft = g.draft;
 
-        if (!seenGameIds.has(gameId)) {
-          seenGameIds.add(gameId);
-          totalLeagueGames += 1;
-
-          const draft = DRAFTS_BY_GAME_ID[gameId];
-          const gameBans = draft?.bans ?? [];
-          for (const b of gameBans) {
-            if (normChamp(b) === targetNorm) {
-              bans += 1;
-              break;
-            }
-          }
-          if (draft?.bluePicks?.[0] && normChamp(draft.bluePicks[0]) === targetNorm) {
-            firstPickCount += 1;
-          }
-        }
-
-        const isBlue = m.teamId === 100;
-        const draft = DRAFTS_BY_GAME_ID[gameId];
-        const teamGameKey = `${gameId}:${team.teamId}`;
-        if (draft && !seenTeamGames.has(teamGameKey)) {
-          seenTeamGames.add(teamGameKey);
-          const teamBans = isBlue ? draft.blueBans : draft.redBans;
-          const entry = bannedByMap.get(team.teamId) ?? {
-            teamId: team.teamId,
-            teamName: team.teamName,
-            logoUrl: team.logoUrl,
-            bans: 0,
-            totalTeamGames: 0,
-          };
-          entry.totalTeamGames += 1;
-          if (teamBans?.some((b) => normChamp(b) === targetNorm)) {
-            entry.bans += 1;
-          }
-          bannedByMap.set(team.teamId, entry);
-        }
-
-        if (normChamp(m.championName) !== targetNorm) continue;
-
-        games += 1;
-        if (m.win) wins += 1;
-        if (isBlue) {
-          blueGames += 1;
-          if (m.win) blueWins += 1;
-        } else {
-          redGames += 1;
-          if (m.win) redWins += 1;
-        }
-
-        const roleKey = (player.role || "unknown").toLowerCase();
-        const rStat = roleMap.get(roleKey) ?? { games: 0, wins: 0 };
-        rStat.games += 1;
-        if (m.win) rStat.wins += 1;
-        roleMap.set(roleKey, rStat);
-
-        const mins = m.gameDuration > 0 ? m.gameDuration / 60 : 0;
-        const dpm = mins > 0 ? m.totalDamageDealtToChampions / mins : 0;
-        const csPerMin = mins > 0 ? m.cs / mins : 0;
-
-        const pKey = player.riotId.split("#")[0].trim().toLowerCase();
-        const pStat = playerMap.get(pKey) ?? {
-          playerKey: pKey,
-          playerName: player.riotId.split("#")[0].trim() || player.riotId,
-          teamId: team.teamId,
-          teamName: team.teamName,
-          logoUrl: team.logoUrl,
-          games: 0,
-          wins: 0,
-          kills: 0,
-          deaths: 0,
-          assists: 0,
-          totalDpm: 0,
-          totalDmgShare: 0,
-          totalCsPerMin: 0,
+    if (draft) {
+      if ([...(draft.blueBans ?? []), ...(draft.redBans ?? [])].some((b) => normChamp(b) === target)) {
+        bans += 1;
+      }
+      if (draft.bluePicks?.[0] && normChamp(draft.bluePicks[0]) === target) {
+        firstPickCount += 1;
+      }
+      for (const [teamName, teamBans] of [
+        [g.blueTeam, draft.blueBans],
+        [g.redTeam, draft.redBans],
+      ] as const) {
+        const meta = teamMeta(teamName);
+        const key = meta?.teamId ?? `name:${teamName.toLowerCase()}`;
+        const entry = bannedByMap.get(key) ?? {
+          teamId: meta?.teamId ?? "",
+          teamName,
+          logoUrl: meta?.logoUrl ?? null,
+          bans: 0,
+          totalTeamGames: 0,
         };
-        pStat.games += 1;
-        if (m.win) pStat.wins += 1;
-        pStat.kills += m.kills;
-        pStat.deaths += m.deaths;
-        pStat.assists += m.assists;
-        pStat.totalDpm += dpm;
-        pStat.totalDmgShare +=
-          m.teamDamage && m.teamDamage > 0
-            ? (m.totalDamageDealtToChampions / m.teamDamage) * 100
-            : 0;
-        pStat.totalCsPerMin += csPerMin;
-        playerMap.set(pKey, pStat);
-
-        recentGames.push({
-          seriesKey: m.matchLabel ?? gameId,
-          gameId,
-          matchLabel: m.matchLabel ?? `${team.teamName} (${isBlue ? "Blue" : "Red"})`,
-          division: team.divisionName,
-          // Sheet rows carry no date; gameCreation holds sheet row order (later = more recent)
-          date: String(m.gameCreation ?? 0).padStart(10, "0"),
-          side: isBlue ? "Blue" : "Red",
-          win: m.win,
-          playerName: pStat.playerName,
-          playerKey: pKey,
-          kills: m.kills,
-          deaths: m.deaths,
-          assists: m.assists,
-          teamId: team.teamId,
-          teamName: team.teamName,
-          opponentName: "",
-        });
+        entry.totalTeamGames += 1;
+        if ((teamBans ?? []).some((b) => normChamp(b) === target)) entry.bans += 1;
+        bannedByMap.set(key, entry);
       }
     }
-  }
 
-  const losses = games - wins;
-  const winRate = games > 0 ? (wins / games) * 100 : 0;
-  const pickRate = totalLeagueGames > 0 ? (games / totalLeagueGames) * 100 : 0;
-  const banRate = totalLeagueGames > 0 ? (bans / totalLeagueGames) * 100 : 0;
-  const presence =
-    totalLeagueGames > 0 ? ((games + bans) / totalLeagueGames) * 100 : 0;
-  const firstPickRate =
-    totalLeagueGames > 0 ? (firstPickCount / totalLeagueGames) * 100 : 0;
+    const minutes = g.gameDuration > 0 ? g.gameDuration / 60 : 0;
+    const teamDamage = new Map<string, number>();
+    for (const p of g.players) {
+      teamDamage.set(p.teamName, (teamDamage.get(p.teamName) ?? 0) + p.damageDealt);
+    }
+
+    for (const p of g.players) {
+      if (normChamp(p.champion) !== target) continue;
+
+      games += 1;
+      if (p.win) wins += 1;
+      if (p.side === "Blue") {
+        blueGames += 1;
+        if (p.win) blueWins += 1;
+      } else {
+        redGames += 1;
+        if (p.win) redWins += 1;
+      }
+
+      const rStat = roleMap.get(p.role) ?? { games: 0, wins: 0 };
+      rStat.games += 1;
+      if (p.win) rStat.wins += 1;
+      roleMap.set(p.role, rStat);
+
+      const meta = teamMeta(p.teamName);
+      const pKey = p.displayName.toLowerCase();
+      const tDmg = teamDamage.get(p.teamName) ?? 0;
+      const pStat = playerMap.get(pKey) ?? {
+        playerKey: pKey,
+        playerName: p.displayName,
+        teamId: meta?.teamId ?? null,
+        teamName: p.teamName,
+        logoUrl: meta?.logoUrl ?? null,
+        games: 0,
+        wins: 0,
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        totalDpm: 0,
+        totalDmgShare: 0,
+        totalCsPerMin: 0,
+      };
+      pStat.games += 1;
+      if (p.win) pStat.wins += 1;
+      pStat.kills += p.kills;
+      pStat.deaths += p.deaths;
+      pStat.assists += p.assists;
+      pStat.totalDpm += minutes > 0 ? p.damageDealt / minutes : 0;
+      pStat.totalDmgShare += tDmg > 0 ? (p.damageDealt / tDmg) * 100 : 0;
+      pStat.totalCsPerMin += minutes > 0 ? p.cs / minutes : 0;
+      playerMap.set(pKey, pStat);
+
+      recent.push({
+        order,
+        row: {
+          seriesKey: g.seriesKey,
+          gameId: g.gameId,
+          matchLabel: g.matchLabel,
+          roundLabel: g.roundLabel,
+          side: p.side,
+          win: p.win,
+          playerName: p.displayName,
+          playerKey: pKey,
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          teamId: meta?.teamId ?? null,
+          teamName: p.teamName,
+          opponentName: p.teamName === g.blueTeam ? g.redTeam : g.blueTeam,
+        },
+      });
+    }
+  });
+
+  const totalLeagueGames = allGames.length;
+  const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 
   const roles: ChampionRoleStat[] = [...roleMap.entries()]
     .map(([role, s]) => ({
@@ -271,7 +251,7 @@ export function computeChampionStats(
       games: s.games,
       wins: s.wins,
       losses: s.games - s.wins,
-      winRate: s.games > 0 ? (s.wins / s.games) * 100 : 0,
+      winRate: pct(s.wins, s.games),
     }))
     .sort((a, b) => b.games - a.games);
 
@@ -281,67 +261,62 @@ export function computeChampionStats(
     .slice(0, 6);
 
   const playerLeaderboard: ChampionPlayerRow[] = [...playerMap.values()]
-    .map((p) => {
-      const kda = p.deaths > 0 ? (p.kills + p.assists) / p.deaths : p.kills + p.assists;
-      return {
-        playerKey: p.playerKey,
-        playerName: p.playerName,
-        teamId: p.teamId,
-        teamName: p.teamName,
-        logoUrl: p.logoUrl,
-        games: p.games,
-        wins: p.wins,
-        losses: p.games - p.wins,
-        winRate: p.games > 0 ? (p.wins / p.games) * 100 : 0,
-        kills: p.kills,
-        deaths: p.deaths,
-        assists: p.assists,
-        kda,
-        dpm: p.games > 0 ? p.totalDpm / p.games : 0,
-        damageShare: p.games > 0 ? p.totalDmgShare / p.games : 0,
-        csPerMin: p.games > 0 ? p.totalCsPerMin / p.games : 0,
-        isCarrying: false,
-      };
-    })
+    .map((p) => ({
+      playerKey: p.playerKey,
+      playerName: p.playerName,
+      teamId: p.teamId,
+      teamName: p.teamName,
+      logoUrl: p.logoUrl,
+      games: p.games,
+      wins: p.wins,
+      losses: p.games - p.wins,
+      winRate: pct(p.wins, p.games),
+      kills: p.kills,
+      deaths: p.deaths,
+      assists: p.assists,
+      kda: p.deaths > 0 ? (p.kills + p.assists) / p.deaths : p.kills + p.assists,
+      dpm: p.games > 0 ? p.totalDpm / p.games : 0,
+      damageShare: p.games > 0 ? p.totalDmgShare / p.games : 0,
+      csPerMin: p.games > 0 ? p.totalCsPerMin / p.games : 0,
+      isCarrying: false,
+    }))
     .sort((a, b) => b.games - a.games || b.winRate - a.winRate || b.kda - a.kda);
 
-  // Flag "Carrying the Champ" (>= 3 games, highest win rate)
-  let bestWr = -1;
+  // "Carrying the Champ": best win rate among players with 3+ games
   let bestIdx = -1;
-  playerLeaderboard.forEach((p, idx) => {
+  let bestWr = -1;
+  playerLeaderboard.forEach((p, i) => {
     if (p.games >= 3 && p.winRate > bestWr) {
       bestWr = p.winRate;
-      bestIdx = idx;
+      bestIdx = i;
     }
   });
-  if (bestIdx >= 0) {
-    playerLeaderboard[bestIdx].isCarrying = true;
-  }
+  if (bestIdx >= 0) playerLeaderboard[bestIdx].isCarrying = true;
 
-  recentGames.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  recent.sort((a, b) => b.order - a.order);
 
   return {
     championName,
     totalLeagueGames,
     games,
     wins,
-    losses,
-    winRate,
-    pickRate,
+    losses: games - wins,
+    winRate: pct(wins, games),
+    pickRate: pct(games, totalLeagueGames),
     bans,
-    banRate,
-    presence,
+    banRate: pct(bans, totalLeagueGames),
+    presence: pct(games + bans, totalLeagueGames),
     firstPickCount,
-    firstPickRate,
+    firstPickRate: pct(firstPickCount, totalLeagueGames),
     blueGames,
     blueWins,
-    blueWinRate: blueGames > 0 ? (blueWins / blueGames) * 100 : 0,
+    blueWinRate: pct(blueWins, blueGames),
     redGames,
     redWins,
-    redWinRate: redGames > 0 ? (redWins / redGames) * 100 : 0,
+    redWinRate: pct(redWins, redGames),
     roles,
     mostBannedBy,
     playerLeaderboard,
-    recentGames: recentGames.slice(0, 15),
+    recentGames: recent.slice(0, 15).map((r) => r.row),
   };
 }

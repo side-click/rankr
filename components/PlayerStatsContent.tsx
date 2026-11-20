@@ -733,16 +733,11 @@ export async function PlayerStatsContent({
                           g.row.win ? "bg-[#7cd438]" : "bg-[#ff857a]"
                         }`}
                       />
-                      <Link
-                        href={`/stats/champion/${encodeURIComponent(g.row.champion)}`}
-                        className="contents"
-                      >
-                        <img
-                          src={getChampionIconUrl(g.row.champion, ctx.ddVersion)}
-                          alt={g.row.champion}
-                          className="w-11 h-11 rounded border border-white/20 object-cover shrink-0"
-                        />
-                      </Link>
+                      <img
+                        src={getChampionIconUrl(g.row.champion, ctx.ddVersion)}
+                        alt={g.row.champion}
+                        className="w-11 h-11 rounded border border-white/20 object-cover shrink-0"
+                      />
                       <div>
                         <div className="flex items-center gap-2 font-bold text-[#f0ede0] text-sm sm:text-[15px]">
                           <span>{g.row.champion}</span>

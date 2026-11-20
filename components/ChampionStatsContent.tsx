@@ -9,9 +9,11 @@ import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { computeChampionStats } from "@/utils/championStats";
 import type { LoadedStatsContext } from "@/utils/riotStatsServer";
+import type { ScdlSeriesDetail } from "@/utils/scdlSheetStats";
 
 interface ChampionStatsContentProps {
   ctx: LoadedStatsContext;
+  series: ScdlSeriesDetail[];
   championName: string;
   basePath?: string;
 }
@@ -20,6 +22,7 @@ type PlayerSortKey = "games" | "winRate" | "kda" | "dpm" | "damageShare" | "csPe
 
 export function ChampionStatsContent({
   ctx,
+  series,
   championName,
   basePath = "/stats",
 }: ChampionStatsContentProps) {
@@ -28,8 +31,8 @@ export function ChampionStatsContent({
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const stats = useMemo(
-    () => computeChampionStats(ctx, championName, divisionFilter),
-    [ctx, championName, divisionFilter]
+    () => computeChampionStats(ctx, series, championName, divisionFilter),
+    [ctx, series, championName, divisionFilter]
   );
 
   const sortedPlayers = useMemo(() => {
@@ -499,7 +502,11 @@ export function ChampionStatsContent({
             </div>
           )}
 
-          <StatsDataCredits variant="compact" />
+          <StatsDataCredits
+            leagueName={ctx.leagueName}
+            seasonName={ctx.seasonName}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>
