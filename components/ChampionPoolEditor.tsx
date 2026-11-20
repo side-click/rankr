@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Download,
   Eye,
+  EyeClosed,
   EyeOff,
   KeyRound,
   Lock,
@@ -30,7 +31,6 @@ import {
   RotateCcw,
   Save,
   Search,
-  Shield,
   ShieldCheck,
   Trash2,
   Unlock,
@@ -156,7 +156,7 @@ function ChampionTileVisual({
               : "bg-[#1c222d] border-white/25 text-[#a6a89e] opacity-0 group-hover:opacity-100 hover:border-[#7cd438] hover:text-[#7cd438]"
           }`}
         >
-          <Shield className="w-2.5 h-2.5" />
+          <EyeClosed className="w-2.5 h-2.5" />
         </button>
       )}
       {showRemoveButton && onRemove && (
@@ -416,7 +416,7 @@ function DroppableTierRow({
               }`}
             >
               <div className="flex items-center gap-1 mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#7cd438]">
-                <Shield className="w-3 h-3" />
+                <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
               <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
