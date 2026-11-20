@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -92,6 +93,12 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased">
+        <NextTopLoader
+          color="#f0c020"
+          height={4}
+          showSpinner={false}
+          shadow="0 0 8px #f0c020, 0 0 4px #f0c020"
+        />
         <Navbar
           requireAllowlist={requireAllowlist}
           isAdmin={isAdmin}
