@@ -1594,12 +1594,12 @@ export function ChampionPoolEditor({
         )}
 
         {/* Role Selector Tabs (one role at a time) */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 xp-inset p-0.5 rounded-sm">
           {LEAGUE_ROLES.map((r) => {
             const sec = pool.roles[r.key];
-            const count = sec
-              ? sec.tiers.reduce((sum, t) => sum + t.champions.length, 0)
-              : 0;
+            const hasChamps = Boolean(
+              sec && sec.tiers.some((t) => t.champions.length > 0)
+            );
             const isActive = activeRole === r.key;
 
             return (
@@ -1607,27 +1607,20 @@ export function ChampionPoolEditor({
                 key={r.key}
                 type="button"
                 onClick={() => setActiveRole(r.key)}
-                className={`p-2 rounded-lg border-2 flex items-center justify-center sm:justify-between gap-2 transition cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-xs text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                   isActive
-                    ? "bg-[#221d12] border-[#f0c020] text-[#f0c020]"
-                    : "bg-[#15181f] border-white/10 text-[#c7c9be] hover:border-white/25"
+                    ? "bg-[#2b2412] text-[#f0c020] border border-[#c89b3c]/60"
+                    : "text-[#a6a89e] hover:text-white border border-transparent"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <img src={r.icon} alt={r.label} className="w-5 h-5" />
-                  <span className="font-black text-xs hidden sm:inline">
-                    {r.label}
-                  </span>
-                </div>
-                <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    count > 0
-                      ? "bg-[#1b3827] text-[#7cd438]"
-                      : "bg-black/30 text-[#7c808b]"
-                  }`}
-                >
-                  {count}
-                </span>
+                <img src={r.icon} alt={r.label} className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">{r.label}</span>
+                {hasChamps && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-[#7cd438] shrink-0"
+                    title={`${r.label} has saved champions`}
+                  />
+                )}
               </button>
             );
           })}
