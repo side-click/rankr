@@ -1990,15 +1990,6 @@ export function ChampionPoolEditor({
         <div className="flex flex-wrap items-center justify-end gap-2 pb-3 border-b border-white/10 text-xs">
           <button
             type="button"
-            onClick={handleRandomizeRoleTest}
-            title="Randomly place champions from this role into tiers for testing"
-            className="xp-btn text-xs"
-          >
-            <Dices className="w-3.5 h-3.5 text-[#f0c020]" />
-            Randomize Test
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setConfirmModal({
                 title: `Reset ${activeRoleMeta.label} Pool`,
