@@ -1192,7 +1192,7 @@ export function ChampionPoolEditor({
       const dataUrl = await toPng(exportCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "#0e1117",
+        backgroundColor: "transparent",
       });
       const link = document.createElement("a");
       const safeTitle = effectiveTitle
@@ -2090,7 +2090,7 @@ export function ChampionPoolEditor({
         <div className="fixed -left-[9999px] top-0 pointer-events-none">
           <div
             ref={exportCardRef}
-            className="w-[920px] p-6 bg-[#0e1117] text-[#f0ede0] border border-[#f0c020]/40 space-y-4"
+            className="w-[920px] p-6 bg-[#0e1117] text-[#f0ede0] rounded-xl border-2 border-[#c89b3c]/70 space-y-4"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
@@ -2100,7 +2100,7 @@ export function ChampionPoolEditor({
                   className="w-8 h-8"
                 />
                 <div>
-                  <h2 className="text-xl font-black text-[#f0c020]">
+                  <h2 className="wow-heading text-3xl font-bold text-[#f0c020] tracking-wide">
                     {effectiveTitle}
                   </h2>
                   {(pool.generalNotes ?? "").trim() && (
