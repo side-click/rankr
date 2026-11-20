@@ -41,6 +41,7 @@ import type {
   Team,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
 import { CAPTAIN_ICON, getRoleMeta, normalizeRoster } from "@/utils/roles";
 import { getRankColor } from "@/utils/rankColors";

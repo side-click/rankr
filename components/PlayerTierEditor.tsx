@@ -46,6 +46,7 @@ import type {
   TierRowData,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 import {
   CAPTAIN_ICON,
   getRoleMeta,

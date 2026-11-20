@@ -64,6 +64,7 @@ import {
   TIER_PRESETS,
 } from "@/utils/tierPresets";
 import { RetroWindow } from "@/components/RetroWindow";
+import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 
 interface ChampionPoolEditorProps {
   userId: string | null;
@@ -639,15 +640,7 @@ export function ChampionPoolEditor({
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!dirty || !unlocked) return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [dirty, unlocked]);
+  useUnsavedChangesGuard(dirty && unlocked);
 
   // Load champion catalog + existing encrypted record
   useEffect(() => {
