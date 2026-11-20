@@ -1983,28 +1983,16 @@ export function StatsDashboard({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Mini 2x3 Drag-and-Drop Array + Stat Pill Tray + Export PNG */}
-                  <div className="xp-panel p-3 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                  {/* Mini 2x3 Drag-and-Drop Array + Stat Pill Tray + Reset / Export PNG */}
+                  <div className="xp-panel p-3 space-y-3">
                     <div className="flex flex-col sm:flex-row gap-4 flex-1 min-w-0">
                       <div className="space-y-1.5 shrink-0 sm:w-[270px]">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
-                            Shareable 2×3 Layout (
-                            <strong className="text-[#f0c020]">
-                              {selectedShareableCards.length}/6
-                            </strong>
-                            )
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setShareableCardKeys(DEFAULT_SHAREABLE_CARD_KEYS)
-                            }
-                            title="Reset to default 2×3 layout"
-                            className="xp-btn text-[10px] px-2 py-0.5"
-                          >
-                            Reset
-                          </button>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#c7c5b8]">
+                          Shareable 2×3 Layout (
+                          <strong className="text-[#f0c020]">
+                            {selectedShareableCards.length}/6
+                          </strong>
+                          )
                         </div>
                         <div className="grid grid-cols-2 gap-1.5 bg-black/35 p-2 rounded border border-white/10">
                           {shareableCardKeys.map((slotKey, slotIdx) => {
@@ -2133,17 +2121,31 @@ export function StatsDashboard({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => void handleExportLeaderboardPng()}
-                      disabled={exportingLeaderboard}
-                      className="xp-btn xp-btn-gold text-xs disabled:opacity-50 shrink-0 self-end"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>
-                        {exportingLeaderboard ? "Exporting..." : "Export PNG"}
-                      </span>
-                    </button>
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShareableCardKeys(DEFAULT_SHAREABLE_CARD_KEYS)
+                        }
+                        title="Reset to default 2×3 layout"
+                        className="xp-btn text-xs"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleExportLeaderboardPng()}
+                        disabled={exportingLeaderboard}
+                        className="xp-btn xp-btn-gold text-xs disabled:opacity-50 shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>
+                          {exportingLeaderboard ? "Exporting..." : "Export PNG"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="max-w-[800px] mx-auto w-full">
