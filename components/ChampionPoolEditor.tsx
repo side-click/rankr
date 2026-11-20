@@ -691,6 +691,7 @@ export function ChampionPoolEditor({
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const [showAuthorInExport, setShowAuthorInExport] = useState(true);
+  const [iconsOnlyExport, setIconsOnlyExport] = useState(false);
 
   // Retro confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -2028,6 +2029,14 @@ export function ChampionPoolEditor({
           </button>
           <button
             type="button"
+            onClick={() => setIconsOnlyExport((v) => !v)}
+            title="Toggle champion names on exported PNG"
+            className="xp-btn text-xs"
+          >
+            <span>{iconsOnlyExport ? "Icons Only: On" : "Icons Only: Off"}</span>
+          </button>
+          <button
+            type="button"
             onClick={handleExportRolePng}
             disabled={exportingPng}
             className="xp-btn xp-btn-gold text-xs"
@@ -2426,32 +2435,48 @@ export function ChampionPoolEditor({
                               <span>Blindable</span>
                             </span>
                             <div className="flex flex-wrap gap-2 items-start">
-                              {blindChamps.map((c) => (
-                                <div
-                                  key={c.championId}
-                                  className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#14221a] border border-[#2f6343]"
-                                >
-                                  <img
-                                    src={iconMap.get(c.championId) ?? ""}
-                                    alt={c.name}
-                                    width={48}
-                                    height={48}
-                                    crossOrigin="anonymous"
-                                    className="w-12 h-12 rounded object-cover"
-                                  />
-                                  <span
-                                    className={`mt-1 ${
-                                      c.name.length > 13
-                                        ? "text-[8px] tracking-tighter"
-                                        : c.name.length > 11
-                                        ? "text-[9px]"
-                                        : "text-[10px]"
-                                    } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                              {blindChamps.map((c) =>
+                                iconsOnlyExport ? (
+                                  <div
+                                    key={c.championId}
+                                    className="w-[64px] h-[64px] rounded-md overflow-hidden border border-[#2f6343] bg-[#14221a]"
                                   >
-                                    {c.name}
-                                  </span>
-                                </div>
-                              ))}
+                                    <img
+                                      src={iconMap.get(c.championId) ?? ""}
+                                      alt={c.name}
+                                      width={64}
+                                      height={64}
+                                      crossOrigin="anonymous"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={c.championId}
+                                    className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#14221a] border border-[#2f6343]"
+                                  >
+                                    <img
+                                      src={iconMap.get(c.championId) ?? ""}
+                                      alt={c.name}
+                                      width={48}
+                                      height={48}
+                                      crossOrigin="anonymous"
+                                      className="w-12 h-12 rounded object-cover"
+                                    />
+                                    <span
+                                      className={`mt-1 ${
+                                        c.name.length > 13
+                                          ? "text-[8px] tracking-tighter"
+                                          : c.name.length > 11
+                                          ? "text-[9px]"
+                                          : "text-[10px]"
+                                      } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                                    >
+                                      {c.name}
+                                    </span>
+                                  </div>
+                                )
+                              )}
                             </div>
                           </div>
                         )}
@@ -2465,32 +2490,48 @@ export function ChampionPoolEditor({
                                 Empty
                               </span>
                             ) : genChamps.length === 0 ? null : (
-                              genChamps.map((c) => (
-                                <div
-                                  key={c.championId}
-                                  className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#1b202b] border border-white/10"
-                                >
-                                  <img
-                                    src={iconMap.get(c.championId) ?? ""}
-                                    alt={c.name}
-                                    width={48}
-                                    height={48}
-                                    crossOrigin="anonymous"
-                                    className="w-12 h-12 rounded object-cover"
-                                  />
-                                  <span
-                                    className={`mt-1 ${
-                                      c.name.length > 13
-                                        ? "text-[8px] tracking-tighter"
-                                        : c.name.length > 11
-                                        ? "text-[9px]"
-                                        : "text-[10px]"
-                                    } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                              genChamps.map((c) =>
+                                iconsOnlyExport ? (
+                                  <div
+                                    key={c.championId}
+                                    className="w-[64px] h-[64px] rounded-md overflow-hidden border border-white/15 bg-[#1b202b]"
                                   >
-                                    {c.name}
-                                  </span>
-                                </div>
-                              ))
+                                    <img
+                                      src={iconMap.get(c.championId) ?? ""}
+                                      alt={c.name}
+                                      width={64}
+                                      height={64}
+                                      crossOrigin="anonymous"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={c.championId}
+                                    className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#1b202b] border border-white/10"
+                                  >
+                                    <img
+                                      src={iconMap.get(c.championId) ?? ""}
+                                      alt={c.name}
+                                      width={48}
+                                      height={48}
+                                      crossOrigin="anonymous"
+                                      className="w-12 h-12 rounded object-cover"
+                                    />
+                                    <span
+                                      className={`mt-1 ${
+                                        c.name.length > 13
+                                          ? "text-[8px] tracking-tighter"
+                                          : c.name.length > 11
+                                          ? "text-[9px]"
+                                          : "text-[10px]"
+                                      } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                                    >
+                                      {c.name}
+                                    </span>
+                                  </div>
+                                )
+                              )
                             )}
                           </div>
                         </div>
