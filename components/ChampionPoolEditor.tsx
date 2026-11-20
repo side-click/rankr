@@ -118,16 +118,12 @@ function ChampionTileVisual({
   iconUrl,
   showRemoveButton,
   onRemove,
-  showBlindToggle,
-  onToggleBlind,
   isOverlay,
 }: {
   champion: ChampionPoolTierItem;
   iconUrl: string;
   showRemoveButton?: boolean;
   onRemove?: () => void;
-  showBlindToggle?: boolean;
-  onToggleBlind?: () => void;
   isOverlay?: boolean;
 }) {
   return (
@@ -174,7 +170,6 @@ function DraggablePlacedChampion({
   champion,
   iconUrl,
   onRemove,
-  onToggleBlind,
   onHoverStart,
   onHoverEnd,
 }: {
@@ -182,7 +177,6 @@ function DraggablePlacedChampion({
   champion: ChampionPoolTierItem;
   iconUrl: string;
   onRemove: () => void;
-  onToggleBlind: () => void;
   onHoverStart?: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd?: () => void;
 }) {
@@ -239,8 +233,6 @@ function DraggablePlacedChampion({
         iconUrl={iconUrl}
         showRemoveButton
         onRemove={onRemove}
-        showBlindToggle
-        onToggleBlind={onToggleBlind}
       />
     </div>
   );
@@ -248,10 +240,8 @@ function DraggablePlacedChampion({
 
 function DraggablePoolChampion({
   champion,
-  onQuickAdd,
 }: {
   champion: ChampionCatalogItem;
-  onQuickAdd: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool:${champion.id}`,
@@ -266,8 +256,6 @@ function DraggablePoolChampion({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      onDoubleClick={onQuickAdd}
-      title={`Drag to a tier or double-click to add ${champion.name}`}
       className={`touch-none ${isDragging ? "opacity-30" : ""}`}
     >
       <ChampionTileVisual
@@ -290,7 +278,6 @@ function DroppableTierRow({
   onMoveTier,
   onDeleteTier,
   onRemoveChampion,
-  onToggleBlind,
   onHoverStart,
   onHoverEnd,
 }: {
@@ -305,7 +292,6 @@ function DroppableTierRow({
   onMoveTier: (dir: -1 | 1) => void;
   onDeleteTier: () => void;
   onRemoveChampion: (championId: string) => void;
-  onToggleBlind: (championId: string) => void;
   onHoverStart: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd: () => void;
 }) {
@@ -472,7 +458,6 @@ function DroppableTierRow({
                     champion={champ}
                     iconUrl={iconMap.get(champ.championId) ?? ""}
                     onRemove={() => onRemoveChampion(champ.championId)}
-                    onToggleBlind={() => onToggleBlind(champ.championId)}
                   />
                 ))}
               </div>
@@ -498,7 +483,6 @@ function DroppableTierRow({
                     champion={champ}
                     iconUrl={iconMap.get(champ.championId) ?? ""}
                     onRemove={() => onRemoveChampion(champ.championId)}
-                    onToggleBlind={() => onToggleBlind(champ.championId)}
                     onHoverStart={onHoverStart}
                     onHoverEnd={onHoverEnd}
                   />
@@ -1072,24 +1056,6 @@ export function ChampionPoolEditor({
     });
   }
 
-  function handleQuickAddChampion(champ: ChampionCatalogItem) {
-    updateActiveRoleTiers((tiers) => {
-      if (tiers.length === 0) return tiers;
-      const [first, ...rest] = tiers;
-      if (first.champions.some((c) => c.championId === champ.id)) return tiers;
-      return [
-        {
-          ...first,
-          champions: [
-            ...first.champions,
-            { championId: champ.id, name: champ.name },
-          ],
-        },
-        ...rest,
-      ];
-    });
-  }
-
   function handleRandomizeRoleTest() {
     const roleChamps = (catalog?.champions ?? []).filter((c) =>
       c.roles.includes(activeRole)
@@ -1651,23 +1617,6 @@ export function ChampionPoolEditor({
                     )
                   )
                 }
-                onToggleBlind={(championId) => {
-                  handleChampHoverEnd();
-                  updateActiveRoleTiers((tiers) =>
-                    tiers.map((t) =>
-                      t.id === tier.id
-                        ? {
-                            ...t,
-                            champions: t.champions.map((c) =>
-                              c.championId === championId
-                                ? { ...c, isBlindable: !c.isBlindable }
-                                : c
-                            ),
-                          }
-                        : t
-                    )
-                  );
-                }}
                 onHoverStart={handleChampHoverStart}
                 onHoverEnd={handleChampHoverEnd}
               />
@@ -1727,7 +1676,6 @@ export function ChampionPoolEditor({
                   <DraggablePoolChampion
                     key={champ.id}
                     champion={champ}
-                    onQuickAdd={() => handleQuickAddChampion(champ)}
                   />
                 ))
               )}
