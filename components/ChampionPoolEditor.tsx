@@ -20,6 +20,7 @@ import { toPng } from "html-to-image";
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   CheckCircle2,
   Dices,
   Download,
@@ -1713,12 +1714,18 @@ export function ChampionPoolEditor({
                     className="w-4 h-4 shrink-0"
                   />
                   <span className="hidden sm:inline">{r.label}</span>
-                  {hasChamps && (
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-[#7cd438] shrink-0"
-                      title={`${r.label} has saved champions`}
-                    />
-                  )}
+                  {hasChamps &&
+                    (dirty ? (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-[#7cd438] shrink-0"
+                        title={`${r.label} has unsaved champions`}
+                      />
+                    ) : (
+                      <Check
+                        className="w-3 h-3 text-[#7cd438] shrink-0"
+                        aria-label={`${r.label} saved`}
+                      />
+                    ))}
                 </button>
               );
             })}
