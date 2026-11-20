@@ -131,7 +131,7 @@ function ChampionTileVisual({
 }) {
   return (
     <div
-      className={`group relative flex flex-col items-center w-[66px] h-[84px] p-1.5 rounded border select-none transition-colors ${
+      className={`group relative flex flex-col items-center w-[66px] h-[90px] p-1.5 rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -1820,28 +1820,15 @@ export function ChampionPoolEditor({
                   alt={activeRoleMeta.label}
                   className="w-4 h-4"
                 />
-                <span className="text-xs font-black text-[#f0ede0]">
-                  {activeRoleMeta.label} Champions ({unplacedChampions.length})
+                <span className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+                  {activeRoleMeta.label} Champions
                 </span>
-                {catalog?.ratesPatch && (
-                  <span className="text-[10px] text-[#7c808b]">
-                    Role data: Patch {catalog.ratesPatch}
-                  </span>
-                )}
+                <span className="px-2 py-0.5 rounded bg-[#0c1017] border border-white/10 text-[11px] font-bold text-[#c7c5b8]">
+                  {unplacedChampions.length} remaining
+                </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-[#7c808b] absolute left-2.5 top-1.5" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search champion..."
-                    className="bg-[#0a0d12] border border-white/15 rounded pl-8 pr-2.5 py-1 text-xs text-white placeholder:text-[#666b75] focus:outline-none focus:border-[#f0c020]"
-                  />
-                </div>
-
                 <label className="flex items-center gap-1.5 text-[11px] text-[#c7c9be] cursor-pointer">
                   <input
                     type="checkbox"
@@ -1851,10 +1838,18 @@ export function ChampionPoolEditor({
                   />
                   Show all champions
                 </label>
+
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter champion..."
+                  className="xp-inset px-2.5 py-1 text-xs w-40"
+                />
               </div>
             </div>
 
-            <div className="max-h-[340px] overflow-y-auto pr-1 flex flex-wrap gap-2">
+            <div className="xp-inset p-2.5 max-h-[340px] overflow-y-auto flex flex-wrap gap-2">
               {unplacedChampions.length === 0 ? (
                 <div className="w-full py-6 text-center text-xs text-[#7c808b]">
                   No matching champions available.
@@ -2094,7 +2089,7 @@ export function ChampionPoolEditor({
                               {blindChamps.map((c) => (
                                 <div
                                   key={c.championId}
-                                  className="flex flex-col items-center w-[64px] h-[80px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
+                                  className="flex flex-col items-center w-[64px] h-[86px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
                                 >
                                   <img
                                     src={iconMap.get(c.championId) ?? ""}
@@ -2121,7 +2116,7 @@ export function ChampionPoolEditor({
                             genChamps.map((c) => (
                               <div
                                 key={c.championId}
-                                className="flex flex-col items-center w-[64px] h-[80px] p-1 rounded bg-[#1b202b] border border-white/10"
+                                className="flex flex-col items-center w-[64px] h-[86px] p-1 rounded bg-[#1b202b] border border-white/10"
                               >
                                 <img
                                   src={iconMap.get(c.championId) ?? ""}
