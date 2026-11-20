@@ -131,7 +131,7 @@ function ChampionTileVisual({
 }) {
   const nameSizeClass =
     champion.name.length > 13
-      ? "text-[8.5px]"
+      ? "text-[8px] tracking-tighter"
       : champion.name.length > 11
       ? "text-[9px]"
       : "text-[10px]";
