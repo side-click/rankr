@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Lock, User } from "lucide-react";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -57,7 +57,6 @@ export function RankWorkspace({
 }: RankWorkspaceProps) {
   const [rankingType, setRankingType] = useState<RankingType>(initialType);
   const [activeTabDirty, setActiveTabDirty] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -90,7 +89,6 @@ export function RankWorkspace({
     const qs = params.toString();
     const nextUrl = qs ? `${pathname}?${qs}` : pathname;
     window.history.replaceState(null, "", nextUrl);
-    router.replace(nextUrl, { scroll: false });
   }
 
   return (
