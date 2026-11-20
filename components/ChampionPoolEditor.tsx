@@ -129,9 +129,16 @@ function ChampionTileVisual({
   onRemove?: () => void;
   isOverlay?: boolean;
 }) {
+  const nameSizeClass =
+    champion.name.length > 13
+      ? "text-[8.5px]"
+      : champion.name.length > 11
+      ? "text-[9px]"
+      : "text-[10px]";
+
   return (
     <div
-      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[90px] p-1.5 rounded border select-none transition-colors ${
+      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[78px] p-1.5 rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -161,7 +168,9 @@ function ChampionTileVisual({
         draggable={false}
         className="w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
       />
-      <span className="mt-1 text-[10px] font-bold leading-tight text-center line-clamp-2 w-full">
+      <span
+        className={`mt-1 ${nameSizeClass} font-bold leading-tight text-center whitespace-nowrap truncate w-full`}
+      >
         {champion.name}
       </span>
     </div>
@@ -2086,7 +2095,7 @@ export function ChampionPoolEditor({
                               {blindChamps.map((c) => (
                                 <div
                                   key={c.championId}
-                                  className="flex flex-col items-center w-[74px] h-[86px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
+                                  className="flex flex-col items-center w-[74px] h-[76px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
                                 >
                                   <img
                                     src={iconMap.get(c.championId) ?? ""}
@@ -2096,7 +2105,15 @@ export function ChampionPoolEditor({
                                     crossOrigin="anonymous"
                                     className="w-11 h-11 rounded object-cover"
                                   />
-                                  <span className="mt-1 text-[10px] font-bold text-center leading-tight line-clamp-2">
+                                  <span
+                                    className={`mt-1 ${
+                                      c.name.length > 13
+                                        ? "text-[8.5px]"
+                                        : c.name.length > 11
+                                        ? "text-[9px]"
+                                        : "text-[10px]"
+                                    } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                                  >
                                     {c.name}
                                   </span>
                                 </div>
