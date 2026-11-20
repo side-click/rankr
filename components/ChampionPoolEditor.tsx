@@ -2510,13 +2510,13 @@ export function ChampionPoolEditor({
                                 iconsOnlyExport ? (
                                   <div
                                     key={c.championId}
-                                    className="w-[64px] h-[64px] rounded-md overflow-hidden border border-white/15 bg-[#1b202b]"
+                                    className="w-[76px] h-[78px] rounded overflow-hidden border border-white/15 bg-[#1b202b]"
                                   >
                                     <img
                                       src={iconMap.get(c.championId) ?? ""}
                                       alt={c.name}
-                                      width={64}
-                                      height={64}
+                                      width={76}
+                                      height={78}
                                       crossOrigin="anonymous"
                                       className="w-full h-full object-cover"
                                     />
