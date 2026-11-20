@@ -144,7 +144,7 @@ function ChampionTileVisual({
 
   return (
     <div
-      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[78px] ${
+      className={`group relative flex flex-col items-center w-[76px] h-[78px] ${
         iconsOnly ? "p-0" : "p-1.5"
       } rounded border select-none transition-colors ${
         isOverlay
@@ -2443,13 +2443,13 @@ export function ChampionPoolEditor({
                                 iconsOnlyExport ? (
                                   <div
                                     key={c.championId}
-                                    className="w-[64px] h-[64px] rounded-md overflow-hidden border border-[#2f6343] bg-[#14221a]"
+                                    className="w-[76px] h-[78px] rounded overflow-hidden border border-[#2f6343] bg-[#14221a]"
                                   >
                                     <img
                                       src={iconMap.get(c.championId) ?? ""}
                                       alt={c.name}
-                                      width={64}
-                                      height={64}
+                                      width={76}
+                                      height={78}
                                       crossOrigin="anonymous"
                                       className="w-full h-full object-cover"
                                     />
