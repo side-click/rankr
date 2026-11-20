@@ -1658,7 +1658,7 @@ export function ChampionPoolEditor({
         )}
 
         {/* Role Selector Tabs (one role at a time) */}
-        <div className="grid grid-cols-5 xp-inset p-0.5 rounded-sm">
+        <div className="inline-flex flex-wrap items-center xp-inset p-0.5 rounded-sm">
           {LEAGUE_ROLES.map((r) => {
             const sec = pool.roles[r.key];
             const hasChamps = Boolean(
