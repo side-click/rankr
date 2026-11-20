@@ -617,7 +617,6 @@ export function ChampionPoolEditor({
 
   // Picker filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortMode, setSortMode] = useState<"popularity" | "alpha">("popularity");
   const [showAllOffMeta, setShowAllOffMeta] = useState(false);
 
   // Drag state
@@ -764,22 +763,13 @@ export function ChampionPoolEditor({
       return true;
     });
 
-    if (sortMode === "alpha") {
-      return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return [...filtered].sort((a, b) => {
-      const rateA = a.rolePlayRates[activeRole] ?? 0;
-      const rateB = b.rolePlayRates[activeRole] ?? 0;
-      if (rateB !== rateA) return rateB - rateA;
-      return a.name.localeCompare(b.name);
-    });
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [
     catalog,
     placedIdsInActiveRole,
     showAllOffMeta,
     activeRole,
     searchQuery,
-    sortMode,
   ]);
 
   function updateActiveRoleTiers(
@@ -1736,18 +1726,6 @@ export function ChampionPoolEditor({
                     className="bg-[#0a0d12] border border-white/15 rounded pl-8 pr-2.5 py-1 text-xs text-white placeholder:text-[#666b75] focus:outline-none focus:border-[#f0c020]"
                   />
                 </div>
-
-                <select
-                  value={sortMode}
-                  onChange={(e) =>
-                    setSortMode(e.target.value as "popularity" | "alpha")
-                  }
-                  aria-label="Sort champions"
-                  className="bg-[#0a0d12] border border-white/15 rounded px-2 py-1 text-xs text-[#d6d3c4]"
-                >
-                  <option value="popularity">Sort: Role Popularity</option>
-                  <option value="alpha">Sort: A–Z</option>
-                </select>
 
                 <label className="flex items-center gap-1.5 text-[11px] text-[#c7c9be] cursor-pointer">
                   <input
