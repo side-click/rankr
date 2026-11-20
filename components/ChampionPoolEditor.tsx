@@ -484,22 +484,16 @@ function DroppableTierRow({
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
               <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
-                {blindableChamps.length === 0 ? (
-                  <div className="w-full h-16 flex items-center justify-center text-[11px] text-[#5e7364] italic text-center px-1 select-none">
-                    Drop blind picks here
-                  </div>
-                ) : (
-                  blindableChamps.map((champ) => (
-                    <DraggablePlacedChampion
-                      key={champ.championId}
-                      tierId={tier.id}
-                      champion={champ}
-                      iconUrl={iconMap.get(champ.championId) ?? ""}
-                      onRemove={() => onRemoveChampion(champ.championId)}
-                      onToggleBlind={() => onToggleBlind(champ.championId)}
-                    />
-                  ))
-                )}
+                {blindableChamps.map((champ) => (
+                  <DraggablePlacedChampion
+                    key={champ.championId}
+                    tierId={tier.id}
+                    champion={champ}
+                    iconUrl={iconMap.get(champ.championId) ?? ""}
+                    onRemove={() => onRemoveChampion(champ.championId)}
+                    onToggleBlind={() => onToggleBlind(champ.championId)}
+                  />
+                ))}
               </div>
             </div>
 
@@ -514,29 +508,20 @@ function DroppableTierRow({
             >
               <div className="flex items-center gap-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8e93a0]">
                 <span>General ({generalChamps.length})</span>
-                <span className="text-[9px] font-normal text-[#666b75]">
-                  • Hover for Counters
-                </span>
               </div>
               <div className="flex flex-wrap gap-2 items-start min-h-[76px]">
-                {generalChamps.length === 0 ? (
-                  <div className="w-full h-16 flex items-center justify-center text-xs text-[#7c808b] italic select-none">
-                    Drag champions here (or double-click from pool below)
-                  </div>
-                ) : (
-                  generalChamps.map((champ) => (
-                    <DraggablePlacedChampion
-                      key={champ.championId}
-                      tierId={tier.id}
-                      champion={champ}
-                      iconUrl={iconMap.get(champ.championId) ?? ""}
-                      onRemove={() => onRemoveChampion(champ.championId)}
-                      onToggleBlind={() => onToggleBlind(champ.championId)}
-                      onHoverStart={onHoverStart}
-                      onHoverEnd={onHoverEnd}
-                    />
-                  ))
-                )}
+                {generalChamps.map((champ) => (
+                  <DraggablePlacedChampion
+                    key={champ.championId}
+                    tierId={tier.id}
+                    champion={champ}
+                    iconUrl={iconMap.get(champ.championId) ?? ""}
+                    onRemove={() => onRemoveChampion(champ.championId)}
+                    onToggleBlind={() => onToggleBlind(champ.championId)}
+                    onHoverStart={onHoverStart}
+                    onHoverEnd={onHoverEnd}
+                  />
+                ))}
               </div>
             </div>
           </div>
