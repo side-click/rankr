@@ -1094,7 +1094,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
 
   if (loadingRecord) {
     return (
-      <RetroWindow title="Private Champion Pool Creator" theme="scdl">
+      <RetroWindow title="Champion Pool Editor" theme="scdl">
         <div className="py-12 text-center text-xs text-[#a6a89e]">
           Loading encrypted champion pool...
         </div>
@@ -1104,7 +1104,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
 
   if (catalogError) {
     return (
-      <RetroWindow title="Private Champion Pool Creator" theme="scdl">
+      <RetroWindow title="Champion Pool Editor" theme="scdl">
         <div className="p-6 text-center text-xs text-[#ff857a]">
           {catalogError}
         </div>
@@ -1114,25 +1114,19 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
 
   if (!unlocked) {
     return (
-      <RetroWindow
-        title={
-          existingRecord
-            ? "Unlock Private Champion Pool"
-            : "Create Private Champion Pool"
-        }
-        theme="scdl"
-      >
+      <RetroWindow title="Champion Pool Editor" theme="scdl">
         <div className="max-w-md mx-auto py-6 px-3 space-y-5">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-[#11241a] border border-[#2f6343]">
             <ShieldCheck className="w-5 h-5 text-[#7cd438] shrink-0 mt-0.5" />
             <div className="text-xs text-[#d6e4d2] space-y-1">
               <p className="font-bold text-[#f0ede0]">
-                End-to-End Encrypted &amp; Strictly Private
+                100% Private and Secure
               </p>
               <p className="text-[11px] leading-relaxed text-[#b9cbb6]">
-                Your champion pool is encrypted in your browser (AES-256-GCM)
-                before saving. It is never published, never shown in Browse or
-                Consensus, and cannot be read by site administrators.
+                Your champion pools are stored locally and encrypted in your
+                browser. They are never published, and can only be viewed by you
+                or someone with your passphrase (no, the web admin can&apos;t
+                see them either).
               </p>
             </div>
           </div>
@@ -1186,8 +1180,8 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                 type="submit"
                 className="w-full xp-btn xp-btn-primary py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Unlock className="w-4 h-4" />
-                Unlock Champion Pool
+                <KeyRound className="w-4 h-4" />
+                Unlock Champion Pool Editor
               </button>
 
               <div className="pt-3 border-t border-white/10 text-center">
@@ -1230,7 +1224,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
             <form onSubmit={handleCreatePoolSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-[#f0ede0] mb-1.5">
-                  Start With Role (you can add more roles anytime)
+                  Select a Role (you can add more later)
                 </label>
                 <div className="grid grid-cols-5 gap-1.5">
                   {LEAGUE_ROLES.map((r) => (
@@ -1253,7 +1247,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
 
               <div>
                 <label className="block text-xs font-bold text-[#f0ede0] mb-1">
-                  Set Encryption Passphrase
+                  Set Local Encryption Passphrase
                 </label>
                 <div className="relative">
                   <input
@@ -1306,7 +1300,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                 className="w-full xp-btn xp-btn-primary py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <KeyRound className="w-4 h-4" />
-                {saving ? "Encrypting..." : "Create Private Champion Pool"}
+                {saving ? "Encrypting..." : "Unlock Champion Pool Editor"}
               </button>
             </form>
           )}
@@ -1316,7 +1310,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
   }
 
   return (
-    <RetroWindow title="Private Champion Pool Creator" theme="scdl">
+    <RetroWindow title="Champion Pool Editor" theme="scdl">
       <div className="space-y-4">
         {/* Top Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-[#141820] border border-white/10">

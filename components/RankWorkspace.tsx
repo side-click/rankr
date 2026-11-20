@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Lock, ShieldCheck, User } from "lucide-react";
+import { Lock, User } from "lucide-react";
+import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
   Division,
@@ -149,7 +150,7 @@ export function RankWorkspace({
                 : "bg-black/30 border-white/15 text-[#7cd438]/70"
             }`}
           >
-            <ShieldCheck className="w-5 h-5" />
+            <ChampionHelmetIcon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <span
