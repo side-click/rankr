@@ -56,11 +56,22 @@ export function RankWorkspace({
   requireAllowlist = false,
 }: RankWorkspaceProps) {
   const [rankingType, setRankingType] = useState<RankingType>(initialType);
+  const [activeTabDirty, setActiveTabDirty] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   function handleSelectRankingType(nextType: RankingType) {
+    if (nextType === rankingType) return;
+    if (
+      activeTabDirty &&
+      !window.confirm(
+        "You have unsaved changes. Switch tabs and discard your unsaved work?"
+      )
+    ) {
+      return;
+    }
+    setActiveTabDirty(false);
     setRankingType(nextType);
     const params = new URLSearchParams(
       typeof window !== "undefined"
@@ -181,6 +192,7 @@ export function RankWorkspace({
           authorName={initialAuthorName || discordDefaultName}
           authorAvatarUrl={initialAuthorAvatarUrl}
           discordDefaultName={discordDefaultName}
+          onUnsavedChange={setActiveTabDirty}
         />
       ) : !userId ? (
         <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
@@ -211,6 +223,7 @@ export function RankWorkspace({
             initialDivisionSlug === "all" ? undefined : initialDivisionSlug
           }
           initialEditionSlug={initialEditionSlug}
+          onUnsavedChange={setActiveTabDirty}
         />
       ) : (
         <PlayerTierEditor
@@ -226,6 +239,7 @@ export function RankWorkspace({
           initialSeasonSlug={initialSeasonSlug}
           initialDivisionSlug={initialDivisionSlug}
           initialEditionSlug={initialEditionSlug}
+          onUnsavedChange={setActiveTabDirty}
         />
       )}
     </div>

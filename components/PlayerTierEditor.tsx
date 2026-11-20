@@ -78,6 +78,7 @@ interface PlayerTierEditorProps {
   initialSeasonSlug?: string;
   initialDivisionSlug?: string;
   initialEditionSlug?: string;
+  onUnsavedChange?: (dirty: boolean) => void;
 }
 
 interface DragPlayerMeta {
@@ -647,6 +648,7 @@ export function PlayerTierEditor({
   initialSeasonSlug,
   initialDivisionSlug,
   initialEditionSlug,
+  onUnsavedChange,
 }: PlayerTierEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -1157,6 +1159,10 @@ export function PlayerTierEditor({
   }, [totalPlacedPlayers, authorNotes, tierPayload]);
 
   useUnsavedChangesGuard(hasTierWork);
+
+  useEffect(() => {
+    onUnsavedChange?.(hasTierWork);
+  }, [hasTierWork, onUnsavedChange]);
 
   function confirmSwitchScope(): boolean {
     if (!hasTierWork) return true;

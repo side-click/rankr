@@ -72,6 +72,7 @@ interface ChampionPoolEditorProps {
   authorName?: string;
   authorAvatarUrl?: string | null;
   discordDefaultName?: string;
+  onUnsavedChange?: (dirty: boolean) => void;
 }
 
 const ANON_POOL_STORAGE_KEY = "rankr_anon_champ_pool_v1";
@@ -553,6 +554,7 @@ export function ChampionPoolEditor({
   authorName,
   authorAvatarUrl,
   discordDefaultName = "",
+  onUnsavedChange,
 }: ChampionPoolEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const storageUserKey = userId ?? "anon";
@@ -651,6 +653,10 @@ export function ChampionPoolEditor({
   }, []);
 
   useUnsavedChangesGuard(dirty && unlocked);
+
+  useEffect(() => {
+    onUnsavedChange?.(dirty && unlocked);
+  }, [dirty, unlocked, onUnsavedChange]);
 
   // Load champion catalog + existing encrypted record
   useEffect(() => {

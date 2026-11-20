@@ -66,6 +66,7 @@ interface BallotEditorProps {
   initialSeasonSlug?: string;
   initialDivisionSlug?: string;
   initialEditionSlug?: string;
+  onUnsavedChange?: (dirty: boolean) => void;
 }
 
 function SortableTeamRow({
@@ -340,6 +341,7 @@ export function BallotEditor({
   initialSeasonSlug,
   initialDivisionSlug,
   initialEditionSlug,
+  onUnsavedChange,
 }: BallotEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -902,6 +904,10 @@ export function BallotEditor({
   );
 
   useUnsavedChangesGuard(hasUnsavedChanges);
+
+  useEffect(() => {
+    onUnsavedChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onUnsavedChange]);
 
   function confirmSwitchScope(): boolean {
     if (!hasUnsavedChanges) return true;
