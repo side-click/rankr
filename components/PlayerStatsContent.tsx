@@ -289,7 +289,12 @@ export async function PlayerStatsContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={basePath} className="xp-btn text-xs">
+          <Link
+            href={`${basePath}?division=${encodeURIComponent(
+              soloPlayer.divisionId
+            )}&tab=players`}
+            className="xp-btn text-xs"
+          >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Stats Dashboard</span>
           </Link>

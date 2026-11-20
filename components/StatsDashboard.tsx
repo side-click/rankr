@@ -164,14 +164,19 @@ export function StatsDashboard({
 }: StatsDashboardProps) {
   const router = useRouter();
   const basePath = isAdminView ? "/admin/stats" : "/stats";
+  const resolveDivId = (raw: string | null | undefined): string | null => {
+    if (!raw) return null;
+    if (raw === "all") return "all";
+    const lower = raw.toLowerCase();
+    const matched = divisions.find(
+      (d) => d.id.toLowerCase() === lower || d.slug.toLowerCase() === lower
+    );
+    return matched ? matched.id : null;
+  };
+
   const [divisionFilter, setDivisionFilter] = useState<string>(() => {
-    if (
-      initialDivision &&
-      (initialDivision === "all" ||
-        divisions.some((d) => d.id === initialDivision))
-    ) {
-      return initialDivision;
-    }
+    const resolved = resolveDivId(initialDivision);
+    if (resolved) return resolved;
     return divisions[0]?.id ?? "all";
   });
   const [activeSection, setActiveSection] = useState<
@@ -232,24 +237,22 @@ export function StatsDashboard({
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const divParam = sp.get("division");
-    if (
-      divParam &&
-      (divParam === "all" || divisions.some((d) => d.id === divParam))
-    ) {
-      setDivisionFilter(divParam);
+    const rawDiv = sp.get("division") ?? initialDivision;
+    const resolvedDiv = resolveDivId(rawDiv);
+    if (resolvedDiv) {
+      setDivisionFilter(resolvedDiv);
     }
-    const tabParam = sp.get("tab");
+    const tabParam = sp.get("tab") ?? initialTab;
     if (
       tabParam === "players" ||
       tabParam === "teams" ||
       tabParam === "division"
     ) {
       setActiveSection(tabParam);
-    } else if (divParam === "all") {
+    } else if (resolvedDiv === "all") {
       setActiveSection("division");
     }
-  }, [divisions]);
+  }, [divisions, initialDivision, initialTab]);
 
   function updateUrlParams(updates: { division?: string; tab?: string }) {
     if (typeof window === "undefined") return;

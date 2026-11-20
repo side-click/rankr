@@ -278,7 +278,12 @@ export function TeamScoutingView({
   return (
     <div className="space-y-4 w-[min(1560px,94vw)] relative left-1/2 -translate-x-1/2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href={basePath} className="xp-btn text-xs">
+        <Link
+          href={`${basePath}?division=${encodeURIComponent(
+            team.divisionId
+          )}&tab=teams`}
+          className="xp-btn text-xs"
+        >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Stats Dashboard</span>
         </Link>

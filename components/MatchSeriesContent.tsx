@@ -442,7 +442,9 @@ export async function MatchSeriesContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href={basePath}
+          href={`${basePath}?division=${encodeURIComponent(
+            divId ?? "all"
+          )}&tab=division`}
           className="xp-btn inline-flex items-center gap-1.5 text-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

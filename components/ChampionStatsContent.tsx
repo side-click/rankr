@@ -118,7 +118,9 @@ export function ChampionStatsContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          href={basePath}
+          href={`${basePath}?division=${encodeURIComponent(
+            selectedDiv ? selectedDiv.id : "all"
+          )}&tab=division`}
           className="xp-btn text-xs inline-flex items-center gap-1.5"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -140,11 +142,18 @@ export function ChampionStatsContent({
               key={div.id}
               type="button"
               onClick={() => selectDivision(div.slug)}
-              className={`xp-btn text-xs ${
+              className={`xp-btn text-xs inline-flex items-center gap-1.5 ${
                 divisionFilter === div.slug ? "xp-btn-gold" : ""
               }`}
             >
-              {div.name}
+              {div.logo_url && (
+                <img
+                  src={div.logo_url}
+                  alt={div.name}
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+              )}
+              <span>{div.name}</span>
             </button>
           ))}
         </div>
