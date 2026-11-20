@@ -499,7 +499,7 @@ function DroppableTierRow({
             {/* Isolated Blindable Section at Front of Tier */}
             <div
               ref={setBlindRef}
-              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r-2 border-[#3f8559] transition-colors flex flex-col ${
+              className={`md:min-w-[168px] shrink-0 p-2 border-b md:border-b-0 md:border-r-2 border-[#3f8559] transition-colors flex flex-col ${
                 isOverBlind
                   ? "bg-[#2f6343]/25 ring-1 ring-inset ring-[#7cd438]/50"
                   : "bg-[#0f1a14]/70"
@@ -509,9 +509,9 @@ function DroppableTierRow({
                 <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
-              <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-start min-h-[80px]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 gap-x-0.5 items-start min-h-[80px] w-fit">
                 {blindableChamps.map((champ, cIdx) => (
-                  <React.Fragment key={champ.championId}>
+                  <div key={champ.championId} className="flex items-center">
                     <GapDropSlot
                       tierId={tier.id}
                       isBlindable={true}
@@ -525,7 +525,7 @@ function DroppableTierRow({
                       onHoverStart={onHoverStart}
                       onHoverEnd={onHoverEnd}
                     />
-                  </React.Fragment>
+                  </div>
                 ))}
               </div>
             </div>
@@ -540,9 +540,9 @@ function DroppableTierRow({
               }`}
             >
               <div className="h-[14px] mb-1.5" aria-hidden="true" />
-              <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-start min-h-[80px]">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-y-2 gap-x-0.5 items-start min-h-[80px] w-fit">
                 {generalChamps.map((champ, cIdx) => (
-                  <React.Fragment key={champ.championId}>
+                  <div key={champ.championId} className="flex items-center">
                     <GapDropSlot
                       tierId={tier.id}
                       isBlindable={false}
@@ -559,7 +559,7 @@ function DroppableTierRow({
                       onHoverStart={onHoverStart}
                       onHoverEnd={onHoverEnd}
                     />
-                  </React.Fragment>
+                  </div>
                 ))}
                 {generalChamps.length > 0 && (
                   <GapDropSlot
@@ -2416,7 +2416,15 @@ export function ChampionPoolEditor({
                               <EyeClosed className="w-3 h-3" />
                               <span>Blindable</span>
                             </span>
-                            <div className="flex flex-wrap gap-2 items-start">
+                            <div
+                              className="grid gap-2 items-start"
+                              style={{
+                                gridTemplateColumns: `repeat(${Math.min(
+                                  blindChamps.length,
+                                  4
+                                )}, max-content)`,
+                              }}
+                            >
                               {blindChamps.map((c) =>
                                 iconsOnlyExport ? (
                                   <div
@@ -2466,7 +2474,19 @@ export function ChampionPoolEditor({
                           {blindChamps.length > 0 && (
                             <span className="h-3" aria-hidden="true" />
                           )}
-                          <div className="flex flex-wrap gap-2 items-start">
+                          <div
+                            className="grid gap-2 items-start"
+                            style={
+                              genChamps.length > 0
+                                ? {
+                                    gridTemplateColumns: `repeat(${Math.min(
+                                      genChamps.length,
+                                      6
+                                    )}, max-content)`,
+                                  }
+                                : undefined
+                            }
+                          >
                             {tier.champions.length === 0 ? (
                               <span className="text-xs text-[#5d626d] italic">
                                 Empty
