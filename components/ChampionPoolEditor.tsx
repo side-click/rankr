@@ -1661,7 +1661,7 @@ export function ChampionPoolEditor({
                     onChange={(e) => setShowAllOffMeta(e.target.checked)}
                     className="accent-[#f0c020]"
                   />
-                  Show all champions (off-meta)
+                  Show all champions
                 </label>
               </div>
             </div>
