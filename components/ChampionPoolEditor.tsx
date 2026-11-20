@@ -639,6 +639,16 @@ export function ChampionPoolEditor({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!dirty || !unlocked) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty, unlocked]);
+
   // Load champion catalog + existing encrypted record
   useEffect(() => {
     let cancelled = false;
@@ -925,6 +935,14 @@ export function ChampionPoolEditor({
   }
 
   function handleLockPool() {
+    if (
+      dirty &&
+      !confirm(
+        "You have unsaved changes. Lock anyway and discard unsaved edits?"
+      )
+    ) {
+      return;
+    }
     clearStoredPassphrase(storageUserKey);
     setActivePassphrase("");
     setUnlocked(false);
@@ -1758,11 +1776,17 @@ export function ChampionPoolEditor({
           </button>
           <button
             type="button"
-            onClick={() =>
-              updateActiveRoleTiers(() =>
-                createRoleSection(activeRole, "standard").tiers
-              )
-            }
+            onClick={() => {
+              if (
+                confirm(
+                  `Reset ${activeRoleMeta.label} Pool? All champions in this role's tiers will be removed.`
+                )
+              ) {
+                updateActiveRoleTiers(() =>
+                  createRoleSection(activeRole, "standard").tiers
+                );
+              }
+            }}
             className="xp-btn xp-btn-danger text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -1852,12 +1876,20 @@ export function ChampionPoolEditor({
                     return copy;
                   })
                 }
-                onDeleteTier={() =>
-                  updateActiveRoleTiers((tiers) => {
-                    if (tiers.length <= 1) return tiers;
-                    return tiers.filter((t) => t.id !== tier.id);
-                  })
-                }
+                onDeleteTier={() => {
+                  if (
+                    confirm(
+                      `Delete tier "${
+                        tier.label || "Untitled"
+                      }"? Any champions in it will be removed.`
+                    )
+                  ) {
+                    updateActiveRoleTiers((tiers) => {
+                      if (tiers.length <= 1) return tiers;
+                      return tiers.filter((t) => t.id !== tier.id);
+                    });
+                  }
+                }}
                 onRemoveChampion={(championId) =>
                   updateActiveRoleTiers((tiers) =>
                     tiers.map((t) =>
