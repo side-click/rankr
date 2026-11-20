@@ -1685,8 +1685,8 @@ export function ChampionPoolEditor({
     <RetroWindow title="Champion Pool Editor" theme="scdl">
       <div className="space-y-4">
         {/* Row 1: Name Shown + Custom Author + Custom Title (left) | Change Passphrase + Lock (top-right) */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 flex flex-wrap items-center gap-2">
             {displayAuthorName && (
               <button
                 type="button"
