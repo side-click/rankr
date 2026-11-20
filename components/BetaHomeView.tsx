@@ -61,13 +61,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
   return (
     <div className="space-y-5">
       {isFocusPending && (
-        <div
-          className="fixed top-0 left-0 right-0 h-1 z-50 animate-pulse"
-          style={{
-            background:
-              "repeating-linear-gradient(90deg, #f0c020 0px, #f0c020 8px, #121615 8px, #121615 10px)",
-          }}
-        />
+        <div className="fixed top-0 left-0 right-0 h-[3px] bg-[#f0c020] shadow-[0_0_8px_#f0c020] z-50 animate-pulse" />
       )}
       {/* 1. Top Row: Start Menu (left, stacked in navbar order) + Seasons Directory (right) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
