@@ -52,8 +52,11 @@ import type {
 } from "@/utils/championData";
 import type { ChampionMatchupsResponse } from "@/utils/lolalyticsMatchups";
 import {
+  clearStoredPassphrase,
   decryptPoolPayload,
   encryptPoolPayload,
+  getStoredPassphrase,
+  storePassphrase,
 } from "@/utils/cryptoPool";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import {
@@ -558,6 +561,7 @@ export function ChampionPoolEditor({
   const [passInput, setPassInput] = useState("");
   const [passConfirmInput, setPassConfirmInput] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [stayUnlocked, setStayUnlocked] = useState(false);
   const [startingRole, setStartingRole] = useState<LeagueRole>("mid");
   const [authError, setAuthError] = useState<string | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -662,7 +666,34 @@ export function ChampionPoolEditor({
         if (dbRes.error) {
           setAuthError(dbRes.error.message);
         } else if (dbRes.data) {
-          setExistingRecord(dbRes.data as EncryptedChampionPoolRecord);
+          const rec = dbRes.data as EncryptedChampionPoolRecord;
+          setExistingRecord(rec);
+
+          const stored = getStoredPassphrase(storageUserKey);
+          if (stored.passphrase && stored.remembered) {
+            try {
+              const decrypted = await decryptPoolPayload(
+                rec,
+                stored.passphrase
+              );
+              if (cancelled) return;
+              setPool(decrypted);
+              setActivePassphrase(stored.passphrase);
+              setStayUnlocked(true);
+              const populatedRoles = LEAGUE_ROLES.map((r) => r.key).filter(
+                (r) => {
+                  const sec = decrypted.roles[r];
+                  return sec && sec.tiers.some((t) => t.champions.length > 0);
+                }
+              );
+              if (populatedRoles.length > 0) {
+                setActiveRole(populatedRoles[0]);
+              }
+              setUnlocked(true);
+            } catch {
+              clearStoredPassphrase(storageUserKey);
+            }
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -806,6 +837,11 @@ export function ChampionPoolEditor({
         );
       }
 
+      if (stayUnlocked) {
+        storePassphrase(storageUserKey, passInput, true);
+      } else {
+        clearStoredPassphrase(storageUserKey);
+      }
       setExistingRecord(savedRec);
       setPool(initialPayload);
       setActiveRole(startingRole);
@@ -830,6 +866,11 @@ export function ChampionPoolEditor({
 
     try {
       const decrypted = await decryptPoolPayload(existingRecord, passInput);
+      if (stayUnlocked) {
+        storePassphrase(storageUserKey, passInput, true);
+      } else {
+        clearStoredPassphrase(storageUserKey);
+      }
       setPool(decrypted);
       setActivePassphrase(passInput);
       setPassInput("");
@@ -922,6 +963,11 @@ export function ChampionPoolEditor({
           ANON_POOL_STORAGE_KEY,
           JSON.stringify(savedRec)
         );
+      }
+      if (stayUnlocked) {
+        storePassphrase(storageUserKey, passInput, true);
+      } else {
+        clearStoredPassphrase(storageUserKey);
       }
       setExistingRecord(savedRec);
       setDirty(false);
@@ -1233,6 +1279,16 @@ export function ChampionPoolEditor({
                 </div>
               </div>
 
+              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stayUnlocked}
+                  onChange={(e) => setStayUnlocked(e.target.checked)}
+                  className="accent-[#f0c020]"
+                />
+                Stay unlocked on this browser
+              </label>
+
               <button
                 type="submit"
                 className="w-full xp-btn xp-btn-primary py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
@@ -1338,6 +1394,16 @@ export function ChampionPoolEditor({
                   className="w-full bg-[#0f131a] border border-white/15 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#f0c020]"
                 />
               </div>
+
+              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stayUnlocked}
+                  onChange={(e) => setStayUnlocked(e.target.checked)}
+                  className="accent-[#f0c020]"
+                />
+                Stay unlocked on this browser
+              </label>
 
               <button
                 type="submit"
