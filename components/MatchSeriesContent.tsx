@@ -157,9 +157,14 @@ function SideBoxScore({
                             {p.displayName}
                           </div>
                         )}
-                        <div className="text-xs text-[#9aa092]">
+                        <Link
+                          href={`${basePath}/champion/${encodeURIComponent(
+                            p.champion
+                          )}`}
+                          className="text-xs text-[#9aa092] hover:text-[#f0c020] transition-colors block truncate"
+                        >
                           {p.champion}
-                        </div>
+                        </Link>
                       </div>
                     </div>
                   </td>
@@ -431,36 +436,6 @@ export async function MatchSeriesContent({
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Stats Dashboard</span>
         </Link>
-        {teamAData && (
-          <Link
-            href={`${basePath}/team/${encodeURIComponent(teamAData.teamId)}`}
-            className="xp-btn inline-flex items-center gap-1.5 text-xs"
-          >
-            {teamAData.logoUrl && (
-              <img
-                src={teamAData.logoUrl}
-                alt={teamAData.teamName}
-                className="w-4 h-4 object-contain"
-              />
-            )}
-            <span>{teamAData.teamName} Team Stats</span>
-          </Link>
-        )}
-        {teamBData && (
-          <Link
-            href={`${basePath}/team/${encodeURIComponent(teamBData.teamId)}`}
-            className="xp-btn inline-flex items-center gap-1.5 text-xs"
-          >
-            {teamBData.logoUrl && (
-              <img
-                src={teamBData.logoUrl}
-                alt={teamBData.teamName}
-                className="w-4 h-4 object-contain"
-              />
-            )}
-            <span>{teamBData.teamName} Team Stats</span>
-          </Link>
-        )}
       </div>
 
       <RetroWindow title="Match Results" theme={windowTheme} customTheme={divTheme}>

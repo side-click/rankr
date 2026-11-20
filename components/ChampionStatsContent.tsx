@@ -131,10 +131,13 @@ export function ChampionStatsContent({
       <RetroWindow
         title="Champion Stats"
         theme={
-          (selectedDiv?.theme_key ?? "scdl") as React.ComponentProps<
-            typeof RetroWindow
-          >["theme"]
+          selectedDiv?.theme_key === "dragon"
+            ? "dragon"
+            : selectedDiv?.theme_key === "baron"
+            ? "baron"
+            : "scdl"
         }
+        customTheme={selectedDiv ? divTheme : undefined}
       >
         <div className="p-4 space-y-6">
           {/* Header (matches PlayerStatsContent & TeamScoutingView) */}
@@ -149,22 +152,17 @@ export function ChampionStatsContent({
                 <h1 className="wow-heading text-3xl sm:text-4xl font-extrabold text-white">
                   {championName}
                 </h1>
-                <div className="mt-1 space-y-0.5 text-sm">
-                  <div className="font-bold text-[#f0c020]">
-                    <span
-                      style={
-                        selectedDiv
-                          ? { color: divTheme.accent_text_color }
-                          : undefined
-                      }
-                    >
-                      {selectedDiv ? selectedDiv.name : "All Divisions"}
-                    </span>{" "}
-                    • {leaguePrefix} {ctx.seasonName}
-                  </div>
-                  <div className="text-xs font-semibold text-[#a6a89e]">
-                    {stats.totalLeagueGames} Official League Games Analyzed
-                  </div>
+                <div className="mt-1 text-sm font-bold text-[#f0c020]">
+                  <span
+                    style={
+                      selectedDiv
+                        ? { color: divTheme.accent_text_color }
+                        : undefined
+                    }
+                  >
+                    {selectedDiv ? selectedDiv.name : "All Divisions"}
+                  </span>{" "}
+                  • {leaguePrefix} {ctx.seasonName}
                 </div>
               </div>
             </div>
@@ -461,7 +459,7 @@ export function ChampionStatsContent({
                               href={`${basePath}/player/${encodeURIComponent(
                                 p.playerKey
                               )}`}
-                              className="text-[#f7f5eb] hover:text-[#f0c020] hover:underline truncate max-w-[115px] sm:max-w-none"
+                              className="text-[#f7f5eb] hover:text-[#f0c020] transition-colors truncate max-w-[115px] sm:max-w-none"
                             >
                               {p.playerName}
                             </Link>

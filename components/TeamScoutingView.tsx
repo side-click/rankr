@@ -401,7 +401,7 @@ export function TeamScoutingView({
                       href={`${basePath}/player/${encodeURIComponent(
                         soloPlayer.playerKey
                       )}`}
-                      className="flex items-center gap-2 hover:text-[#f0c020] transition"
+                      className="group flex items-center gap-2 transition"
                     >
                       <img
                         src={roleMeta.icon}
@@ -409,7 +409,7 @@ export function TeamScoutingView({
                         title={roleMeta.label}
                         className="w-7 h-7 object-contain shrink-0"
                       />
-                      <span className="font-extrabold text-lg text-[#f0ede0] truncate">
+                      <span className="font-extrabold text-lg text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
                         {soloPlayer.displayName}
                       </span>
                     </Link>
@@ -449,14 +449,17 @@ export function TeamScoutingView({
                           const isPriority = prioRank !== undefined;
                           const losses = c.games - c.wins;
                           return (
-                            <div
+                            <Link
                               key={c.name}
+                              href={`${basePath}/champion/${encodeURIComponent(
+                                c.name
+                              )}`}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
                                   : undefined
                               }
-                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] ${
+                              className={`group flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                                 isPriority && isFlex
                                   ? ""
                                   : isPriority
@@ -472,7 +475,7 @@ export function TeamScoutingView({
                                   alt={c.name}
                                   className="w-6 h-6 rounded object-cover shrink-0"
                                 />
-                                <span className="font-bold text-[#f0ede0] truncate">
+                                <span className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
                                   {c.name}
                                 </span>
                               </div>
@@ -485,7 +488,7 @@ export function TeamScoutingView({
                               >
                                 {c.wins}-{losses}
                               </span>
-                            </div>
+                            </Link>
                           );
                         })}
                       </div>
@@ -512,14 +515,17 @@ export function TeamScoutingView({
                           const prioRank = soloPrioRanks.get(c.name);
                           const isPriority = prioRank !== undefined;
                           return (
-                            <div
+                            <Link
                               key={c.name}
+                              href={`${basePath}/champion/${encodeURIComponent(
+                                c.name
+                              )}`}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
                                   : undefined
                               }
-                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] ${
+                              className={`group flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                                 isPriority && isFlex
                                   ? ""
                                   : isPriority
@@ -535,7 +541,7 @@ export function TeamScoutingView({
                                   alt={c.name}
                                   className="w-6 h-6 rounded object-cover shrink-0"
                                 />
-                                <span className="font-semibold text-[#e8e5d8] truncate">
+                                <span className="font-semibold text-[#e8e5d8] group-hover:text-[#f0c020] transition-colors truncate">
                                   {c.name}
                                 </span>
                               </div>
@@ -554,7 +560,7 @@ export function TeamScoutingView({
                                   {c.winRate.toFixed(0)}%
                                 </strong>
                               </span>
-                            </div>
+                            </Link>
                           );
                         })}
                       </div>
@@ -573,12 +579,15 @@ export function TeamScoutingView({
                     {soloPlayer.masteryTop4.length > 0 ? (
                       <div className="grid grid-cols-4 gap-1.5">
                         {soloPlayer.masteryTop4.map((m) => (
-                          <div
+                          <Link
                             key={m.championName}
+                            href={`${basePath}/champion/${encodeURIComponent(
+                              m.championName
+                            )}`}
                             title={`${m.championName} — M${
                               m.championLevel
                             } (${m.championPoints.toLocaleString()} pts)`}
-                            className="bg-black/40 border border-white/10 rounded overflow-hidden text-center"
+                            className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden text-center block"
                           >
                             <img
                               src={getChampionIconUrl(
@@ -591,7 +600,7 @@ export function TeamScoutingView({
                             <div className="text-[11px] font-bold text-[#f0c020] py-0.5">
                               {formatMasteryPoints(m.championPoints)}
                             </div>
-                          </div>
+                          </Link>
                         ))}
                       </div>
                     ) : (
@@ -616,9 +625,10 @@ export function TeamScoutingView({
             {bannedAgainstList.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {bannedAgainstList.slice(0, 12).map((b) => (
-                  <div
+                  <Link
                     key={b.name}
-                    className="flex items-center justify-between gap-2 bg-black/35 border border-white/10 rounded px-2.5 py-2 text-xs sm:text-[13px]"
+                    href={`${basePath}/champion/${encodeURIComponent(b.name)}`}
+                    className="group flex items-center justify-between gap-2 bg-black/35 border border-white/10 hover:border-[#f0c020]/70 transition rounded px-2.5 py-2 text-xs sm:text-[13px]"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <img
@@ -626,14 +636,14 @@ export function TeamScoutingView({
                         alt={b.name}
                         className="w-6 h-6 rounded object-cover shrink-0"
                       />
-                      <span className="font-bold text-[#f0ede0] truncate">
+                      <span className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
                         {b.name}
                       </span>
                     </div>
                     <span className="text-base sm:text-lg tabular-nums font-black text-[#ff857a] leading-none shrink-0">
                       {b.total}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -655,21 +665,27 @@ export function TeamScoutingView({
                 {b1Picks.length > 0 ? (
                   <div className="space-y-2">
                     {b1Picks.map((p, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
+                      <Link
+                        key={idx}
+                        href={`${basePath}/champion/${encodeURIComponent(
+                          p.champ
+                        )}`}
+                        className="group flex items-start gap-2"
+                      >
                         <img
                           src={getChampionIconUrl(p.champ, ddVersion)}
                           alt={p.champ}
                           className="w-6 h-6 rounded object-cover shrink-0 mt-0.5"
                         />
                         <div className="min-w-0">
-                          <div className="font-bold text-[#f0ede0] leading-tight">
+                          <div className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors leading-tight">
                             {p.champ}
                           </div>
                           <div className="text-[11px] text-[#a6a89e] leading-snug">
                             {p.round} vs {p.vs}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -687,17 +703,22 @@ export function TeamScoutingView({
                       <div key={idx} className="space-y-0.5">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {p.champs.map((ch) => (
-                            <img
+                            <Link
                               key={ch}
-                              src={getChampionIconUrl(ch, ddVersion)}
-                              alt={ch}
-                              title={ch}
-                              className="w-6 h-6 rounded object-cover shrink-0"
-                            />
+                              href={`${basePath}/champion/${encodeURIComponent(
+                                ch
+                              )}`}
+                              className="inline-flex items-center gap-1 hover:text-[#f0c020] transition-colors font-bold text-[#f0ede0]"
+                            >
+                              <img
+                                src={getChampionIconUrl(ch, ddVersion)}
+                                alt={ch}
+                                title={ch}
+                                className="w-6 h-6 rounded object-cover shrink-0"
+                              />
+                              <span>{ch}</span>
+                            </Link>
                           ))}
-                          <span className="font-bold text-[#f0ede0] leading-tight">
-                            {p.champs.join(" + ")}
-                          </span>
                         </div>
                         <div className="text-[11px] text-[#a6a89e] leading-snug">
                           {p.round} vs {p.vs}
@@ -739,14 +760,28 @@ export function TeamScoutingView({
                     })()}
                     {r5Picks.map((p, idx) => (
                       <div key={idx} className="flex items-start gap-2">
-                        <img
-                          src={getChampionIconUrl(p.champ, ddVersion)}
-                          alt={p.champ}
-                          className="w-6 h-6 rounded object-cover shrink-0 mt-0.5"
-                        />
+                        <Link
+                          href={`${basePath}/champion/${encodeURIComponent(
+                            p.champ
+                          )}`}
+                          className="shrink-0 mt-0.5"
+                        >
+                          <img
+                            src={getChampionIconUrl(p.champ, ddVersion)}
+                            alt={p.champ}
+                            className="w-6 h-6 rounded object-cover"
+                          />
+                        </Link>
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-[#f0ede0] flex flex-wrap items-center gap-1 leading-tight">
-                            <span>{p.champ}</span>
+                            <Link
+                              href={`${basePath}/champion/${encodeURIComponent(
+                                p.champ
+                              )}`}
+                              className="hover:text-[#f0c020] transition-colors"
+                            >
+                              {p.champ}
+                            </Link>
                             {p.role && (
                               <span className="text-xs text-[#f0c020]">
                                 ({p.role})
@@ -757,15 +792,25 @@ export function TeamScoutingView({
                                 <span className="text-xs text-[#a6a89e] font-normal">
                                   vs
                                 </span>
-                                <img
-                                  src={getChampionIconUrl(p.vsChamp, ddVersion)}
-                                  alt={p.vsChamp}
-                                  title={`Counterpicked into ${p.vsChamp}`}
-                                  className="w-5 h-5 rounded object-cover shrink-0"
-                                />
-                                <span className="text-xs text-[#ff857a] font-semibold">
-                                  {p.vsChamp}
-                                </span>
+                                <Link
+                                  href={`${basePath}/champion/${encodeURIComponent(
+                                    p.vsChamp
+                                  )}`}
+                                  className="inline-flex items-center gap-1 group"
+                                >
+                                  <img
+                                    src={getChampionIconUrl(
+                                      p.vsChamp,
+                                      ddVersion
+                                    )}
+                                    alt={p.vsChamp}
+                                    title={`Counterpicked into ${p.vsChamp}`}
+                                    className="w-5 h-5 rounded object-cover shrink-0"
+                                  />
+                                  <span className="text-xs text-[#ff857a] group-hover:text-[#f0c020] transition-colors font-semibold">
+                                    {p.vsChamp}
+                                  </span>
+                                </Link>
                               </>
                             )}
                           </div>
