@@ -64,6 +64,7 @@ import {
   TIER_PRESETS,
 } from "@/utils/tierPresets";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
 import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 
 interface ChampionPoolEditorProps {
@@ -618,6 +619,15 @@ export function ChampionPoolEditor({
   const [exportingPng, setExportingPng] = useState(false);
   const [showAuthorInExport, setShowAuthorInExport] = useState(true);
 
+  // Retro confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+
   // Matchup hover popover state (General section champions)
   const [hoveredChamp, setHoveredChamp] = useState<{
     champion: ChampionPoolTierItem;
@@ -927,21 +937,31 @@ export function ChampionPoolEditor({
     }
   }
 
-  function handleLockPool() {
-    if (
-      dirty &&
-      !confirm(
-        "You have unsaved changes. Lock anyway and discard unsaved edits?"
-      )
-    ) {
-      return;
-    }
+  function performLockPool() {
     clearStoredPassphrase(storageUserKey);
     setActivePassphrase("");
     setUnlocked(false);
     setStayUnlocked(false);
     setPool({ version: 1, title: "", roles: {} });
     setDirty(false);
+  }
+
+  function handleLockPool() {
+    if (dirty) {
+      setConfirmModal({
+        title: "Unsaved Changes",
+        message:
+          "You have unsaved changes. Lock anyway and discard unsaved edits?",
+        confirmLabel: "Lock & Discard",
+        danger: true,
+        onConfirm: () => {
+          setConfirmModal(null);
+          performLockPool();
+        },
+      });
+      return;
+    }
+    performLockPool();
   }
 
   async function savePoolWithPassphrase(passToUse: string) {
@@ -1769,15 +1789,18 @@ export function ChampionPoolEditor({
           <button
             type="button"
             onClick={() => {
-              if (
-                confirm(
-                  `Reset ${activeRoleMeta.label} Pool? All champions in this role's tiers will be removed.`
-                )
-              ) {
-                updateActiveRoleTiers(() =>
-                  createRoleSection(activeRole, "standard").tiers
-                );
-              }
+              setConfirmModal({
+                title: `Reset ${activeRoleMeta.label} Pool`,
+                message: `Reset ${activeRoleMeta.label} Pool? All champions in this role's tiers will be removed.`,
+                confirmLabel: `Reset ${activeRoleMeta.label} Pool`,
+                danger: true,
+                onConfirm: () => {
+                  setConfirmModal(null);
+                  updateActiveRoleTiers(() =>
+                    createRoleSection(activeRole, "standard").tiers
+                  );
+                },
+              });
             }}
             className="xp-btn xp-btn-danger text-xs"
           >
@@ -1869,18 +1892,21 @@ export function ChampionPoolEditor({
                   })
                 }
                 onDeleteTier={() => {
-                  if (
-                    confirm(
-                      `Delete tier "${
-                        tier.label || "Untitled"
-                      }"? Any champions in it will be removed.`
-                    )
-                  ) {
-                    updateActiveRoleTiers((tiers) => {
-                      if (tiers.length <= 1) return tiers;
-                      return tiers.filter((t) => t.id !== tier.id);
-                    });
-                  }
+                  setConfirmModal({
+                    title: "Delete Tier",
+                    message: `Delete tier "${
+                      tier.label || "Untitled"
+                    }"? Any champions in it will be removed.`,
+                    confirmLabel: "Delete Tier",
+                    danger: true,
+                    onConfirm: () => {
+                      setConfirmModal(null);
+                      updateActiveRoleTiers((tiers) => {
+                        if (tiers.length <= 1) return tiers;
+                        return tiers.filter((t) => t.id !== tier.id);
+                      });
+                    },
+                  });
                 }}
                 onRemoveChampion={(championId) =>
                   updateActiveRoleTiers((tiers) =>
@@ -2263,6 +2289,16 @@ export function ChampionPoolEditor({
           </div>
         </div>
       </div>
+
+      <RetroConfirmModal
+        open={Boolean(confirmModal)}
+        title={confirmModal?.title ?? "Confirm"}
+        message={confirmModal?.message ?? ""}
+        confirmLabel={confirmModal?.confirmLabel ?? "Confirm"}
+        danger={confirmModal?.danger}
+        onConfirm={() => confirmModal?.onConfirm()}
+        onCancel={() => setConfirmModal(null)}
+      />
     </RetroWindow>
   );
 }
