@@ -1410,9 +1410,7 @@ export function ChampionPoolEditor({
               className="xp-btn xp-btn-gold text-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              {exportingPng
-                ? "Exporting..."
-                : `Export ${activeRoleMeta.label} PNG`}
+              {exportingPng ? "Exporting..." : "Export PNG"}
             </button>
 
             {authorName && (
@@ -1554,28 +1552,6 @@ export function ChampionPoolEditor({
 
         {/* Tier Actions for Active Role */}
         <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() =>
-              updateActiveRoleTiers((tiers) => [
-                ...tiers,
-                {
-                  id: makeTierId(),
-                  label: "New Tier",
-                  color:
-                    DEFAULT_TIER_COLORS[
-                      tiers.length % DEFAULT_TIER_COLORS.length
-                    ],
-                  commentary: "",
-                  champions: [],
-                },
-              ])
-            }
-            className="xp-btn text-xs"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#f0c020]" />
-            Add Tier
-          </button>
           <button
             type="button"
             onClick={() =>
