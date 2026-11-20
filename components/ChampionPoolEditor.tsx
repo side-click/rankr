@@ -1407,9 +1407,9 @@ export function ChampionPoolEditor({
               type="button"
               onClick={handleExportRolePng}
               disabled={exportingPng}
-              className="px-3 py-1.5 rounded bg-[#1c2330] hover:bg-[#252e3f] border border-white/15 text-xs font-bold text-[#f0ede0] inline-flex items-center gap-1.5 cursor-pointer"
+              className="xp-btn xp-btn-gold text-xs"
             >
-              <Download className="w-3.5 h-3.5 text-[#f0c020]" />
+              <Download className="w-3.5 h-3.5" />
               {exportingPng
                 ? "Exporting..."
                 : `Export ${activeRoleMeta.label} PNG`}
@@ -1424,16 +1424,12 @@ export function ChampionPoolEditor({
                     ? "Hide Discord name on exported PNG"
                     : "Show Discord name on exported PNG"
                 }
-                className={`px-2.5 py-1.5 rounded border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${
-                  showAuthorInExport
-                    ? "bg-[#1c2330] border-white/15 text-[#f0ede0] hover:bg-[#252e3f]"
-                    : "bg-black/30 border-white/10 text-[#7c808b] hover:text-[#c7c9be]"
-                }`}
+                className="xp-btn text-xs"
               >
                 {showAuthorInExport ? (
                   <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
                 ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
+                  <EyeOff className="w-3.5 h-3.5 text-[#a6a89e]" />
                 )}
                 <span>{showAuthorInExport ? "Name Shown" : "Name Hidden"}</span>
               </button>
@@ -1443,7 +1439,7 @@ export function ChampionPoolEditor({
               type="button"
               onClick={() => setChangePassOpen((v) => !v)}
               title="Change passphrase"
-              className="px-2.5 py-1.5 rounded bg-black/30 hover:bg-white/10 border border-white/10 text-xs text-[#c7c9be] inline-flex items-center gap-1 cursor-pointer"
+              className="xp-btn text-xs"
             >
               <KeyRound className="w-3.5 h-3.5" />
             </button>
@@ -1452,7 +1448,7 @@ export function ChampionPoolEditor({
               type="button"
               onClick={handleLockPool}
               title="Lock pool"
-              className="px-2.5 py-1.5 rounded bg-black/30 hover:bg-white/10 border border-white/10 text-xs text-[#c7c9be] inline-flex items-center gap-1 cursor-pointer"
+              className="xp-btn text-xs"
             >
               <Lock className="w-3.5 h-3.5" />
               Lock
@@ -1509,7 +1505,7 @@ export function ChampionPoolEditor({
             <button
               type="button"
               onClick={() => setChangePassOpen(false)}
-              className="px-2.5 py-1.5 text-xs text-[#a6a89e] hover:text-white cursor-pointer"
+              className="xp-btn text-xs"
             >
               Cancel
             </button>
@@ -1557,47 +1553,41 @@ export function ChampionPoolEditor({
         </div>
 
         {/* Tier Actions for Active Role */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="text-[#a6a89e] font-bold">
-            Editing {activeRoleMeta.label} Pool
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                updateActiveRoleTiers((tiers) => [
-                  ...tiers,
-                  {
-                    id: makeTierId(),
-                    label: "New Tier",
-                    color:
-                      DEFAULT_TIER_COLORS[
-                        tiers.length % DEFAULT_TIER_COLORS.length
-                      ],
-                    commentary: "",
-                    champions: [],
-                  },
-                ])
-              }
-              className="px-2.5 py-1 rounded bg-[#1b2330] border border-white/15 text-[11px] font-bold text-[#f0ede0] hover:border-[#f0c020]/50 inline-flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#f0c020]" />
-              Add Tier
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                updateActiveRoleTiers(() =>
-                  createRoleSection(activeRole, "standard").tiers
-                )
-              }
-              className="px-2.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] text-[#a6a89e] hover:text-[#ff857a] inline-flex items-center gap-1 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Clear {activeRoleMeta.label}
-            </button>
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() =>
+              updateActiveRoleTiers((tiers) => [
+                ...tiers,
+                {
+                  id: makeTierId(),
+                  label: "New Tier",
+                  color:
+                    DEFAULT_TIER_COLORS[
+                      tiers.length % DEFAULT_TIER_COLORS.length
+                    ],
+                  commentary: "",
+                  champions: [],
+                },
+              ])
+            }
+            className="xp-btn text-xs"
+          >
+            <Plus className="w-3.5 h-3.5 text-[#f0c020]" />
+            Add Tier
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              updateActiveRoleTiers(() =>
+                createRoleSection(activeRole, "standard").tiers
+              )
+            }
+            className="xp-btn xp-btn-danger text-xs"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Clear {activeRoleMeta.label}
+          </button>
         </div>
 
         {/* Drag-and-Drop Tier Board + Unplaced Champion Picker */}
