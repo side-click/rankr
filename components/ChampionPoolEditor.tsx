@@ -1368,8 +1368,10 @@ export function ChampionPoolEditor({
       <div className="space-y-4">
         {/* Top Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-[#141820] border border-white/10">
-          <div className="flex items-center gap-2.5 flex-1 min-w-[220px]">
-            <ShieldCheck className="w-5 h-5 text-[#7cd438] shrink-0" />
+          <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+            <span className="text-xs font-bold text-[#a6a89e] shrink-0">
+              Title:
+            </span>
             <input
               type="text"
               value={pool.title}
@@ -1382,9 +1384,6 @@ export function ChampionPoolEditor({
               aria-label="Champion Pool Title"
               className="bg-black/30 border border-white/15 rounded px-2.5 py-1.5 text-sm font-black text-[#f0ede0] focus:outline-none focus:border-[#f0c020] w-full max-w-xs"
             />
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#11241a] border border-[#2f6343] text-[10px] font-bold text-[#7cd438]">
-              <Lock className="w-3 h-3" /> Private &amp; Encrypted
-            </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
