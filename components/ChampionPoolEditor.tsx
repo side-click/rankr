@@ -140,28 +140,6 @@ function ChampionTileVisual({
           : "bg-[#1a1f29] border-white/15 text-[#f0ede0] hover:border-[#f0c020]/60 cursor-grab"
       }`}
     >
-      {showBlindToggle && onToggleBlind && (
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleBlind();
-          }}
-          title={
-            champion.isBlindable
-              ? `Unmark ${champion.name} as Blindable`
-              : `Mark ${champion.name} as Blindable`
-          }
-          className={`absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full border flex items-center justify-center transition-opacity cursor-pointer z-10 ${
-            champion.isBlindable
-              ? "bg-[#1b3827] border-[#7cd438] text-[#7cd438] opacity-100"
-              : "bg-[#1c222d] border-white/25 text-[#a6a89e] opacity-0 group-hover:opacity-100 hover:border-[#7cd438] hover:text-[#7cd438]"
-          }`}
-        >
-          <EyeClosed className="w-2.5 h-2.5" />
-        </button>
-      )}
       {showRemoveButton && onRemove && (
         <button
           type="button"
