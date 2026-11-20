@@ -989,7 +989,11 @@ export function ChampionPoolEditor({
       }
       setExistingRecord(savedRec);
       setDirty(false);
-      setSaveMessage("Encrypted & saved privately");
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      setSaveMessage(`${activeRoleMeta.label} pool saved at ${timeStr}`);
     } catch (err) {
       setSaveError(
         err instanceof Error ? err.message : "Failed to save champion pool."
