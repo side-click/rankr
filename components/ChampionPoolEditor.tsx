@@ -1253,7 +1253,7 @@ export function ChampionPoolEditor({
                 ) : (
                   <div className="p-3 rounded bg-[#2a1414] border border-[#ff857a]/40 space-y-2">
                     <p className="text-[11px] text-[#ffcbc6]">
-                      Resetting permanently deletes your saved pool.
+                      Resetting permanently deletes your saved pools.
                     </p>
                     <div className="flex justify-center gap-2">
                       <button
