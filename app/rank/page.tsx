@@ -3,7 +3,6 @@ import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { checkUserAllowlisted } from "@/utils/allowlist";
 import { RankWorkspace } from "@/components/RankWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
-import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import type { RankingType } from "@/types/database";
@@ -50,8 +49,19 @@ export default async function RankPage({
         : "champion_pool";
 
     return (
-      <SignInRequiredWindow
+      <RankWorkspace
+        userId={null}
+        initialAuthorName=""
+        initialAuthorAvatarUrl={null}
+        discordDefaultName=""
         requireAllowlist={Boolean(appSettings?.require_allowlist)}
+        seasons={[]}
+        divisions={[]}
+        themes={[]}
+        editions={[]}
+        teams={[]}
+        seasonPlayers={[]}
+        initialType={guestInitialType}
       />
     );
   }
