@@ -22,6 +22,7 @@ import type {
   DivisionTheme,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
 import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { CAPTAIN_ICON, getRoleMeta, normalizeRoster } from "@/utils/roles";
@@ -94,6 +95,8 @@ export function BallotShareView({
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const initialOverlays: BallotOverlay[] = Array.isArray(ballot.overlays)
     ? ballot.overlays
     : [];
@@ -185,25 +188,25 @@ export function BallotShareView({
     }
   }
 
-  async function handleAdminDelete() {
-    if (
-      !confirm(
-        "Are you sure you want to permanently delete this published ranking?"
-      )
-    ) {
-      return;
-    }
+  function handleAdminDelete() {
+    setDeleteError(null);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function confirmAdminDelete() {
     setDeleting(true);
+    setDeleteError(null);
     const supabase = createClient();
     const { error } = await supabase
       .from("ballots")
       .delete()
       .eq("id", ballot.id);
     if (error) {
-      alert(`Failed to delete ranking: ${error.message}`);
+      setDeleteError(`Failed to delete ranking: ${error.message}`);
       setDeleting(false);
       return;
     }
+    setDeleteConfirmOpen(false);
     router.push("/browse");
     router.refresh();
   }
@@ -778,6 +781,18 @@ export function BallotShareView({
           </div>
         </ScaledGraphicFrame>
       </RetroWindow>
+
+      <RetroConfirmModal
+        open={deleteConfirmOpen}
+        title="Delete Published Ranking"
+        message="Are you sure you want to permanently delete this published ranking?"
+        confirmLabel="Delete Ranking"
+        danger
+        loading={deleting}
+        error={deleteError}
+        onConfirm={confirmAdminDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }
