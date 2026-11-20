@@ -691,7 +691,7 @@ export function ChampionPoolEditor({
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const [showAuthorInExport, setShowAuthorInExport] = useState(true);
-  const [iconsOnlyExport, setIconsOnlyExport] = useState(false);
+  const [iconsOnlyExport, setIconsOnlyExport] = useState(true);
 
   // Retro confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -2022,7 +2022,7 @@ export function ChampionPoolEditor({
             type="button"
             onClick={() => savePoolWithPassphrase(activePassphrase)}
             disabled={saving}
-            className="xp-btn xp-btn-primary text-xs"
+            className="xp-btn xp-btn-primary text-xs w-[116px] justify-center"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? "Encrypting..." : `Save Pools${dirty ? "*" : ""}`}
@@ -2031,7 +2031,7 @@ export function ChampionPoolEditor({
             type="button"
             onClick={() => setIconsOnlyExport((v) => !v)}
             title="Toggle champion names on exported PNG"
-            className="xp-btn text-xs"
+            className="xp-btn text-xs w-[116px] justify-center"
           >
             <span>{iconsOnlyExport ? "Icons Only: On" : "Icons Only: Off"}</span>
           </button>
