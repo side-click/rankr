@@ -1432,111 +1432,159 @@ export function ChampionPoolEditor({
   return (
     <RetroWindow title="Champion Pool Editor" theme="scdl">
       <div className="space-y-4">
-        {/* Row 1: Custom Author Name & Custom Title (matches TPR & PTL) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowCustomAuthor((prev) => !prev);
-                setShowCustomTitle(false);
-              }}
-              className="xp-btn text-xs"
-            >
-              + Custom Author Name
-              {savedAuthorName ? ` (${savedAuthorName})` : ""}
-            </button>
+        {/* Row 1: Name Shown + Custom Author + Custom Title (left) | Change Passphrase + Lock (top-right) */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {displayAuthorName && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthorInExport((v) => !v);
+                  setShowCustomAuthor(false);
+                }}
+                title={
+                  showAuthorInExport
+                    ? "Hide Discord name on exported PNG"
+                    : "Show Discord name on exported PNG"
+                }
+                className="xp-btn text-xs"
+              >
+                {showAuthorInExport ? (
+                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5 text-[#a6a89e]" />
+                )}
+                <span>{showAuthorInExport ? "Name Shown" : "Name Hidden"}</span>
+              </button>
+            )}
 
-            {showCustomAuthor && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-[11px] font-bold text-[#c7c5b8]">
-                    Custom Author Name
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomAuthor(false)}
-                    className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
-                    title="Close"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={customAuthorInput}
-                  onChange={(e) => {
-                    setCustomAuthorInput(e.target.value);
-                    setDirty(true);
-                    setSaveMessage(null);
+            {showAuthorInExport && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomAuthor((prev) => !prev);
+                    setShowCustomTitle(false);
                   }}
-                  placeholder={
-                    discordDefaultName
-                      ? `Leave blank to reset to ${discordDefaultName}`
-                      : "Enter author name..."
-                  }
-                  className="w-full xp-inset px-2.5 py-1.5 text-xs"
-                />
-                {discordDefaultName && (
-                  <div className="text-[10px] text-[#a6a89e]">
-                    Leave blank to reset to {discordDefaultName}
+                  className="xp-btn text-xs"
+                >
+                  + Custom Author Name
+                  {savedAuthorName ? ` (${savedAuthorName})` : ""}
+                </button>
+
+                {showCustomAuthor && (
+                  <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-[11px] font-bold text-[#c7c5b8]">
+                        Custom Author Name
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomAuthor(false)}
+                        className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
+                        title="Close"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={customAuthorInput}
+                      onChange={(e) => {
+                        setCustomAuthorInput(e.target.value);
+                        setDirty(true);
+                        setSaveMessage(null);
+                      }}
+                      placeholder={
+                        discordDefaultName
+                          ? `Leave blank to reset to ${discordDefaultName}`
+                          : "Enter author name..."
+                      }
+                      className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                    />
+                    {discordDefaultName && (
+                      <div className="text-[10px] text-[#a6a89e]">
+                        Leave blank to reset to {discordDefaultName}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomTitle((prev) => !prev);
+                  setShowCustomAuthor(false);
+                }}
+                className="xp-btn text-xs"
+              >
+                {customTitleValue
+                  ? `Custom Title (${customTitleValue})`
+                  : "+ Custom Title"}
+              </button>
+
+              {showCustomTitle && (
+                <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-[#c7c5b8]">
+                      Custom Title
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomTitle(false)}
+                      className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={customTitleValue}
+                    onChange={(e) => {
+                      setPool((prev) => ({ ...prev, title: e.target.value }));
+                      setDirty(true);
+                      setSaveMessage(null);
+                    }}
+                    maxLength={60}
+                    placeholder={`Leave blank for "${defaultRoleTitle}"`}
+                    className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                  />
+                  <div className="text-[10px] text-[#a6a89e]">
+                    Leave blank for default &quot;{defaultRoleTitle}&quot;
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setShowCustomTitle((prev) => !prev);
-                setShowCustomAuthor(false);
-              }}
+              onClick={() => setChangePassOpen((v) => !v)}
+              title="Change passphrase"
               className="xp-btn text-xs"
             >
-              {customTitleValue
-                ? `Custom Title (${customTitleValue})`
-                : "+ Custom Title"}
+              <KeyRound className="w-3.5 h-3.5" />
             </button>
 
-            {showCustomTitle && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-[11px] font-bold text-[#c7c5b8]">
-                    Custom Title
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomTitle(false)}
-                    className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
-                    title="Close"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={customTitleValue}
-                  onChange={(e) => {
-                    setPool((prev) => ({ ...prev, title: e.target.value }));
-                    setDirty(true);
-                    setSaveMessage(null);
-                  }}
-                  maxLength={60}
-                  placeholder={`Leave blank for "${defaultRoleTitle}"`}
-                  className="w-full xp-inset px-2.5 py-1.5 text-xs"
-                />
-                <div className="text-[10px] text-[#a6a89e]">
-                  Leave blank for default &quot;{defaultRoleTitle}&quot;
-                </div>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={handleLockPool}
+              title="Lock pool"
+              className="xp-btn text-xs"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Lock
+            </button>
           </div>
         </div>
 
-        {/* Row 2: Role Selector (left) + Save/Export/Security Actions (right) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+        {/* Row 2: Role Selector (right-justified) */}
+        <div className="flex justify-end">
           <div className="inline-flex flex-wrap items-center xp-inset p-0.5 rounded-sm">
             {LEAGUE_ROLES.map((r) => {
               const sec = pool.roles[r.key];
@@ -1571,71 +1619,6 @@ export function ChampionPoolEditor({
                 </button>
               );
             })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => savePoolWithPassphrase(activePassphrase)}
-              disabled={saving}
-              className="xp-btn xp-btn-primary text-xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {saving
-                ? "Encrypting..."
-                : dirty
-                ? "Save Changes*"
-                : "Save Pool"}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportRolePng}
-              disabled={exportingPng}
-              className="xp-btn xp-btn-gold text-xs"
-            >
-              <Download className="w-3.5 h-3.5" />
-              {exportingPng ? "Exporting..." : "Export PNG"}
-            </button>
-
-            {displayAuthorName && (
-              <button
-                type="button"
-                onClick={() => setShowAuthorInExport((v) => !v)}
-                title={
-                  showAuthorInExport
-                    ? "Hide Discord name on exported PNG"
-                    : "Show Discord name on exported PNG"
-                }
-                className="xp-btn text-xs"
-              >
-                {showAuthorInExport ? (
-                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5 text-[#a6a89e]" />
-                )}
-                <span>{showAuthorInExport ? "Name Shown" : "Name Hidden"}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setChangePassOpen((v) => !v)}
-              title="Change passphrase"
-              className="xp-btn text-xs"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLockPool}
-              title="Lock pool"
-              className="xp-btn text-xs"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Lock
-            </button>
           </div>
         </div>
 
@@ -1695,8 +1678,8 @@ export function ChampionPoolEditor({
           </form>
         )}
 
-        {/* Tier Actions for Active Role */}
-        <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+        {/* Row 3: Tier & Save/Export Actions (right-justified) */}
+        <div className="flex flex-wrap items-center justify-end gap-2 pb-3 border-b border-white/10 text-xs">
           <button
             type="button"
             onClick={handleRandomizeRoleTest}
@@ -1716,7 +1699,29 @@ export function ChampionPoolEditor({
             className="xp-btn xp-btn-danger text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Clear {activeRoleMeta.label}
+            Reset {activeRoleMeta.label} Pool
+          </button>
+          <button
+            type="button"
+            onClick={() => savePoolWithPassphrase(activePassphrase)}
+            disabled={saving}
+            className="xp-btn xp-btn-primary text-xs"
+          >
+            <Save className="w-3.5 h-3.5" />
+            {saving
+              ? "Encrypting..."
+              : dirty
+              ? "Save Changes*"
+              : "Save Pool"}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportRolePng}
+            disabled={exportingPng}
+            className="xp-btn xp-btn-gold text-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {exportingPng ? "Exporting..." : "Export PNG"}
           </button>
         </div>
 
