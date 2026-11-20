@@ -1746,6 +1746,7 @@ export function ChampionPoolEditor({
                       : "text-[#a6a89e] hover:text-white border border-transparent"
                   }`}
                 >
+                  <span className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   <img
                     src={r.icon}
                     alt={r.label}
