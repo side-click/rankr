@@ -914,6 +914,15 @@ export function ChampionPoolEditor({
     }
   }
 
+  function handleLockPool() {
+    clearStoredPassphrase(storageUserKey);
+    setActivePassphrase("");
+    setUnlocked(false);
+    setStayUnlocked(false);
+    setPool({ version: 1, title: "", roles: {} });
+    setDirty(false);
+  }
+
   async function savePoolWithPassphrase(passToUse: string) {
     setSaving(true);
     setSaveError(null);
@@ -1579,6 +1588,16 @@ export function ChampionPoolEditor({
               className="xp-btn text-xs"
             >
               <KeyRound className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLockPool}
+              title="Lock pool"
+              className="xp-btn text-xs"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Lock
             </button>
           </div>
         </div>
