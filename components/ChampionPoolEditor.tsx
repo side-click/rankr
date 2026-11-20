@@ -276,11 +276,11 @@ function GapDropSlot({
   return (
     <div
       ref={setNodeRef}
-      className="w-2 h-[78px] -mx-1 flex items-center justify-center shrink-0"
+      className="relative z-20 w-3 h-[78px] -mx-1 flex items-center justify-center shrink-0 pointer-events-auto"
     >
       <div
-        className={`h-14 rounded-full transition-all ${
-          isOver ? "w-1 bg-[#f0c020] shadow-[0_0_8px_#f0c020]" : "w-0"
+        className={`h-16 rounded-full transition-all ${
+          isOver ? "w-1.5 bg-[#f0c020] shadow-[0_0_10px_#f0c020]" : "w-0"
         }`}
       />
     </div>
