@@ -1152,6 +1152,17 @@ export function ChampionPoolEditor({
     setHoveredChamp(null);
   }, []);
 
+  useEffect(() => {
+    if (!hoveredChamp) return;
+    const clear = () => handleChampHoverEnd();
+    window.addEventListener("scroll", clear, true);
+    window.addEventListener("pointerdown", clear, true);
+    return () => {
+      window.removeEventListener("scroll", clear, true);
+      window.removeEventListener("pointerdown", clear, true);
+    };
+  }, [hoveredChamp, handleChampHoverEnd]);
+
   function handleDragStart(event: DragStartEvent) {
     handleChampHoverEnd();
     const meta = event.active.data.current as DragChampMeta | undefined;
@@ -1958,7 +1969,8 @@ export function ChampionPoolEditor({
                     },
                   });
                 }}
-                onRemoveChampion={(championId) =>
+                onRemoveChampion={(championId) => {
+                  handleChampHoverEnd();
                   updateActiveRoleTiers((tiers) =>
                     tiers.map((t) =>
                       t.id === tier.id
@@ -1970,8 +1982,8 @@ export function ChampionPoolEditor({
                           }
                         : t
                     )
-                  )
-                }
+                  );
+                }}
                 onHoverStart={handleChampHoverStart}
                 onHoverEnd={handleChampHoverEnd}
               />
