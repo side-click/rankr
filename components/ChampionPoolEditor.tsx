@@ -319,6 +319,15 @@ function DroppableTierRow({
   });
 
   const contrastColor = getTierContrastText(tier.color);
+  const labelLen = (tier.label || "").trim().length;
+  const labelSizeClass =
+    labelLen <= 3
+      ? "text-2xl"
+      : labelLen <= 8
+      ? "text-lg"
+      : labelLen <= 16
+      ? "text-sm"
+      : "text-xs";
   const blindableChamps = tier.champions.filter((c) => Boolean(c.isBlindable));
   const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
@@ -333,7 +342,7 @@ function DroppableTierRow({
           <div className="inline-grid items-center justify-items-center max-w-full">
             <span
               aria-hidden="true"
-              className="col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 font-black text-sm leading-tight text-center min-w-[2ch] max-w-[132px]"
+              className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 font-black ${labelSizeClass} leading-tight text-center min-w-[2ch] max-w-[132px]`}
             >
               {(tier.label || "Tier...") + "\u200b"}
             </span>
@@ -348,7 +357,7 @@ function DroppableTierRow({
               placeholder="Tier..."
               aria-label="Tier label"
               style={{ color: contrastColor }}
-              className="col-start-1 row-start-1 w-full h-full min-w-0 resize-none overflow-hidden bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black text-sm leading-tight focus:outline-none placeholder:text-white/50"
+              className={`col-start-1 row-start-1 w-full h-full min-w-0 resize-none overflow-hidden bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black ${labelSizeClass} leading-tight focus:outline-none placeholder:text-white/50`}
             />
           </div>
 
