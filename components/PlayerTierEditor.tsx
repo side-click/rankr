@@ -46,6 +46,7 @@ import type {
   TierRowData,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
 import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 import {
   CAPTAIN_ICON,
@@ -167,6 +168,7 @@ function PlayerTileVisual({
           <X className="w-3 h-3" />
         </button>
       )}
+
     </div>
   );
 }
@@ -238,6 +240,7 @@ function DraggablePlayerTile({
         showRemoveButton={isPlaced}
         onRemove={onRemove}
       />
+
     </div>
   );
 }
@@ -375,6 +378,7 @@ function DroppablePoolArea({
           ))
         )}
       </div>
+
     </div>
   );
 }
@@ -625,6 +629,7 @@ function DroppableTierRow({
           })()}
         </div>
       </div>
+
     </div>
   );
 }
@@ -962,6 +967,7 @@ export function PlayerTierEditor({
   const lastLoadedKeyRef = useRef<string>("");
   const lastScopeKeyRef = useRef<string>("");
   const [saving, setSaving] = useState(false);
+  const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
     targetStatus: "draft" | "published";
     existingStatus: string;
@@ -2063,14 +2069,6 @@ export function PlayerTierEditor({
                 (partial tiers allowed)
               </span>
             )}
-            {hasTierWork && !isEditDisabled && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] italic text-[#f0c020]">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Changing dropdowns or toggles will clear unsaved/unpublished work.
-                </span>
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -2086,11 +2084,23 @@ export function PlayerTierEditor({
             <button
               type="button"
               disabled={saving || isEditDisabled || totalPlacedPlayers === 0}
-              onClick={() => void savePlayerTierList("draft")}
+              onClick={() => {
+                if (ballotStatus === "published") {
+                  setUnpublishConfirmOpen(true);
+                } else {
+                  void savePlayerTierList("draft");
+                }
+              }}
               className="xp-btn text-xs"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saving ? "Saving..." : "Save Draft"}</span>
+              <span>
+                {saving
+                  ? "Saving..."
+                  : `Save Draft${hasTierWork ? "*" : ""}${
+                      ballotStatus === "published" ? " (Unpublish)" : ""
+                    }`}
+              </span>
             </button>
             <button
               type="button"
@@ -2102,9 +2112,11 @@ export function PlayerTierEditor({
               <span>
                 {saving
                   ? "Publishing..."
-                  : ballotStatus === "published"
-                  ? "Update Tier List"
-                  : "Publish Tier List"}
+                  : `${
+                      ballotStatus === "published"
+                        ? "Update Tier List"
+                        : "Publish Tier List"
+                    }${hasTierWork ? "*" : ""}`}
               </span>
             </button>
           </div>
@@ -2324,6 +2336,19 @@ export function PlayerTierEditor({
           </div>,
           document.body
         )}
+      <RetroConfirmModal
+        open={unpublishConfirmOpen}
+        title="Unpublish & Save as Draft?"
+        message="Saving as a draft will unpublish your currently published tier list from Browse and Consensus until you publish again. Continue?"
+        confirmLabel="Save Draft (Unpublish)"
+        danger
+        loading={saving}
+        onConfirm={() => {
+          setUnpublishConfirmOpen(false);
+          void savePlayerTierList("draft");
+        }}
+        onCancel={() => setUnpublishConfirmOpen(false)}
+      />
     </div>
   );
 }
