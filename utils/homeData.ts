@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { ContentCardData } from "@/components/ContentCard";
 import { loadConsensusPageData } from "@/utils/consensusData";
@@ -118,6 +119,152 @@ function unwrap<T>(val: T | T[] | null | undefined): T | null {
   if (!val) return null;
   return Array.isArray(val) ? val[0] ?? null : val;
 }
+
+const loadCachedHomeStatsBlock = unstable_cache(
+  async (statsSeasonSlug: string | undefined) => {
+    const statsCtx = await loadPublicStatsContext(statsSeasonSlug, {
+      includeRiotStats: false,
+    }).catch(() => null);
+
+    let divisionStandings: HomeDivisionStandings[] = [];
+    let divisionTopPerformers: HomeDivisionTopPerformers[] = [];
+    let topPerformers: HomeTopPerformer[] = [];
+    let recentMatches: HomeRecentMatch[] = [];
+
+    if (statsCtx && statsCtx.teams.length > 0) {
+      const [sheetSummary, allSeries] = await Promise.all([
+        fetchScdlSheetStats(
+          statsCtx.players,
+          statsCtx.teams,
+          statsCtx.sheetConfig
+        ).catch(() => null),
+        fetchAllScdlSeries(statsCtx.sheetConfig).catch(() => []),
+      ]);
+
+      const activeTeams = sheetSummary?.teams ?? statsCtx.teams;
+      const rawPlayers = sheetSummary?.players ?? statsCtx.players;
+      const ratedPlayers = computeRoleNormalizedRatings(rawPlayers);
+
+      const teamLogoByName = new Map(
+        activeTeams.map((t) => [t.teamName.toLowerCase(), t.logoUrl])
+      );
+      const teamDivByName = new Map(
+        activeTeams.map((t) => [t.teamName.toLowerCase(), t.divisionId])
+      );
+
+      divisionStandings = statsCtx.divisions.map((d) => {
+        const divTheme = resolveDivisionTheme(d.theme_key);
+        const divTeams = activeTeams
+          .filter((t) => t.divisionId === d.id)
+          .sort((a, b) => {
+            const sa = a.seed ?? 999;
+            const sb = b.seed ?? 999;
+            if (sa !== sb) return sa - sb;
+            return (b.seriesWins ?? b.wins) - (a.seriesWins ?? a.wins);
+          })
+          .slice(0, 4)
+          .map((t) => ({
+            teamId: t.teamId,
+            teamName: t.teamName,
+            logoUrl: t.logoUrl,
+            seed: t.seed ?? null,
+            seriesWins: t.seriesWins ?? t.wins,
+            seriesLosses: t.seriesLosses ?? Math.max(0, t.games - t.wins),
+            gamesWins: t.wins,
+            gamesLosses: Math.max(0, t.games - t.wins),
+          }));
+
+        return {
+          divisionId: d.id,
+          divisionName: d.name,
+          divisionSlug: d.slug,
+          logoUrl: d.logo_url,
+          primaryColor: divTheme.primary_color,
+          teams: divTeams,
+        };
+      });
+
+      divisionTopPerformers = statsCtx.divisions.map((d) => {
+        const divTheme = resolveDivisionTheme(d.theme_key);
+        const divRated = computeRoleNormalizedRatings(
+          rawPlayers.filter((p) => p.divisionId === d.id)
+        );
+        const topDivPlayers = divRated
+          .filter((p) => p.games > 0)
+          .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
+          .slice(0, 5)
+          .map((p) => ({
+            playerKey: p.playerKey,
+            displayName: p.displayName,
+            role: p.role,
+            teamName: p.teamName,
+            teamLogoUrl: p.teamLogoUrl,
+            rating: p.leagueRating ?? 0,
+            games: p.games,
+            kda: p.kda,
+            dpm: p.dpm,
+          }));
+
+        return {
+          divisionId: d.id,
+          divisionName: d.name,
+          divisionSlug: d.slug,
+          logoUrl: d.logo_url,
+          primaryColor: divTheme.primary_color,
+          players: topDivPlayers,
+        };
+      });
+
+      topPerformers = ratedPlayers
+        .filter((p) => p.games > 0)
+        .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
+        .slice(0, 5)
+        .map((p) => ({
+          playerKey: p.playerKey,
+          displayName: p.displayName,
+          role: p.role,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+          rating: p.leagueRating ?? 0,
+          games: p.games,
+          kda: p.kda,
+          dpm: p.dpm,
+        }));
+
+      recentMatches = [...allSeries]
+        .reverse()
+        .slice(0, 4)
+        .map((s) => {
+          const divId =
+            teamDivByName.get(s.teamA.toLowerCase()) ??
+            teamDivByName.get(s.teamB.toLowerCase());
+          const div = statsCtx.divisions.find((d) => d.id === divId);
+          const theme = resolveDivisionTheme(div?.theme_key);
+          return {
+            seriesKey: s.seriesKey,
+            roundLabel: s.roundLabel,
+            teamA: s.teamA,
+            teamALogoUrl: teamLogoByName.get(s.teamA.toLowerCase()) ?? null,
+            teamAWins: s.teamAWins,
+            teamB: s.teamB,
+            teamBLogoUrl: teamLogoByName.get(s.teamB.toLowerCase()) ?? null,
+            teamBWins: s.teamBWins,
+            divisionName: div?.name ?? null,
+            divisionColor: theme.primary_color,
+          };
+        });
+    }
+
+    return {
+      divisionStandings,
+      divisionTopPerformers,
+      topPerformers,
+      recentMatches,
+    };
+  },
+  ["home-stats-block"],
+  { revalidate: 60, tags: ["public-stats", "home-stats"] }
+);
 
 export async function loadHomeData(
   focusedSeasonSlug?: string
@@ -266,143 +413,20 @@ export async function loadHomeData(
   const statsSeasonSlug =
     focusedSeason?.slug ?? liveSeasons[0]?.slug ?? allSeasons[0]?.slug;
 
-  const [{ data: recentBallotsRaw }, consensusRaw, statsCtx] =
-    await Promise.all([
-      ballotsQuery,
-      Promise.all(consensusPromises),
-      loadPublicStatsContext(statsSeasonSlug, {
-        includeRiotStats: false,
-      }).catch(() => null),
-    ]);
-
-  let divisionStandings: HomeDivisionStandings[] = [];
-  let divisionTopPerformers: HomeDivisionTopPerformers[] = [];
-  let topPerformers: HomeTopPerformer[] = [];
-  let recentMatches: HomeRecentMatch[] = [];
-
-  if (statsCtx && statsCtx.teams.length > 0) {
-    const [sheetSummary, allSeries] = await Promise.all([
-      fetchScdlSheetStats(
-        statsCtx.players,
-        statsCtx.teams,
-        statsCtx.sheetConfig
-      ).catch(() => null),
-      fetchAllScdlSeries(statsCtx.sheetConfig).catch(() => []),
-    ]);
-
-    const activeTeams = sheetSummary?.teams ?? statsCtx.teams;
-    const rawPlayers = sheetSummary?.players ?? statsCtx.players;
-    const ratedPlayers = computeRoleNormalizedRatings(rawPlayers);
-
-    const teamLogoByName = new Map(
-      activeTeams.map((t) => [t.teamName.toLowerCase(), t.logoUrl])
-    );
-    const teamDivByName = new Map(
-      activeTeams.map((t) => [t.teamName.toLowerCase(), t.divisionId])
-    );
-
-    divisionStandings = statsCtx.divisions.map((d) => {
-      const divTheme = resolveDivisionTheme(d.theme_key, divisionThemesRaw);
-      const divTeams = activeTeams
-        .filter((t) => t.divisionId === d.id)
-        .sort((a, b) => {
-          const sa = a.seed ?? 999;
-          const sb = b.seed ?? 999;
-          if (sa !== sb) return sa - sb;
-          return (b.seriesWins ?? b.wins) - (a.seriesWins ?? a.wins);
-        })
-        .slice(0, 4)
-        .map((t) => ({
-          teamId: t.teamId,
-          teamName: t.teamName,
-          logoUrl: t.logoUrl,
-          seed: t.seed ?? null,
-          seriesWins: t.seriesWins ?? t.wins,
-          seriesLosses: t.seriesLosses ?? Math.max(0, t.games - t.wins),
-          gamesWins: t.wins,
-          gamesLosses: Math.max(0, t.games - t.wins),
-        }));
-
-      return {
-        divisionId: d.id,
-        divisionName: d.name,
-        divisionSlug: d.slug,
-        logoUrl: d.logo_url,
-        primaryColor: divTheme.primary_color,
-        teams: divTeams,
-      };
-    });
-
-    divisionTopPerformers = statsCtx.divisions.map((d) => {
-      const divTheme = resolveDivisionTheme(d.theme_key, divisionThemesRaw);
-      const divRated = computeRoleNormalizedRatings(
-        rawPlayers.filter((p) => p.divisionId === d.id)
-      );
-      const topDivPlayers = divRated
-        .filter((p) => p.games > 0)
-        .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
-        .slice(0, 5)
-        .map((p) => ({
-          playerKey: p.playerKey,
-          displayName: p.displayName,
-          role: p.role,
-          teamName: p.teamName,
-          teamLogoUrl: p.teamLogoUrl,
-          rating: p.leagueRating ?? 0,
-          games: p.games,
-          kda: p.kda,
-          dpm: p.dpm,
-        }));
-
-      return {
-        divisionId: d.id,
-        divisionName: d.name,
-        divisionSlug: d.slug,
-        logoUrl: d.logo_url,
-        primaryColor: divTheme.primary_color,
-        players: topDivPlayers,
-      };
-    });
-
-    topPerformers = ratedPlayers
-      .filter((p) => p.games > 0)
-      .sort((a, b) => (b.leagueRating ?? 0) - (a.leagueRating ?? 0))
-      .slice(0, 5)
-      .map((p) => ({
-        playerKey: p.playerKey,
-        displayName: p.displayName,
-        role: p.role,
-        teamName: p.teamName,
-        teamLogoUrl: p.teamLogoUrl,
-        rating: p.leagueRating ?? 0,
-        games: p.games,
-        kda: p.kda,
-        dpm: p.dpm,
-      }));
-
-    recentMatches = [...allSeries]
-      .reverse()
-      .slice(0, 4)
-      .map((s) => {
-        const divId =
-          teamDivByName.get(s.teamA.toLowerCase()) ??
-          teamDivByName.get(s.teamB.toLowerCase());
-        const div = statsCtx.divisions.find((d) => d.id === divId);
-        const theme = resolveDivisionTheme(div?.theme_key, divisionThemesRaw);
-        return {
-          seriesKey: s.seriesKey,
-          roundLabel: s.roundLabel,
-          teamA: s.teamA,
-          teamALogoUrl: teamLogoByName.get(s.teamA.toLowerCase()) ?? null,
-          teamAWins: s.teamAWins,
-          teamB: s.teamB,
-          teamBLogoUrl: teamLogoByName.get(s.teamB.toLowerCase()) ?? null,
-          teamBWins: s.teamBWins,
-          divisionName: div?.name ?? null,
-          divisionColor: theme.primary_color,
-        };
-      });
-  }
+  const [
+    { data: recentBallotsRaw },
+    consensusRaw,
+    {
+      divisionStandings,
+      divisionTopPerformers,
+      topPerformers,
+      recentMatches,
+    },
+  ] = await Promise.all([
+    ballotsQuery,
+    Promise.all(consensusPromises),
+    loadCachedHomeStatsBlock(statsSeasonSlug),
+  ]);
 
   return {
     allSeasons,

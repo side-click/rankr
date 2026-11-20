@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { CompactRiotMatch } from "@/utils/riotApi";
 import draftsData from "@/data/scdl_drafts.json";
@@ -225,7 +226,7 @@ export interface SheetSourceConfig {
   bypassCache?: boolean;
 }
 
-const loadMergedDraftsCached = cache(
+const fetchMergedDraftsFromDb = unstable_cache(
   async (): Promise<Record<string, DraftRecord>> => {
     const merged: Record<string, DraftRecord> = { ...DRAFTS_BY_GAME_ID };
     const sb = getSnapshotClient(false);
@@ -267,8 +268,12 @@ const loadMergedDraftsCached = cache(
       // Non-fatal if match_drafts migration hasn't been applied yet
     }
     return merged;
-  }
+  },
+  ["merged-match-drafts"],
+  { revalidate: 60, tags: ["public-stats", "match-drafts"] }
 );
+
+const loadMergedDraftsCached = cache(async () => fetchMergedDraftsFromDb());
 
 async function loadSupabaseNativeRows(
   seasonId: string
@@ -374,13 +379,13 @@ async function saveSheetSnapshot(
 
 async function loadSheetSnapshotFallback(
   sheetId: string
-): Promise<ParsedSheetRow[] | null> {
+): Promise<{ rows: ParsedSheetRow[]; fetchedAtMs: number } | null> {
   const sb = getSnapshotClient(false);
   if (!sb) return null;
   try {
     const { data, error } = await sb
       .from("sheet_snapshots")
-      .select("csv_tabs")
+      .select("csv_tabs, fetched_at")
       .eq("sheet_id", sheetId)
       .maybeSingle();
     if (error || !Array.isArray(data?.csv_tabs)) return null;
@@ -388,7 +393,12 @@ async function loadSheetSnapshotFallback(
       (t): t is string => typeof t === "string" && t.length > 0
     );
     if (csvTexts.length === 0) return null;
-    return dedupeParsedRows(csvTexts);
+    const rows = dedupeParsedRows(csvTexts);
+    if (rows.length === 0) return null;
+    const fetchedAtMs = data.fetched_at
+      ? new Date(String(data.fetched_at)).getTime()
+      : 0;
+    return { rows, fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : 0 };
   } catch {
     return null;
   }
@@ -414,21 +424,44 @@ async function fetchCsvTabsFromGoogle(
   );
 }
 
+const SNAPSHOT_STALE_MS = 120_000;
+const inFlightRefreshBySheet = new Set<string>();
+
+function refreshSheetFromGoogleInBackground(sheetId: string, gids: string[]) {
+  if (inFlightRefreshBySheet.has(sheetId)) return;
+  inFlightRefreshBySheet.add(sheetId);
+  void fetchCsvTabsFromGoogle(sheetId, gids, true)
+    .then(async (csvTexts) => {
+      const rows = dedupeParsedRows(csvTexts);
+      if (rows.length > 0) {
+        await saveSheetSnapshot(sheetId, gids, csvTexts, true);
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      inFlightRefreshBySheet.delete(sheetId);
+    });
+}
+
 const fetchUniqueSheetRowsCached = cache(
   async (sheetId: string, gidsKey: string): Promise<ParsedSheetRow[]> => {
     const gids = gidsKey.split(",").filter(Boolean);
-    try {
-      const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
-      const rows = dedupeParsedRows(csvTexts);
-      if (rows.length > 0) {
-        void saveSheetSnapshot(sheetId, gids, csvTexts, false);
-        return rows;
+    // 1. Stale-while-revalidate: serve from fast Supabase snapshot (~15ms) first if available
+    const snap = await loadSheetSnapshotFallback(sheetId);
+    if (snap && snap.rows.length > 0) {
+      if (Date.now() - snap.fetchedAtMs > SNAPSHOT_STALE_MS) {
+        refreshSheetFromGoogleInBackground(sheetId, gids);
       }
-    } catch {
-      // Fall back to Supabase snapshot below
+      return snap.rows;
     }
-    const fallback = await loadSheetSnapshotFallback(sheetId);
-    if (fallback) return fallback;
+
+    // 2. Cold start (no snapshot row exists yet): fetch from Google Sheets and seed snapshot
+    const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
+    const rows = dedupeParsedRows(csvTexts);
+    if (rows.length > 0) {
+      void saveSheetSnapshot(sheetId, gids, csvTexts, true);
+      return rows;
+    }
     throw new Error(`Failed to load SCDL sheet ${sheetId} and no backup snapshot exists`);
   }
 );
@@ -488,7 +521,7 @@ async function loadUniqueSheetRows(
       }
     } catch (err) {
       const fallback = await loadSheetSnapshotFallback(sheetId);
-      if (fallback) return fallback;
+      if (fallback) return fallback.rows;
       throw err;
     }
   }
