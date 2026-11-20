@@ -1629,7 +1629,10 @@ export function PlayerTierEditor({
         text:
           targetStatus === "published"
             ? "Player Tier List published!"
-            : "Draft saved.",
+            : `Draft saved at ${new Date().toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}.`,
       });
       router.refresh();
     } catch (err) {

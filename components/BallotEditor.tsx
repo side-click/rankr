@@ -847,7 +847,10 @@ export function BallotEditor({
         text:
           targetStatus === "published"
             ? "Ranking published!"
-            : "Draft saved.",
+            : `Draft saved at ${new Date().toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}.`,
       });
       router.refresh();
     } catch (err) {
