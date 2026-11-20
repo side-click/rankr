@@ -36,23 +36,27 @@ export default async function RankPage({
       .eq("id", 1)
       .maybeSingle();
 
+    const guestInitialType: RankingType =
+      params.type === "player"
+        ? "player"
+        : params.type === "team"
+        ? "team"
+        : "champion_pool";
+
     return (
-      <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
-        <div className="py-8 px-4 text-center space-y-4">
-          <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
-            <Lock className="w-6 h-6 text-[#f0c020]" />
-          </div>
-          <h1 className="text-lg font-bold text-[#f0ede0]">
-            Sign in with Discord to Create Rankings
-          </h1>
-          <div className="flex justify-center">
-            <AuthButton
-              user={null}
-              requireAllowlist={Boolean(appSettings?.require_allowlist)}
-            />
-          </div>
-        </div>
-      </RetroWindow>
+      <RankWorkspace
+        userId={null}
+        initialAuthorName=""
+        discordDefaultName=""
+        seasons={[]}
+        divisions={[]}
+        themes={[]}
+        editions={[]}
+        teams={[]}
+        seasonPlayers={[]}
+        initialType={guestInitialType}
+        requireAllowlist={Boolean(appSettings?.require_allowlist)}
+      />
     );
   }
 

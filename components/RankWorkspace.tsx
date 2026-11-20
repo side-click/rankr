@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Lock, User } from "lucide-react";
+import { AuthButton } from "@/components/AuthButton";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
+import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
   Division,
@@ -19,7 +21,7 @@ import { ChampionPoolEditor } from "@/components/ChampionPoolEditor";
 import { PlayerTierEditor } from "@/components/PlayerTierEditor";
 
 interface RankWorkspaceProps {
-  userId: string;
+  userId: string | null;
   initialAuthorName: string;
   initialAuthorAvatarUrl?: string | null;
   discordDefaultName: string;
@@ -33,6 +35,7 @@ interface RankWorkspaceProps {
   initialSeasonSlug?: string;
   initialDivisionSlug?: string;
   initialEditionSlug?: string;
+  requireAllowlist?: boolean;
 }
 
 export function RankWorkspace({
@@ -50,6 +53,7 @@ export function RankWorkspace({
   initialSeasonSlug,
   initialDivisionSlug,
   initialEditionSlug,
+  requireAllowlist = false,
 }: RankWorkspaceProps) {
   const [rankingType, setRankingType] = useState<RankingType>(initialType);
   const router = useRouter();
@@ -171,7 +175,28 @@ export function RankWorkspace({
         </button>
       </div>
 
-      {rankingType === "team" ? (
+      {rankingType === "champion_pool" ? (
+        <ChampionPoolEditor
+          userId={userId}
+          authorName={initialAuthorName || discordDefaultName}
+          authorAvatarUrl={initialAuthorAvatarUrl}
+          discordDefaultName={discordDefaultName}
+        />
+      ) : !userId ? (
+        <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
+          <div className="py-8 px-4 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
+              <Lock className="w-6 h-6 text-[#f0c020]" />
+            </div>
+            <h1 className="text-lg font-bold text-[#f0ede0]">
+              Sign in with Discord to Create Rankings
+            </h1>
+            <div className="flex justify-center">
+              <AuthButton user={null} requireAllowlist={requireAllowlist} />
+            </div>
+          </div>
+        </RetroWindow>
+      ) : rankingType === "team" ? (
         <BallotEditor
           userId={userId}
           initialAuthorName={initialAuthorName}
@@ -186,13 +211,6 @@ export function RankWorkspace({
             initialDivisionSlug === "all" ? undefined : initialDivisionSlug
           }
           initialEditionSlug={initialEditionSlug}
-        />
-      ) : rankingType === "champion_pool" ? (
-        <ChampionPoolEditor
-          userId={userId}
-          authorName={initialAuthorName || discordDefaultName}
-          authorAvatarUrl={initialAuthorAvatarUrl}
-          discordDefaultName={discordDefaultName}
         />
       ) : (
         <PlayerTierEditor

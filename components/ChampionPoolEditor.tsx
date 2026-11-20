@@ -66,11 +66,13 @@ import {
 import { RetroWindow } from "@/components/RetroWindow";
 
 interface ChampionPoolEditorProps {
-  userId: string;
+  userId: string | null;
   authorName?: string;
   authorAvatarUrl?: string | null;
   discordDefaultName?: string;
 }
+
+const ANON_POOL_STORAGE_KEY = "rankr_anon_champ_pool_v1";
 
 interface DragChampMeta {
   source: "pool" | string; // "pool" or tier.id
@@ -540,6 +542,7 @@ export function ChampionPoolEditor({
   discordDefaultName = "",
 }: ChampionPoolEditorProps) {
   const supabase = useMemo(() => createClient(), []);
+  const storageUserKey = userId ?? "anon";
 
   // Catalog state
   const [catalog, setCatalog] = useState<ChampionCatalogResponse | null>(null);
@@ -636,11 +639,23 @@ export function ChampionPoolEditor({
             if (!r.ok) throw new Error(`Catalog error (${r.status})`);
             return (await r.json()) as ChampionCatalogResponse;
           }),
-          supabase
-            .from("champion_pools")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle(),
+          userId
+            ? supabase
+                .from("champion_pools")
+                .select("*")
+                .eq("user_id", userId)
+                .maybeSingle()
+            : Promise.resolve({
+                data: (() => {
+                  try {
+                    const raw = window.localStorage.getItem(ANON_POOL_STORAGE_KEY);
+                    return raw ? (JSON.parse(raw) as EncryptedChampionPoolRecord) : null;
+                  } catch {
+                    return null;
+                  }
+                })(),
+                error: null,
+              }),
         ]);
 
         if (cancelled) return;
@@ -653,7 +668,7 @@ export function ChampionPoolEditor({
           setExistingRecord(rec);
 
           // Try auto-unlock if passphrase is remembered in browser storage
-          const stored = getStoredPassphrase(userId);
+          const stored = getStoredPassphrase(storageUserKey);
           if (stored.passphrase) {
             try {
               const decrypted = await decryptPoolPayload(
@@ -678,7 +693,7 @@ export function ChampionPoolEditor({
               }
               setUnlocked(true);
             } catch {
-              clearStoredPassphrase(userId);
+              clearStoredPassphrase(storageUserKey);
             }
           }
         }
@@ -699,7 +714,7 @@ export function ChampionPoolEditor({
     return () => {
       cancelled = true;
     };
-  }, [supabase, userId]);
+  }, [supabase, userId, storageUserKey]);
 
   const iconMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -791,23 +806,41 @@ export function ChampionPoolEditor({
     try {
       setSaving(true);
       const encrypted = await encryptPoolPayload(initialPayload, passInput);
-      const { data, error } = await supabase
-        .from("champion_pools")
-        .upsert(
-          {
-            user_id: userId,
-            ...encrypted,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        )
-        .select("*")
-        .single();
+      const nowIso = new Date().toISOString();
+      let savedRec: EncryptedChampionPoolRecord;
 
-      if (error) throw error;
+      if (userId) {
+        const { data, error } = await supabase
+          .from("champion_pools")
+          .upsert(
+            {
+              user_id: userId,
+              ...encrypted,
+              updated_at: nowIso,
+            },
+            { onConflict: "user_id" }
+          )
+          .select("*")
+          .single();
 
-      storePassphrase(userId, passInput, rememberBrowser);
-      setExistingRecord(data as EncryptedChampionPoolRecord);
+        if (error) throw error;
+        savedRec = data as EncryptedChampionPoolRecord;
+      } else {
+        savedRec = {
+          id: "anon",
+          user_id: "anon",
+          ...encrypted,
+          created_at: nowIso,
+          updated_at: nowIso,
+        };
+        window.localStorage.setItem(
+          ANON_POOL_STORAGE_KEY,
+          JSON.stringify(savedRec)
+        );
+      }
+
+      storePassphrase(storageUserKey, passInput, rememberBrowser);
+      setExistingRecord(savedRec);
       setPool(initialPayload);
       setActiveRole(startingRole);
       setActivePassphrase(passInput);
@@ -831,7 +864,7 @@ export function ChampionPoolEditor({
 
     try {
       const decrypted = await decryptPoolPayload(existingRecord, passInput);
-      storePassphrase(userId, passInput, rememberBrowser);
+      storePassphrase(storageUserKey, passInput, rememberBrowser);
       setPool(decrypted);
       setActivePassphrase(passInput);
       setPassInput("");
@@ -854,12 +887,16 @@ export function ChampionPoolEditor({
   async function handleResetEncryptedPool() {
     setAuthError(null);
     try {
-      const { error } = await supabase
-        .from("champion_pools")
-        .delete()
-        .eq("user_id", userId);
-      if (error) throw error;
-      clearStoredPassphrase(userId);
+      if (userId) {
+        const { error } = await supabase
+          .from("champion_pools")
+          .delete()
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        window.localStorage.removeItem(ANON_POOL_STORAGE_KEY);
+      }
+      clearStoredPassphrase(storageUserKey);
       setExistingRecord(null);
       setActivePassphrase("");
       setUnlocked(false);
@@ -873,7 +910,7 @@ export function ChampionPoolEditor({
   }
 
   function handleLockPool() {
-    clearStoredPassphrase(userId);
+    clearStoredPassphrase(storageUserKey);
     setActivePassphrase("");
     setUnlocked(false);
     setPool({ version: 1, title: "My Champion Pool", roles: {} });
@@ -887,7 +924,7 @@ export function ChampionPoolEditor({
     try {
       const resolvedAuthor =
         customAuthorInput.trim() || discordDefaultName || savedAuthorName;
-      if (resolvedAuthor && resolvedAuthor !== savedAuthorName) {
+      if (userId && resolvedAuthor && resolvedAuthor !== savedAuthorName) {
         const { error: profileErr } = await supabase
           .from("profiles")
           .update({ username: resolvedAuthor })
@@ -898,21 +935,39 @@ export function ChampionPoolEditor({
       }
 
       const encrypted = await encryptPoolPayload(pool, passToUse);
-      const { data, error } = await supabase
-        .from("champion_pools")
-        .upsert(
-          {
-            user_id: userId,
-            ...encrypted,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        )
-        .select("*")
-        .single();
+      const nowIso = new Date().toISOString();
+      let savedRec: EncryptedChampionPoolRecord;
 
-      if (error) throw error;
-      setExistingRecord(data as EncryptedChampionPoolRecord);
+      if (userId) {
+        const { data, error } = await supabase
+          .from("champion_pools")
+          .upsert(
+            {
+              user_id: userId,
+              ...encrypted,
+              updated_at: nowIso,
+            },
+            { onConflict: "user_id" }
+          )
+          .select("*")
+          .single();
+
+        if (error) throw error;
+        savedRec = data as EncryptedChampionPoolRecord;
+      } else {
+        savedRec = {
+          id: "anon",
+          user_id: "anon",
+          ...encrypted,
+          created_at: existingRecord?.created_at ?? nowIso,
+          updated_at: nowIso,
+        };
+        window.localStorage.setItem(
+          ANON_POOL_STORAGE_KEY,
+          JSON.stringify(savedRec)
+        );
+      }
+      setExistingRecord(savedRec);
       setDirty(false);
       setSaveMessage("Encrypted & saved privately");
     } catch (err) {
@@ -936,7 +991,7 @@ export function ChampionPoolEditor({
       return;
     }
     setActivePassphrase(newPassInput);
-    storePassphrase(userId, newPassInput, rememberBrowser);
+    storePassphrase(storageUserKey, newPassInput, rememberBrowser);
     await savePoolWithPassphrase(newPassInput);
     setNewPassInput("");
     setNewPassConfirm("");
