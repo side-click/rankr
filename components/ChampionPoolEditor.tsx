@@ -459,7 +459,7 @@ function DroppableTierRow({
             {/* Isolated Blindable Section at Front of Tier */}
             <div
               ref={setBlindRef}
-              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r border-[#2f6343]/80 transition-colors flex flex-col ${
+              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r-2 border-[#3f8559] transition-colors flex flex-col ${
                 isOverBlind
                   ? "bg-[#2f6343]/25 ring-1 ring-inset ring-[#7cd438]/50"
                   : "bg-[#0f1a14]/70"
@@ -491,9 +491,7 @@ function DroppableTierRow({
                   : ""
               }`}
             >
-              <div className="flex items-center gap-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8e93a0]">
-                <span>General ({generalChamps.length})</span>
-              </div>
+              <div className="h-[14px] mb-1.5" aria-hidden="true" />
               <div className="flex flex-wrap gap-2 items-start min-h-[80px]">
                 {generalChamps.map((champ) => (
                   <DraggablePlacedChampion
@@ -2200,7 +2198,10 @@ export function ChampionPoolEditor({
 
         {/* Off-screen Single-Role PNG Export Card */}
         <div className="fixed -left-[9999px] top-0 pointer-events-none">
-          <div ref={exportCardRef} className="w-[1080px] p-2.5">
+          <div
+            ref={exportCardRef}
+            className="min-w-[640px] max-w-[1080px] w-fit p-2.5"
+          >
             <div
               style={{ borderRadius: "44px", borderColor: "#5c6662" }}
               className="w-full p-6 bg-[#0e1117] text-[#f0ede0] border-[6px] overflow-hidden space-y-4"
@@ -2263,9 +2264,10 @@ export function ChampionPoolEditor({
                     <div className="flex-1 flex flex-col">
                       <div className="flex-1 flex items-stretch">
                         {blindChamps.length > 0 && (
-                          <div className="p-2.5 bg-[#0f1a14] border-r border-[#2f6343]/80 flex flex-col gap-1.5 shrink-0">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#9ec497] leading-none">
-                              Blindable
+                          <div className="p-2.5 bg-[#0f1a14] border-r-2 border-[#3f8559] flex flex-col gap-1.5 shrink-0">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#9ec497] leading-none h-3">
+                              <EyeClosed className="w-3 h-3" />
+                              <span>Blindable</span>
                             </span>
                             <div className="flex flex-wrap gap-2 items-start">
                               {blindChamps.map((c) => (
@@ -2298,9 +2300,9 @@ export function ChampionPoolEditor({
                           </div>
                         )}
                         <div className="flex-1 p-2.5 flex flex-col gap-1.5">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-[#8e93a0] leading-none">
-                            General
-                          </span>
+                          {blindChamps.length > 0 && (
+                            <span className="h-3" aria-hidden="true" />
+                          )}
                           <div className="flex flex-wrap gap-2 items-start">
                             {tier.champions.length === 0 ? (
                               <span className="text-xs text-[#5d626d] italic">
