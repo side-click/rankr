@@ -601,6 +601,7 @@ export function ChampionPoolEditor({
   );
   const [showCustomAuthor, setShowCustomAuthor] = useState(false);
   const [showCustomTitle, setShowCustomTitle] = useState(false);
+  const [showGeneralNotes, setShowGeneralNotes] = useState(false);
 
   // Picker filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -1531,6 +1532,7 @@ export function ChampionPoolEditor({
                 onClick={() => {
                   setShowCustomTitle((prev) => !prev);
                   setShowCustomAuthor(false);
+                  setShowGeneralNotes(false);
                 }}
                 className="xp-btn text-xs"
               >
@@ -1568,6 +1570,58 @@ export function ChampionPoolEditor({
                   />
                   <div className="text-[10px] text-[#a6a89e]">
                     Leave blank for default &quot;{defaultRoleTitle}&quot;
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGeneralNotes((prev) => !prev);
+                  setShowCustomAuthor(false);
+                  setShowCustomTitle(false);
+                }}
+                className="xp-btn text-xs"
+              >
+                {(pool.generalNotes ?? "").trim()
+                  ? "General Notes (Added)"
+                  : "+ Add General Notes"}
+              </button>
+
+              {showGeneralNotes && (
+                <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-96 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-[#c7c5b8]">
+                      General Notes
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowGeneralNotes(false)}
+                      className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={pool.generalNotes ?? ""}
+                    onChange={(e) => {
+                      setPool((prev) => ({
+                        ...prev,
+                        generalNotes: e.target.value,
+                      }));
+                      setDirty(true);
+                      setSaveMessage(null);
+                    }}
+                    maxLength={125}
+                    placeholder="Short general note for this champion pool..."
+                    className="w-full xp-inset px-2.5 py-1.5 text-xs resize-none"
+                  />
+                  <div className="text-[10px] text-[#a6a89e] text-right">
+                    {(pool.generalNotes ?? "").length}/125
                   </div>
                 </div>
               )}
@@ -2049,9 +2103,11 @@ export function ChampionPoolEditor({
                   <h2 className="text-xl font-black text-[#f0c020]">
                     {effectiveTitle}
                   </h2>
-                  <p className="text-xs text-[#a6a89e] font-bold uppercase tracking-wider">
-                    {roleLaneLabel}
-                  </p>
+                  {(pool.generalNotes ?? "").trim() && (
+                    <p className="text-xs text-[#d6d3c4] mt-0.5 max-w-xl">
+                      {(pool.generalNotes ?? "").trim()}
+                    </p>
+                  )}
                 </div>
               </div>
               {showAuthorInExport && displayAuthorName && (
@@ -2076,6 +2132,9 @@ export function ChampionPoolEditor({
                 const contrast = getTierContrastText(tier.color);
                 const blindChamps = tier.champions.filter((c) => c.isBlindable);
                 const genChamps = tier.champions.filter((c) => !c.isBlindable);
+                const tLen = (tier.label || "").trim().length;
+                const exportLabelSize =
+                  tLen <= 6 ? "text-3xl" : tLen <= 18 ? "text-2xl" : "text-sm";
 
                 return (
                   <div
@@ -2083,7 +2142,7 @@ export function ChampionPoolEditor({
                     className="flex rounded-lg border border-white/10 bg-[#141820] overflow-hidden"
                   >
                     <div
-                      className="w-28 shrink-0 p-3 flex items-center justify-center text-center font-black text-sm"
+                      className={`w-32 shrink-0 p-3 flex items-center justify-center text-center font-black leading-tight break-words ${exportLabelSize}`}
                       style={{ backgroundColor: tier.color, color: contrast }}
                     >
                       {tier.label}
@@ -2092,27 +2151,27 @@ export function ChampionPoolEditor({
                       <div className="flex-1 flex items-stretch">
                         {blindChamps.length > 0 && (
                           <div className="p-2.5 bg-[#0f1a14] border-r border-[#2f6343]/80 flex flex-col gap-1.5 shrink-0">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#9ec497]">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#9ec497] leading-none">
                               Blindable
                             </span>
-                            <div className="flex flex-wrap gap-2 items-center">
+                            <div className="flex flex-wrap gap-2 items-start">
                               {blindChamps.map((c) => (
                                 <div
                                   key={c.championId}
-                                  className="flex flex-col items-center w-[74px] h-[76px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
+                                  className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#14221a] border border-[#2f6343]"
                                 >
                                   <img
                                     src={iconMap.get(c.championId) ?? ""}
                                     alt={c.name}
-                                    width={44}
-                                    height={44}
+                                    width={48}
+                                    height={48}
                                     crossOrigin="anonymous"
-                                    className="w-11 h-11 rounded object-cover"
+                                    className="w-12 h-12 rounded object-cover"
                                   />
                                   <span
                                     className={`mt-1 ${
                                       c.name.length > 13
-                                        ? "text-[8.5px]"
+                                        ? "text-[8px] tracking-tighter"
                                         : c.name.length > 11
                                         ? "text-[9px]"
                                         : "text-[10px]"
@@ -2125,31 +2184,44 @@ export function ChampionPoolEditor({
                             </div>
                           </div>
                         )}
-                        <div className="flex-1 p-2.5 flex flex-wrap gap-2 items-center">
-                          {tier.champions.length === 0 ? (
-                            <span className="text-xs text-[#5d626d] italic">
-                              Empty
-                            </span>
-                          ) : genChamps.length === 0 ? null : (
-                            genChamps.map((c) => (
-                              <div
-                                key={c.championId}
-                                className="flex flex-col items-center w-[74px] h-[86px] p-1 rounded bg-[#1b202b] border border-white/10"
-                              >
-                                <img
-                                  src={iconMap.get(c.championId) ?? ""}
-                                  alt={c.name}
-                                  width={44}
-                                  height={44}
-                                  crossOrigin="anonymous"
-                                  className="w-11 h-11 rounded object-cover"
-                                />
-                                <span className="mt-1 text-[10px] font-bold text-center leading-tight line-clamp-2">
-                                  {c.name}
-                                </span>
-                              </div>
-                            ))
-                          )}
+                        <div className="flex-1 p-2.5 flex flex-col gap-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-[#8e93a0] leading-none">
+                            General
+                          </span>
+                          <div className="flex flex-wrap gap-2 items-start">
+                            {tier.champions.length === 0 ? (
+                              <span className="text-xs text-[#5d626d] italic">
+                                Empty
+                              </span>
+                            ) : genChamps.length === 0 ? null : (
+                              genChamps.map((c) => (
+                                <div
+                                  key={c.championId}
+                                  className="flex flex-col items-center w-[76px] h-[78px] p-1.5 rounded bg-[#1b202b] border border-white/10"
+                                >
+                                  <img
+                                    src={iconMap.get(c.championId) ?? ""}
+                                    alt={c.name}
+                                    width={48}
+                                    height={48}
+                                    crossOrigin="anonymous"
+                                    className="w-12 h-12 rounded object-cover"
+                                  />
+                                  <span
+                                    className={`mt-1 ${
+                                      c.name.length > 13
+                                        ? "text-[8px] tracking-tighter"
+                                        : c.name.length > 11
+                                        ? "text-[9px]"
+                                        : "text-[10px]"
+                                    } font-bold text-center leading-tight whitespace-nowrap truncate w-full`}
+                                  >
+                                    {c.name}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
                       </div>
                       {tier.commentary.trim() && (

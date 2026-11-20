@@ -219,6 +219,7 @@ export interface ChampionRoleSection {
 export interface ChampionPoolPayload {
   version: 1;
   title: string;
+  generalNotes?: string;
   roles: Partial<Record<LeagueRole, ChampionRoleSection>>;
 }
 
