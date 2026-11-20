@@ -1948,15 +1948,6 @@ export function PlayerTierEditor({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleRandomizeTiers}
-                  className="xp-btn text-[11px] order-1 sm:order-2"
-                  title="Randomly distribute all players across tiers"
-                >
-                  <Dices className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <span>Randomize</span>
-                </button>
               </div>
             )}
           </div>
