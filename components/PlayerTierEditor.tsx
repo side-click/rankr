@@ -1940,7 +1940,7 @@ export function PlayerTierEditor({
                   <button
                     type="button"
                     onClick={handleResetPlacements}
-                    className="xp-btn text-[11px] order-2 sm:order-1"
+                    className="xp-btn xp-btn-danger text-[11px] order-2 sm:order-1"
                     title="Move all placed players back to pool"
                   >
                     <RotateCcw className="w-3 h-3" />
