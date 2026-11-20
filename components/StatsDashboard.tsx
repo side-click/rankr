@@ -1206,7 +1206,7 @@ export function StatsDashboard({
             },
             {
               key: "division",
-              label: "Division",
+              label: "General",
               icon: <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 shrink-0" />,
             },
           ] as const

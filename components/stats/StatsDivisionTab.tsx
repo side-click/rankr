@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   Activity,
   BarChart3,
@@ -366,12 +367,13 @@ export function StatsDivisionTab({
           <div className="p-3">
             <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
               {overview.champs.slice(0, 36).map((c) => (
-                <div
+                <Link
                   key={c.name}
+                  href={`/stats/champion/${encodeURIComponent(c.name)}`}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
                     0
                   )}% WR)`}
-                  className="rounded border border-white/15 bg-[#121615] overflow-hidden flex flex-col"
+                  className="rounded border border-white/15 bg-[#121615] hover:border-[#f0c020]/70 transition overflow-hidden flex flex-col"
                 >
                   <img
                     src={getChampionIconUrl(c.name, ddVersion)}
@@ -388,7 +390,7 @@ export function StatsDivisionTab({
                       {c.winRate.toFixed(0)}%
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
             {overview.bannedChamps.length > 0 && (
@@ -403,12 +405,13 @@ export function StatsDivisionTab({
                 </div>
                 <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
                   {overview.bannedChamps.slice(0, 12).map((b) => (
-                    <div
+                    <Link
                       key={b.name}
+                      href={`/stats/champion/${encodeURIComponent(b.name)}`}
                       title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
                         0
                       )}% ban rate)`}
-                      className="bg-black/40 border border-white/10 rounded overflow-hidden"
+                      className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden block"
                     >
                       <img
                         src={getChampionIconUrl(b.name, ddVersion)}
@@ -421,7 +424,7 @@ export function StatsDivisionTab({
                           {b.banRate.toFixed(0)}%
                         </span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

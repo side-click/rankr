@@ -147,12 +147,10 @@ function ChampionTileVisual({
       className={`group relative flex flex-col items-center w-[76px] h-[78px] ${
         iconsOnly ? "p-0" : "p-1.5"
       } rounded border select-none transition-colors ${
-        isOverlay
-          ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
-          : champion.isBlindable
-          ? "bg-[#14221a] border-[#2f6343] text-[#f0ede0] hover:border-[#7cd438] cursor-grab"
-          : "bg-[#1a1f29] border-white/15 text-[#f0ede0] hover:border-[#f0c020]/60 cursor-grab"
-      }`}
+        champion.isBlindable
+          ? "bg-[#14221a] border-[#2f6343] text-[#f0ede0] hover:border-[#7cd438]"
+          : "bg-[#1a1f29] border-white/15 text-[#f0ede0] hover:border-[#f0c020]/60"
+      } ${isOverlay ? "shadow-2xl cursor-grabbing" : "cursor-grab"}`}
     >
       {showRemoveButton && onRemove && (
         <button
@@ -307,8 +305,10 @@ function GapDropSlot({
 
 function DraggablePoolChampion({
   champion,
+  iconsOnly,
 }: {
   champion: ChampionCatalogItem;
+  iconsOnly?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool:${champion.id}`,
@@ -328,6 +328,7 @@ function DraggablePoolChampion({
       <ChampionTileVisual
         champion={{ championId: champion.id, name: champion.name }}
         iconUrl={champion.iconUrl}
+        iconsOnly={iconsOnly}
       />
     </div>
   );
@@ -720,7 +721,7 @@ export function ChampionPoolEditor({
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const [showAuthorInExport, setShowAuthorInExport] = useState(true);
-  const [iconsOnlyExport, setIconsOnlyExport] = useState(false);
+  const [hideNames, setHideNames] = useState(true);
 
   // Retro confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -2002,11 +2003,11 @@ export function ChampionPoolEditor({
           </button>
           <button
             type="button"
-            onClick={() => setIconsOnlyExport((v) => !v)}
-            title="Toggle champion names on exported PNG"
-            className="xp-btn text-xs w-[116px] justify-center"
+            onClick={() => setHideNames((v) => !v)}
+            title="Toggle champion names on tiles and exported PNG"
+            className="xp-btn text-xs w-[158px] whitespace-nowrap justify-center"
           >
-            <span>{iconsOnlyExport ? "Icons Only: On" : "Icons Only: Off"}</span>
+            <span>{hideNames ? "Show Champion Names" : "Hide Champion Names"}</span>
           </button>
           <button
             type="button"
@@ -2122,7 +2123,7 @@ export function ChampionPoolEditor({
                 onHoverStart={handleChampHoverStart}
                 onHoverEnd={handleChampHoverEnd}
                 activeGapId={activeGapId}
-                iconsOnly={iconsOnlyExport}
+                iconsOnly={hideNames}
               />
             ))}
           </div>
@@ -2194,6 +2195,7 @@ export function ChampionPoolEditor({
                   <DraggablePoolChampion
                     key={champ.id}
                     champion={champ}
+                    iconsOnly={hideNames}
                   />
                 ))
               )}
@@ -2208,7 +2210,7 @@ export function ChampionPoolEditor({
                     champion={activeDragChamp}
                     iconUrl={iconMap.get(activeDragChamp.championId) ?? ""}
                     isOverlay
-                    iconsOnly={iconsOnlyExport}
+                    iconsOnly={hideNames}
                   />
                 ) : null}
               </DragOverlay>,
@@ -2441,7 +2443,7 @@ export function ChampionPoolEditor({
                               }}
                             >
                               {blindChamps.map((c) =>
-                                iconsOnlyExport ? (
+                                hideNames ? (
                                   <div
                                     key={c.championId}
                                     className="w-[76px] h-[78px] rounded overflow-hidden border border-[#2f6343] bg-[#14221a]"
@@ -2508,7 +2510,7 @@ export function ChampionPoolEditor({
                               </span>
                             ) : genChamps.length === 0 ? null : (
                               genChamps.map((c) =>
-                                iconsOnlyExport ? (
+                                hideNames ? (
                                   <div
                                     key={c.championId}
                                     className="w-[76px] h-[78px] rounded overflow-hidden border border-white/15 bg-[#1b202b]"

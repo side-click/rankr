@@ -95,6 +95,7 @@ export interface HomeConsensusSnapshot {
   topTeams: {
     rank: number;
     teamName: string;
+    teamId: string | null;
     teamLogoUrl: string | null;
     averageRank: number;
   }[];
@@ -253,6 +254,7 @@ export async function loadHomeData(
           topTeams: res.rows.slice(0, 3).map((r) => ({
             rank: r.consensusRank,
             teamName: r.teamName,
+            teamId: r.teamKey.startsWith("name:") ? null : r.teamKey,
             teamLogoUrl: r.logoUrl,
             averageRank: r.averageRank,
           })),

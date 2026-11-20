@@ -346,16 +346,37 @@ export function HomeView({ data }: { data: HomeData }) {
                               {t.rank}
                             </span>
                           </div>
-                          {t.teamLogoUrl && (
-                            <img
-                              src={t.teamLogoUrl}
-                              alt={t.teamName}
-                              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
-                            />
+                          {t.teamId ? (
+                            <Link
+                              href={`/stats/team/${encodeURIComponent(t.teamId)}`}
+                              className="flex items-center gap-3 min-w-0 group"
+                              title={`View ${t.teamName} stats`}
+                            >
+                              {t.teamLogoUrl && (
+                                <img
+                                  src={t.teamLogoUrl}
+                                  alt={t.teamName}
+                                  className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+                                />
+                              )}
+                              <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-[#f0c020] transition-colors truncate">
+                                {t.teamName}
+                              </span>
+                            </Link>
+                          ) : (
+                            <>
+                              {t.teamLogoUrl && (
+                                <img
+                                  src={t.teamLogoUrl}
+                                  alt={t.teamName}
+                                  className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+                                />
+                              )}
+                              <span className="text-sm sm:text-base font-extrabold text-white truncate">
+                                {t.teamName}
+                              </span>
+                            </>
                           )}
-                          <span className="text-sm sm:text-base font-extrabold text-white truncate">
-                            {t.teamName}
-                          </span>
                         </div>
                         <span className="px-2.5 py-1 rounded-lg bg-black/45 border border-white/15 text-sm font-bold text-[#f0ede0] tabular-nums shrink-0">
                           {t.averageRank.toFixed(2)}{" "}
