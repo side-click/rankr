@@ -1531,16 +1531,6 @@ export function ChampionPoolEditor({
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stayUnlocked}
-                  onChange={(e) => setStayUnlocked(e.target.checked)}
-                  className="accent-[#f0c020]"
-                />
-                Stay unlocked on this browser
-              </label>
-
               <button
                 type="submit"
                 className="w-full xp-btn xp-btn-primary py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
@@ -1646,16 +1636,6 @@ export function ChampionPoolEditor({
                   className="w-full bg-[#0f131a] border border-white/15 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#f0c020]"
                 />
               </div>
-
-              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stayUnlocked}
-                  onChange={(e) => setStayUnlocked(e.target.checked)}
-                  className="accent-[#f0c020]"
-                />
-                Stay unlocked on this browser
-              </label>
 
               <button
                 type="submit"
@@ -1865,16 +1845,6 @@ export function ChampionPoolEditor({
               className="xp-btn text-xs"
             >
               <KeyRound className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLockPool}
-              title="Lock pool"
-              className="xp-btn text-xs"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Lock
             </button>
           </div>
         </div>
