@@ -103,6 +103,7 @@ export function computeChampionStats(
     : ctx.teams;
 
   const seenGameIds = new Set<string>();
+  const seenTeamGames = new Set<string>();
   let totalLeagueGames = 0;
   let bans = 0;
   let firstPickCount = 0;
@@ -142,8 +143,8 @@ export function computeChampionStats(
   for (const team of teams) {
     for (const player of team.players ?? []) {
       for (const m of player.matches ?? []) {
-        const gameId = m.matchId;
-        if (!gameId) continue;
+        if (!m.matchId || !m.matchId.startsWith("SCDL_")) continue;
+        const gameId = m.matchId.replace(/^SCDL_/, "");
 
         if (!seenGameIds.has(gameId)) {
           seenGameIds.add(gameId);
@@ -164,7 +165,9 @@ export function computeChampionStats(
 
         const isBlue = m.teamId === 100;
         const draft = DRAFTS_BY_GAME_ID[gameId];
-        if (draft) {
+        const teamGameKey = `${gameId}:${team.teamId}`;
+        if (draft && !seenTeamGames.has(teamGameKey)) {
+          seenTeamGames.add(teamGameKey);
           const teamBans = isBlue ? draft.blueBans : draft.redBans;
           const entry = bannedByMap.get(team.teamId) ?? {
             teamId: team.teamId,
@@ -224,15 +227,20 @@ export function computeChampionStats(
         pStat.deaths += m.deaths;
         pStat.assists += m.assists;
         pStat.totalDpm += dpm;
+        pStat.totalDmgShare +=
+          m.teamDamage && m.teamDamage > 0
+            ? (m.totalDamageDealtToChampions / m.teamDamage) * 100
+            : 0;
         pStat.totalCsPerMin += csPerMin;
         playerMap.set(pKey, pStat);
 
         recentGames.push({
-          seriesKey: gameId,
+          seriesKey: m.matchLabel ?? gameId,
           gameId,
-          matchLabel: `${team.teamName} (${isBlue ? "Blue" : "Red"})`,
+          matchLabel: m.matchLabel ?? `${team.teamName} (${isBlue ? "Blue" : "Red"})`,
           division: team.divisionName,
-          date: m.gameCreation ? new Date(m.gameCreation).toISOString().slice(0, 10) : "",
+          // Sheet rows carry no date; gameCreation holds sheet row order (later = more recent)
+          date: String(m.gameCreation ?? 0).padStart(10, "0"),
           side: isBlue ? "Blue" : "Red",
           win: m.win,
           playerName: pStat.playerName,
