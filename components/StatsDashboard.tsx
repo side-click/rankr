@@ -2210,6 +2210,7 @@ export function StatsDashboard({
                       sortKey === "games" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("games")}
+                    title="Games Played"
                   >
                     Games
                   </th>
@@ -2227,6 +2228,7 @@ export function StatsDashboard({
                       sortKey === "kda" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("kda")}
+                    title="Kill / Death / Assist Ratio"
                   >
                     KDA
                   </th>
@@ -2235,6 +2237,7 @@ export function StatsDashboard({
                       sortKey === "dpm" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("dpm")}
+                    title="Damage to Champions / Min"
                   >
                     DPM
                   </th>
@@ -2243,6 +2246,7 @@ export function StatsDashboard({
                       sortKey === "gpm" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("gpm")}
+                    title="Gold Earned / Min"
                   >
                     GPM
                   </th>
@@ -2251,6 +2255,7 @@ export function StatsDashboard({
                       sortKey === "csPerMin" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("csPerMin")}
+                    title="Creep Score / Min"
                   >
                     CS/m
                   </th>
@@ -2259,6 +2264,7 @@ export function StatsDashboard({
                       sortKey === "kpPct" ? "text-[#f0c020]" : ""
                     }`}
                     onClick={() => handleSort("kpPct")}
+                    title="Kill Participation %"
                   >
                     KP%
                   </th>
@@ -2289,7 +2295,9 @@ export function StatsDashboard({
                   >
                     GD@15
                   </th>
-                  <th className="px-3 py-2">Top Champs</th>
+                  <th className="px-3 py-2" title="Most Played Champions">
+                    Top Champs
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">

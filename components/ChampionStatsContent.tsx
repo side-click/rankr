@@ -425,7 +425,10 @@ export function ChampionStatsContent({
                     <tr>
                       <th className="px-2 sm:px-3 py-2">Player</th>
                       <th className="px-2 sm:px-3 py-2">Team</th>
-                      <th className="px-1.5 sm:px-2.5 py-2 text-right">
+                      <th
+                        className="px-1.5 sm:px-2.5 py-2 text-right"
+                        title="Games Played"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("games")}
@@ -434,7 +437,10 @@ export function ChampionStatsContent({
                           G <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </th>
-                      <th className="px-1.5 sm:px-2.5 py-2 text-right">
+                      <th
+                        className="px-1.5 sm:px-2.5 py-2 text-right"
+                        title="Win Rate"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("winRate")}
@@ -443,7 +449,10 @@ export function ChampionStatsContent({
                           WR <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </th>
-                      <th className="px-1.5 sm:px-2.5 py-2 text-right">
+                      <th
+                        className="px-1.5 sm:px-2.5 py-2 text-right"
+                        title="Kill / Death / Assist Ratio"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("kda")}
@@ -452,7 +461,10 @@ export function ChampionStatsContent({
                           KDA <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </th>
-                      <th className="hidden sm:table-cell px-2.5 py-2 text-right">
+                      <th
+                        className="hidden sm:table-cell px-2.5 py-2 text-right"
+                        title="Damage to Champions / Min"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("dpm")}
@@ -461,7 +473,10 @@ export function ChampionStatsContent({
                           DPM <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </th>
-                      <th className="hidden sm:table-cell px-2.5 py-2 text-right">
+                      <th
+                        className="hidden sm:table-cell px-2.5 py-2 text-right"
+                        title="Team Damage Share %"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("damageShare")}
@@ -470,7 +485,10 @@ export function ChampionStatsContent({
                           DMG% <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </th>
-                      <th className="hidden md:table-cell px-2.5 py-2 text-right">
+                      <th
+                        className="hidden md:table-cell px-2.5 py-2 text-right"
+                        title="Creep Score / Min"
+                      >
                         <button
                           type="button"
                           onClick={() => handleSort("csPerMin")}

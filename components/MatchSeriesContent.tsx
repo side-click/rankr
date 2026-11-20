@@ -107,14 +107,42 @@ function SideBoxScore({
           <thead>
             <tr className="border-b border-[#252824] text-[11px] uppercase tracking-wider text-[#8e9286] whitespace-nowrap">
               <th className="py-2 px-2.5 text-left">Player</th>
-              <th className="py-2 px-2.5 text-center">K/D/A</th>
-              <th className="py-2 px-2.5 text-right">CS</th>
-              <th className="py-2 px-2.5 text-right">Gold</th>
-              <th className="py-2 px-2.5 text-right">DPM</th>
-              <th className="py-2 px-2.5 text-right">VS</th>
-              <th className="py-2 px-2.5 text-right">GD</th>
-              <th className="py-2 px-2.5 text-right">GD@15</th>
-              <th className="py-2 px-2.5 text-right">SK</th>
+              <th
+                className="py-2 px-2.5 text-center"
+                title="Kills / Deaths / Assists"
+              >
+                K/D/A
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Creep Score">
+                CS
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Total Gold Earned">
+                Gold
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Damage to Champions / Min"
+              >
+                DPM
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Vision Score">
+                VS
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Total Gold Diff vs Lane Opponent"
+              >
+                GD
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Gold Diff at 15 Minutes vs Lane Opponent"
+              >
+                GD@15
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Solo Kills">
+                SK
+              </th>
             </tr>
           </thead>
           <tbody>
