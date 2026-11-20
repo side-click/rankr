@@ -95,7 +95,7 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col antialiased">
         <NextTopLoader
           color="#f0c020"
-          height={4}
+          height={3}
           showSpinner={false}
           shadow="0 0 8px #f0c020, 0 0 4px #f0c020"
         />

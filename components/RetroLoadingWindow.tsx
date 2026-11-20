@@ -8,7 +8,7 @@ interface RetroLoadingWindowProps {
 
 export function RetroLoadingWindow({
   title = "Loading...",
-  label = "Fetching latest data...",
+  label = "Loading...",
   theme = "scdl",
 }: RetroLoadingWindowProps) {
   return (

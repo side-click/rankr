@@ -465,13 +465,7 @@ export function ConsensusRankingsView({
 
         {/* Outdated Fallback Notice */}
         {isPending && (
-          <div
-            className="fixed top-0 left-0 right-0 h-1 z-50 animate-pulse"
-            style={{
-              background:
-                "repeating-linear-gradient(90deg, #f0c020 0px, #f0c020 8px, #121615 8px, #121615 10px)",
-            }}
-          />
+          <div className="fixed top-0 left-0 right-0 h-[3px] bg-[#f0c020] shadow-[0_0_8px_#f0c020] z-50 animate-pulse" />
         )}
         <div
           className={`space-y-4 transition-opacity duration-150 ${
