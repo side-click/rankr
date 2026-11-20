@@ -305,6 +305,7 @@ function DroppableTierRow({
   onLabelChange,
   onColorChange,
   onCommentaryChange,
+  onInsertTier,
   onMoveTier,
   onDeleteTier,
   onRemoveChampion,
@@ -319,6 +320,7 @@ function DroppableTierRow({
   onLabelChange: (label: string) => void;
   onColorChange: (color: string) => void;
   onCommentaryChange: (text: string) => void;
+  onInsertTier: (pos: "above" | "below") => void;
   onMoveTier: (dir: -1 | 1) => void;
   onDeleteTier: () => void;
   onRemoveChampion: (championId: string) => void;
@@ -326,6 +328,8 @@ function DroppableTierRow({
   onHoverStart: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd: () => void;
 }) {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
   const { setNodeRef: setBlindRef, isOver: isOverBlind } = useDroppable({
     id: `tier-blind:${tier.id}`,
     data: {
@@ -351,54 +355,114 @@ function DroppableTierRow({
   return (
     <div className="rounded-lg border border-white/10 bg-[#12151c] overflow-hidden">
       <div className="flex flex-col sm:flex-row">
-        {/* Tier Label & Controls */}
+        {/* Tier Label & Controls (matches PlayerTierEditor) */}
         <div
-          className="sm:w-36 shrink-0 p-2.5 flex sm:flex-col items-center justify-between gap-2 border-b sm:border-b-0 sm:border-r border-black/30"
+          className="md:w-[152px] sm:w-36 shrink-0 p-2.5 flex flex-row sm:flex-col items-center justify-between gap-2 border-b sm:border-b-0 sm:border-r border-black/30"
           style={{ backgroundColor: tier.color, color: contrastColor }}
         >
-          <input
-            type="text"
-            value={tier.label}
-            onChange={(e) => onLabelChange(e.target.value)}
-            maxLength={24}
-            aria-label="Tier label"
-            className="w-full bg-black/20 border border-white/20 rounded px-2 py-1 text-center font-black text-sm focus:outline-none focus:border-white/60"
-            style={{ color: contrastColor }}
-          />
-          <div className="flex items-center gap-1 flex-wrap justify-center">
-            <input
-              type="color"
-              value={tier.color}
-              onChange={(e) => onColorChange(e.target.value)}
-              title="Tier color"
-              className="w-6 h-6 rounded border border-white/30 bg-transparent cursor-pointer p-0"
+          <div className="inline-grid items-center justify-items-center max-w-full">
+            <span
+              aria-hidden="true"
+              className="col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 font-black text-sm leading-tight text-center min-w-[2ch] max-w-[132px]"
+            >
+              {(tier.label || "Tier...") + "\u200b"}
+            </span>
+            <textarea
+              rows={1}
+              value={tier.label}
+              onChange={(e) =>
+                onLabelChange(e.target.value.replace(/\r?\n/g, " "))
+              }
+              maxLength={40}
+              placeholder="Tier..."
+              aria-label="Tier label"
+              style={{ color: contrastColor }}
+              className="col-start-1 row-start-1 w-full h-full min-w-0 resize-none overflow-hidden bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black text-sm leading-tight focus:outline-none placeholder:text-white/50"
             />
+          </div>
+
+          <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
             <button
               type="button"
-              onClick={() => onMoveTier(-1)}
+              onClick={() => setShowColorPicker((prev) => !prev)}
+              title="Change tier color"
+              style={{ backgroundColor: tier.color }}
+              className="w-6 h-6 rounded border-2 border-white/50 hover:border-white cursor-pointer shadow-xs"
+            />
+            {showColorPicker && (
+              <>
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setShowColorPicker(false)}
+                />
+                <div className="absolute left-0 top-7 z-30 p-2 rounded-md bg-[#181c24] border border-white/20 shadow-2xl grid grid-cols-5 gap-1.5 w-[154px]">
+                  {DEFAULT_TIER_COLORS.map((swatch) => (
+                    <button
+                      key={swatch}
+                      type="button"
+                      onClick={() => {
+                        onColorChange(swatch);
+                        setShowColorPicker(false);
+                      }}
+                      style={{ backgroundColor: swatch }}
+                      className={`w-6 h-6 rounded border cursor-pointer transition-transform hover:scale-110 ${
+                        tier.color.toLowerCase() === swatch.toLowerCase()
+                          ? "border-white ring-1 ring-white"
+                          : "border-black/50"
+                      }`}
+                      title={swatch}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Row 1 Col 2: Add tier above */}
+            <button
+              type="button"
+              onClick={() => onInsertTier("above")}
+              className="w-6 h-6 flex items-center justify-center rounded bg-black/25 hover:bg-black/45 text-white text-[10px] font-bold cursor-pointer"
+              title="Add tier above"
+            >
+              +↑
+            </button>
+            {/* Row 1 Col 3: Move tier up */}
+            <button
+              type="button"
               disabled={index === 0}
+              onClick={() => onMoveTier(-1)}
+              className="w-6 h-6 flex items-center justify-center rounded bg-black/25 hover:bg-black/45 text-white disabled:opacity-30 cursor-pointer"
               title="Move tier up"
-              className="p-1 rounded bg-black/25 hover:bg-black/40 disabled:opacity-30 cursor-pointer"
             >
-              <ArrowUp className="w-3.5 h-3.5" />
+              <ArrowUp className="w-3 h-3" />
             </button>
+            {/* Row 2 Col 1: Delete tier */}
             <button
               type="button"
-              onClick={() => onMoveTier(1)}
-              disabled={index === totalTiers - 1}
-              title="Move tier down"
-              className="p-1 rounded bg-black/25 hover:bg-black/40 disabled:opacity-30 cursor-pointer"
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={onDeleteTier}
               disabled={totalTiers <= 1}
+              onClick={onDeleteTier}
+              className="w-6 h-6 flex items-center justify-center rounded bg-black/30 hover:bg-[#9e2626] text-white disabled:opacity-30 cursor-pointer"
               title="Delete tier"
-              className="p-1 rounded bg-black/25 hover:bg-red-900/70 disabled:opacity-30 cursor-pointer"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-3 h-3" />
+            </button>
+            {/* Row 2 Col 2: Add tier below */}
+            <button
+              type="button"
+              onClick={() => onInsertTier("below")}
+              className="w-6 h-6 flex items-center justify-center rounded bg-black/25 hover:bg-black/45 text-white text-[10px] font-bold cursor-pointer"
+              title="Add tier below"
+            >
+              +↓
+            </button>
+            {/* Row 2 Col 3: Move tier down */}
+            <button
+              type="button"
+              disabled={index === totalTiers - 1}
+              onClick={() => onMoveTier(1)}
+              className="w-6 h-6 flex items-center justify-center rounded bg-black/25 hover:bg-black/45 text-white disabled:opacity-30 cursor-pointer"
+              title="Move tier down"
+            >
+              <ArrowDown className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -1552,6 +1616,24 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                       t.id === tier.id ? { ...t, commentary } : t
                     )
                   )
+                }
+                onInsertTier={(pos) =>
+                  updateActiveRoleTiers((tiers) => {
+                    const insertAt = pos === "above" ? idx : idx + 1;
+                    const newTier: ChampionTierRowData = {
+                      id: makeTierId(),
+                      label: "New Tier",
+                      color:
+                        DEFAULT_TIER_COLORS[
+                          tiers.length % DEFAULT_TIER_COLORS.length
+                        ],
+                      commentary: "",
+                      champions: [],
+                    };
+                    const copy = [...tiers];
+                    copy.splice(insertAt, 0, newTier);
+                    return copy;
+                  })
                 }
                 onMoveTier={(dir) =>
                   updateActiveRoleTiers((tiers) => {
