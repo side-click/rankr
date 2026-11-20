@@ -69,6 +69,7 @@ interface ChampionPoolEditorProps {
   userId: string;
   authorName?: string;
   authorAvatarUrl?: string | null;
+  discordDefaultName?: string;
 }
 
 interface DragChampMeta {
@@ -536,6 +537,7 @@ export function ChampionPoolEditor({
   userId,
   authorName,
   authorAvatarUrl,
+  discordDefaultName = "",
 }: ChampionPoolEditorProps) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -567,7 +569,7 @@ export function ChampionPoolEditor({
   // Pool editor state
   const [pool, setPool] = useState<ChampionPoolPayload>({
     version: 1,
-    title: "My Champion Pool",
+    title: "",
     roles: {},
   });
   const [activeRole, setActiveRole] = useState<LeagueRole>("mid");
@@ -575,6 +577,16 @@ export function ChampionPoolEditor({
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Custom Author & Custom Title popovers
+  const [customAuthorInput, setCustomAuthorInput] = useState(
+    authorName ?? discordDefaultName
+  );
+  const [savedAuthorName, setSavedAuthorName] = useState(
+    authorName ?? discordDefaultName
+  );
+  const [showCustomAuthor, setShowCustomAuthor] = useState(false);
+  const [showCustomTitle, setShowCustomTitle] = useState(false);
 
   // Picker filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -873,6 +885,18 @@ export function ChampionPoolEditor({
     setSaveError(null);
     setSaveMessage(null);
     try {
+      const resolvedAuthor =
+        customAuthorInput.trim() || discordDefaultName || savedAuthorName;
+      if (resolvedAuthor && resolvedAuthor !== savedAuthorName) {
+        const { error: profileErr } = await supabase
+          .from("profiles")
+          .update({ username: resolvedAuthor })
+          .eq("id", userId);
+        if (profileErr) throw new Error(profileErr.message);
+        setCustomAuthorInput(resolvedAuthor);
+        setSavedAuthorName(resolvedAuthor);
+      }
+
       const encrypted = await encryptPoolPayload(pool, passToUse);
       const { data, error } = await supabase
         .from("champion_pools")
@@ -1092,10 +1116,10 @@ export function ChampionPoolEditor({
         backgroundColor: "#0e1117",
       });
       const link = document.createElement("a");
-      const safeTitle = (pool.title || "champion-pool")
+      const safeTitle = effectiveTitle
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-");
-      link.download = `${safeTitle}-${activeRole}.png`;
+      link.download = `${safeTitle}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -1108,6 +1132,22 @@ export function ChampionPoolEditor({
   }
 
   const activeRoleMeta = getRoleMeta(activeRole);
+  const roleLaneLabel =
+    activeRole === "top"
+      ? "Top Lane"
+      : activeRole === "mid"
+      ? "Mid Lane"
+      : activeRole === "bot"
+      ? "Bot Lane"
+      : activeRoleMeta.label;
+  const defaultRoleTitle = `${roleLaneLabel} Pool`;
+  const customTitleValue =
+    pool.title.trim() && pool.title.trim() !== "My Champion Pool"
+      ? pool.title.trim()
+      : "";
+  const effectiveTitle = customTitleValue || defaultRoleTitle;
+  const displayAuthorName =
+    customAuthorInput.trim() || discordDefaultName || savedAuthorName;
 
   if (loadingRecord) {
     return (
@@ -1331,22 +1371,106 @@ export function ChampionPoolEditor({
       <div className="space-y-4">
         {/* Top Toolbar */}
         <div className="xp-inset rounded p-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[220px]">
-            <span className="text-xs font-bold text-[#a6a89e] shrink-0">
-              Title:
-            </span>
-            <input
-              type="text"
-              value={pool.title}
-              onChange={(e) => {
-                setPool((prev) => ({ ...prev, title: e.target.value }));
-                setDirty(true);
-                setSaveMessage(null);
-              }}
-              maxLength={60}
-              aria-label="Champion Pool Title"
-              className="bg-black/30 border border-white/15 rounded px-2.5 py-1.5 text-sm font-black text-[#f0ede0] focus:outline-none focus:border-[#f0c020] w-full max-w-xs"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomAuthor((prev) => !prev);
+                  setShowCustomTitle(false);
+                }}
+                className="xp-btn text-xs"
+              >
+                + Custom Author Name
+                {savedAuthorName ? ` (${savedAuthorName})` : ""}
+              </button>
+
+              {showCustomAuthor && (
+                <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-[#c7c5b8]">
+                      Custom Author Name
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomAuthor(false)}
+                      className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={customAuthorInput}
+                    onChange={(e) => {
+                      setCustomAuthorInput(e.target.value);
+                      setDirty(true);
+                      setSaveMessage(null);
+                    }}
+                    placeholder={
+                      discordDefaultName
+                        ? `Leave blank to reset to ${discordDefaultName}`
+                        : "Enter author name..."
+                    }
+                    className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                  />
+                  {discordDefaultName && (
+                    <div className="text-[10px] text-[#a6a89e]">
+                      Leave blank to reset to {discordDefaultName}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomTitle((prev) => !prev);
+                  setShowCustomAuthor(false);
+                }}
+                className="xp-btn text-xs"
+              >
+                {customTitleValue
+                  ? `Custom Title (${customTitleValue})`
+                  : "+ Custom Title"}
+              </button>
+
+              {showCustomTitle && (
+                <div className="absolute left-0 top-full mt-1.5 z-30 w-[calc(100vw-2.5rem)] max-w-sm sm:w-80 bg-[#1a201e] border border-[#4a5650] rounded-md shadow-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-[#c7c5b8]">
+                      Custom Title
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomTitle(false)}
+                      className="text-[#a6a89e] hover:text-white p-0.5 cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={customTitleValue}
+                    onChange={(e) => {
+                      setPool((prev) => ({ ...prev, title: e.target.value }));
+                      setDirty(true);
+                      setSaveMessage(null);
+                    }}
+                    maxLength={60}
+                    placeholder={`Leave blank for "${defaultRoleTitle}"`}
+                    className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                  />
+                  <div className="text-[10px] text-[#a6a89e]">
+                    Leave blank for default &quot;{defaultRoleTitle}&quot;
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1853,31 +1977,25 @@ export function ChampionPoolEditor({
                 />
                 <div>
                   <h2 className="text-xl font-black text-[#f0c020]">
-                    {pool.title || "My Champion Pool"}
+                    {effectiveTitle}
                   </h2>
                   <p className="text-xs text-[#a6a89e] font-bold uppercase tracking-wider">
-                    {activeRole === "top"
-                      ? "Top Lane"
-                      : activeRole === "mid"
-                      ? "Mid Lane"
-                      : activeRole === "bot"
-                      ? "Bot Lane"
-                      : activeRoleMeta.label}
+                    {roleLaneLabel}
                   </p>
                 </div>
               </div>
-              {showAuthorInExport && authorName && (
+              {showAuthorInExport && displayAuthorName && (
                 <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-lg border border-white/20 shrink-0">
                   {authorAvatarUrl && (
                     <img
                       src={authorAvatarUrl}
-                      alt={authorName}
+                      alt={displayAuthorName}
                       crossOrigin="anonymous"
                       className="w-10 h-10 rounded-md object-cover border border-white/50"
                     />
                   )}
                   <div className="text-lg font-extrabold text-white tracking-wide">
-                    {authorName}
+                    {displayAuthorName}
                   </div>
                 </div>
               )}

@@ -192,6 +192,7 @@ export function RankWorkspace({
           userId={userId}
           authorName={initialAuthorName || discordDefaultName}
           authorAvatarUrl={initialAuthorAvatarUrl}
+          discordDefaultName={discordDefaultName}
         />
       ) : (
         <PlayerTierEditor
