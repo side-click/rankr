@@ -593,6 +593,9 @@ export function ChampionPoolEditor({
   });
   const [activeRole, setActiveRole] = useState<LeagueRole>("mid");
   const [dirty, setDirty] = useState(false);
+  const [savedRolesJson, setSavedRolesJson] = useState<
+    Partial<Record<LeagueRole, string>>
+  >({});
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -708,6 +711,14 @@ export function ChampionPoolEditor({
               );
               if (cancelled) return;
               setPool(decrypted);
+              setSavedRolesJson(
+                Object.fromEntries(
+                  LEAGUE_ROLES.map((r) => [
+                    r.key,
+                    JSON.stringify(decrypted.roles[r.key] ?? null),
+                  ])
+                )
+              );
               setActivePassphrase(stored.passphrase);
               setStayUnlocked(true);
               const populatedRoles = LEAGUE_ROLES.map((r) => r.key).filter(
@@ -874,6 +885,14 @@ export function ChampionPoolEditor({
       }
       setExistingRecord(savedRec);
       setPool(initialPayload);
+      setSavedRolesJson(
+        Object.fromEntries(
+          LEAGUE_ROLES.map((r) => [
+            r.key,
+            JSON.stringify(initialPayload.roles[r.key] ?? null),
+          ])
+        )
+      );
       setActiveRole(startingRole);
       setActivePassphrase(passInput);
       setPassInput("");
@@ -902,6 +921,14 @@ export function ChampionPoolEditor({
         clearStoredPassphrase(storageUserKey);
       }
       setPool(decrypted);
+      setSavedRolesJson(
+        Object.fromEntries(
+          LEAGUE_ROLES.map((r) => [
+            r.key,
+            JSON.stringify(decrypted.roles[r.key] ?? null),
+          ])
+        )
+      );
       setActivePassphrase(passInput);
       setPassInput("");
       const populatedRoles = LEAGUE_ROLES.map((r) => r.key).filter((r) => {
@@ -1027,6 +1054,14 @@ export function ChampionPoolEditor({
         clearStoredPassphrase(storageUserKey);
       }
       setExistingRecord(savedRec);
+      setSavedRolesJson(
+        Object.fromEntries(
+          LEAGUE_ROLES.map((r) => [
+            r.key,
+            JSON.stringify(pool.roles[r.key] ?? null),
+          ])
+        )
+      );
       setDirty(false);
       const timeStr = new Date().toLocaleTimeString([], {
         hour: "numeric",
@@ -1695,6 +1730,9 @@ export function ChampionPoolEditor({
               const hasChamps = Boolean(
                 sec && sec.tiers.some((t) => t.champions.length > 0)
               );
+              const isRoleDirty =
+                JSON.stringify(sec ?? null) !==
+                (savedRolesJson[r.key] ?? "null");
               const isActive = activeRole === r.key;
 
               return (
@@ -1714,18 +1752,20 @@ export function ChampionPoolEditor({
                     className="w-4 h-4 shrink-0"
                   />
                   <span className="hidden sm:inline">{r.label}</span>
-                  {hasChamps &&
-                    (dirty ? (
-                      <span
-                        className="w-1.5 h-1.5 rounded-full bg-[#7cd438] shrink-0"
-                        title={`${r.label} has unsaved champions`}
-                      />
-                    ) : (
-                      <Check
-                        className="w-3 h-3 text-[#7cd438] shrink-0"
-                        aria-label={`${r.label} saved`}
-                      />
-                    ))}
+                  <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                    {hasChamps &&
+                      (isRoleDirty ? (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-[#7cd438]"
+                          title={`${r.label} has unsaved champions`}
+                        />
+                      ) : (
+                        <Check
+                          className="w-3 h-3 text-[#7cd438]"
+                          aria-label={`${r.label} saved`}
+                        />
+                      ))}
+                  </span>
                 </button>
               );
             })}
