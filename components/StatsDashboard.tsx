@@ -76,7 +76,7 @@ function CreepScoreIcon({ className }: { className?: string }) {
   );
 }
 
-interface AdminStatsDashboardProps {
+interface StatsDashboardProps {
   missingTable: boolean;
   hasRiotKey: boolean;
   ddVersion: string;
@@ -146,7 +146,7 @@ const DEFAULT_SHAREABLE_CARD_KEYS: string[] = [
   "Solo Kills",
 ];
 
-export function AdminStatsDashboard({
+export function StatsDashboard({
   missingTable,
   ddVersion,
   leagueName,
@@ -161,7 +161,7 @@ export function AdminStatsDashboard({
   initialDivision,
   initialTab,
   initialSheetData = null,
-}: AdminStatsDashboardProps) {
+}: StatsDashboardProps) {
   const router = useRouter();
   const basePath = isAdminView ? "/admin/stats" : "/stats";
   const [divisionFilter, setDivisionFilter] = useState<string>(() => {

@@ -25,7 +25,7 @@ export interface StatsContextQueryOptions {
   playerKeyFilter?: string;
 }
 
-export interface LoadedAdminStatsContext {
+export interface LoadedStatsContext {
   authorized: boolean;
   missingTable: boolean;
   hasRiotKey: boolean;
@@ -43,7 +43,7 @@ export interface LoadedAdminStatsContext {
 
 export async function loadAdminStatsContext(
   queryOpts?: StatsContextQueryOptions
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   const [auth, ddVersion] = await Promise.all([
     getServerAuthContext(),
     getLatestDdragonVersion(),
@@ -83,7 +83,7 @@ const loadCachedPublicStatsContext = unstable_cache(
     includeRiotStats: boolean,
     teamIdFilter: string | undefined,
     playerKeyFilter: string | undefined
-  ): Promise<LoadedAdminStatsContext> => {
+  ): Promise<LoadedStatsContext> => {
     const supabase = createPublicClient();
     const ddVersion = await getLatestDdragonVersion();
     return loadStatsContextInternal(
@@ -191,7 +191,7 @@ export async function loadPublicSoloPrioMap(
 export async function loadPublicStatsContext(
   seasonSlug?: string,
   queryOpts?: StatsContextQueryOptions
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   return loadCachedPublicStatsContext(
     seasonSlug,
     queryOpts?.includeRiotStats ?? true,
@@ -212,7 +212,7 @@ async function loadStatsContextInternal(
     teamIdFilter?: string;
     playerKeyFilter?: string;
   }
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   const {
     authorized,
     hasRiotKey,
@@ -436,7 +436,7 @@ export interface TeamScoutingPayload {
 }
 
 export async function loadTeamScoutingData(
-  ctx: LoadedAdminStatsContext,
+  ctx: LoadedStatsContext,
   teamId: string
 ): Promise<TeamScoutingPayload | null> {
   const team = ctx.teams.find((t) => t.teamId === teamId);

@@ -1024,7 +1024,7 @@ export function PlayerTierEditor({
 
       try {
         let query = supabase
-          .from("ballots")
+          .from("rankings")
           .select("*")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1492,7 +1492,7 @@ export function PlayerTierEditor({
 
       if (!skipOverwriteConfirm && !existingBallotId) {
         let checkQuery = supabase
-          .from("ballots")
+          .from("rankings")
           .select("id, status, tier_variant")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1580,7 +1580,7 @@ export function PlayerTierEditor({
       let targetBallotId = existingBallotId;
       if (!targetBallotId) {
         let lookup = supabase
-          .from("ballots")
+          .from("rankings")
           .select("id")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1599,13 +1599,13 @@ export function PlayerTierEditor({
 
       const ballotQuery = targetBallotId
         ? supabase
-            .from("ballots")
+            .from("rankings")
             .update(payload)
             .eq("id", targetBallotId)
             .select("id, status")
             .single()
         : supabase
-            .from("ballots")
+            .from("rankings")
             .insert(payload)
             .select("id, status")
             .single();
@@ -1622,7 +1622,7 @@ export function PlayerTierEditor({
         // Keep only one published player tier list per user/season/division/edition;
         // revert any other published variant for this scope back to a saved draft.
         let unpubQuery = supabase
-          .from("ballots")
+          .from("rankings")
           .update({ status: "draft", published_at: null })
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1720,12 +1720,12 @@ export function PlayerTierEditor({
                   const nextSeason = seasons.find((s) => s.id === newId);
                   if (nextSeason?.slug) {
                     router.replace(
-                      `/rank?type=player&season=${encodeURIComponent(
+                      `/create?type=player&season=${encodeURIComponent(
                         nextSeason.slug
                       )}`
                     );
                   } else {
-                    router.replace("/rank?type=player");
+                    router.replace("/create?type=player");
                   }
                 }}
                 className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
@@ -2085,7 +2085,7 @@ export function PlayerTierEditor({
           <div className="flex flex-wrap items-center gap-2">
             {existingBallotId && ballotStatus === "published" && (
               <Link
-                href={`/ballot/${existingBallotId}`}
+                href={`/tierlist/${existingBallotId}`}
                 className="xp-btn text-xs"
               >
                 <ExternalLink className="w-3.5 h-3.5" />

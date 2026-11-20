@@ -3,27 +3,27 @@
 import React, { useState } from "react";
 import { LayoutGrid, List } from "lucide-react";
 import {
-  BallotCard,
-  type BallotCardData,
-  type BallotCardLayout,
-} from "@/components/BallotCard";
+  ContentCard,
+  type ContentCardData,
+  type ContentCardLayout,
+} from "@/components/ContentCard";
 
-interface BallotListGridProps {
-  ballots: BallotCardData[];
-  defaultView?: BallotCardLayout;
+interface ContentListGridProps {
+  ballots: ContentCardData[];
+  defaultView?: ContentCardLayout;
   emptyMessage?: string;
   showCount?: boolean;
   headerLeft?: React.ReactNode;
 }
 
-export function BallotListGrid({
+export function ContentListGrid({
   ballots,
   defaultView = "grid",
   emptyMessage = "No published rankings match your filters.",
   showCount = false,
   headerLeft,
-}: BallotListGridProps) {
-  const [viewMode, setViewMode] = useState<BallotCardLayout>(defaultView);
+}: ContentListGridProps) {
+  const [viewMode, setViewMode] = useState<ContentCardLayout>(defaultView);
 
   if (ballots.length === 0) {
     return (
@@ -80,19 +80,19 @@ export function BallotListGrid({
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {ballots.map((b) => (
-            <BallotCard key={b.id} ballot={b} layout="grid" />
+            <ContentCard key={b.id} ballot={b} layout="grid" />
           ))}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 md:hidden">
             {ballots.map((b) => (
-              <BallotCard key={b.id} ballot={b} layout="grid" />
+              <ContentCard key={b.id} ballot={b} layout="grid" />
             ))}
           </div>
           <div className="hidden md:block space-y-2.5">
             {ballots.map((b) => (
-              <BallotCard key={b.id} ballot={b} layout="list" />
+              <ContentCard key={b.id} ballot={b} layout="list" />
             ))}
           </div>
         </>

@@ -13,7 +13,7 @@ import {
   getPriorityPickRanks,
   getRoleFilteredSoloChampions,
 } from "@/utils/riotStatsAggregation";
-import type { LoadedAdminStatsContext } from "@/utils/riotStatsServer";
+import type { LoadedStatsContext } from "@/utils/riotStatsServer";
 import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
@@ -136,7 +136,7 @@ export async function PlayerStatsContent({
   decodedKey,
   basePath = "/admin/stats",
 }: {
-  ctx: LoadedAdminStatsContext;
+  ctx: LoadedStatsContext;
   decodedKey: string;
   basePath?: string;
 }) {

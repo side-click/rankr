@@ -16,11 +16,11 @@ import type {
   SeasonPlayer,
   Team,
 } from "@/types/database";
-import { BallotEditor } from "@/components/BallotEditor";
+import { TeamRankingEditor } from "@/components/TeamRankingEditor";
 import { ChampionPoolEditor } from "@/components/ChampionPoolEditor";
 import { PlayerTierEditor } from "@/components/PlayerTierEditor";
 
-interface RankWorkspaceProps {
+interface CreateWorkspaceProps {
   userId: string | null;
   initialAuthorName: string;
   initialAuthorAvatarUrl?: string | null;
@@ -38,7 +38,7 @@ interface RankWorkspaceProps {
   requireAllowlist?: boolean;
 }
 
-export function RankWorkspace({
+export function CreateWorkspace({
   userId,
   initialAuthorName,
   initialAuthorAvatarUrl,
@@ -54,7 +54,7 @@ export function RankWorkspace({
   initialDivisionSlug,
   initialEditionSlug,
   requireAllowlist = false,
-}: RankWorkspaceProps) {
+}: CreateWorkspaceProps) {
   const [rankingType, setRankingType] = useState<RankingType>(initialType);
   const [activeTabDirty, setActiveTabDirty] = useState(false);
   const pathname = usePathname();
@@ -195,7 +195,7 @@ export function RankWorkspace({
       ) : !userId ? (
         <SignInRequiredWindow requireAllowlist={requireAllowlist} />
       ) : rankingType === "team" ? (
-        <BallotEditor
+        <TeamRankingEditor
           userId={userId}
           initialAuthorName={initialAuthorName}
           discordDefaultName={discordDefaultName}

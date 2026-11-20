@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
+import { StatsDashboard } from "@/components/StatsDashboard";
 import {
   loadPublicSoloPrioMap,
   loadPublicStatsContext,
@@ -97,7 +97,7 @@ export default async function PublicStatsPage({
   ).catch(() => undefined);
 
   return (
-    <AdminStatsDashboard
+    <StatsDashboard
       missingTable={false}
       hasRiotKey={false}
       ddVersion={ctx.ddVersion}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AdminTeamScoutingView } from "@/components/AdminTeamScoutingView";
+import { TeamScoutingView } from "@/components/TeamScoutingView";
 import {
   loadPublicStatsContext,
   loadTeamScoutingData,
@@ -44,7 +44,7 @@ export default async function PublicTeamStatsPage({
   }
 
   return (
-    <AdminTeamScoutingView
+    <TeamScoutingView
       ddVersion={ctx.ddVersion}
       leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}

@@ -146,7 +146,7 @@ export interface Team {
   updated_at: string;
 }
 
-export interface BallotOverlay {
+export interface RankingOverlay {
   id: string;
   url: string;
   x: number;
@@ -154,7 +154,7 @@ export interface BallotOverlay {
   width: number;
 }
 
-export interface Ballot {
+export interface Ranking {
   id: string;
   user_id: string;
   season_id: string | null;
@@ -165,7 +165,7 @@ export interface Ballot {
   tier_data?: PlayerTierListPayload | null;
   title: string | null;
   author_notes: string;
-  overlays?: BallotOverlay[];
+  overlays?: RankingOverlay[];
   status: "draft" | "published";
   published_at: string | null;
   league_name_snapshot?: string | null;
@@ -182,9 +182,9 @@ export interface Ballot {
   editions?: Pick<Edition, "id" | "name" | "slug" | "sort_order" | "is_open"> | null;
 }
 
-export interface BallotEntry {
+export interface RankingEntry {
   id: string;
-  ballot_id: string;
+  ranking_id: string;
   team_id: string | null;
   rank: number;
   previous_rank: number | null;

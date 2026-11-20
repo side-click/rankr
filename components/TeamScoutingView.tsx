@@ -19,7 +19,7 @@ import {
 import type { ScdlSeriesDetail } from "@/utils/scdlSheetStats";
 import { resolveDivisionTheme } from "@/utils/themes";
 
-interface AdminTeamScoutingViewProps {
+interface TeamScoutingViewProps {
   ddVersion: string;
   leagueName?: string;
   seasonName: string;
@@ -115,7 +115,7 @@ function formatMasteryPoints(pts: number): string {
   return String(pts);
 }
 
-export function AdminTeamScoutingView({
+export function TeamScoutingView({
   ddVersion,
   leagueName,
   seasonName,
@@ -126,7 +126,7 @@ export function AdminTeamScoutingView({
   teamLogoMap,
   roleRankByPlayerKey,
   basePath = "/admin/stats",
-}: AdminTeamScoutingViewProps) {
+}: TeamScoutingViewProps) {
   const leaguePrefix = deriveLeaguePrefix(leagueName);
   const divTheme = resolveDivisionTheme(divisionThemeKey);
   const windowTheme =

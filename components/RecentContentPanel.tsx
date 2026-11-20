@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import type { BallotCardData } from "@/components/BallotCard";
-import { BallotListGrid } from "@/components/BallotListGrid";
+import type { ContentCardData } from "@/components/ContentCard";
+import { ContentListGrid } from "@/components/ContentListGrid";
 
-interface RecentBallotsPanelProps {
-  ballots: BallotCardData[];
+interface RecentContentPanelProps {
+  ballots: ContentCardData[];
   browseHref?: string;
 }
 
-export function RecentBallotsPanel({
+export function RecentContentPanel({
   ballots,
   browseHref = "/browse",
-}: RecentBallotsPanelProps) {
+}: RecentContentPanelProps) {
   const recentBallots = ballots.slice(0, 6);
 
   return (
     <div className="space-y-3">
-      <BallotListGrid ballots={recentBallots} defaultView="list" />
+      <ContentListGrid ballots={recentBallots} defaultView="list" />
       <div className="flex justify-end">
         <Link href={browseHref} className="xp-btn text-xs">
           <Eye className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />

@@ -16,9 +16,9 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type {
-  Ballot,
-  BallotEntry,
-  BallotOverlay,
+  Ranking,
+  RankingEntry,
+  RankingOverlay,
   DivisionTheme,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -29,9 +29,9 @@ import { CAPTAIN_ICON, getRoleMeta, normalizeRoster } from "@/utils/roles";
 import { getRankColor } from "@/utils/rankColors";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 
-interface BallotShareViewProps {
-  ballot: Ballot;
-  entries: BallotEntry[];
+interface TeamRankingShareViewProps {
+  ballot: Ranking;
+  entries: RankingEntry[];
   themes?: DivisionTheme[];
   isOwner: boolean;
   isAdmin?: boolean;
@@ -83,13 +83,13 @@ function AutoFitComment({ text }: { text: string | null | undefined }) {
   );
 }
 
-export function BallotShareView({
+export function TeamRankingShareView({
   ballot,
   entries,
   themes,
   isOwner,
   isAdmin = false,
-}: BallotShareViewProps) {
+}: TeamRankingShareViewProps) {
   const router = useRouter();
   const cardRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -97,12 +97,12 @@ export function BallotShareView({
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const initialOverlays: BallotOverlay[] = Array.isArray(ballot.overlays)
+  const initialOverlays: RankingOverlay[] = Array.isArray(ballot.overlays)
     ? ballot.overlays
     : [];
-  const [overlays, setOverlays] = useState<BallotOverlay[]>(initialOverlays);
+  const [overlays, setOverlays] = useState<RankingOverlay[]>(initialOverlays);
   const [savedOverlays, setSavedOverlays] =
-    useState<BallotOverlay[]>(initialOverlays);
+    useState<RankingOverlay[]>(initialOverlays);
   const [editingOverlays, setEditingOverlays] = useState(false);
   const [uploadingOverlay, setUploadingOverlay] = useState(false);
   const [savingOverlays, setSavingOverlays] = useState(false);
@@ -198,7 +198,7 @@ export function BallotShareView({
     setDeleteError(null);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     if (error) {
@@ -228,7 +228,7 @@ export function BallotShareView({
     const path = `${ballot.user_id}/${ballot.id}-${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .upload(path, file, { upsert: true });
 
     if (uploadErr) {
@@ -238,10 +238,10 @@ export function BallotShareView({
     }
 
     const { data: pub } = supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .getPublicUrl(path);
 
-    const newItem: BallotOverlay = {
+    const newItem: RankingOverlay = {
       id:
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -261,7 +261,7 @@ export function BallotShareView({
     setSavingOverlays(true);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .update({
         overlays,
         updated_at: new Date().toISOString(),
@@ -393,7 +393,7 @@ export function BallotShareView({
           <div className="flex flex-wrap items-center gap-2">
             {isOwner && isEditionEditable && (
               <Link
-                href={`/rank?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
+                href={`/create?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
                 className="xp-btn text-xs"
               >
                 <Edit3 className="w-3.5 h-3.5" />

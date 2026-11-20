@@ -1,6 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
+import { StatsDashboard } from "@/components/StatsDashboard";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
@@ -50,7 +50,7 @@ export default async function AdminStatsPage({
   ).catch(() => null);
 
   return (
-    <AdminStatsDashboard
+    <StatsDashboard
       missingTable={ctx.missingTable}
       hasRiotKey={ctx.hasRiotKey}
       ddVersion={ctx.ddVersion}

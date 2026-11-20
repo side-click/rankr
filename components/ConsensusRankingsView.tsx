@@ -50,11 +50,11 @@ interface EditionOption {
   slug: string;
   isOpen: boolean;
   isArchived: boolean;
-  ballotCount: number;
+  rankingCount: number;
 }
 
 interface Contributor {
-  ballotId: string;
+  rankingId: string;
   username: string;
   avatarUrl: string | null;
 }
@@ -422,10 +422,10 @@ export function ConsensusRankingsView({
                   {currentEdition && (
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${publishedPillTone(
-                        currentEdition.ballotCount
+                        currentEdition.rankingCount
                       )}`}
                     >
-                      {currentEdition.ballotCount} published
+                      {currentEdition.rankingCount} published
                     </span>
                   )}
                 </div>
@@ -451,10 +451,10 @@ export function ConsensusRankingsView({
                     </span>
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${publishedPillTone(
-                        ed.ballotCount
+                        ed.rankingCount
                       )}`}
                     >
-                      {ed.ballotCount} published
+                      {ed.rankingCount} published
                     </span>
                   </button>
                 ))}
@@ -492,8 +492,8 @@ export function ConsensusRankingsView({
             <div className="flex flex-wrap items-center gap-1.5">
               {contributors.map((c) => (
                 <Link
-                  key={c.ballotId}
-                  href={`/ballot/${c.ballotId}`}
+                  key={c.rankingId}
+                  href={`/rankings/${c.rankingId}`}
                   title={`Open ${c.username}'s ranking`}
                   className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c89b3c]/60 text-[11px] font-bold text-[#e8e6dc] transition"
                 >
@@ -736,9 +736,9 @@ export function ConsensusRankingsView({
                                 <div className="text-4xl font-extrabold text-white truncate leading-tight">
                                   {row.teamName}
                                 </div>
-                                {row.ballotCount < submissionCount && (
+                                {row.rankingCount < submissionCount && (
                                   <div className="text-[11px] text-[#a6a89e]">
-                                    Ranked on {row.ballotCount} of{" "}
+                                    Ranked on {row.rankingCount} of{" "}
                                     {submissionCount} submissions
                                   </div>
                                 )}
@@ -748,8 +748,8 @@ export function ConsensusRankingsView({
                               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                                 {row.voterRanks.map((vr) => (
                                   <Link
-                                    key={`${row.teamKey}-${vr.ballotId}`}
-                                    href={`/ballot/${vr.ballotId}`}
+                                    key={`${row.teamKey}-${vr.rankingId}`}
+                                    href={`/rankings/${vr.rankingId}`}
                                     className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 hover:bg-black/60 border border-white/10 text-[11px] text-[#d6d3c4] transition"
                                   >
                                     <span className="font-bold text-[#f0c020]">

@@ -67,7 +67,7 @@ export default function PrivacyPage() {
           <p>
             You may permanently delete any of your draft or published rankings
             at any time from the{" "}
-            <Link href="/my-rankings" className="text-[#f0c020] underline">
+            <Link href="/my-history" className="text-[#f0c020] underline">
               My History
             </Link>{" "}
             page. To request full removal of your account profile, contact a

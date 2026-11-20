@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
-import { BallotListGrid } from "@/components/BallotListGrid";
+import { ContentListGrid } from "@/components/ContentListGrid";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { Search } from "lucide-react";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Browse Rankings | Rankr",
+  title: "Browse Content | Rankr",
 };
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function BrowsePage({
     ]);
 
   let query = supabase
-    .from("ballots")
+    .from("rankings")
     .select(
       `
       id,
@@ -60,7 +60,7 @@ export default async function BrowsePage({
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug ),
-      ballot_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
+      ranking_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
     `
     )
     .eq("status", "published")
@@ -107,7 +107,7 @@ export default async function BrowsePage({
   );
 
   return (
-    <RetroWindow title="Browse Published Rankings" theme="scdl">
+    <RetroWindow title="Browse Content" theme="scdl">
       <form
         key={`${params.type ?? ""}|${effectiveSeason ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
         method="GET"
@@ -216,7 +216,7 @@ export default async function BrowsePage({
         </div>
       </form>
 
-      <BallotListGrid ballots={filteredBallots} showCount />
+      <ContentListGrid ballots={filteredBallots} showCount />
     </RetroWindow>
   );
 }

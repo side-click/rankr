@@ -253,7 +253,7 @@ export function AdminDashboard({
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase
-        .from("ballots")
+        .from("rankings")
         .select(
           "id, title, status, ranking_type, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
         )
@@ -767,7 +767,7 @@ export function AdminDashboard({
     }
     setBusy(true);
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     setStatusMsg(
@@ -788,7 +788,7 @@ export function AdminDashboard({
     const rankingType = ballot.ranking_type ?? "team";
     setCheckingConflict(true);
     let query = supabase
-      .from("ballots")
+      .from("rankings")
       .select("id, title, status, updated_at, published_at")
       .eq("user_id", ballot.user_id)
       .eq("edition_id", nextEditionId)
@@ -893,7 +893,7 @@ export function AdminDashboard({
     try {
       if (conflictBallot) {
         const { error: delErr } = await supabase
-          .from("ballots")
+          .from("rankings")
           .delete()
           .eq("id", conflictBallot.id);
         if (delErr) {
@@ -904,7 +904,7 @@ export function AdminDashboard({
       }
 
       const { error: updErr } = await supabase
-        .from("ballots")
+        .from("rankings")
         .update({
           edition_id: targetEd.id,
           edition_name_snapshot: targetEd.name,
@@ -3034,7 +3034,11 @@ export function AdminDashboard({
                             </button>
                           )}
                           <Link
-                            href={`/ballot/${b.id}`}
+                            href={
+                              b.ranking_type === "player"
+                                ? `/tierlist/${b.id}`
+                                : `/rankings/${b.id}`
+                            }
                             className="xp-btn text-[11px] px-2 py-1"
                             title="View Ranking"
                           >

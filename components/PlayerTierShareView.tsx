@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type {
-  Ballot,
-  BallotOverlay,
+  Ranking,
+  RankingOverlay,
   DivisionTheme,
   PlayerTierListPayload,
 } from "@/types/database";
@@ -34,7 +34,7 @@ import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import { getRoleSectionTitle } from "@/utils/tierPresets";
 
 interface PlayerTierShareViewProps {
-  ballot: Ballot;
+  ballot: Ranking;
   themes?: DivisionTheme[];
   isOwner: boolean;
   isAdmin?: boolean;
@@ -281,12 +281,12 @@ export function PlayerTierShareView({
     }
   }, [roleFilter, pathname, searchParams]);
 
-  const initialOverlays: BallotOverlay[] = Array.isArray(ballot.overlays)
+  const initialOverlays: RankingOverlay[] = Array.isArray(ballot.overlays)
     ? ballot.overlays
     : [];
-  const [overlays, setOverlays] = useState<BallotOverlay[]>(initialOverlays);
+  const [overlays, setOverlays] = useState<RankingOverlay[]>(initialOverlays);
   const [savedOverlays, setSavedOverlays] =
-    useState<BallotOverlay[]>(initialOverlays);
+    useState<RankingOverlay[]>(initialOverlays);
   const [editingOverlays, setEditingOverlays] = useState(false);
   const [uploadingOverlay, setUploadingOverlay] = useState(false);
   const [savingOverlays, setSavingOverlays] = useState(false);
@@ -422,7 +422,7 @@ export function PlayerTierShareView({
     setDeleteError(null);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     if (error) {
@@ -452,7 +452,7 @@ export function PlayerTierShareView({
     const path = `${ballot.user_id}/${ballot.id}-${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .upload(path, file, { upsert: true });
 
     if (uploadErr) {
@@ -462,10 +462,10 @@ export function PlayerTierShareView({
     }
 
     const { data: pub } = supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .getPublicUrl(path);
 
-    const newItem: BallotOverlay = {
+    const newItem: RankingOverlay = {
       id:
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -485,7 +485,7 @@ export function PlayerTierShareView({
     setSavingOverlays(true);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .update({
         overlays,
         updated_at: new Date().toISOString(),
@@ -608,7 +608,7 @@ export function PlayerTierShareView({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {isOwner && isEditionEditable && (
-              <Link href={`/rank?${editParams.toString()}`} className="xp-btn text-xs">
+              <Link href={`/create?${editParams.toString()}`} className="xp-btn text-xs">
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Tier List</span>
               </Link>

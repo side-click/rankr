@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import type { BallotCardData } from "@/components/BallotCard";
+import type { ContentCardData } from "@/components/ContentCard";
 import { loadConsensusPageData } from "@/utils/consensusData";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
@@ -9,7 +9,7 @@ import {
 } from "@/utils/scdlSheetStats";
 import { resolveDivisionTheme } from "@/utils/themes";
 
-export interface BetaSeasonSummary {
+export interface HomeSeasonSummary {
   id: string;
   name: string;
   slug: string;
@@ -29,7 +29,7 @@ export interface BetaSeasonSummary {
   }[];
 }
 
-export interface BetaStandingRow {
+export interface HomeStandingRow {
   teamId: string;
   teamName: string;
   logoUrl: string | null;
@@ -40,16 +40,16 @@ export interface BetaStandingRow {
   gamesLosses: number;
 }
 
-export interface BetaDivisionStandings {
+export interface HomeDivisionStandings {
   divisionId: string;
   divisionName: string;
   divisionSlug: string;
   logoUrl: string | null;
   primaryColor: string;
-  teams: BetaStandingRow[];
+  teams: HomeStandingRow[];
 }
 
-export interface BetaTopPerformer {
+export interface HomeTopPerformer {
   playerKey: string;
   displayName: string;
   role: string;
@@ -61,16 +61,16 @@ export interface BetaTopPerformer {
   dpm: number;
 }
 
-export interface BetaDivisionTopPerformers {
+export interface HomeDivisionTopPerformers {
   divisionId: string;
   divisionName: string;
   divisionSlug: string;
   logoUrl: string | null;
   primaryColor: string;
-  players: BetaTopPerformer[];
+  players: HomeTopPerformer[];
 }
 
-export interface BetaRecentMatch {
+export interface HomeRecentMatch {
   seriesKey: string;
   roundLabel: string;
   teamA: string;
@@ -83,7 +83,7 @@ export interface BetaRecentMatch {
   divisionColor: string;
 }
 
-export interface BetaConsensusSnapshot {
+export interface HomeConsensusSnapshot {
   seasonSlug: string;
   seasonName: string;
   divisionName: string;
@@ -100,17 +100,17 @@ export interface BetaConsensusSnapshot {
   }[];
 }
 
-export interface BetaHomeData {
-  allSeasons: BetaSeasonSummary[];
-  liveSeasons: BetaSeasonSummary[];
-  archivedSeasons: BetaSeasonSummary[];
-  focusedSeason: BetaSeasonSummary | null;
-  recentBallots: BallotCardData[];
-  divisionStandings: BetaDivisionStandings[];
-  divisionTopPerformers: BetaDivisionTopPerformers[];
-  topPerformers: BetaTopPerformer[];
-  recentMatches: BetaRecentMatch[];
-  consensusSnapshots: BetaConsensusSnapshot[];
+export interface HomeData {
+  allSeasons: HomeSeasonSummary[];
+  liveSeasons: HomeSeasonSummary[];
+  archivedSeasons: HomeSeasonSummary[];
+  focusedSeason: HomeSeasonSummary | null;
+  recentBallots: ContentCardData[];
+  divisionStandings: HomeDivisionStandings[];
+  divisionTopPerformers: HomeDivisionTopPerformers[];
+  topPerformers: HomeTopPerformer[];
+  recentMatches: HomeRecentMatch[];
+  consensusSnapshots: HomeConsensusSnapshot[];
 }
 
 function unwrap<T>(val: T | T[] | null | undefined): T | null {
@@ -118,9 +118,9 @@ function unwrap<T>(val: T | T[] | null | undefined): T | null {
   return Array.isArray(val) ? val[0] ?? null : val;
 }
 
-export async function loadBetaHomeData(
+export async function loadHomeData(
   focusedSeasonSlug?: string
-): Promise<BetaHomeData> {
+): Promise<HomeData> {
   const supabase = await createClient();
 
   const [
@@ -147,7 +147,7 @@ export async function loadBetaHomeData(
       .eq("is_active", true),
   ]);
 
-  const allSeasons: BetaSeasonSummary[] = (seasonsRaw ?? []).map((s) => {
+  const allSeasons: HomeSeasonSummary[] = (seasonsRaw ?? []).map((s) => {
     const league = unwrap(
       s.leagues as unknown as
         | { name?: string; short_name?: string; logo_url?: string | null }
@@ -206,7 +206,7 @@ export async function loadBetaHomeData(
 
   // Query recent published ballots scoped to targetSeasons
   let ballotsQuery = supabase
-    .from("ballots")
+    .from("rankings")
     .select(
       `
       id,
@@ -226,7 +226,7 @@ export async function loadBetaHomeData(
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, theme_key, logo_url ),
       editions ( name ),
-      ballot_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
+      ranking_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
     `
     )
     .eq("status", "published")
@@ -273,10 +273,10 @@ export async function loadBetaHomeData(
       }).catch(() => null),
     ]);
 
-  let divisionStandings: BetaDivisionStandings[] = [];
-  let divisionTopPerformers: BetaDivisionTopPerformers[] = [];
-  let topPerformers: BetaTopPerformer[] = [];
-  let recentMatches: BetaRecentMatch[] = [];
+  let divisionStandings: HomeDivisionStandings[] = [];
+  let divisionTopPerformers: HomeDivisionTopPerformers[] = [];
+  let topPerformers: HomeTopPerformer[] = [];
+  let recentMatches: HomeRecentMatch[] = [];
 
   if (statsCtx && statsCtx.teams.length > 0) {
     const [sheetSummary, allSeries] = await Promise.all([
@@ -407,13 +407,13 @@ export async function loadBetaHomeData(
     liveSeasons,
     archivedSeasons,
     focusedSeason,
-    recentBallots: (recentBallotsRaw ?? []) as unknown as BallotCardData[],
+    recentBallots: (recentBallotsRaw ?? []) as unknown as ContentCardData[],
     divisionStandings,
     divisionTopPerformers,
     topPerformers,
     recentMatches,
     consensusSnapshots: consensusRaw.filter(
-      (c): c is BetaConsensusSnapshot => c !== null && c.submissionCount > 0
+      (c): c is HomeConsensusSnapshot => c !== null && c.submissionCount > 0
     ),
   };
 }

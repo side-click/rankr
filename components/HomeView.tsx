@@ -13,15 +13,15 @@ import {
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { RankrLogoIcon } from "@/components/RankrLogoIcon";
-import { RecentBallotsPanel } from "@/components/RecentBallotsPanel";
+import { RecentContentPanel } from "@/components/RecentContentPanel";
 import { getRankColor } from "@/utils/rankColors";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
-import type { BetaHomeData } from "@/utils/betaHomeData";
+import type { HomeData } from "@/utils/homeData";
 
 const FOCUS_STORAGE_KEY = "rankr_focused_season";
 const FOCUS_COOKIE_NAME = "rankr_focused_season";
 
-export function BetaHomeView({ data }: { data: BetaHomeData }) {
+export function HomeView({ data }: { data: HomeData }) {
   const router = useRouter();
   const [isFocusPending, startFocusTransition] = useTransition();
   const focusedSlug = data.focusedSeason?.slug ?? "";
@@ -53,7 +53,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
 
   const statsHref = "/stats";
   const consensusHref = "/consensus";
-  const rankHref = "/rank";
+  const rankHref = "/create";
   const browseHref = "/browse";
 
   const shouldGlowFocus = !focusedSlug && data.liveSeasons.length > 1;
@@ -72,10 +72,10 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 <ListOrdered className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div className="min-w-0">
                   <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                    Create New
+                    Create Content
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build and share power rankings and tier lists
+                    Build and share power rankings, tier lists, and champion pools
                   </div>
                 </div>
               </Link>
@@ -87,7 +87,7 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
                 <Eye className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div className="min-w-0">
                   <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                    Browse Rankings
+                    Browse Content
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
                     Explore everything published on Rankr
@@ -657,14 +657,14 @@ export function BetaHomeView({ data }: { data: BetaHomeData }) {
         </RetroWindow>
       )}
 
-      {/* 4. Recently Published Rankings & Tier Lists */}
-      <RetroWindow title="Recently Published Rankings" theme="scdl">
+      {/* 4. Recently Published Content */}
+      <RetroWindow title="Recently Published Content" theme="scdl">
         {data.recentBallots.length === 0 ? (
           <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-            No published rankings yet for this scope.
+            No published content yet for this scope.
           </div>
         ) : (
-          <RecentBallotsPanel
+          <RecentContentPanel
             ballots={data.recentBallots}
             browseHref={browseHref}
           />

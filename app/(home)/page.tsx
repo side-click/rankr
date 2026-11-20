@@ -1,6 +1,6 @@
 import { RetroWindow } from "@/components/RetroWindow";
-import { BetaHomeView } from "@/components/BetaHomeView";
-import { loadBetaHomeData } from "@/utils/betaHomeData";
+import { HomeView } from "@/components/HomeView";
+import { loadHomeData } from "@/utils/homeData";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { ShieldAlert } from "lucide-react";
 
@@ -13,7 +13,7 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
-  const data = await loadBetaHomeData(effectiveSeason);
+  const data = await loadHomeData(effectiveSeason);
 
   if (data.allSeasons.length === 0) {
     return (
@@ -36,5 +36,5 @@ export default async function HomePage({
     );
   }
 
-  return <BetaHomeView data={data} />;
+  return <HomeView data={data} />;
 }

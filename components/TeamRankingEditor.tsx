@@ -54,7 +54,7 @@ interface RankedTeamItem {
   previousRank: number | null;
 }
 
-interface BallotEditorProps {
+interface TeamRankingEditorProps {
   userId: string;
   initialAuthorName: string;
   discordDefaultName: string;
@@ -329,7 +329,7 @@ function SortableTeamRow({
   );
 }
 
-export function BallotEditor({
+export function TeamRankingEditor({
   userId,
   initialAuthorName,
   discordDefaultName,
@@ -342,7 +342,7 @@ export function BallotEditor({
   initialDivisionSlug,
   initialEditionSlug,
   onUnsavedChange,
-}: BallotEditorProps) {
+}: TeamRankingEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
@@ -559,7 +559,7 @@ export function BallotEditor({
         const prevRankMap = new Map<string, number>();
         if (earlierEds.length > 0) {
           const { data: earlierBallots } = await supabase
-            .from("ballots")
+            .from("rankings")
             .select("id, edition_id")
             .eq("user_id", userId)
             .eq("division_id", divisionId)
@@ -577,9 +577,9 @@ export function BallotEditor({
 
           if (prevBallot) {
             const { data: prevEntries } = await supabase
-              .from("ballot_entries")
+              .from("ranking_entries")
               .select("team_id, rank")
-              .eq("ballot_id", prevBallot.id);
+              .eq("ranking_id", prevBallot.id);
 
             (prevEntries ?? []).forEach((entry) => {
               if (entry.team_id) {
@@ -590,7 +590,7 @@ export function BallotEditor({
         }
 
         const { data: currentBallot } = await supabase
-          .from("ballots")
+          .from("rankings")
           .select("*")
           .eq("user_id", userId)
           .eq("division_id", divisionId)
@@ -607,9 +607,9 @@ export function BallotEditor({
           setShowGeneralNotes(false);
 
           const { data: entries } = await supabase
-            .from("ballot_entries")
+            .from("ranking_entries")
             .select("*")
-            .eq("ballot_id", currentBallot.id)
+            .eq("ranking_id", currentBallot.id)
             .order("rank", { ascending: true });
 
           if (cancelled) return;
@@ -767,7 +767,7 @@ export function BallotEditor({
       let targetBallotId = existingBallotId;
       if (!targetBallotId) {
         const { data: existingRow } = await supabase
-          .from("ballots")
+          .from("rankings")
           .select("id")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -782,13 +782,13 @@ export function BallotEditor({
 
       const ballotQuery = targetBallotId
         ? supabase
-            .from("ballots")
+            .from("rankings")
             .update(payload)
             .eq("id", targetBallotId)
             .select("id, status")
             .single()
         : supabase
-            .from("ballots")
+            .from("rankings")
             .insert(payload)
             .select("id, status")
             .single();
@@ -800,9 +800,9 @@ export function BallotEditor({
       }
 
       const { error: delErr } = await supabase
-        .from("ballot_entries")
+        .from("ranking_entries")
         .delete()
-        .eq("ballot_id", savedBallot.id);
+        .eq("ranking_id", savedBallot.id);
 
       if (delErr) {
         throw new Error(delErr.message);
@@ -813,7 +813,7 @@ export function BallotEditor({
         const rankChange =
           item.previousRank !== null ? item.previousRank - rank : null;
         return {
-          ballot_id: savedBallot.id,
+          ranking_id: savedBallot.id,
           team_id: item.team.id,
           rank,
           previous_rank: item.previousRank,
@@ -826,7 +826,7 @@ export function BallotEditor({
       });
 
       const { error: insErr } = await supabase
-        .from("ballot_entries")
+        .from("ranking_entries")
         .insert(entriesToInsert);
 
       if (insErr) {
@@ -955,10 +955,10 @@ export function BallotEditor({
                   const nextSeason = seasons.find((s) => s.id === newId);
                   if (nextSeason?.slug) {
                     router.replace(
-                      `/rank?season=${encodeURIComponent(nextSeason.slug)}`
+                      `/create?season=${encodeURIComponent(nextSeason.slug)}`
                     );
                   } else {
-                    router.replace("/rank");
+                    router.replace("/create");
                   }
                 }}
                 className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
@@ -1203,7 +1203,7 @@ export function BallotEditor({
           <div className="flex flex-wrap items-center gap-2">
             {existingBallotId && ballotStatus === "published" && (
               <Link
-                href={`/ballot/${existingBallotId}`}
+                href={`/rankings/${existingBallotId}`}
                 className="xp-btn text-xs"
               >
                 <ExternalLink className="w-3.5 h-3.5" />

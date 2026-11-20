@@ -67,7 +67,7 @@ export default async function AdminPublishingsPage() {
       .select("*")
       .order("sort_order", { ascending: true }),
     supabase
-      .from("ballots")
+      .from("rankings")
       .select(
         `
         id,

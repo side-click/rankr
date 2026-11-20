@@ -213,7 +213,7 @@ export function AdminPublishingsLog({
     }
     setBusy(true);
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     if (error) {
@@ -237,7 +237,7 @@ export function AdminPublishingsLog({
     const rankingType = ballot.ranking_type ?? "team";
     setCheckingConflict(true);
     let query = supabase
-      .from("ballots")
+      .from("rankings")
       .select("id, title, status, updated_at, published_at")
       .eq("user_id", ballot.user_id)
       .eq("edition_id", nextEditionId)
@@ -345,7 +345,7 @@ export function AdminPublishingsLog({
     try {
       if (conflictBallot) {
         const { error: delErr } = await supabase
-          .from("ballots")
+          .from("rankings")
           .delete()
           .eq("id", conflictBallot.id);
         if (delErr) {
@@ -357,7 +357,7 @@ export function AdminPublishingsLog({
 
       const nextTitle = moveTitle.trim() || movingBallot.title;
       const { error: updErr } = await supabase
-        .from("ballots")
+        .from("rankings")
         .update({
           edition_id: targetEd.id,
           edition_name_snapshot: targetEd.name,
@@ -588,7 +588,11 @@ export function AdminPublishingsLog({
                       )}
                     </span>
                     <Link
-                      href={`/ballot/${b.id}`}
+                      href={
+                        b.ranking_type === "player"
+                          ? `/tierlist/${b.id}`
+                          : `/rankings/${b.id}`
+                      }
                       className="font-bold text-[#f0ede0] hover:text-[#f0c020] truncate"
                     >
                       {b.title || "Untitled Ranking"}
@@ -633,7 +637,11 @@ export function AdminPublishingsLog({
                     </button>
                   )}
                   <Link
-                    href={`/ballot/${b.id}`}
+                    href={
+                      b.ranking_type === "player"
+                        ? `/tierlist/${b.id}`
+                        : `/rankings/${b.id}`
+                    }
                     className="xp-btn text-[11px] px-2 py-1"
                     title="View Ranking"
                   >

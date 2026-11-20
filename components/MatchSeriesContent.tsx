@@ -5,7 +5,7 @@ import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
-import type { LoadedAdminStatsContext } from "@/utils/riotStatsServer";
+import type { LoadedStatsContext } from "@/utils/riotStatsServer";
 import {
   fetchAllScdlSeries,
   type ScdlGameDetail,
@@ -350,7 +350,7 @@ export async function MatchSeriesContent({
   decodedKey,
   basePath = "/admin/stats",
 }: {
-  ctx: LoadedAdminStatsContext;
+  ctx: LoadedStatsContext;
   decodedKey: string;
   basePath?: string;
 }) {

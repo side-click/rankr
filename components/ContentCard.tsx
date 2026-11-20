@@ -16,7 +16,7 @@ function unwrap<T>(val: MaybeArray<T>): T | null {
   return Array.isArray(val) ? val[0] ?? null : val;
 }
 
-export interface BallotCardData {
+export interface ContentCardData {
   id: string;
   title: string | null;
   ranking_type?: RankingType;
@@ -48,7 +48,7 @@ export interface BallotCardData {
     theme_key?: string | null;
   }>;
   editions?: MaybeArray<{ name: string }>;
-  ballot_entries?: MaybeArray<{
+  ranking_entries?: MaybeArray<{
     rank: number;
     team_name_snapshot: string | null;
     teams?: MaybeArray<{ name: string; logo_url: string | null }>;
@@ -66,14 +66,14 @@ export function getLeaguePrefix(
   return fallbackName ?? "";
 }
 
-export type BallotCardLayout = "grid" | "list";
+export type ContentCardLayout = "grid" | "list";
 
-export function BallotCard({
+export function ContentCard({
   ballot,
   layout = "grid",
 }: {
-  ballot: BallotCardData;
-  layout?: BallotCardLayout;
+  ballot: ContentCardData;
+  layout?: ContentCardLayout;
 }) {
   const profile = unwrap(ballot.profiles);
   const season = unwrap(ballot.seasons);
@@ -116,7 +116,7 @@ export function BallotCard({
 
   if (layout === "list") {
     const top3Teams = !isPlayer
-      ? [...(Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [])]
+      ? [...(Array.isArray(ballot.ranking_entries) ? ballot.ranking_entries : [])]
           .sort((a, b) => a.rank - b.rank)
           .slice(0, 3)
           .map((e) => {
@@ -165,7 +165,11 @@ export function BallotCard({
 
     return (
       <Link
-        href={`/ballot/${ballot.id}`}
+        href={
+          ballot.ranking_type === "player"
+            ? `/tierlist/${ballot.id}`
+            : `/rankings/${ballot.id}`
+        }
         style={cardStyle}
         className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_auto_1fr] xl:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
@@ -333,7 +337,11 @@ export function BallotCard({
 
   return (
     <Link
-      href={`/ballot/${ballot.id}`}
+      href={
+        ballot.ranking_type === "player"
+          ? `/tierlist/${ballot.id}`
+          : `/rankings/${ballot.id}`
+      }
       style={cardStyle}
       className="xp-panel relative p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >

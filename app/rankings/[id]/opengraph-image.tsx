@@ -41,7 +41,7 @@ export default async function BallotOpenGraphImage({
 
   const [{ data: ballot }, { data: themesData }, fonts] = await Promise.all([
     supabase
-      .from("ballots")
+      .from("rankings")
       .select(
         `
         title,
@@ -58,7 +58,7 @@ export default async function BallotOpenGraphImage({
         seasons ( name, leagues ( name, logo_url ) ),
         divisions ( name, theme_key ),
         editions ( name ),
-        ballot_entries ( rank, team_name_snapshot, team_logo_snapshot, commentary, teams ( name, logo_url ) )
+        ranking_entries ( rank, team_name_snapshot, team_logo_snapshot, commentary, teams ( name, logo_url ) )
       `
       )
       .eq("id", id)
@@ -222,7 +222,7 @@ export default async function BallotOpenGraphImage({
     support: supIconSrc,
   };
 
-  const items = Array.isArray(ballot.ballot_entries) ? ballot.ballot_entries : [];
+  const items = Array.isArray(ballot.ranking_entries) ? ballot.ranking_entries : [];
   const top3Raw = !isPlayerTierList
     ? [...items].sort((a, b) => a.rank - b.rank).slice(0, 3)
     : [];
