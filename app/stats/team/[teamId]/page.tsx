@@ -17,12 +17,14 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicTeamStatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
-  const { teamId } = await params;
+  const [{ teamId }, { season }] = await Promise.all([params, searchParams]);
   const decodedId = decodeURIComponent(teamId);
-  const effectiveSeason = await getFocusedSeasonSlug();
+  const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     teamIdFilter: decodedId,
   });

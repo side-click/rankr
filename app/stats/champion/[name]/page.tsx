@@ -15,11 +15,14 @@ export default async function PublicChampionStatsPage({
   searchParams,
 }: {
   params: Promise<{ name: string }>;
-  searchParams: Promise<{ division?: string }>;
+  searchParams: Promise<{ division?: string; season?: string }>;
 }) {
-  const [{ name }, { division }] = await Promise.all([params, searchParams]);
+  const [{ name }, { division, season }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const championName = decodeURIComponent(name);
-  const effectiveSeason = await getFocusedSeasonSlug();
+  const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     includeRiotStats: false,
   });

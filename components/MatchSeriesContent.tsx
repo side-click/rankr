@@ -633,6 +633,7 @@ export async function MatchSeriesContent({
           <StatsDataCredits
             leagueName={ctx.leagueName}
             seasonName={ctx.seasonName}
+            sheetConfig={ctx.sheetConfig}
             variant="compact"
           />
         </div>

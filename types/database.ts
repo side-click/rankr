@@ -43,11 +43,30 @@ export interface Season {
   name: string;
   slug: string;
   is_active: boolean;
+  stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
+  stats_sheet_id?: string | null;
+  stats_sheet_gids?: string[] | null;
+  stats_credits_label?: string | null;
+  stats_credits_url?: string | null;
+  stats_credits_attribution?: string | null;
   created_at: string;
   leagues?: Pick<
     League,
     "id" | "name" | "short_name" | "slug" | "logo_url" | "theme_key"
   >;
+}
+
+export interface MatchDraftRow {
+  game_id: string;
+  season_id: string | null;
+  blue_team: string;
+  red_team: string;
+  blue_bans: string[];
+  red_bans: string[];
+  blue_picks: string[];
+  red_picks: string[];
+  source_url: string | null;
+  updated_at?: string;
 }
 
 export interface DivisionTheme {

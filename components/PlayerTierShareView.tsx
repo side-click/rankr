@@ -206,7 +206,8 @@ function renderPlayerPill(
     is_captain?: boolean;
   },
   size: PillSize,
-  linkToStats = false
+  linkToStats = false,
+  seasonSlug?: string | null
 ) {
   const styles = PILL_STYLES[size];
   const displayName = pl.name.split("#")[0].trim() || pl.name;
@@ -247,7 +248,7 @@ function renderPlayerPill(
         key={pl.id}
         href={`/stats/player/${encodeURIComponent(
           pl.name.trim().toLowerCase()
-        )}`}
+        )}${seasonSlug ? `?season=${encodeURIComponent(seasonSlug)}` : ""}`}
         title={`View ${displayName} stats`}
         className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] hover:border-[#f0c020]/70 hover:text-[#f0c020] transition-colors ${styles.container}`}
       >
@@ -1042,7 +1043,8 @@ export function PlayerTierShareView({
                                               Boolean(
                                                 ballot.season_id &&
                                                   ballot.division_id
-                                              )
+                                              ),
+                                              ballot.seasons?.slug
                                             )
                                           )}
                                         </div>
@@ -1058,7 +1060,8 @@ export function PlayerTierShareView({
                                       pillSize,
                                       Boolean(
                                         ballot.season_id && ballot.division_id
-                                      )
+                                      ),
+                                      ballot.seasons?.slug
                                     )
                                   )}
                                 </div>

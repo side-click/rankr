@@ -1,20 +1,55 @@
+import type { SheetSourceConfig } from "@/utils/scdlSheetStats";
+
 const SCDL_45_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1tdi8ftaQ50sYS92H39YybU29SIPGVSyRNeT_HdOHP8A";
 
 interface StatsDataCreditsProps {
   leagueName?: string;
   seasonName?: string;
+  sheetConfig?: SheetSourceConfig;
   variant?: "full" | "compact";
 }
 
 export function StatsDataCredits({
   leagueName,
   seasonName,
+  sheetConfig,
   variant = "compact",
 }: StatsDataCreditsProps) {
-  const isScdl = (leagueName ?? "").toLowerCase().includes("scdl");
-  const isSeason45 = (seasonName ?? "").includes("4.5");
-  const showScdlSheetCredit = isScdl || isSeason45;
+  const isScdl = (leagueName ?? "").toLowerCase().includes("scdl") ||
+    (leagueName ?? "").toLowerCase().includes("scuttle crab");
+  const isSeason45 =
+    (seasonName ?? "").includes("4.5") ||
+    sheetConfig?.seasonSlug === "season-4-5";
+
+  const resolvedUrl =
+    sheetConfig?.creditsUrl?.trim() ||
+    (sheetConfig?.sheetId?.trim()
+      ? `https://docs.google.com/spreadsheets/d/${sheetConfig.sheetId.trim()}`
+      : isSeason45 || (isScdl && !seasonName)
+      ? SCDL_45_SHEET_URL
+      : null);
+
+  const resolvedLabel =
+    sheetConfig?.creditsLabel?.trim() ||
+    (isSeason45 || (isScdl && !seasonName)
+      ? "SCDL 4.5 Master Google Sheet"
+      : resolvedUrl
+      ? `${leagueName ? `${leagueName} ` : ""}${
+          seasonName ? `${seasonName} ` : ""
+        }Master Google Sheet`.trim()
+      : null);
+
+  const resolvedAttribution =
+    sheetConfig?.creditsAttribution?.trim() ||
+    (isScdl
+      ? "the SCDL Admin Team (special thanks to Pandora)"
+      : leagueName
+      ? `the ${leagueName} Admin Team`
+      : "the League Admin Team");
+
+  const showSheetCredit =
+    sheetConfig?.provider !== "none" && Boolean(resolvedUrl && resolvedLabel);
 
   if (variant === "full") {
     return (
@@ -22,20 +57,20 @@ export function StatsDataCredits({
         <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8d5c5]">
           Data Sources &amp; Credits
         </div>
-        {showScdlSheetCredit && (
+        {showSheetCredit && resolvedUrl && resolvedLabel && (
           <p>
-            Official match &amp; draft stats for SCDL Season 4.5 are sourced
-            from the{" "}
+            Official match &amp; draft stats
+            {seasonName ? ` for ${leagueName ? `${leagueName} ` : ""}${seasonName}` : ""}{" "}
+            are sourced from the{" "}
             <a
-              href={SCDL_45_SHEET_URL}
+              href={resolvedUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#f0c020] hover:underline font-semibold"
             >
-              SCDL 4.5 Master Google Sheet
+              {resolvedLabel}
             </a>
-            , built and maintained by the SCDL Admin Team (special thanks to{" "}
-            <span className="text-[#f0ede0] font-semibold">Pandora</span>).
+            , built and maintained by {resolvedAttribution}.
           </p>
         )}
         <p>
@@ -48,18 +83,16 @@ export function StatsDataCredits({
 
   return (
     <div className="pt-2 border-t border-white/10 text-[11px] text-[#a6a89e] text-center leading-relaxed">
-      {showScdlSheetCredit ? (
+      {showSheetCredit && resolvedUrl && resolvedLabel ? (
         <>
-          Match &amp; draft data courtesy of the SCDL Admin Team (special thanks
-          to <span className="text-[#f0ede0] font-semibold">Pandora</span>) via
-          the{" "}
+          Match &amp; draft data courtesy of {resolvedAttribution} via the{" "}
           <a
-            href={SCDL_45_SHEET_URL}
+            href={resolvedUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#f0c020] hover:underline font-semibold"
           >
-            SCDL 4.5 Master Google Sheet
+            {resolvedLabel}
           </a>{" "}
           • Solo/Duo data via Riot Games API &amp; Data Dragon
         </>

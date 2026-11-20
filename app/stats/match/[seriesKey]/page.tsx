@@ -12,12 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicMatchSeriesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ seriesKey: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
-  const { seriesKey } = await params;
+  const [{ seriesKey }, { season }] = await Promise.all([params, searchParams]);
   const decodedKey = decodeURIComponent(seriesKey);
-  const effectiveSeason = await getFocusedSeasonSlug();
+  const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     includeRiotStats: false,
   });

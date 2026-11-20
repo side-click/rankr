@@ -12,12 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicPlayerStatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ playerKey: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
-  const { playerKey } = await params;
+  const [{ playerKey }, { season }] = await Promise.all([params, searchParams]);
   const decodedKey = decodeURIComponent(playerKey).toLowerCase();
-  const effectiveSeason = await getFocusedSeasonSlug();
+  const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     playerKeyFilter: decodedKey,
   });

@@ -444,14 +444,36 @@ export function AdminDashboard({
   async function handleSaveSeason(season: Season) {
     if (!season.name.trim()) return;
     setBusy(true);
-    const { error } = await supabase
+    const fullPayload: Record<string, unknown> = {
+      name: season.name.trim(),
+      slug: slugify(season.name),
+      is_active: season.is_active,
+      stats_provider: season.stats_provider ?? "google_sheet",
+      stats_sheet_id: season.stats_sheet_id?.trim() || null,
+      stats_sheet_gids:
+        season.stats_sheet_gids && season.stats_sheet_gids.length > 0
+          ? season.stats_sheet_gids.map((g) => g.trim()).filter(Boolean)
+          : null,
+      stats_credits_label: season.stats_credits_label?.trim() || null,
+      stats_credits_url: season.stats_credits_url?.trim() || null,
+      stats_credits_attribution:
+        season.stats_credits_attribution?.trim() || null,
+    };
+    let { error } = await supabase
       .from("seasons")
-      .update({
-        name: season.name.trim(),
-        slug: slugify(season.name),
-        is_active: season.is_active,
-      })
+      .update(fullPayload)
       .eq("id", season.id);
+    if (error && error.message.includes("column")) {
+      const fallback = await supabase
+        .from("seasons")
+        .update({
+          name: season.name.trim(),
+          slug: slugify(season.name),
+          is_active: season.is_active,
+        })
+        .eq("id", season.id);
+      error = fallback.error;
+    }
     setStatusMsg(error ? `Error: ${error.message}` : `Saved ${season.name}.`);
     await refreshAll();
     setBusy(false);
@@ -2179,6 +2201,176 @@ export function AdminDashboard({
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
+
+                      <details className="pt-1 border-t border-white/10 text-[11px]">
+                        <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
+                          Stats &amp; Credits Source (
+                          {s.stats_provider ?? "google_sheet"}
+                          {s.stats_sheet_id ? " • sheet linked" : ""})
+                        </summary>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Stats Provider
+                            </label>
+                            <select
+                              value={s.stats_provider ?? "google_sheet"}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_provider: e.target
+                                            .value as Season["stats_provider"],
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            >
+                              <option value="google_sheet">
+                                Google Sheet CSV
+                              </option>
+                              <option value="supabase_native">
+                                Supabase Native (league_game_participants)
+                              </option>
+                              <option value="none">None (Solo/Duo only)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Google Sheet ID
+                            </label>
+                            <input
+                              type="text"
+                              value={s.stats_sheet_id ?? ""}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_sheet_id: e.target.value,
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="1tdi8ftaQ50sYS92H39YybU29..."
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Sheet Tab GIDs (comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={(s.stats_sheet_gids ?? []).join(", ")}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_sheet_gids: e.target.value
+                                            .split(",")
+                                            .map((g) => g.trim())
+                                            .filter(Boolean),
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="1733612942, 1849724071"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Credits Link Label
+                            </label>
+                            <input
+                              type="text"
+                              value={s.stats_credits_label ?? ""}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_credits_label: e.target.value,
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="e.g. SCDL 4.5 Master Google Sheet"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Credits URL (optional override)
+                            </label>
+                            <input
+                              type="text"
+                              value={s.stats_credits_url ?? ""}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_credits_url: e.target.value,
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="https://docs.google.com/spreadsheets/d/..."
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Credits Attribution
+                            </label>
+                            <input
+                              type="text"
+                              value={s.stats_credits_attribution ?? ""}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_credits_attribution:
+                                            e.target.value,
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="the SCDL Admin Team (special thanks to Pandora)"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div className="sm:col-span-2 flex justify-end">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleSaveSeason(s)}
+                              className="xp-btn xp-btn-primary text-xs"
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              <span>Save Stats &amp; Credits Config</span>
+                            </button>
+                          </div>
+                        </div>
+                      </details>
                     </div>
                   );
                 });
