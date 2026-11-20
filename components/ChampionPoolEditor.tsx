@@ -1849,7 +1849,7 @@ export function ChampionPoolEditor({
               </div>
             </div>
 
-            <div className="xp-inset p-2.5 max-h-[340px] overflow-y-auto flex flex-wrap gap-2">
+            <div className="xp-inset p-2.5 flex flex-wrap gap-2">
               {unplacedChampions.length === 0 ? (
                 <div className="w-full py-6 text-center text-xs text-[#7c808b]">
                   No matching champions available.
