@@ -41,6 +41,7 @@ import type {
   Team,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
 import { CAPTAIN_ICON, getRoleMeta, normalizeRoster } from "@/utils/roles";
 import { getRankColor } from "@/utils/rankColors";
@@ -441,6 +442,7 @@ export function BallotEditor({
   const lastLoadedKeyRef = useRef<string>("");
   const popoverContainerRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
+  const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -1187,14 +1189,6 @@ export function BallotEditor({
             ) : ballotStatus === "draft" ? (
               <span className="text-xs text-[#a6a89e]">● Draft saved</span>
             ) : null}
-            {hasUnsavedChanges && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] italic text-[#f0c020]">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Changing Season, Division, or Edition will clear unsaved work.
-                </span>
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1210,11 +1204,23 @@ export function BallotEditor({
             <button
               type="button"
               disabled={saving || isEditDisabled || rankedItems.length === 0}
-              onClick={() => saveBallot("draft")}
+              onClick={() => {
+                if (ballotStatus === "published") {
+                  setUnpublishConfirmOpen(true);
+                } else {
+                  void saveBallot("draft");
+                }
+              }}
               className="xp-btn text-xs"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saving ? "Saving..." : "Save Draft"}</span>
+              <span>
+                {saving
+                  ? "Saving..."
+                  : `Save Draft${hasUnsavedChanges ? "*" : ""}${
+                      ballotStatus === "published" ? " (Unpublish)" : ""
+                    }`}
+              </span>
             </button>
             <button
               type="button"
@@ -1226,9 +1232,11 @@ export function BallotEditor({
               <span>
                 {saving
                   ? "Publishing..."
-                  : ballotStatus === "published"
-                  ? "Update Published Ranking"
-                  : "Publish Ranking"}
+                  : `${
+                      ballotStatus === "published"
+                        ? "Update Published Ranking"
+                        : "Publish Ranking"
+                    }${hasUnsavedChanges ? "*" : ""}`}
               </span>
             </button>
           </div>
@@ -1275,6 +1283,20 @@ export function BallotEditor({
           </DndContext>
         )}
       </RetroWindow>
+
+      <RetroConfirmModal
+        open={unpublishConfirmOpen}
+        title="Unpublish & Save as Draft?"
+        message="Saving as a draft will unpublish your currently published ranking from Browse and Consensus until you publish again. Continue?"
+        confirmLabel="Save Draft (Unpublish)"
+        danger
+        loading={saving}
+        onConfirm={() => {
+          setUnpublishConfirmOpen(false);
+          void saveBallot("draft");
+        }}
+        onCancel={() => setUnpublishConfirmOpen(false)}
+      />
     </div>
   );
 }
