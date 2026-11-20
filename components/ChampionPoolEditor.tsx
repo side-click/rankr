@@ -131,7 +131,7 @@ function ChampionTileVisual({
 }) {
   return (
     <div
-      className={`group relative flex flex-col items-center w-[66px] h-[90px] p-1.5 rounded border select-none transition-colors ${
+      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[90px] p-1.5 rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -1846,7 +1846,7 @@ export function ChampionPoolEditor({
               </div>
             </div>
 
-            <div className="xp-inset p-2.5 flex flex-wrap gap-2">
+            <div className="xp-inset p-2.5 grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2">
               {unplacedChampions.length === 0 ? (
                 <div className="w-full py-6 text-center text-xs text-[#7c808b]">
                   No matching champions available.
@@ -2086,7 +2086,7 @@ export function ChampionPoolEditor({
                               {blindChamps.map((c) => (
                                 <div
                                   key={c.championId}
-                                  className="flex flex-col items-center w-[64px] h-[86px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
+                                  className="flex flex-col items-center w-[74px] h-[86px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
                                 >
                                   <img
                                     src={iconMap.get(c.championId) ?? ""}
@@ -2113,7 +2113,7 @@ export function ChampionPoolEditor({
                             genChamps.map((c) => (
                               <div
                                 key={c.championId}
-                                className="flex flex-col items-center w-[64px] h-[86px] p-1 rounded bg-[#1b202b] border border-white/10"
+                                className="flex flex-col items-center w-[74px] h-[86px] p-1 rounded bg-[#1b202b] border border-white/10"
                               >
                                 <img
                                   src={iconMap.get(c.championId) ?? ""}
