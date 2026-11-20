@@ -258,13 +258,16 @@ function GapDropSlot({
   tierId,
   isBlindable,
   insertIndex,
+  isHighlighted,
 }: {
   tierId: string;
   isBlindable: boolean;
   insertIndex: number;
+  isHighlighted?: boolean;
 }) {
+  const gapId = `gap-drop:${tierId}:${isBlindable ? "blind" : "gen"}:${insertIndex}`;
   const { setNodeRef, isOver } = useDroppable({
-    id: `gap-drop:${tierId}:${isBlindable ? "blind" : "gen"}:${insertIndex}`,
+    id: gapId,
     data: {
       kind: "gap",
       tierId,
@@ -273,14 +276,16 @@ function GapDropSlot({
     },
   });
 
+  const active = isOver || Boolean(isHighlighted);
+
   return (
     <div
       ref={setNodeRef}
       className="relative z-20 w-3 h-[78px] -mx-1 flex items-center justify-center shrink-0 pointer-events-auto"
     >
       <div
-        className={`h-16 rounded-full transition-all ${
-          isOver ? "w-1.5 bg-[#f0c020] shadow-[0_0_10px_#f0c020]" : "w-0"
+        className={`h-[84px] rounded-full transition-all ${
+          active ? "w-1.5 bg-[#f0c020] shadow-[0_0_12px_#f0c020]" : "w-0"
         }`}
       />
     </div>
@@ -329,6 +334,7 @@ function DroppableTierRow({
   onRemoveChampion,
   onHoverStart,
   onHoverEnd,
+  activeGapId,
 }: {
   tier: ChampionTierRowData;
   index: number;
@@ -343,6 +349,7 @@ function DroppableTierRow({
   onRemoveChampion: (championId: string) => void;
   onHoverStart: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd: () => void;
+  activeGapId: string | null;
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -540,9 +547,11 @@ function DroppableTierRow({
                       tierId={tier.id}
                       isBlindable={false}
                       insertIndex={cIdx}
+                      isHighlighted={
+                        activeGapId === `gap-drop:${tier.id}:gen:${cIdx}`
+                      }
                     />
                     <DraggablePlacedChampion
-                      key={champ.championId}
                       tierId={tier.id}
                       champion={champ}
                       iconUrl={iconMap.get(champ.championId) ?? ""}
@@ -552,6 +561,17 @@ function DroppableTierRow({
                     />
                   </React.Fragment>
                 ))}
+                {generalChamps.length > 0 && (
+                  <GapDropSlot
+                    tierId={tier.id}
+                    isBlindable={false}
+                    insertIndex={generalChamps.length}
+                    isHighlighted={
+                      activeGapId ===
+                      `gap-drop:${tier.id}:gen:${generalChamps.length}`
+                    }
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -664,6 +684,7 @@ export function ChampionPoolEditor({
   // Drag state
   const [activeDragChamp, setActiveDragChamp] =
     useState<ChampionPoolTierItem | null>(null);
+  const [activeGapId, setActiveGapId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   // PNG export state
@@ -1141,18 +1162,60 @@ export function ChampionPoolEditor({
     setChangePassOpen(false);
   }
 
-  // DnD collision detection prioritizing gap/tile drops over tier containers
-  const collisionDetection: CollisionDetection = useCallback((args) => {
-    const pointerHits = pointerWithin(args);
-    const gapHit = pointerHits.find((h) => String(h.id).startsWith("gap-drop:"));
-    if (gapHit) return [gapHit];
-    const tileHit = pointerHits.find((h) =>
-      String(h.id).startsWith("tile-drop:")
-    );
-    if (tileHit) return [tileHit];
-    if (pointerHits.length > 0) return pointerHits;
-    return closestCorners(args);
-  }, []);
+  // DnD collision detection: resolve both gaps and left/right tile halves to gap-drop targets
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      const pointerHits = pointerWithin(args);
+      const gapHit = pointerHits.find((h) =>
+        String(h.id).startsWith("gap-drop:")
+      );
+      if (gapHit) return [gapHit];
+
+      const tileHit = pointerHits.find((h) =>
+        String(h.id).startsWith("tile-drop:")
+      );
+      if (tileHit && args.pointerCoordinates) {
+        const container = args.droppableContainers.find(
+          (c) => c.id === tileHit.id
+        );
+        const rect = container?.rect.current;
+        const data = container?.data.current as
+          | { tierId?: string; championId?: string; isBlindable?: boolean }
+          | undefined;
+        if (rect && data?.tierId && data?.championId) {
+          const sec = pool.roles[activeRole];
+          const tier = sec?.tiers.find((t) => t.id === data.tierId);
+          const subList = tier
+            ? tier.champions.filter(
+                (c) => Boolean(c.isBlindable) === Boolean(data.isBlindable)
+              )
+            : [];
+          const tileIdx = subList.findIndex(
+            (c) => c.championId === data.championId
+          );
+          if (tileIdx >= 0) {
+            const isRightHalf =
+              args.pointerCoordinates.x >= rect.left + rect.width / 2;
+            const targetInsertIdx = isRightHalf ? tileIdx + 1 : tileIdx;
+            const targetGapId = `gap-drop:${data.tierId}:${
+              data.isBlindable ? "blind" : "gen"
+            }:${targetInsertIdx}`;
+            const gapContainer = args.droppableContainers.find(
+              (c) => c.id === targetGapId
+            );
+            if (gapContainer) {
+              return [{ id: gapContainer.id, data: { droppableContainer: gapContainer } }];
+            }
+          }
+        }
+        return [tileHit];
+      }
+
+      if (pointerHits.length > 0) return pointerHits;
+      return closestCorners(args);
+    },
+    [pool.roles, activeRole]
+  );
 
   const handleChampHoverStart = useCallback(
     (champion: ChampionPoolTierItem, rect: DOMRect) => {
@@ -1221,6 +1284,7 @@ export function ChampionPoolEditor({
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveDragChamp(null);
+    setActiveGapId(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -1978,6 +2042,14 @@ export function ChampionPoolEditor({
           sensors={sensors}
           collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragOver={(e) => {
+            const id = e.over ? String(e.over.id) : "";
+            setActiveGapId(id.startsWith("gap-drop:") ? id : null);
+          }}
+          onDragCancel={() => {
+            setActiveDragChamp(null);
+            setActiveGapId(null);
+          }}
           onDragEnd={handleDragEnd}
         >
           <div className="space-y-2.5">
@@ -2067,6 +2139,7 @@ export function ChampionPoolEditor({
                 }}
                 onHoverStart={handleChampHoverStart}
                 onHoverEnd={handleChampHoverEnd}
+                activeGapId={activeGapId}
               />
             ))}
           </div>
