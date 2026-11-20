@@ -1823,9 +1823,6 @@ export function ChampionPoolEditor({
                 <span className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
                   {activeRoleMeta.label} Champions
                 </span>
-                <span className="px-2 py-0.5 rounded bg-[#0c1017] border border-white/10 text-[11px] font-bold text-[#c7c5b8]">
-                  {unplacedChampions.length} remaining
-                </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1843,7 +1840,7 @@ export function ChampionPoolEditor({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter champion..."
+                  placeholder="Filter by name..."
                   className="xp-inset px-2.5 py-1 text-xs w-40"
                 />
               </div>
