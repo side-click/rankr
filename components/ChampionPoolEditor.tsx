@@ -1173,17 +1173,17 @@ export function ChampionPoolEditor({
     return (
       <RetroWindow title="Champion Pool Editor" theme="scdl">
         <div className="max-w-md mx-auto py-6 px-3 space-y-5">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#11241a] border border-[#2f6343]">
-            <ShieldCheck className="w-5 h-5 text-[#7cd438] shrink-0 mt-0.5" />
-            <div className="text-xs text-[#d6e4d2] space-y-1">
-              <p className="font-bold text-[#f0ede0]">
-                100% Private and Secure
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#221d12] border border-[#f0c020]/50">
+            <Lock className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
+            <div className="text-xs text-[#d6d3c4] space-y-1">
+              <p className="font-bold text-[#f0c020]">
+                Privacy Notice
               </p>
-              <p className="text-[11px] leading-relaxed text-[#b9cbb6]">
+              <p className="text-[11px] leading-relaxed text-[#d6d3c4]">
                 Your champion pools are stored locally and encrypted in your
                 browser. They are never published, and require your passphrase
                 to unlock and view (no, the web admin can&apos;t see them
-                either).
+                either). Forgotten passphrases cannot be recovered.
               </p>
             </div>
           </div>
