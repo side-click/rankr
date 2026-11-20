@@ -1477,37 +1477,11 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
           })}
         </div>
 
-        {/* Preset & Tier Actions for Active Role */}
+        {/* Tier Actions for Active Role */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[#a6a89e] font-bold">
-              Editing {activeRoleMeta.label} Pool:
-            </span>
-            {TIER_PRESETS.map((preset) => (
-              <button
-                key={preset.key}
-                type="button"
-                onClick={() => {
-                  const fresh = createRoleSection(activeRole, preset.key);
-                  // Preserve already-placed champions by moving them into first tier if switching preset
-                  const existingChamps = activeSection.tiers.flatMap(
-                    (t) => t.champions
-                  );
-                  if (existingChamps.length > 0 && fresh.tiers.length > 0) {
-                    fresh.tiers[0].champions = existingChamps;
-                  }
-                  updateActiveRoleTiers(() => fresh.tiers, preset.key);
-                }}
-                className={`px-2.5 py-1 rounded border text-[11px] font-bold cursor-pointer ${
-                  activeSection.preset === preset.key
-                    ? "bg-[#221d12] border-[#f0c020] text-[#f0c020]"
-                    : "bg-[#15181f] border-white/10 text-[#a6a89e] hover:text-white"
-                }`}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
+          <span className="text-[#a6a89e] font-bold">
+            Editing {activeRoleMeta.label} Pool
+          </span>
 
           <div className="flex items-center gap-2">
             <button
