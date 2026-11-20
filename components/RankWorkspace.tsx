@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Lock, User } from "lucide-react";
-import { AuthButton } from "@/components/AuthButton";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
 import { RetroWindow } from "@/components/RetroWindow";
+import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
   Division,
@@ -195,19 +195,7 @@ export function RankWorkspace({
           onUnsavedChange={setActiveTabDirty}
         />
       ) : !userId ? (
-        <RetroWindow title="Sign In Required — Rankings Editor" theme="scdl">
-          <div className="py-8 px-4 text-center space-y-4">
-            <div className="w-12 h-12 mx-auto rounded xp-inset flex items-center justify-center">
-              <Lock className="w-6 h-6 text-[#f0c020]" />
-            </div>
-            <h1 className="text-lg font-bold text-[#f0ede0]">
-              Sign in with Discord to Create Rankings
-            </h1>
-            <div className="flex justify-center">
-              <AuthButton user={null} requireAllowlist={requireAllowlist} />
-            </div>
-          </div>
-        </RetroWindow>
+        <SignInRequiredWindow requireAllowlist={requireAllowlist} />
       ) : rankingType === "team" ? (
         <BallotEditor
           userId={userId}
