@@ -81,6 +81,19 @@ try {
       await page.waitForTimeout(500);
 
       async function capture(label) {
+        await page.evaluate(async () => {
+          await Promise.all(
+            [...document.querySelectorAll("img")].map((img) =>
+              img.complete
+                ? null
+                : new Promise((resolve) => {
+                    img.addEventListener("load", resolve, { once: true });
+                    img.addEventListener("error", resolve, { once: true });
+                    setTimeout(resolve, 4000);
+                  })
+            )
+          );
+        });
         const health = await page.evaluate(() => {
           const brokenImgs = [...document.querySelectorAll("img")]
             .filter((img) => img.complete && img.naturalWidth === 0)

@@ -50,11 +50,19 @@ export interface ChampionRecentGame {
   win: boolean;
   playerName: string;
   playerKey: string;
+  role: string;
+  pickSlot: string | null;
+  opponentChampion: string | null;
+  gameDuration: number;
   kills: number;
   deaths: number;
   assists: number;
+  cs: number;
+  dpm: number;
+  goldDiff15: number;
   teamId: string | null;
   teamName: string;
+  teamLogoUrl: string | null;
   opponentName: string;
 }
 
@@ -195,6 +203,7 @@ export function computeChampionStats(
       const meta = teamMeta(p.teamName);
       const pKey = p.displayName.toLowerCase();
       const tDmg = teamDamage.get(p.teamName) ?? 0;
+      const dpm = minutes > 0 ? p.damageDealt / minutes : 0;
       const pStat = playerMap.get(pKey) ?? {
         playerKey: pKey,
         playerName: p.displayName,
@@ -215,10 +224,22 @@ export function computeChampionStats(
       pStat.kills += p.kills;
       pStat.deaths += p.deaths;
       pStat.assists += p.assists;
-      pStat.totalDpm += minutes > 0 ? p.damageDealt / minutes : 0;
+      pStat.totalDpm += dpm;
       pStat.totalDmgShare += tDmg > 0 ? (p.damageDealt / tDmg) * 100 : 0;
       pStat.totalCsPerMin += minutes > 0 ? p.cs / minutes : 0;
       playerMap.set(pKey, pStat);
+
+      const opp = g.players.find(
+        (o) => o.teamName.toLowerCase() !== p.teamName.toLowerCase() && o.role === p.role
+      );
+      let pickSlot: string | null = null;
+      if (draft) {
+        const sidePicks = p.side === "Blue" ? draft.bluePicks : draft.redPicks;
+        const idx = (sidePicks ?? []).findIndex((c) => normChamp(c) === target);
+        if (idx >= 0) {
+          pickSlot = `${p.side === "Blue" ? "B" : "R"}${idx + 1}`;
+        }
+      }
 
       recent.push({
         order,
@@ -231,11 +252,19 @@ export function computeChampionStats(
           win: p.win,
           playerName: p.displayName,
           playerKey: pKey,
+          role: p.role,
+          pickSlot,
+          opponentChampion: opp?.champion ?? null,
+          gameDuration: g.gameDuration,
           kills: p.kills,
           deaths: p.deaths,
           assists: p.assists,
+          cs: p.cs,
+          dpm: Math.round(dpm),
+          goldDiff15: p.goldDiff15,
           teamId: meta?.teamId ?? null,
           teamName: p.teamName,
+          teamLogoUrl: meta?.logoUrl ?? null,
           opponentName: p.teamName === g.blueTeam ? g.redTeam : g.blueTeam,
         },
       });
