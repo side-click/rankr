@@ -1728,7 +1728,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                 const isLoading = matchupLoadingKey === cacheKey;
                 const isError = matchupErrorKey === cacheKey;
 
-                const popoverWidth = 280;
+                const popoverWidth = 236;
                 const left = Math.min(
                   Math.max(12, hoveredChamp.rect.left + hoveredChamp.rect.width / 2 - popoverWidth / 2),
                   typeof window !== "undefined" ? window.innerWidth - popoverWidth - 12 : 900
@@ -1761,7 +1761,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                         </span>
                       </div>
                       <span className="text-[10px] font-bold text-[#8e93a0]">
-                        Plat+ • {activeRoleMeta.label}
+                        {activeRoleMeta.label} (Plat+)
                       </span>
                     </div>
 
@@ -1777,7 +1777,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                       <div className="space-y-2.5">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-wider text-[#7cd438] mb-1">
-                            Counters (&gt;51% WR • Top 5 Games)
+                            Counters (&gt;51% WR)
                           </p>
                           {data.counters.length === 0 ? (
                             <p className="text-[11px] text-[#7c808b] italic">
@@ -1800,11 +1800,11 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                                       {m.name}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2 shrink-0">
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <span className="font-black text-[#7cd438]">
                                       {m.winRate.toFixed(1)}%
                                     </span>
-                                    <span className="text-[10px] text-[#7c808b] w-12 text-right">
+                                    <span className="text-[10px] text-[#7c808b] w-10 text-right">
                                       {m.games.toLocaleString()}g
                                     </span>
                                   </div>
@@ -1816,7 +1816,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
 
                         <div className="pt-1.5 border-t border-white/10">
                           <p className="text-[10px] font-black uppercase tracking-wider text-[#ff857a] mb-1">
-                            Countered By (&lt;49% WR • Top 5 Games)
+                            Countered By (&lt;49% WR)
                           </p>
                           {data.counteredBy.length === 0 ? (
                             <p className="text-[11px] text-[#7c808b] italic">
@@ -1839,11 +1839,11 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                                       {m.name}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2 shrink-0">
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <span className="font-black text-[#ff857a]">
                                       {m.winRate.toFixed(1)}%
                                     </span>
-                                    <span className="text-[10px] text-[#7c808b] w-12 text-right">
+                                    <span className="text-[10px] text-[#7c808b] w-10 text-right">
                                       {m.games.toLocaleString()}g
                                     </span>
                                   </div>
