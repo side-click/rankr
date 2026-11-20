@@ -245,7 +245,9 @@ function renderPlayerPill(
     return (
       <Link
         key={pl.id}
-        href={`/stats/player/${encodeURIComponent(displayName.toLowerCase())}`}
+        href={`/stats/player/${encodeURIComponent(
+          pl.name.trim().toLowerCase()
+        )}`}
         title={`View ${displayName} stats`}
         className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] hover:border-[#f0c020]/70 hover:text-[#f0c020] transition-colors ${styles.container}`}
       >

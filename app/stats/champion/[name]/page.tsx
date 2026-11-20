@@ -12,10 +12,12 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicChampionStatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ name: string }>;
+  searchParams: Promise<{ division?: string }>;
 }) {
-  const { name } = await params;
+  const [{ name }, { division }] = await Promise.all([params, searchParams]);
   const championName = decodeURIComponent(name);
   const effectiveSeason = await getFocusedSeasonSlug();
   const ctx = await loadPublicStatsContext(effectiveSeason, {
@@ -28,6 +30,7 @@ export default async function PublicChampionStatsPage({
       ctx={ctx}
       series={series}
       championName={championName}
+      initialDivision={division}
       basePath="/stats"
     />
   );

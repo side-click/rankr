@@ -44,6 +44,7 @@ function SideBoxScore({
   durationSec,
   ddVersion,
   basePath,
+  divisionSlug,
   playerKeyByName,
 }: {
   side: "Blue" | "Red";
@@ -55,8 +56,13 @@ function SideBoxScore({
   durationSec: number;
   ddVersion: string;
   basePath: string;
+  divisionSlug?: string | null;
   playerKeyByName: Map<string, string>;
 }) {
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
   const mins = Math.max(durationSec / 60, 1);
   const sideColor =
     side === "Blue"
@@ -133,7 +139,7 @@ function SideBoxScore({
                         />
                       )}
                       <Link
-                        href={`/stats/champion/${encodeURIComponent(p.champion)}`}
+                        href={champHref(p.champion)}
                         className="contents"
                       >
                         <img
@@ -158,9 +164,7 @@ function SideBoxScore({
                           </div>
                         )}
                         <Link
-                          href={`${basePath}/champion/${encodeURIComponent(
-                            p.champion
-                          )}`}
+                          href={champHref(p.champion)}
                           className="text-xs text-[#9aa092] hover:text-[#f0c020] transition-colors block truncate"
                         >
                           {p.champion}
@@ -215,12 +219,20 @@ function SideBoxScore({
 function DraftStrip({
   game,
   ddVersion,
+  basePath = "/stats",
+  divisionSlug,
 }: {
   game: ScdlGameDetail;
   ddVersion: string;
+  basePath?: string;
+  divisionSlug?: string | null;
 }) {
   const draft = game.draft;
   if (!draft) return null;
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
 
   const hasPicks = draft.bluePicks.length > 0 || draft.redPicks.length > 0;
   const hasBans = draft.blueBans.length > 0 || draft.redBans.length > 0;
@@ -262,7 +274,7 @@ function DraftStrip({
                     title={`Blue Ban ${i + 1}: ${champ}`}
                   >
                     <Link
-                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      href={champHref(champ)}
                       className="contents"
                     >
                       <img
@@ -289,7 +301,7 @@ function DraftStrip({
                     title={`B${i + 1}: ${champ}`}
                   >
                     <Link
-                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      href={champHref(champ)}
                       className="contents"
                     >
                       <img
@@ -325,7 +337,7 @@ function DraftStrip({
                     title={`Red Ban ${i + 1}: ${champ}`}
                   >
                     <Link
-                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      href={champHref(champ)}
                       className="contents"
                     >
                       <img
@@ -352,7 +364,7 @@ function DraftStrip({
                     title={`R${i + 1}: ${champ}`}
                   >
                     <Link
-                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      href={champHref(champ)}
                       className="contents"
                     >
                       <img
@@ -532,7 +544,12 @@ export async function MatchSeriesContent({
                   </div>
                 </div>
 
-                <DraftStrip game={g} ddVersion={ctx.ddVersion} />
+                <DraftStrip
+                  game={g}
+                  ddVersion={ctx.ddVersion}
+                  basePath={basePath}
+                  divisionSlug={division?.slug}
+                />
 
                 <div className="space-y-3">
                   <SideBoxScore
@@ -553,6 +570,7 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />
                   <SideBoxScore
@@ -573,6 +591,7 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />
                 </div>

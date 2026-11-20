@@ -24,6 +24,7 @@ interface ChampionStatsContentProps {
   ctx: LoadedStatsContext;
   series: ScdlSeriesDetail[];
   championName: string;
+  initialDivision?: string;
   basePath?: string;
 }
 
@@ -44,11 +45,32 @@ export function ChampionStatsContent({
   ctx,
   series,
   championName,
+  initialDivision,
   basePath = "/stats",
 }: ChampionStatsContentProps) {
-  const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const [divisionFilter, setDivisionFilter] = useState<string>(() => {
+    if (!initialDivision || initialDivision === "all") return "all";
+    const lower = initialDivision.toLowerCase();
+    const matched = ctx.divisions.find(
+      (d) => d.slug.toLowerCase() === lower || d.id.toLowerCase() === lower
+    );
+    return matched ? matched.slug : "all";
+  });
   const [sortBy, setSortBy] = useState<PlayerSortKey>("games");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+
+  const selectDivision = (nextSlug: string) => {
+    setDivisionFilter(nextSlug);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (nextSlug === "all") {
+        url.searchParams.delete("division");
+      } else {
+        url.searchParams.set("division", nextSlug);
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
 
   const selectedDiv = useMemo(
     () =>
@@ -106,7 +128,7 @@ export function ChampionStatsContent({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setDivisionFilter("all")}
+            onClick={() => selectDivision("all")}
             className={`xp-btn text-xs ${
               divisionFilter === "all" ? "xp-btn-gold" : ""
             }`}
@@ -117,7 +139,7 @@ export function ChampionStatsContent({
             <button
               key={div.id}
               type="button"
-              onClick={() => setDivisionFilter(div.slug)}
+              onClick={() => selectDivision(div.slug)}
               className={`xp-btn text-xs ${
                 divisionFilter === div.slug ? "xp-btn-gold" : ""
               }`}

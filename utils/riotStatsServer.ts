@@ -228,7 +228,9 @@ async function loadStatsContextInternal(
     ? (() => {
         let q = supabase.from("riot_player_stats").select("*");
         if (playerKeyFilter) {
-          q = q.eq("player_key", playerKeyFilter);
+          q = playerKeyFilter.includes("#")
+            ? q.eq("player_key", playerKeyFilter)
+            : q.ilike("player_key", `${playerKeyFilter}#%`);
         } else if (teamIdFilter) {
           q = q.eq("team_id", teamIdFilter);
         }
@@ -432,6 +434,7 @@ export interface TeamScoutingPayload {
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
   divisionThemeKey: string;
+  divisionSlug: string | null;
   roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
 }
 
@@ -464,8 +467,9 @@ export async function loadTeamScoutingData(
     teamLogoMap[t.teamName.toLowerCase()] = t.logoUrl;
   }
 
-  const divisionThemeKey =
-    ctx.divisions.find((d) => d.id === team.divisionId)?.theme_key ?? "scdl";
+  const divisionObj = ctx.divisions.find((d) => d.id === team.divisionId);
+  const divisionThemeKey = divisionObj?.theme_key ?? "scdl";
+  const divisionSlug = divisionObj?.slug ?? null;
 
   const roleRankByPlayerKey: Record<string, { rank: number; total: number }> =
     {};
@@ -492,6 +496,7 @@ export async function loadTeamScoutingData(
     seriesHistory,
     teamLogoMap,
     divisionThemeKey,
+    divisionSlug,
     roleRankByPlayerKey,
   };
 }

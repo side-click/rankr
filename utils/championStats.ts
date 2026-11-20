@@ -111,6 +111,24 @@ export function computeChampionStats(
   const teamByName = new Map(ctx.teams.map((t) => [t.teamName.trim().toLowerCase(), t]));
   const teamMeta = (name: string) => teamByName.get(name.trim().toLowerCase()) ?? null;
 
+  const playerKeyByName = new Map<string, string>();
+  for (const pl of ctx.players) {
+    playerKeyByName.set(pl.playerKey.toLowerCase(), pl.playerKey);
+    playerKeyByName.set(pl.displayName.toLowerCase(), pl.playerKey);
+    const riotBase = pl.riotId.split("#")[0]?.trim().toLowerCase();
+    if (riotBase) playerKeyByName.set(riotBase, pl.playerKey);
+    for (const alt of pl.altAccounts ?? []) {
+      const altLower = alt.trim().toLowerCase();
+      if (altLower && !playerKeyByName.has(altLower)) {
+        playerKeyByName.set(altLower, pl.playerKey);
+      }
+      const altBase = alt.split("#")[0]?.trim().toLowerCase();
+      if (altBase && !playerKeyByName.has(altBase)) {
+        playerKeyByName.set(altBase, pl.playerKey);
+      }
+    }
+  }
+
   const allGames = flattenSeriesGames(series).filter((g) => {
     if (!divObj) return true;
     return teamMeta(g.blueTeam)?.divisionId === divObj.id;
@@ -201,7 +219,10 @@ export function computeChampionStats(
       roleMap.set(p.role, rStat);
 
       const meta = teamMeta(p.teamName);
-      const pKey = p.displayName.toLowerCase();
+      const pKey =
+        playerKeyByName.get(p.playerName.trim().toLowerCase()) ??
+        playerKeyByName.get(p.displayName.trim().toLowerCase()) ??
+        p.playerName.trim().toLowerCase();
       const tDmg = teamDamage.get(p.teamName) ?? 0;
       const dpm = minutes > 0 ? p.damageDealt / minutes : 0;
       const pStat = playerMap.get(pKey) ?? {

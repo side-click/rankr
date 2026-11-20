@@ -64,6 +64,7 @@ interface StatsDivisionTabProps {
   ddVersion: string;
   kpiCardStyle: React.CSSProperties;
   selectedDivisionPrimaryColor?: string | null;
+  selectedDivisionSlug?: string | null;
 }
 
 function normChampKey(name: string): string {
@@ -106,7 +107,14 @@ export function StatsDivisionTab({
   ddVersion,
   kpiCardStyle,
   selectedDivisionPrimaryColor,
+  selectedDivisionSlug,
 }: StatsDivisionTabProps) {
+  const champHref = (name: string) =>
+    `/stats/champion/${encodeURIComponent(name)}${
+      selectedDivisionSlug
+        ? `?division=${encodeURIComponent(selectedDivisionSlug)}`
+        : ""
+    }`;
   const allChampions = useAllChampions(ddVersion);
   const untouched = useMemo(() => {
     if (allChampions.length === 0) return [];
@@ -416,7 +424,7 @@ export function StatsDivisionTab({
               {overview.champs.slice(0, 36).map((c) => (
                 <Link
                   key={c.name}
-                  href={`/stats/champion/${encodeURIComponent(c.name)}`}
+                  href={champHref(c.name)}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
                     0
                   )}% WR)`}
@@ -454,7 +462,7 @@ export function StatsDivisionTab({
                   {overview.bannedChamps.slice(0, 12).map((b) => (
                     <Link
                       key={b.name}
-                      href={`/stats/champion/${encodeURIComponent(b.name)}`}
+                      href={champHref(b.name)}
                       title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
                         0
                       )}% ban rate)`}

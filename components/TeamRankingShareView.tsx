@@ -735,9 +735,9 @@ export function TeamRankingShareView({
                               displayName ? (
                                 <Link
                                   href={`/stats/player/${encodeURIComponent(
-                                    displayName.toLowerCase()
+                                    slot.name.trim().toLowerCase()
                                   )}`}
-                                  className="truncate hover:text-[#f0c020] hover:underline transition-colors"
+                                  className="truncate hover:text-[#f0c020] transition-colors"
                                   title={`View ${displayName} stats`}
                                 >
                                   {displayName}

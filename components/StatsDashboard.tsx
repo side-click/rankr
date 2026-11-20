@@ -2134,6 +2134,7 @@ export function StatsDashboard({
             ddVersion={ddVersion}
             kpiCardStyle={kpiCardStyle}
             selectedDivisionPrimaryColor={selectedDivisionTheme?.primary_color}
+            selectedDivisionSlug={selectedDivision?.slug ?? null}
           />
         )}
 

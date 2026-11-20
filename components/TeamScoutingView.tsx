@@ -135,6 +135,18 @@ export function TeamScoutingView({
       : divisionThemeKey === "baron"
       ? "baron"
       : "scdl";
+  const divisionSlug =
+    divisionThemeKey === "dragon" || divisionThemeKey === "baron"
+      ? divisionThemeKey
+      : team.divisionName.toLowerCase().includes("baron")
+      ? "baron"
+      : team.divisionName.toLowerCase().includes("dragon")
+      ? "dragon"
+      : null;
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
 
   const displayTeam = leagueTeam ?? team;
   const leaguePlayerByKey = new Map(
@@ -451,9 +463,7 @@ export function TeamScoutingView({
                           return (
                             <Link
                               key={c.name}
-                              href={`${basePath}/champion/${encodeURIComponent(
-                                c.name
-                              )}`}
+                              href={champHref(c.name)}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
@@ -517,9 +527,7 @@ export function TeamScoutingView({
                           return (
                             <Link
                               key={c.name}
-                              href={`${basePath}/champion/${encodeURIComponent(
-                                c.name
-                              )}`}
+                              href={champHref(c.name)}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
@@ -581,9 +589,7 @@ export function TeamScoutingView({
                         {soloPlayer.masteryTop4.map((m) => (
                           <Link
                             key={m.championName}
-                            href={`${basePath}/champion/${encodeURIComponent(
-                              m.championName
-                            )}`}
+                            href={champHref(m.championName)}
                             title={`${m.championName} — M${
                               m.championLevel
                             } (${m.championPoints.toLocaleString()} pts)`}
@@ -627,7 +633,7 @@ export function TeamScoutingView({
                 {bannedAgainstList.slice(0, 12).map((b) => (
                   <Link
                     key={b.name}
-                    href={`${basePath}/champion/${encodeURIComponent(b.name)}`}
+                    href={champHref(b.name)}
                     className="group flex items-center justify-between gap-2 bg-black/35 border border-white/10 hover:border-[#f0c020]/70 transition rounded px-2.5 py-2 text-xs sm:text-[13px]"
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -667,9 +673,7 @@ export function TeamScoutingView({
                     {b1Picks.map((p, idx) => (
                       <Link
                         key={idx}
-                        href={`${basePath}/champion/${encodeURIComponent(
-                          p.champ
-                        )}`}
+                        href={champHref(p.champ)}
                         className="group flex items-start gap-2"
                       >
                         <img
@@ -705,9 +709,7 @@ export function TeamScoutingView({
                           {p.champs.map((ch) => (
                             <Link
                               key={ch}
-                              href={`${basePath}/champion/${encodeURIComponent(
-                                ch
-                              )}`}
+                              href={champHref(ch)}
                               className="inline-flex items-center gap-1 hover:text-[#f0c020] transition-colors font-bold text-[#f0ede0]"
                             >
                               <img
@@ -761,9 +763,7 @@ export function TeamScoutingView({
                     {r5Picks.map((p, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <Link
-                          href={`${basePath}/champion/${encodeURIComponent(
-                            p.champ
-                          )}`}
+                          href={champHref(p.champ)}
                           className="shrink-0 mt-0.5"
                         >
                           <img
@@ -775,9 +775,7 @@ export function TeamScoutingView({
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-[#f0ede0] flex flex-wrap items-center gap-1 leading-tight">
                             <Link
-                              href={`${basePath}/champion/${encodeURIComponent(
-                                p.champ
-                              )}`}
+                              href={champHref(p.champ)}
                               className="hover:text-[#f0c020] transition-colors"
                             >
                               {p.champ}
@@ -793,9 +791,7 @@ export function TeamScoutingView({
                                   vs
                                 </span>
                                 <Link
-                                  href={`${basePath}/champion/${encodeURIComponent(
-                                    p.vsChamp
-                                  )}`}
+                                  href={champHref(p.vsChamp)}
                                   className="inline-flex items-center gap-1 group"
                                 >
                                   <img

@@ -140,7 +140,12 @@ export async function PlayerStatsContent({
   decodedKey: string;
   basePath?: string;
 }) {
-  const soloPlayer = ctx.players.find((p) => p.playerKey === decodedKey);
+  const soloPlayer = ctx.players.find(
+    (p) =>
+      p.playerKey === decodedKey ||
+      p.displayName.toLowerCase() === decodedKey ||
+      p.riotId.split("#")[0]?.trim().toLowerCase() === decodedKey
+  );
   if (!soloPlayer) {
     return (
       <RetroWindow title="Player Not Found" theme="scdl">
@@ -246,9 +251,13 @@ export async function PlayerStatsContent({
     soloPlayer.soloLp
   );
   const leaguePrefix = deriveLeaguePrefix(ctx.leagueName);
-  const divThemeKey =
-    ctx.divisions.find((d) => d.id === soloPlayer.divisionId)?.theme_key ??
-    "scdl";
+  const playerDiv = ctx.divisions.find((d) => d.id === soloPlayer.divisionId);
+  const divThemeKey = playerDiv?.theme_key ?? "scdl";
+  const divisionSlug = playerDiv?.slug ?? null;
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
   const divTheme = resolveDivisionTheme(divThemeKey);
   const windowTheme =
     divThemeKey === "dragon"
@@ -564,7 +573,7 @@ export async function PlayerStatsContent({
                   return (
                     <Link
                       key={c.name}
-                      href={`${basePath}/champion/${encodeURIComponent(c.name)}`}
+                      href={champHref(c.name)}
                       className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
@@ -612,7 +621,7 @@ export async function PlayerStatsContent({
                   return (
                     <Link
                       key={c.name}
-                      href={`${basePath}/champion/${encodeURIComponent(c.name)}`}
+                      href={champHref(c.name)}
                       className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
@@ -665,9 +674,7 @@ export async function PlayerStatsContent({
                 {soloPlayer.masteryTop4.map((m) => (
                   <Link
                     key={m.championName}
-                    href={`${basePath}/champion/${encodeURIComponent(
-                      m.championName
-                    )}`}
+                    href={champHref(m.championName)}
                     title={`${m.championName} • ${m.championPoints.toLocaleString()} pts`}
                     className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden text-center block"
                   >
