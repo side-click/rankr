@@ -2184,7 +2184,7 @@ export function ChampionPoolEditor({
 
             <div className="xp-inset p-2.5 grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2">
               {unplacedChampions.length === 0 ? (
-                <div className="w-full py-6 text-center text-xs text-[#7c808b]">
+                <div className="col-span-full w-full py-6 text-center text-xs text-[#7c808b]">
                   No matching champions available.
                 </div>
               ) : (
