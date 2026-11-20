@@ -1124,9 +1124,9 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
               </p>
               <p className="text-[11px] leading-relaxed text-[#b9cbb6]">
                 Your champion pools are stored locally and encrypted in your
-                browser. They are never published, and can only be viewed after
-                unlocking with your passphrase (no, the web admin can&apos;t see
-                them either).
+                browser. They are never published, and require your passphrase
+                to unlock and view (no, the web admin can&apos;t see them
+                either).
               </p>
             </div>
           </div>
