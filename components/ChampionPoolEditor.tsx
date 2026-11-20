@@ -336,6 +336,7 @@ function DroppableTierRow({
             </span>
             <textarea
               rows={1}
+              cols={1}
               value={tier.label}
               onChange={(e) =>
                 onLabelChange(e.target.value.replace(/\r?\n/g, " "))
