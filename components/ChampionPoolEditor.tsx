@@ -1862,13 +1862,9 @@ export function ChampionPoolEditor({
         </div>
 
         {/* Row 2: Role Selector (right-justified) */}
-        <div className="flex justify-end">
-          <div className="inline-flex flex-wrap items-center xp-inset p-0.5 rounded-sm">
+        <div className="flex flex-wrap items-center justify-end gap-2">
             {LEAGUE_ROLES.map((r) => {
               const sec = pool.roles[r.key];
-              const hasChamps = Boolean(
-                sec && sec.tiers.some((t) => t.champions.length > 0)
-              );
               const isRoleDirty =
                 JSON.stringify(sec ?? null) !==
                 (savedRolesJson[r.key] ?? "null");
@@ -1879,10 +1875,8 @@ export function ChampionPoolEditor({
                   key={r.key}
                   type="button"
                   onClick={() => setActiveRole(r.key)}
-                  className={`px-2.5 py-1.5 rounded-xs text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-[#2b2412] text-[#f0c020] border border-[#c89b3c]/60"
-                      : "text-[#a6a89e] hover:text-white border border-transparent"
+                  className={`xp-btn text-xs sm:w-[104px] justify-center whitespace-nowrap ${
+                    isActive ? "xp-btn-gold" : ""
                   }`}
                 >
                   <img
@@ -1890,25 +1884,15 @@ export function ChampionPoolEditor({
                     alt={r.label}
                     className="w-4 h-4 shrink-0"
                   />
-                  <span className="hidden sm:inline">{r.label}</span>
-                  <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-                    {hasChamps &&
-                      (isRoleDirty ? (
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#7cd438]"
-                          title={`${r.label} has unsaved champions`}
-                        />
-                      ) : (
-                        <Check
-                          className="w-3 h-3 text-[#7cd438]"
-                          aria-label={`${r.label} saved`}
-                        />
-                      ))}
+                  <span className="hidden sm:inline">
+                    {r.label}
+                    <span className="inline-block w-2 text-left">
+                      {isRoleDirty ? "*" : ""}
+                    </span>
                   </span>
                 </button>
               );
             })}
-          </div>
         </div>
 
         {saveMessage && (
