@@ -464,9 +464,6 @@ export function ConsensusRankingsView({
         </div>
 
         {/* Outdated Fallback Notice */}
-        {isPending && (
-          <div className="fixed top-0 left-0 right-0 h-[3px] bg-[#f0c020] shadow-[0_0_8px_#f0c020] z-50 animate-pulse" />
-        )}
         <div
           className={`space-y-4 transition-opacity duration-150 ${
             isPending ? "opacity-60 pointer-events-none" : ""
