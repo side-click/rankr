@@ -126,12 +126,14 @@ function ChampionTileVisual({
   showRemoveButton,
   onRemove,
   isOverlay,
+  iconsOnly,
 }: {
   champion: ChampionPoolTierItem;
   iconUrl: string;
   showRemoveButton?: boolean;
   onRemove?: () => void;
   isOverlay?: boolean;
+  iconsOnly?: boolean;
 }) {
   const nameSizeClass =
     champion.name.length > 13
@@ -142,7 +144,11 @@ function ChampionTileVisual({
 
   return (
     <div
-      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[78px] p-1.5 rounded border select-none transition-colors ${
+      className={`group relative flex flex-col items-center ${
+        iconsOnly
+          ? "w-[64px] h-[64px] rounded-md overflow-visible"
+          : "w-full min-w-[76px] h-[78px] p-1.5 rounded"
+      } border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -167,16 +173,22 @@ function ChampionTileVisual({
       <img
         src={iconUrl}
         alt={champion.name}
-        width={48}
-        height={48}
+        width={iconsOnly ? 64 : 48}
+        height={iconsOnly ? 64 : 48}
         draggable={false}
-        className="w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
+        className={
+          iconsOnly
+            ? "w-full h-full rounded-[5px] object-cover bg-[#0f131a]"
+            : "w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
+        }
       />
-      <span
-        className={`mt-1 ${nameSizeClass} font-bold leading-tight text-center whitespace-nowrap truncate w-full`}
-      >
-        {champion.name}
-      </span>
+      {!iconsOnly && (
+        <span
+          className={`mt-1 ${nameSizeClass} font-bold leading-tight text-center whitespace-nowrap truncate w-full`}
+        >
+          {champion.name}
+        </span>
+      )}
     </div>
   );
 }
@@ -188,6 +200,7 @@ function DraggablePlacedChampion({
   onRemove,
   onHoverStart,
   onHoverEnd,
+  iconsOnly,
 }: {
   tierId: string;
   champion: ChampionPoolTierItem;
@@ -195,6 +208,7 @@ function DraggablePlacedChampion({
   onRemove: () => void;
   onHoverStart?: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd?: () => void;
+  iconsOnly?: boolean;
 }) {
   const {
     attributes,
@@ -249,6 +263,7 @@ function DraggablePlacedChampion({
         iconUrl={iconUrl}
         showRemoveButton
         onRemove={onRemove}
+        iconsOnly={iconsOnly}
       />
     </div>
   );
@@ -335,6 +350,7 @@ function DroppableTierRow({
   onHoverStart,
   onHoverEnd,
   activeGapId,
+  iconsOnly,
 }: {
   tier: ChampionTierRowData;
   index: number;
@@ -350,6 +366,7 @@ function DroppableTierRow({
   onHoverStart: (champion: ChampionPoolTierItem, rect: DOMRect) => void;
   onHoverEnd: () => void;
   activeGapId: string | null;
+  iconsOnly?: boolean;
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -536,6 +553,7 @@ function DroppableTierRow({
                       onRemove={() => onRemoveChampion(champ.championId)}
                       onHoverStart={onHoverStart}
                       onHoverEnd={onHoverEnd}
+                      iconsOnly={iconsOnly}
                     />
                   </div>
                 ))}
@@ -570,6 +588,7 @@ function DroppableTierRow({
                       onRemove={() => onRemoveChampion(champ.championId)}
                       onHoverStart={onHoverStart}
                       onHoverEnd={onHoverEnd}
+                      iconsOnly={iconsOnly}
                     />
                     {cIdx === generalChamps.length - 1 && (
                       <GapDropSlot
@@ -2105,6 +2124,7 @@ export function ChampionPoolEditor({
                 onHoverStart={handleChampHoverStart}
                 onHoverEnd={handleChampHoverEnd}
                 activeGapId={activeGapId}
+                iconsOnly={iconsOnlyExport}
               />
             ))}
           </div>
