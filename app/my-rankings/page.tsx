@@ -10,6 +10,12 @@ import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
 import { Award, Edit3, Lock, ShieldCheck, User } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "My Ranking History | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function MyRankingsPage() {

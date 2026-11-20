@@ -5,6 +5,12 @@ import { BallotListGrid } from "@/components/BallotListGrid";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { Search } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Browse Rankings | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function BrowsePage({

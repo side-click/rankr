@@ -3,6 +3,12 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { ShieldAlert } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Console | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {

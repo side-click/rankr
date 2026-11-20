@@ -9,6 +9,12 @@ import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import type { RankingType } from "@/types/database";
 import { Lock } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Create Ranking | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function RankPage({
