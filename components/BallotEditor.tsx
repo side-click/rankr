@@ -899,6 +899,8 @@ export function BallotEditor({
       currentSnapshot !== loadedSnapshotRef.current
   );
 
+  useUnsavedChangesGuard(hasUnsavedChanges);
+
   function confirmSwitchScope(): boolean {
     if (!hasUnsavedChanges) return true;
     return window.confirm(

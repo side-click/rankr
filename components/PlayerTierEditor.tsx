@@ -1150,6 +1150,8 @@ export function PlayerTierEditor({
     );
   }, [totalPlacedPlayers, authorNotes, tierPayload]);
 
+  useUnsavedChangesGuard(hasTierWork);
+
   function confirmSwitchScope(): boolean {
     if (!hasTierWork) return true;
     return window.confirm(
