@@ -1814,11 +1814,7 @@ export function ChampionPoolEditor({
             className="xp-btn xp-btn-primary text-xs"
           >
             <Save className="w-3.5 h-3.5" />
-            {saving
-              ? "Encrypting..."
-              : dirty
-              ? "Save Changes*"
-              : "Save Pool"}
+            {saving ? "Encrypting..." : `Save Pool${dirty ? "*" : ""}`}
           </button>
           <button
             type="button"
