@@ -2001,7 +2001,7 @@ export function ChampionPoolEditor({
             onClick={() => {
               setConfirmModal({
                 title: `Reset ${activeRoleMeta.label} Pool`,
-                message: `Reset ${activeRoleMeta.label} Pool? All champions in this role's tiers will be removed.`,
+                message: "All champions in this role's tiers will be removed.",
                 confirmLabel: `Reset ${activeRoleMeta.label} Pool`,
                 danger: true,
                 onConfirm: () => {
