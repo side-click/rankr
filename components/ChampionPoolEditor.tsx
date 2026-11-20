@@ -52,11 +52,8 @@ import type {
 } from "@/utils/championData";
 import type { ChampionMatchupsResponse } from "@/utils/lolalyticsMatchups";
 import {
-  clearStoredPassphrase,
   decryptPoolPayload,
   encryptPoolPayload,
-  getStoredPassphrase,
-  storePassphrase,
 } from "@/utils/cryptoPool";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import {
@@ -568,7 +565,6 @@ export function ChampionPoolEditor({
   const [passInput, setPassInput] = useState("");
   const [passConfirmInput, setPassConfirmInput] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [rememberBrowser, setRememberBrowser] = useState(true);
   const [startingRole, setStartingRole] = useState<LeagueRole>("mid");
   const [authError, setAuthError] = useState<string | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -673,38 +669,7 @@ export function ChampionPoolEditor({
         if (dbRes.error) {
           setAuthError(dbRes.error.message);
         } else if (dbRes.data) {
-          const rec = dbRes.data as EncryptedChampionPoolRecord;
-          setExistingRecord(rec);
-
-          // Try auto-unlock if passphrase is remembered in browser storage
-          const stored = getStoredPassphrase(storageUserKey);
-          if (stored.passphrase) {
-            try {
-              const decrypted = await decryptPoolPayload(
-                rec,
-                stored.passphrase
-              );
-              if (cancelled) return;
-              setPool(decrypted);
-              setActivePassphrase(stored.passphrase);
-              setRememberBrowser(stored.remembered);
-              const populatedRoles = LEAGUE_ROLES.map((r) => r.key).filter(
-                (r) => {
-                  const sec = decrypted.roles[r];
-                  return (
-                    sec &&
-                    sec.tiers.some((t) => t.champions.length > 0)
-                  );
-                }
-              );
-              if (populatedRoles.length > 0) {
-                setActiveRole(populatedRoles[0]);
-              }
-              setUnlocked(true);
-            } catch {
-              clearStoredPassphrase(storageUserKey);
-            }
-          }
+          setExistingRecord(dbRes.data as EncryptedChampionPoolRecord);
         }
       } catch (err) {
         if (!cancelled) {
@@ -848,7 +813,6 @@ export function ChampionPoolEditor({
         );
       }
 
-      storePassphrase(storageUserKey, passInput, rememberBrowser);
       setExistingRecord(savedRec);
       setPool(initialPayload);
       setActiveRole(startingRole);
@@ -873,7 +837,6 @@ export function ChampionPoolEditor({
 
     try {
       const decrypted = await decryptPoolPayload(existingRecord, passInput);
-      storePassphrase(storageUserKey, passInput, rememberBrowser);
       setPool(decrypted);
       setActivePassphrase(passInput);
       setPassInput("");
@@ -905,7 +868,6 @@ export function ChampionPoolEditor({
       } else {
         window.localStorage.removeItem(ANON_POOL_STORAGE_KEY);
       }
-      clearStoredPassphrase(storageUserKey);
       setExistingRecord(null);
       setActivePassphrase("");
       setUnlocked(false);
@@ -916,14 +878,6 @@ export function ChampionPoolEditor({
         err instanceof Error ? err.message : "Failed to delete encrypted pool."
       );
     }
-  }
-
-  function handleLockPool() {
-    clearStoredPassphrase(storageUserKey);
-    setActivePassphrase("");
-    setUnlocked(false);
-    setPool({ version: 1, title: "My Champion Pool", roles: {} });
-    setDirty(false);
   }
 
   async function savePoolWithPassphrase(passToUse: string) {
@@ -1000,7 +954,6 @@ export function ChampionPoolEditor({
       return;
     }
     setActivePassphrase(newPassInput);
-    storePassphrase(storageUserKey, newPassInput, rememberBrowser);
     await savePoolWithPassphrase(newPassInput);
     setNewPassInput("");
     setNewPassConfirm("");
@@ -1287,16 +1240,6 @@ export function ChampionPoolEditor({
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberBrowser}
-                  onChange={(e) => setRememberBrowser(e.target.checked)}
-                  className="accent-[#f0c020]"
-                />
-                Remember passphrase on this browser
-              </label>
-
               <button
                 type="submit"
                 className="w-full xp-btn xp-btn-primary py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
@@ -1402,16 +1345,6 @@ export function ChampionPoolEditor({
                   className="w-full bg-[#0f131a] border border-white/15 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#f0c020]"
                 />
               </div>
-
-              <label className="flex items-center gap-2 text-xs text-[#c7c9be] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberBrowser}
-                  onChange={(e) => setRememberBrowser(e.target.checked)}
-                  className="accent-[#f0c020]"
-                />
-                Remember passphrase on this browser
-              </label>
 
               <button
                 type="submit"
@@ -1587,16 +1520,6 @@ export function ChampionPoolEditor({
               className="xp-btn text-xs"
             >
               <KeyRound className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLockPool}
-              title="Lock pool"
-              className="xp-btn text-xs"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Lock
             </button>
           </div>
         </div>
