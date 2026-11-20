@@ -2119,10 +2119,11 @@ export function ChampionPoolEditor({
 
         {/* Off-screen Single-Role PNG Export Card */}
         <div className="fixed -left-[9999px] top-0 pointer-events-none">
-          <div
-            ref={exportCardRef}
-            className="w-[920px] p-6 bg-[#0e1117] text-[#f0ede0] rounded-xl border-[3px] border-[#4b5563] space-y-4"
-          >
+          <div ref={exportCardRef} className="w-[1080px] p-2.5">
+            <div
+              style={{ borderRadius: "44px", borderColor: "#5c6662" }}
+              className="w-full p-6 bg-[#0e1117] text-[#f0ede0] border-[6px] overflow-hidden space-y-4"
+            >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
                 <img
@@ -2264,6 +2265,7 @@ export function ChampionPoolEditor({
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
         </div>
