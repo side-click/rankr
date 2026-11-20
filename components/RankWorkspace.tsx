@@ -141,15 +141,15 @@ export function RankWorkspace({
           onClick={() => handleSelectRankingType("champion_pool")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
             rankingType === "champion_pool"
-              ? "bg-[#11241a] border-[#7cd438] shadow-[0_0_20px_rgba(124,212,56,0.18)]"
+              ? "bg-[#11241a] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
               rankingType === "champion_pool"
-                ? "bg-[#1b3827] border-[#7cd438] text-[#7cd438]"
-                : "bg-black/30 border-white/15 text-[#7cd438]/70"
+                ? "bg-[#1b3827] border-[#f0c020] text-[#f0c020]"
+                : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
             <ChampionHelmetIcon className="w-5 h-5" />
@@ -158,13 +158,13 @@ export function RankWorkspace({
             <span
               className={`font-black text-sm tracking-tight block ${
                 rankingType === "champion_pool"
-                  ? "text-[#7cd438]"
+                  ? "text-[#f0c020]"
                   : "text-[#f0ede0]"
               }`}
             >
               Champion Pool
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#9fb89a]">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#a6a89e]">
               <Lock className="w-2.5 h-2.5" /> Private
             </span>
           </div>

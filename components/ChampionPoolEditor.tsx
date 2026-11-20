@@ -128,11 +128,11 @@ function ChampionTileVisual({
 }) {
   return (
     <div
-      className={`group relative flex flex-col items-center w-[66px] p-1.5 rounded-md border select-none transition-colors ${
+      className={`group relative flex flex-col items-center w-[66px] h-[84px] p-1.5 rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
-          ? "bg-[#14221a] border-[#7cd438]/45 text-[#f0ede0] hover:border-[#7cd438] cursor-grab"
+          ? "bg-[#14221a] border-[#2f6343] text-[#f0ede0] hover:border-[#7cd438] cursor-grab"
           : "bg-[#1a1f29] border-white/15 text-[#f0ede0] hover:border-[#f0c020]/60 cursor-grab"
       }`}
     >
@@ -320,7 +320,7 @@ function DroppableTierRow({
   const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
   return (
-    <div className="rounded-lg border border-white/10 bg-[#12151c] overflow-hidden">
+    <div className="rounded border border-white/15 bg-[#12151c] overflow-hidden">
       <div className="flex flex-col sm:flex-row">
         {/* Tier Label & Controls (matches PlayerTierEditor) */}
         <div
@@ -440,13 +440,13 @@ function DroppableTierRow({
             {/* Isolated Blindable Section at Front of Tier */}
             <div
               ref={setBlindRef}
-              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r border-[#7cd438]/25 transition-colors flex flex-col ${
+              className={`md:min-w-[168px] md:max-w-[320px] shrink-0 p-2 border-b md:border-b-0 md:border-r border-[#2f6343]/80 transition-colors flex flex-col ${
                 isOverBlind
-                  ? "bg-[#7cd438]/15 ring-1 ring-inset ring-[#7cd438]/60"
-                  : "bg-[#101c16]/70"
+                  ? "bg-[#2f6343]/25 ring-1 ring-inset ring-[#7cd438]/50"
+                  : "bg-[#0f1a14]/70"
               }`}
             >
-              <div className="flex items-center gap-1 mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#7cd438]">
+              <div className="flex items-center gap-1 mb-1.5 text-[10px] font-black uppercase tracking-wider text-[#9ec497]">
                 <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
@@ -522,10 +522,8 @@ function DroppableUnplacedPool({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border p-3 transition-colors ${
-        isOver
-          ? "bg-[#f0c020]/10 border-[#f0c020]/60"
-          : "bg-[#10131a] border-white/10"
+      className={`xp-inset rounded p-3 transition-colors ${
+        isOver ? "ring-1 ring-[#f0c020]/60 bg-[#191d26]" : ""
       }`}
     >
       {children}
@@ -1331,7 +1329,7 @@ export function ChampionPoolEditor({
     <RetroWindow title="Champion Pool Editor" theme="scdl">
       <div className="space-y-4">
         {/* Top Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-[#141820] border border-white/10">
+        <div className="xp-inset rounded p-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-[220px]">
             <span className="text-xs font-bold text-[#a6a89e] shrink-0">
               Title:
@@ -1901,17 +1899,45 @@ export function ChampionPoolEditor({
                     >
                       {tier.label}
                     </div>
-                    <div className="flex-1 flex items-stretch">
-                      {blindChamps.length > 0 && (
-                        <div className="p-2.5 bg-[#101c16] border-r border-[#7cd438]/30 flex flex-col gap-1.5 shrink-0">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-[#7cd438]">
-                            Blindable
-                          </span>
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {blindChamps.map((c) => (
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex-1 flex items-stretch">
+                        {blindChamps.length > 0 && (
+                          <div className="p-2.5 bg-[#0f1a14] border-r border-[#2f6343]/80 flex flex-col gap-1.5 shrink-0">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#9ec497]">
+                              Blindable
+                            </span>
+                            <div className="flex flex-wrap gap-2 items-center">
+                              {blindChamps.map((c) => (
+                                <div
+                                  key={c.championId}
+                                  className="flex flex-col items-center w-[64px] h-[80px] p-1 rounded bg-[#14221a] border border-[#2f6343]"
+                                >
+                                  <img
+                                    src={iconMap.get(c.championId) ?? ""}
+                                    alt={c.name}
+                                    width={44}
+                                    height={44}
+                                    crossOrigin="anonymous"
+                                    className="w-11 h-11 rounded object-cover"
+                                  />
+                                  <span className="mt-1 text-[10px] font-bold text-center leading-tight line-clamp-2">
+                                    {c.name}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1 p-2.5 flex flex-wrap gap-2 items-center">
+                          {tier.champions.length === 0 ? (
+                            <span className="text-xs text-[#5d626d] italic">
+                              Empty
+                            </span>
+                          ) : genChamps.length === 0 ? null : (
+                            genChamps.map((c) => (
                               <div
                                 key={c.championId}
-                                className="flex flex-col items-center w-[64px] p-1 rounded bg-[#14221a] border border-[#7cd438]/40"
+                                className="flex flex-col items-center w-[64px] h-[80px] p-1 rounded bg-[#1b202b] border border-white/10"
                               >
                                 <img
                                   src={iconMap.get(c.championId) ?? ""}
@@ -1921,40 +1947,19 @@ export function ChampionPoolEditor({
                                   crossOrigin="anonymous"
                                   className="w-11 h-11 rounded object-cover"
                                 />
-                                <span className="mt-1 text-[10px] font-bold text-center leading-tight">
+                                <span className="mt-1 text-[10px] font-bold text-center leading-tight line-clamp-2">
                                   {c.name}
                                 </span>
                               </div>
-                            ))}
-                          </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      {tier.commentary.trim() && (
+                        <div className="px-3 py-1.5 border-t border-white/10 bg-black/20 text-[11px] text-[#d6d3c4]">
+                          {tier.commentary.trim()}
                         </div>
                       )}
-                      <div className="flex-1 p-2.5 flex flex-wrap gap-2 items-center">
-                        {tier.champions.length === 0 ? (
-                          <span className="text-xs text-[#5d626d] italic">
-                            Empty
-                          </span>
-                        ) : genChamps.length === 0 ? null : (
-                          genChamps.map((c) => (
-                            <div
-                              key={c.championId}
-                              className="flex flex-col items-center w-[64px] p-1 rounded bg-[#1b202b] border border-white/10"
-                            >
-                              <img
-                                src={iconMap.get(c.championId) ?? ""}
-                                alt={c.name}
-                                width={44}
-                                height={44}
-                                crossOrigin="anonymous"
-                                className="w-11 h-11 rounded object-cover"
-                              />
-                              <span className="mt-1 text-[10px] font-bold text-center leading-tight">
-                                {c.name}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
                     </div>
                   </div>
                 );
