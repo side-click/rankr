@@ -2208,6 +2208,7 @@ export function ChampionPoolEditor({
                     champion={activeDragChamp}
                     iconUrl={iconMap.get(activeDragChamp.championId) ?? ""}
                     isOverlay
+                    iconsOnly={iconsOnlyExport}
                   />
                 ) : null}
               </DragOverlay>,
