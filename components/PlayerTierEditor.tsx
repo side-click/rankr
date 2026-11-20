@@ -170,6 +170,7 @@ function PlayerTileVisual({
         </button>
       )}
 
+
     </div>
   );
 }
@@ -241,6 +242,7 @@ function DraggablePlayerTile({
         showRemoveButton={isPlaced}
         onRemove={onRemove}
       />
+
 
     </div>
   );
@@ -379,6 +381,7 @@ function DroppablePoolArea({
           ))
         )}
       </div>
+
 
     </div>
   );
@@ -630,6 +633,7 @@ function DroppableTierRow({
           })()}
         </div>
       </div>
+
 
     </div>
   );
@@ -970,6 +974,7 @@ export function PlayerTierEditor({
   const lastScopeKeyRef = useRef<string>("");
   const [saving, setSaving] = useState(false);
   const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
     targetStatus: "draft" | "published";
     existingStatus: string;
@@ -1217,14 +1222,14 @@ export function PlayerTierEditor({
   }
 
   function handleResetPlacements() {
-    if (
-      totalPlacedPlayers > 0 &&
-      !window.confirm(
-        `Return all ${totalPlacedPlayers} placed players back to the unranked pool?`
-      )
-    ) {
+    if (totalPlacedPlayers > 0) {
+      setResetConfirmOpen(true);
       return;
     }
+    performResetPlacements();
+  }
+
+  function performResetPlacements() {
     setTierPayload((prev) => ({
       ...prev,
       sections: prev.sections.map((sec) => ({
@@ -2354,6 +2359,18 @@ export function PlayerTierEditor({
           void savePlayerTierList("draft");
         }}
         onCancel={() => setUnpublishConfirmOpen(false)}
+      />
+      <RetroConfirmModal
+        open={resetConfirmOpen}
+        title="Reset All Players"
+        message={`Return all ${totalPlacedPlayers} placed players back to the unranked pool?`}
+        confirmLabel="Reset All Players"
+        danger
+        onConfirm={() => {
+          setResetConfirmOpen(false);
+          performResetPlacements();
+        }}
+        onCancel={() => setResetConfirmOpen(false)}
       />
     </div>
   );
