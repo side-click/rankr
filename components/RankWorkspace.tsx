@@ -186,7 +186,10 @@ export function RankWorkspace({
           initialEditionSlug={initialEditionSlug}
         />
       ) : rankingType === "champion_pool" ? (
-        <ChampionPoolEditor userId={userId} />
+        <ChampionPoolEditor
+          userId={userId}
+          authorName={initialAuthorName || discordDefaultName}
+        />
       ) : (
         <PlayerTierEditor
           userId={userId}

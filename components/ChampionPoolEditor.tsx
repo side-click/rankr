@@ -66,6 +66,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 
 interface ChampionPoolEditorProps {
   userId: string;
+  authorName?: string;
 }
 
 interface DragChampMeta {
@@ -568,7 +569,10 @@ function DroppableUnplacedPool({
   );
 }
 
-export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
+export function ChampionPoolEditor({
+  userId,
+  authorName,
+}: ChampionPoolEditorProps) {
   const supabase = useMemo(() => createClient(), []);
 
   // Catalog state
@@ -621,6 +625,7 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
   // PNG export state
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
+  const [showAuthorInExport, setShowAuthorInExport] = useState(true);
 
   // Matchup hover popover state (General section champions)
   const [hoveredChamp, setHoveredChamp] = useState<{
@@ -1409,6 +1414,30 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                 : `Export ${activeRoleMeta.label} PNG`}
             </button>
 
+            {authorName && (
+              <button
+                type="button"
+                onClick={() => setShowAuthorInExport((v) => !v)}
+                title={
+                  showAuthorInExport
+                    ? "Hide Discord name on exported PNG"
+                    : "Show Discord name on exported PNG"
+                }
+                className={`px-2.5 py-1.5 rounded border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${
+                  showAuthorInExport
+                    ? "bg-[#1c2330] border-white/15 text-[#f0ede0] hover:bg-[#252e3f]"
+                    : "bg-black/30 border-white/10 text-[#7c808b] hover:text-[#c7c9be]"
+                }`}
+              >
+                {showAuthorInExport ? (
+                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{showAuthorInExport ? "Name Shown" : "Name Hidden"}</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setChangePassOpen((v) => !v)}
@@ -1924,9 +1953,16 @@ export function ChampionPoolEditor({ userId }: ChampionPoolEditorProps) {
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-[#7c808b]">
-                Rankr • Private Pool
-              </span>
+              <div className="text-right">
+                {showAuthorInExport && authorName && (
+                  <span className="block text-sm font-black text-[#f0ede0]">
+                    {authorName}
+                  </span>
+                )}
+                <span className="text-xs font-bold text-[#7c808b]">
+                  Rankr • Private Pool
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2">
