@@ -509,7 +509,19 @@ function DroppableTierRow({
                 <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 gap-x-0.5 items-start min-h-[80px] w-fit">
+              <div
+                className="grid gap-y-2 gap-x-0.5 items-start min-h-[80px] w-fit"
+                style={
+                  blindableChamps.length > 0
+                    ? {
+                        gridTemplateColumns: `repeat(${Math.min(
+                          blindableChamps.length,
+                          4
+                        )}, max-content)`,
+                      }
+                    : undefined
+                }
+              >
                 {blindableChamps.map((champ, cIdx) => (
                   <div key={champ.championId} className="flex items-center">
                     <GapDropSlot
