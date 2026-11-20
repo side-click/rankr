@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { toPng } from "html-to-image";
 import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import {
