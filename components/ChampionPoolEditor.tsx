@@ -1948,7 +1948,13 @@ export function ChampionPoolEditor({
                     {pool.title || "My Champion Pool"}
                   </h2>
                   <p className="text-xs text-[#a6a89e] font-bold uppercase tracking-wider">
-                    {activeRoleMeta.label} Champion Pool
+                    {activeRole === "top"
+                      ? "Top Lane"
+                      : activeRole === "mid"
+                      ? "Mid Lane"
+                      : activeRole === "bot"
+                      ? "Bot Lane"
+                      : activeRoleMeta.label}
                   </p>
                 </div>
               </div>
