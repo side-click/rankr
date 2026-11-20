@@ -304,3 +304,62 @@ body {
     opacity: 0.85;
   }
 }
+
+/* Retro WinXP-style segmented top navigation bar (nextjs-toploader / nprogress) */
+#nprogress .bar {
+  background: repeating-linear-gradient(
+    90deg,
+    #f0c020 0px,
+    #f0c020 8px,
+    #121615 8px,
+    #121615 10px
+  ) !important;
+  height: 4px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.75);
+}
+
+/* Classic WinXP recessed segmented loading bar for heavy-route loading dialogs */
+.xp-progress-track {
+  position: relative;
+  height: 16px;
+  padding: 2px;
+  background: #0d1210;
+  border: 1px solid #39443f;
+  border-radius: 3px;
+  box-shadow:
+    inset 1px 1px 2px rgba(0, 0, 0, 0.85),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+@keyframes xp-progress-slide {
+  0% {
+    transform: translateX(-45%);
+  }
+  100% {
+    transform: translateX(135%);
+  }
+}
+
+.xp-progress-blocks {
+  height: 100%;
+  width: 42%;
+  border-radius: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    #7cd438 0px,
+    #7cd438 9px,
+    transparent 9px,
+    transparent 12px
+  );
+  filter: drop-shadow(0 0 4px rgba(124, 212, 56, 0.45));
+  animation: xp-progress-slide 1.25s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-progress-blocks {
+    animation: none;
+    width: 100%;
+    transform: none;
+  }
+}

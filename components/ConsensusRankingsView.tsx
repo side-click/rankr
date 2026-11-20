@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
@@ -113,6 +113,7 @@ export function ConsensusRankingsView({
   const [exporting, setExporting] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showChange, setShowChange] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -163,7 +164,9 @@ export function ConsensusRankingsView({
     }
     setOpenMenu(null);
     const qs = params.toString();
-    router.push(qs ? `/consensus?${qs}` : "/consensus");
+    startTransition(() => {
+      router.replace(qs ? `/consensus?${qs}` : "/consensus");
+    });
   }
 
   async function handleCopyLink() {
@@ -461,6 +464,20 @@ export function ConsensusRankingsView({
         </div>
 
         {/* Outdated Fallback Notice */}
+        {isPending && (
+          <div
+            className="fixed top-0 left-0 right-0 h-1 z-50 animate-pulse"
+            style={{
+              background:
+                "repeating-linear-gradient(90deg, #f0c020 0px, #f0c020 8px, #121615 8px, #121615 10px)",
+            }}
+          />
+        )}
+        <div
+          className={`space-y-4 transition-opacity duration-150 ${
+            isPending ? "opacity-60 pointer-events-none" : ""
+          }`}
+        >
         {isFallbackOutdated && latestEditionName && (
           <div className="rounded-xl border border-[#c89b3c]/60 bg-[#2a2210]/80 px-4 py-3 flex items-center gap-3 text-xs text-[#f7d560]">
             <AlertTriangle className="w-4 h-4 text-[#f0c020] shrink-0" />
@@ -777,6 +794,7 @@ export function ConsensusRankingsView({
             </ScaledGraphicFrame>
           </>
         )}
+        </div>
       </div>
     </div>
   );
