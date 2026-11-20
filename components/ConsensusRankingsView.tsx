@@ -719,31 +719,65 @@ export function ConsensusRankingsView({
                           )}
 
                           <div className="min-w-0">
-                            <div className="flex items-center gap-6 min-w-0">
-                              {row.logoUrl ? (
-                                <img
-                                  src={row.logoUrl}
-                                  alt={row.teamName}
-                                  crossOrigin="anonymous"
-                                  className="w-20 h-20 object-contain drop-shadow shrink-0"
-                                />
-                              ) : (
-                                <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
-                                  <Award className="w-9 h-9 text-[#c89b3c]" />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <div className="text-4xl font-extrabold text-white truncate leading-tight">
-                                  {row.teamName}
-                                </div>
-                                {row.rankingCount < submissionCount && (
-                                  <div className="text-[11px] text-[#a6a89e]">
-                                    Ranked on {row.rankingCount} of{" "}
-                                    {submissionCount} submissions
+                            {!row.teamKey.startsWith("name:") ? (
+                              <Link
+                                href={`/stats/team/${encodeURIComponent(
+                                  row.teamKey
+                                )}`}
+                                className="group flex items-center gap-6 min-w-0"
+                                title={`View ${row.teamName} stats`}
+                              >
+                                {row.logoUrl ? (
+                                  <img
+                                    src={row.logoUrl}
+                                    alt={row.teamName}
+                                    crossOrigin="anonymous"
+                                    className="w-20 h-20 object-contain drop-shadow shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
+                                    <Award className="w-9 h-9 text-[#c89b3c]" />
                                   </div>
                                 )}
+                                <div className="min-w-0">
+                                  <div className="text-4xl font-extrabold text-white group-hover:text-[#f0c020] transition-colors truncate leading-tight">
+                                    {row.teamName}
+                                  </div>
+                                  {row.rankingCount < submissionCount && (
+                                    <div className="text-[11px] text-[#a6a89e]">
+                                      Ranked on {row.rankingCount} of{" "}
+                                      {submissionCount} submissions
+                                    </div>
+                                  )}
+                                </div>
+                              </Link>
+                            ) : (
+                              <div className="flex items-center gap-6 min-w-0">
+                                {row.logoUrl ? (
+                                  <img
+                                    src={row.logoUrl}
+                                    alt={row.teamName}
+                                    crossOrigin="anonymous"
+                                    className="w-20 h-20 object-contain drop-shadow shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
+                                    <Award className="w-9 h-9 text-[#c89b3c]" />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <div className="text-4xl font-extrabold text-white truncate leading-tight">
+                                    {row.teamName}
+                                  </div>
+                                  {row.rankingCount < submissionCount && (
+                                    <div className="text-[11px] text-[#a6a89e]">
+                                      Ranked on {row.rankingCount} of{" "}
+                                      {submissionCount} submissions
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            )}
                             {showBreakdown && (
                               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                                 {row.voterRanks.map((vr) => (

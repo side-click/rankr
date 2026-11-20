@@ -205,16 +205,15 @@ function renderPlayerPill(
     team_name?: string | null;
     is_captain?: boolean;
   },
-  size: PillSize
+  size: PillSize,
+  linkToStats = false
 ) {
   const styles = PILL_STYLES[size];
-  return (
-    <div
-      key={pl.id}
-      className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] ${styles.container}`}
-    >
+  const displayName = pl.name.split("#")[0].trim() || pl.name;
+  const content = (
+    <>
       <span className="font-bold leading-none whitespace-nowrap">
-        {pl.name.split("#")[0].trim() || pl.name}
+        {displayName}
       </span>
       {pl.team_logo_url ? (
         <img
@@ -239,6 +238,28 @@ function renderPlayerPill(
           className={`${styles.captain} object-contain shrink-0`}
         />
       )}
+    </>
+  );
+
+  if (linkToStats && displayName) {
+    return (
+      <Link
+        key={pl.id}
+        href={`/stats/player/${encodeURIComponent(displayName.toLowerCase())}`}
+        title={`View ${displayName} stats`}
+        className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] hover:border-[#f0c020]/70 hover:text-[#f0c020] transition-colors ${styles.container}`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      key={pl.id}
+      className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] ${styles.container}`}
+    >
+      {content}
     </div>
   );
 }
@@ -1013,7 +1034,14 @@ export function PlayerTierShareView({
                                         />
                                         <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
                                           {rolePlayers.map((pl) =>
-                                            renderPlayerPill(pl, pillSize)
+                                            renderPlayerPill(
+                                              pl,
+                                              pillSize,
+                                              Boolean(
+                                                ballot.season_id &&
+                                                  ballot.division_id
+                                              )
+                                            )
                                           )}
                                         </div>
                                       </div>
@@ -1023,7 +1051,13 @@ export function PlayerTierShareView({
                               ) : (
                                 <div className="flex flex-wrap items-center content-center gap-2">
                                   {tier.players.map((pl) =>
-                                    renderPlayerPill(pl, pillSize)
+                                    renderPlayerPill(
+                                      pl,
+                                      pillSize,
+                                      Boolean(
+                                        ballot.season_id && ballot.division_id
+                                      )
+                                    )
                                   )}
                                 </div>
                               )}

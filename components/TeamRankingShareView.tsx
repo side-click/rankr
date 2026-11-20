@@ -669,21 +669,47 @@ export function TeamRankingShareView({
                   </div>
 
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                      {entry.team_logo_snapshot ? (
-                        <img
-                          src={entry.team_logo_snapshot}
-                          alt={entry.team_name_snapshot}
-                          crossOrigin="anonymous"
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-[9px] text-white/40">LOGO</span>
-                      )}
-                    </div>
-                    <div className="font-black text-xl text-[#f7f5eb] tracking-tight leading-tight">
-                      {entry.team_name_snapshot}
-                    </div>
+                    {ballot.season_id && ballot.division_id && entry.team_id ? (
+                      <Link
+                        href={`/stats/team/${encodeURIComponent(entry.team_id)}`}
+                        className="group flex items-center gap-3 min-w-0"
+                        title={`View ${entry.team_name_snapshot} stats`}
+                      >
+                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+                          {entry.team_logo_snapshot ? (
+                            <img
+                              src={entry.team_logo_snapshot}
+                              alt={entry.team_name_snapshot}
+                              crossOrigin="anonymous"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-white/40">LOGO</span>
+                          )}
+                        </div>
+                        <div className="font-black text-xl text-[#f7f5eb] group-hover:text-[#f0c020] transition-colors tracking-tight leading-tight">
+                          {entry.team_name_snapshot}
+                        </div>
+                      </Link>
+                    ) : (
+                      <>
+                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+                          {entry.team_logo_snapshot ? (
+                            <img
+                              src={entry.team_logo_snapshot}
+                              alt={entry.team_name_snapshot}
+                              crossOrigin="anonymous"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-white/40">LOGO</span>
+                          )}
+                        </div>
+                        <div className="font-black text-xl text-[#f7f5eb] tracking-tight leading-tight">
+                          {entry.team_name_snapshot}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="min-w-0">
@@ -691,6 +717,8 @@ export function TeamRankingShareView({
                       {normalizeRoster(entry.roster_snapshot).map(
                         (slot, pIdx) => {
                           const roleMeta = getRoleMeta(slot.role);
+                          const displayName =
+                            slot.name.split("#")[0].trim() || slot.name;
                           return (
                             <li
                               key={pIdx}
@@ -702,9 +730,21 @@ export function TeamRankingShareView({
                                 crossOrigin="anonymous"
                                 className="w-3.5 h-3.5 object-contain shrink-0"
                               />
-                              <span className="truncate">
-                                {slot.name.split("#")[0].trim() || slot.name}
-                              </span>
+                              {ballot.season_id &&
+                              ballot.division_id &&
+                              displayName ? (
+                                <Link
+                                  href={`/stats/player/${encodeURIComponent(
+                                    displayName.toLowerCase()
+                                  )}`}
+                                  className="truncate hover:text-[#f0c020] hover:underline transition-colors"
+                                  title={`View ${displayName} stats`}
+                                >
+                                  {displayName}
+                                </Link>
+                              ) : (
+                                <span className="truncate">{displayName}</span>
+                              )}
                               {slot.is_captain && (
                                 <img
                                   src={CAPTAIN_ICON}

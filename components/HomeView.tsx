@@ -72,10 +72,10 @@ export function HomeView({ data }: { data: HomeData }) {
                 <ListOrdered className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div className="min-w-0">
                   <div className="text-sm font-extrabold text-[#f0ede0] group-hover:text-[#f0c020]">
-                    Create Content
+                    Create
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build and share power rankings, tier lists, and champion pools
+                    Build and share power rankings and tier lists
                   </div>
                 </div>
               </Link>
@@ -129,7 +129,7 @@ export function HomeView({ data }: { data: HomeData }) {
         </div>
 
         <div className="md:col-span-7 flex flex-col">
-          <RetroWindow title="Seasons Directory" theme="scdl" className="h-full">
+          <RetroWindow title="Directory" theme="scdl" className="h-full">
             <div className="space-y-4">
               <div className="space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-[#7cd438]">
