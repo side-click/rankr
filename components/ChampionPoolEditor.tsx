@@ -233,7 +233,7 @@ function DraggablePlacedChampion({
       {...attributes}
       {...listeners}
       onMouseEnter={(e) => {
-        if (!champion.isBlindable && onHoverStart) {
+        if (onHoverStart) {
           onHoverStart(champion, e.currentTarget.getBoundingClientRect());
         }
       }}
@@ -477,6 +477,8 @@ function DroppableTierRow({
                     champion={champ}
                     iconUrl={iconMap.get(champ.championId) ?? ""}
                     onRemove={() => onRemoveChampion(champ.championId)}
+                    onHoverStart={onHoverStart}
+                    onHoverEnd={onHoverEnd}
                   />
                 ))}
               </div>
