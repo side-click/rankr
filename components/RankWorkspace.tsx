@@ -21,6 +21,7 @@ import { PlayerTierEditor } from "@/components/PlayerTierEditor";
 interface RankWorkspaceProps {
   userId: string;
   initialAuthorName: string;
+  initialAuthorAvatarUrl?: string | null;
   discordDefaultName: string;
   seasons: Season[];
   divisions: Division[];
@@ -37,6 +38,7 @@ interface RankWorkspaceProps {
 export function RankWorkspace({
   userId,
   initialAuthorName,
+  initialAuthorAvatarUrl,
   discordDefaultName,
   seasons,
   divisions,
@@ -189,6 +191,7 @@ export function RankWorkspace({
         <ChampionPoolEditor
           userId={userId}
           authorName={initialAuthorName || discordDefaultName}
+          authorAvatarUrl={initialAuthorAvatarUrl}
         />
       ) : (
         <PlayerTierEditor

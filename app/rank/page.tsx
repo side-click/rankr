@@ -161,6 +161,11 @@ export default async function RankPage({
     <RankWorkspace
       userId={user.id}
       initialAuthorName={profile?.username ?? discordDefaultName}
+      initialAuthorAvatarUrl={
+        profile?.avatar_url ??
+        (user.user_metadata?.avatar_url as string | undefined) ??
+        null
+      }
       discordDefaultName={discordDefaultName}
       seasons={seasons ?? []}
       divisions={divisions ?? []}

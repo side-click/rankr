@@ -67,6 +67,7 @@ import { RetroWindow } from "@/components/RetroWindow";
 interface ChampionPoolEditorProps {
   userId: string;
   authorName?: string;
+  authorAvatarUrl?: string | null;
 }
 
 interface DragChampMeta {
@@ -572,6 +573,7 @@ function DroppableUnplacedPool({
 export function ChampionPoolEditor({
   userId,
   authorName,
+  authorAvatarUrl,
 }: ChampionPoolEditorProps) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -1958,16 +1960,21 @@ export function ChampionPoolEditor({
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                {showAuthorInExport && authorName && (
-                  <span className="block text-sm font-black text-[#f0ede0]">
+              {showAuthorInExport && authorName && (
+                <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-lg border border-white/20 shrink-0">
+                  {authorAvatarUrl && (
+                    <img
+                      src={authorAvatarUrl}
+                      alt={authorName}
+                      crossOrigin="anonymous"
+                      className="w-10 h-10 rounded-md object-cover border border-white/50"
+                    />
+                  )}
+                  <div className="text-lg font-extrabold text-white tracking-wide">
                     {authorName}
-                  </span>
-                )}
-                <span className="text-xs font-bold text-[#7c808b]">
-                  Rankr • Private Pool
-                </span>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
