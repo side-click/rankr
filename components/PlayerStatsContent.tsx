@@ -291,7 +291,7 @@ export async function PlayerStatsContent({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`${basePath}?division=${encodeURIComponent(
-              soloPlayer.divisionId
+              soloPlayer.divisionId ?? "all"
             )}&tab=players`}
             className="xp-btn text-xs"
           >
