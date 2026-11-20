@@ -1248,7 +1248,7 @@ export function ChampionPoolEditor({
                     onClick={() => setConfirmResetOpen(true)}
                     className="text-[11px] text-[#a6a89e] hover:text-[#ff857a] underline cursor-pointer"
                   >
-                    Forgot passphrase? Reset &amp; delete encrypted pool
+                    Forgot passphrase?
                   </button>
                 ) : (
                   <div className="p-3 rounded bg-[#2a1414] border border-[#ff857a]/40 space-y-2">
