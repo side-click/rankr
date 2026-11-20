@@ -144,9 +144,9 @@ function ChampionTileVisual({
 
   return (
     <div
-      className={`group relative flex flex-col items-center ${
-        iconsOnly ? "justify-center" : ""
-      } w-full min-w-[76px] h-[78px] p-1.5 rounded border select-none transition-colors ${
+      className={`group relative flex flex-col items-center w-full min-w-[76px] h-[78px] ${
+        iconsOnly ? "p-0" : "p-1.5"
+      } rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -171,10 +171,14 @@ function ChampionTileVisual({
       <img
         src={iconUrl}
         alt={champion.name}
-        width={48}
-        height={48}
+        width={iconsOnly ? 76 : 48}
+        height={iconsOnly ? 78 : 48}
         draggable={false}
-        className="w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
+        className={
+          iconsOnly
+            ? "w-full h-full rounded-[3px] object-cover bg-[#0f131a]"
+            : "w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
+        }
       />
       {!iconsOnly && (
         <span
