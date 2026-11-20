@@ -21,6 +21,7 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle2,
+  Dices,
   Download,
   Eye,
   EyeClosed,
@@ -1121,6 +1122,33 @@ export function ChampionPoolEditor({
     });
   }
 
+  function handleRandomizeRoleTest() {
+    const roleChamps = (catalog?.champions ?? []).filter((c) =>
+      c.roles.includes(activeRole)
+    );
+    if (roleChamps.length === 0) return;
+
+    const shuffled = [...roleChamps].sort(() => Math.random() - 0.5);
+    const sample = shuffled.slice(0, Math.min(14, shuffled.length));
+
+    updateActiveRoleTiers((tiers) => {
+      if (tiers.length === 0) return tiers;
+      const buckets: ChampionPoolTierItem[][] = tiers.map(() => []);
+      sample.forEach((c) => {
+        const tierIdx = Math.floor(Math.random() * tiers.length);
+        buckets[tierIdx].push({
+          championId: c.id,
+          name: c.name,
+          isBlindable: Math.random() < 0.3,
+        });
+      });
+      return tiers.map((t, idx) => ({
+        ...t,
+        champions: buckets[idx],
+      }));
+    });
+  }
+
   async function handleExportRolePng() {
     if (!exportCardRef.current) return;
     setExportingPng(true);
@@ -1552,6 +1580,15 @@ export function ChampionPoolEditor({
 
         {/* Tier Actions for Active Role */}
         <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+          <button
+            type="button"
+            onClick={handleRandomizeRoleTest}
+            title="Randomly place champions from this role into tiers for testing"
+            className="xp-btn text-xs"
+          >
+            <Dices className="w-3.5 h-3.5 text-[#f0c020]" />
+            Randomize Test
+          </button>
           <button
             type="button"
             onClick={() =>
