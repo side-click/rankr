@@ -1,0 +1,37 @@
+name: Weekly Supabase Database Backup
+
+on:
+  schedule:
+    # Runs every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export core Supabase tables
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-supabase.mjs
+
+      - name: Upload backup artifact (30-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rankr-supabase-backup-${{ github.run_number }}
+          path: temp/backups/*.json
+          retention-days: 30
+          if-no-files-found: error
