@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -66,12 +66,59 @@ interface StatsDivisionTabProps {
   selectedDivisionPrimaryColor?: string | null;
 }
 
+function normChampKey(name: string): string {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+const ddChampionCache = new Map<string, { id: string; name: string }[]>();
+
+function useAllChampions(ddVersion: string) {
+  const [all, setAll] = useState<{ id: string; name: string }[]>(
+    () => ddChampionCache.get(ddVersion) ?? []
+  );
+  useEffect(() => {
+    if (ddChampionCache.has(ddVersion)) return;
+    let cancelled = false;
+    fetch(
+      `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!json?.data || cancelled) return;
+        const list = (
+          Object.values(json.data) as { id: string; name: string }[]
+        )
+          .map((c) => ({ id: c.id, name: c.name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        ddChampionCache.set(ddVersion, list);
+        setAll(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [ddVersion]);
+  return all;
+}
+
 export function StatsDivisionTab({
   overview,
   ddVersion,
   kpiCardStyle,
   selectedDivisionPrimaryColor,
 }: StatsDivisionTabProps) {
+  const allChampions = useAllChampions(ddVersion);
+  const untouched = useMemo(() => {
+    if (allChampions.length === 0) return [];
+    const touched = new Set<string>();
+    for (const c of overview.champs) touched.add(normChampKey(c.name));
+    for (const b of overview.bannedChamps) touched.add(normChampKey(b.name));
+    return allChampions.filter(
+      (c) =>
+        !touched.has(normChampKey(c.id)) && !touched.has(normChampKey(c.name))
+    );
+  }, [allChampions, overview.champs, overview.bannedChamps]);
+
   return (
     <>
       {/* Top Overview KPI Strip (10 Cards) */}
@@ -425,6 +472,34 @@ export function StatsDivisionTab({
                         </span>
                       </div>
                     </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {untouched.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#a6a89e]">
+                    Untouched Champions ({untouched.length})
+                  </span>
+                  <span className="text-[11px] text-[#a6a89e]">
+                    Never picked or banned
+                  </span>
+                </div>
+                <div className="grid grid-cols-8 sm:grid-cols-12 md:grid-cols-[repeat(20,minmax(0,1fr))] gap-1">
+                  {untouched.map((c) => (
+                    <div
+                      key={c.id}
+                      title={`${c.name} — no picks or bans`}
+                      className="rounded border border-white/10 bg-black/40 overflow-hidden cursor-default"
+                    >
+                      <img
+                        src={getChampionIconUrl(c.id, ddVersion)}
+                        alt={c.name}
+                        loading="lazy"
+                        className="w-full aspect-square object-cover block grayscale opacity-50"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

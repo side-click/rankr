@@ -566,11 +566,16 @@ export async function PlayerStatsContent({
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <img
-                          src={getChampionIconUrl(c.name, ctx.ddVersion)}
-                          alt={c.name}
-                          className="w-6 h-6 rounded object-cover shrink-0"
-                        />
+                        <Link
+                          href={`/stats/champion/${encodeURIComponent(c.name)}`}
+                          className="contents"
+                        >
+                          <img
+                            src={getChampionIconUrl(c.name, ctx.ddVersion)}
+                            alt={c.name}
+                            className="w-6 h-6 rounded object-cover shrink-0"
+                          />
+                        </Link>
                         <span className="font-bold text-[#f0ede0] truncate">
                           {c.name}
                         </span>
@@ -613,11 +618,16 @@ export async function PlayerStatsContent({
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <img
-                          src={getChampionIconUrl(c.name, ctx.ddVersion)}
-                          alt={c.name}
-                          className="w-6 h-6 rounded object-cover shrink-0"
-                        />
+                        <Link
+                          href={`/stats/champion/${encodeURIComponent(c.name)}`}
+                          className="contents"
+                        >
+                          <img
+                            src={getChampionIconUrl(c.name, ctx.ddVersion)}
+                            alt={c.name}
+                            className="w-6 h-6 rounded object-cover shrink-0"
+                          />
+                        </Link>
                         <span className="font-bold text-[#f0ede0] truncate">
                           {c.name}
                         </span>
@@ -661,11 +671,16 @@ export async function PlayerStatsContent({
                     title={`${m.championName} • ${m.championPoints.toLocaleString()} pts`}
                     className="bg-black/40 border border-white/10 rounded overflow-hidden text-center"
                   >
-                    <img
-                      src={getChampionIconUrl(m.championName, ctx.ddVersion)}
-                      alt={m.championName}
-                      className="w-full aspect-square object-cover block"
-                    />
+                    <Link
+                      href={`/stats/champion/${encodeURIComponent(m.championName)}`}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(m.championName, ctx.ddVersion)}
+                        alt={m.championName}
+                        className="w-full aspect-square object-cover block"
+                      />
+                    </Link>
                     <div className="text-xs font-bold text-[#f0c020] py-1">
                       {formatMasteryPoints(m.championPoints)}
                     </div>
@@ -718,11 +733,16 @@ export async function PlayerStatsContent({
                           g.row.win ? "bg-[#7cd438]" : "bg-[#ff857a]"
                         }`}
                       />
-                      <img
-                        src={getChampionIconUrl(g.row.champion, ctx.ddVersion)}
-                        alt={g.row.champion}
-                        className="w-11 h-11 rounded border border-white/20 object-cover shrink-0"
-                      />
+                      <Link
+                        href={`/stats/champion/${encodeURIComponent(g.row.champion)}`}
+                        className="contents"
+                      >
+                        <img
+                          src={getChampionIconUrl(g.row.champion, ctx.ddVersion)}
+                          alt={g.row.champion}
+                          className="w-11 h-11 rounded border border-white/20 object-cover shrink-0"
+                        />
+                      </Link>
                       <div>
                         <div className="flex items-center gap-2 font-bold text-[#f0ede0] text-sm sm:text-[15px]">
                           <span>{g.row.champion}</span>

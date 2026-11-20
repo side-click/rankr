@@ -132,11 +132,16 @@ function SideBoxScore({
                           className="w-4 h-4 shrink-0 opacity-85"
                         />
                       )}
-                      <img
-                        src={getChampionIconUrl(p.champion, ddVersion)}
-                        alt={p.champion}
-                        className="w-8 h-8 rounded border border-[#3a3e37] shrink-0 object-cover"
-                      />
+                      <Link
+                        href={`/stats/champion/${encodeURIComponent(p.champion)}`}
+                        className="contents"
+                      >
+                        <img
+                          src={getChampionIconUrl(p.champion, ddVersion)}
+                          alt={p.champion}
+                          className="w-8 h-8 rounded border border-[#3a3e37] shrink-0 object-cover"
+                        />
+                      </Link>
                       <div className="min-w-0">
                         {matchedKey ? (
                           <Link
@@ -251,11 +256,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Blue Ban ${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full grayscale opacity-80 object-cover"
-                    />
+                    <Link
+                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full grayscale opacity-80 object-cover"
+                      />
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -273,11 +283,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#2a4569] bg-[#142030] overflow-hidden shrink-0"
                     title={`B${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full object-cover"
-                    />
+                    <Link
+                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full object-cover"
+                      />
+                    </Link>
                     <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#78b7ff] rounded-br">
                       B{i + 1}
                     </span>
@@ -304,11 +319,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Red Ban ${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full grayscale opacity-80 object-cover"
-                    />
+                    <Link
+                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full grayscale opacity-80 object-cover"
+                      />
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -326,11 +346,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#612d2a] bg-[#2a1717] overflow-hidden shrink-0"
                     title={`R${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full object-cover"
-                    />
+                    <Link
+                      href={`/stats/champion/${encodeURIComponent(champ)}`}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full object-cover"
+                      />
+                    </Link>
                     <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#ff8f85] rounded-br">
                       R{i + 1}
                     </span>
