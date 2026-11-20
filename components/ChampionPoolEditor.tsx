@@ -571,19 +571,19 @@ function DroppableTierRow({
                       onHoverStart={onHoverStart}
                       onHoverEnd={onHoverEnd}
                     />
+                    {cIdx === generalChamps.length - 1 && (
+                      <GapDropSlot
+                        tierId={tier.id}
+                        isBlindable={false}
+                        insertIndex={generalChamps.length}
+                        isHighlighted={
+                          activeGapId ===
+                          `gap-drop:${tier.id}:gen:${generalChamps.length}`
+                        }
+                      />
+                    )}
                   </div>
                 ))}
-                {generalChamps.length > 0 && (
-                  <GapDropSlot
-                    tierId={tier.id}
-                    isBlindable={false}
-                    insertIndex={generalChamps.length}
-                    isHighlighted={
-                      activeGapId ===
-                      `gap-drop:${tier.id}:gen:${generalChamps.length}`
-                    }
-                  />
-                )}
               </div>
             </div>
           </div>
