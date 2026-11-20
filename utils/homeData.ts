@@ -1,7 +1,10 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { ContentCardData } from "@/components/ContentCard";
-import { loadConsensusPageData } from "@/utils/consensusData";
+import {
+  computeAverageTeamRankings,
+  type ConsensusRankingInput,
+} from "@/utils/averageRankings";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
 import {
@@ -277,6 +280,7 @@ export async function loadHomeData(
     { data: divisionThemesRaw },
     { data: activeTeamsRaw },
     { data: seasonPlayersRaw },
+    { data: editionsRaw },
   ] = await Promise.all([
     supabase
       .from("seasons")
@@ -293,6 +297,13 @@ export async function loadHomeData(
       .from("season_players")
       .select("id, season_id")
       .eq("is_active", true),
+    supabase
+      .from("editions")
+      .select(
+        "id, season_id, name, slug, is_open, is_archived, sort_order, created_at"
+      )
+      .order("sort_order", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   const allSeasons: HomeSeasonSummary[] = (seasonsRaw ?? []).map((s) => {
@@ -385,37 +396,42 @@ export async function loadHomeData(
     ballotsQuery = ballotsQuery.in("season_id", targetSeasonIds);
   }
 
-  // Fetch consensus snapshots + stats in parallel
-  const consensusPromises = targetSeasons.flatMap((s) =>
-    s.divisions.map((d) =>
-      loadConsensusPageData({ season: s.slug, division: d.slug })
-        .then((res) => ({
-          seasonSlug: s.slug,
-          seasonName: s.name,
-          divisionName: d.name,
-          divisionSlug: d.slug,
-          divisionLogoUrl: d.logoUrl,
-          primaryColor: d.primaryColor,
-          editionName: res.editionName,
-          submissionCount: res.submissionCount,
-          topTeams: res.rows.slice(0, 3).map((r) => ({
-            rank: r.consensusRank,
-            teamName: r.teamName,
-            teamId: r.teamKey.startsWith("name:") ? null : r.teamKey,
-            teamLogoUrl: r.logoUrl,
-            averageRank: r.averageRank,
-          })),
-        }))
-        .catch(() => null)
+  // Fetch all published team rankings for targetSeasons in ONE single live query
+  // (instead of calling loadConsensusPageData per division, which re-queried seasons/divisions/themes/editions 2x)
+  let consensusRankingsQuery = supabase
+    .from("rankings")
+    .select(
+      `
+      id,
+      season_id,
+      division_id,
+      edition_id,
+      profiles ( username, avatar_url ),
+      ranking_entries (
+        rank,
+        team_id,
+        team_name_snapshot,
+        teams ( id, name, logo_url )
+      )
+    `
     )
-  );
+    .eq("status", "published")
+    .eq("ranking_type", "team")
+    .order("published_at", { ascending: false });
+
+  if (targetSeasonIds.length > 0) {
+    consensusRankingsQuery = consensusRankingsQuery.in(
+      "season_id",
+      targetSeasonIds
+    );
+  }
 
   const statsSeasonSlug =
     focusedSeason?.slug ?? liveSeasons[0]?.slug ?? allSeasons[0]?.slug;
 
   const [
     { data: recentBallotsRaw },
-    consensusRaw,
+    { data: consensusRankingsRaw },
     {
       divisionStandings,
       divisionTopPerformers,
@@ -424,9 +440,79 @@ export async function loadHomeData(
     },
   ] = await Promise.all([
     ballotsQuery,
-    Promise.all(consensusPromises),
+    consensusRankingsQuery,
     loadCachedHomeStatsBlock(statsSeasonSlug),
   ]);
+
+  type ConsensusRowWithScope = ConsensusRankingInput & {
+    season_id: string | null;
+    division_id: string | null;
+    edition_id: string | null;
+  };
+  const allConsensusRankings = (consensusRankingsRaw ??
+    []) as unknown as ConsensusRowWithScope[];
+
+  const consensusSnapshots: HomeConsensusSnapshot[] = [];
+  for (const s of targetSeasons) {
+    const seasonEditionsDesc = (editionsRaw ?? []).filter(
+      (ed) => ed.season_id === s.id
+    );
+    const latestOpenEdition =
+      seasonEditionsDesc.find((ed) => ed.is_open && !ed.is_archived) ?? null;
+
+    for (const d of s.divisions) {
+      const divRankings = allConsensusRankings.filter(
+        (r) => r.season_id === s.id && r.division_id === d.id
+      );
+      const countByEdition = new Map<string, number>();
+      for (const r of divRankings) {
+        if (r.edition_id) {
+          countByEdition.set(
+            r.edition_id,
+            (countByEdition.get(r.edition_id) ?? 0) + 1
+          );
+        }
+      }
+      const mostRecentWithMin2 =
+        seasonEditionsDesc.find(
+          (ed) => (countByEdition.get(ed.id) ?? 0) >= 2
+        ) ?? null;
+      const selectedEdition =
+        mostRecentWithMin2 ??
+        latestOpenEdition ??
+        seasonEditionsDesc.find((ed) => !ed.is_archived) ??
+        seasonEditionsDesc[0] ??
+        null;
+
+      if (!selectedEdition) continue;
+
+      const editionRankings = divRankings.filter(
+        (r) => r.edition_id === selectedEdition.id
+      );
+      if (editionRankings.length === 0) continue;
+
+      const avgRows = computeAverageTeamRankings(editionRankings);
+      if (avgRows.length === 0) continue;
+
+      consensusSnapshots.push({
+        seasonSlug: s.slug,
+        seasonName: s.name,
+        divisionName: d.name,
+        divisionSlug: d.slug,
+        divisionLogoUrl: d.logoUrl,
+        primaryColor: d.primaryColor,
+        editionName: selectedEdition.name,
+        submissionCount: editionRankings.length,
+        topTeams: avgRows.slice(0, 3).map((r) => ({
+          rank: r.consensusRank,
+          teamName: r.teamName,
+          teamId: r.teamKey.startsWith("name:") ? null : r.teamKey,
+          teamLogoUrl: r.logoUrl,
+          averageRank: r.averageRank,
+        })),
+      });
+    }
+  }
 
   return {
     allSeasons,
@@ -438,8 +524,6 @@ export async function loadHomeData(
     divisionTopPerformers,
     topPerformers,
     recentMatches,
-    consensusSnapshots: consensusRaw.filter(
-      (c): c is HomeConsensusSnapshot => c !== null && c.submissionCount > 0
-    ),
+    consensusSnapshots,
   };
 }
