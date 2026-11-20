@@ -254,6 +254,39 @@ function DraggablePlacedChampion({
   );
 }
 
+function GapDropSlot({
+  tierId,
+  isBlindable,
+  insertIndex,
+}: {
+  tierId: string;
+  isBlindable: boolean;
+  insertIndex: number;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `gap-drop:${tierId}:${isBlindable ? "blind" : "gen"}:${insertIndex}`,
+    data: {
+      kind: "gap",
+      tierId,
+      isBlindable,
+      insertIndex,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="w-2 h-[78px] -mx-1 flex items-center justify-center shrink-0"
+    >
+      <div
+        className={`h-14 rounded-full transition-all ${
+          isOver ? "w-1 bg-[#f0c020] shadow-[0_0_8px_#f0c020]" : "w-0"
+        }`}
+      />
+    </div>
+  );
+}
+
 function DraggablePoolChampion({
   champion,
 }: {
@@ -469,17 +502,23 @@ function DroppableTierRow({
                 <EyeClosed className="w-3 h-3" />
                 <span>Blindable ({blindableChamps.length})</span>
               </div>
-              <div className="flex flex-wrap gap-2 items-start min-h-[80px]">
-                {blindableChamps.map((champ) => (
-                  <DraggablePlacedChampion
-                    key={champ.championId}
-                    tierId={tier.id}
-                    champion={champ}
-                    iconUrl={iconMap.get(champ.championId) ?? ""}
-                    onRemove={() => onRemoveChampion(champ.championId)}
-                    onHoverStart={onHoverStart}
-                    onHoverEnd={onHoverEnd}
-                  />
+              <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-start min-h-[80px]">
+                {blindableChamps.map((champ, cIdx) => (
+                  <React.Fragment key={champ.championId}>
+                    <GapDropSlot
+                      tierId={tier.id}
+                      isBlindable={true}
+                      insertIndex={cIdx}
+                    />
+                    <DraggablePlacedChampion
+                      tierId={tier.id}
+                      champion={champ}
+                      iconUrl={iconMap.get(champ.championId) ?? ""}
+                      onRemove={() => onRemoveChampion(champ.championId)}
+                      onHoverStart={onHoverStart}
+                      onHoverEnd={onHoverEnd}
+                    />
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -494,17 +533,24 @@ function DroppableTierRow({
               }`}
             >
               <div className="h-[14px] mb-1.5" aria-hidden="true" />
-              <div className="flex flex-wrap gap-2 items-start min-h-[80px]">
-                {generalChamps.map((champ) => (
-                  <DraggablePlacedChampion
-                    key={champ.championId}
-                    tierId={tier.id}
-                    champion={champ}
-                    iconUrl={iconMap.get(champ.championId) ?? ""}
-                    onRemove={() => onRemoveChampion(champ.championId)}
-                    onHoverStart={onHoverStart}
-                    onHoverEnd={onHoverEnd}
-                  />
+              <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-start min-h-[80px]">
+                {generalChamps.map((champ, cIdx) => (
+                  <React.Fragment key={champ.championId}>
+                    <GapDropSlot
+                      tierId={tier.id}
+                      isBlindable={false}
+                      insertIndex={cIdx}
+                    />
+                    <DraggablePlacedChampion
+                      key={champ.championId}
+                      tierId={tier.id}
+                      champion={champ}
+                      iconUrl={iconMap.get(champ.championId) ?? ""}
+                      onRemove={() => onRemoveChampion(champ.championId)}
+                      onHoverStart={onHoverStart}
+                      onHoverEnd={onHoverEnd}
+                    />
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -1095,9 +1141,11 @@ export function ChampionPoolEditor({
     setChangePassOpen(false);
   }
 
-  // DnD collision detection prioritizing specific champion tiles over tier containers
+  // DnD collision detection prioritizing gap/tile drops over tier containers
   const collisionDetection: CollisionDetection = useCallback((args) => {
     const pointerHits = pointerWithin(args);
+    const gapHit = pointerHits.find((h) => String(h.id).startsWith("gap-drop:"));
+    if (gapHit) return [gapHit];
     const tileHit = pointerHits.find((h) =>
       String(h.id).startsWith("tile-drop:")
     );
@@ -1179,10 +1227,11 @@ export function ChampionPoolEditor({
     const meta = active.data.current as DragChampMeta | undefined;
     const overData = over.data.current as
       | {
-          kind: "tier" | "tile" | "pool";
+          kind: "tier" | "tile" | "gap" | "pool";
           tierId?: string;
           championId?: string;
           isBlindable?: boolean;
+          insertIndex?: number;
         }
       | undefined;
 
@@ -1216,7 +1265,20 @@ export function ChampionPoolEditor({
     };
 
     updateActiveRoleTiers((tiers) => {
-      // Remove from source tier (if coming from a tier)
+      const sourceTier = tiers.find((t) => t.id === meta.source);
+      const sourceSubList = sourceTier
+        ? sourceTier.champions.filter(
+            (c) => Boolean(c.isBlindable) === Boolean(dragged.isBlindable)
+          )
+        : [];
+      const sourceSubIdx = sourceSubList.findIndex(
+        (c) => c.championId === dragged.championId
+      );
+      const sameSubSection =
+        meta.source === targetTierId &&
+        Boolean(dragged.isBlindable) === nextBlindable;
+
+      // Remove from source tier
       const cleaned = tiers.map((t) => ({
         ...t,
         champions: t.champions.filter(
@@ -1226,18 +1288,37 @@ export function ChampionPoolEditor({
 
       return cleaned.map((t) => {
         if (t.id !== targetTierId) return t;
-        const list = [...t.champions];
-        if (overData.kind === "tile" && overData.championId) {
-          const idx = list.findIndex(
+        const blindList = t.champions.filter((c) => Boolean(c.isBlindable));
+        const genList = t.champions.filter((c) => !c.isBlindable);
+        const targetList = nextBlindable ? blindList : genList;
+
+        if (overData.kind === "gap" && typeof overData.insertIndex === "number") {
+          let insertAt = overData.insertIndex;
+          if (sameSubSection && sourceSubIdx >= 0 && sourceSubIdx < insertAt) {
+            insertAt = Math.max(0, insertAt - 1);
+          }
+          targetList.splice(insertAt, 0, updatedDragged);
+        } else if (overData.kind === "tile" && overData.championId) {
+          const idx = targetList.findIndex(
             (c) => c.championId === overData.championId
           );
           if (idx >= 0) {
-            list.splice(idx, 0, updatedDragged);
-            return { ...t, champions: list };
+            const origTargetIdx =
+              sameSubSection && sourceSubIdx >= 0 && idx >= sourceSubIdx
+                ? idx + 1
+                : idx;
+            targetList.splice(origTargetIdx, 0, updatedDragged);
+          } else {
+            targetList.push(updatedDragged);
           }
+        } else {
+          targetList.push(updatedDragged);
         }
-        list.push(updatedDragged);
-        return { ...t, champions: list };
+
+        return {
+          ...t,
+          champions: [...blindList, ...genList],
+        };
       });
     });
   }
