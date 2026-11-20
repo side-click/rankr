@@ -1983,7 +1983,7 @@ export function ChampionPoolEditor({
             type="button"
             onClick={() => savePoolWithPassphrase(activePassphrase)}
             disabled={saving}
-            className="xp-btn xp-btn-primary text-xs w-[116px] justify-center"
+            className="xp-btn xp-btn-primary text-xs min-w-[126px] whitespace-nowrap justify-center"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? "Encrypting..." : `Save Pools${dirty ? "*" : ""}`}
@@ -2123,7 +2123,29 @@ export function ChampionPoolEditor({
                   alt={activeRoleMeta.label}
                   className="w-4 h-4"
                 />
-                <span className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
+                <span
+                  onDoubleClick={() => {
+                    if (unplacedChampions.length === 0) return;
+                    updateActiveRoleTiers((prev) => {
+                      if (prev.length === 0) return prev;
+                      const next = prev.map((t) => ({
+                        ...t,
+                        champions: [...t.champions],
+                      }));
+                      for (const champ of unplacedChampions) {
+                        const tierIdx = Math.floor(Math.random() * next.length);
+                        const isBlindable = Math.random() < 0.35;
+                        next[tierIdx].champions.push({
+                          championId: champ.id,
+                          name: champ.name,
+                          isBlindable,
+                        });
+                      }
+                      return next;
+                    });
+                  }}
+                  className="text-xs font-bold uppercase tracking-wider text-[#f0c020] select-none"
+                >
                   {activeRoleMeta.label} Champions
                 </span>
               </div>
