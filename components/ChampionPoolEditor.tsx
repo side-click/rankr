@@ -145,10 +145,8 @@ function ChampionTileVisual({
   return (
     <div
       className={`group relative flex flex-col items-center ${
-        iconsOnly
-          ? "w-[64px] h-[64px] rounded-md overflow-visible"
-          : "w-full min-w-[76px] h-[78px] p-1.5 rounded"
-      } border select-none transition-colors ${
+        iconsOnly ? "justify-center" : ""
+      } w-full min-w-[76px] h-[78px] p-1.5 rounded border select-none transition-colors ${
         isOverlay
           ? "bg-[#222834] border-[#f0c020] text-white shadow-2xl scale-105 cursor-grabbing"
           : champion.isBlindable
@@ -173,14 +171,10 @@ function ChampionTileVisual({
       <img
         src={iconUrl}
         alt={champion.name}
-        width={iconsOnly ? 64 : 48}
-        height={iconsOnly ? 64 : 48}
+        width={48}
+        height={48}
         draggable={false}
-        className={
-          iconsOnly
-            ? "w-full h-full rounded-[5px] object-cover bg-[#0f131a]"
-            : "w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
-        }
+        className="w-12 h-12 rounded border border-black/60 object-cover bg-[#0f131a]"
       />
       {!iconsOnly && (
         <span
@@ -722,7 +716,7 @@ export function ChampionPoolEditor({
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const [showAuthorInExport, setShowAuthorInExport] = useState(true);
-  const [iconsOnlyExport, setIconsOnlyExport] = useState(true);
+  const [iconsOnlyExport, setIconsOnlyExport] = useState(false);
 
   // Retro confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
