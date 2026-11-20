@@ -334,11 +334,11 @@ function DroppableTierRow({
   const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
   return (
-    <div className="rounded border border-white/15 bg-[#12151c] overflow-hidden">
+    <div className="rounded border border-white/15 bg-[#12151c]">
       <div className="flex flex-col sm:flex-row">
         {/* Tier Label & Controls (matches PlayerTierEditor) */}
         <div
-          className="md:w-[152px] sm:w-36 shrink-0 p-2.5 flex flex-row sm:flex-col items-center justify-between gap-2 border-b sm:border-b-0 sm:border-r border-black/30"
+          className="md:w-[152px] sm:w-36 shrink-0 p-2.5 flex flex-row sm:flex-col items-center justify-between gap-2 border-b sm:border-b-0 sm:border-r border-black/30 rounded-t sm:rounded-tr-none sm:rounded-l"
           style={{ backgroundColor: tier.color, color: contrastColor }}
         >
           <div className="inline-grid items-center justify-items-center max-w-full">
