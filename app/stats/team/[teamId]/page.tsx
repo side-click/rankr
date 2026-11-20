@@ -7,6 +7,12 @@ import {
 } from "@/utils/riotStatsServer";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Team Stats | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function PublicTeamStatsPage({

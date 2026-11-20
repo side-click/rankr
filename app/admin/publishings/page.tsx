@@ -6,7 +6,12 @@ import {
   type AdminLogBallot,
 } from "@/components/AdminPublishingsLog";
 import type { Division, Edition, League, Season } from "@/types/database";
+import type { Metadata } from "next";
 import { ShieldAlert } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Admin Publishings | Rankr",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -2,6 +2,12 @@ import { MatchSeriesContent } from "@/components/MatchSeriesContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Match History | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function PublicMatchSeriesPage({

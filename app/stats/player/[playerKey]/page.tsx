@@ -2,6 +2,12 @@ import { PlayerStatsContent } from "@/components/PlayerStatsContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Player Stats | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function PublicPlayerStatsPage({

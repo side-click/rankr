@@ -4,6 +4,12 @@ import { AdminStatsDashboard } from "@/components/AdminStatsDashboard";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Stats | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatsPage({
