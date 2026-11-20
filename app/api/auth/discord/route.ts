@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   discordAuthUrl.searchParams.set("client_id", clientId);
   discordAuthUrl.searchParams.set("redirect_uri", redirectUri);
   discordAuthUrl.searchParams.set("response_type", "code");
-  discordAuthUrl.searchParams.set("scope", "identify email");
+  discordAuthUrl.searchParams.set("scope", "identify");
   discordAuthUrl.searchParams.set("state", state);
 
   const response = NextResponse.redirect(discordAuthUrl.toString());
