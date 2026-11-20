@@ -317,14 +317,7 @@ function DroppableTierRow({
 
   const contrastColor = getTierContrastText(tier.color);
   const labelLen = (tier.label || "").trim().length;
-  const labelSizeClass =
-    labelLen <= 12
-      ? "text-2xl"
-      : labelLen <= 20
-      ? "text-lg"
-      : labelLen <= 28
-      ? "text-sm"
-      : "text-xs";
+  const labelSizeClass = labelLen <= 3 ? "text-2xl" : "text-sm";
   const blindableChamps = tier.champions.filter((c) => Boolean(c.isBlindable));
   const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
