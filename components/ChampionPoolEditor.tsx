@@ -1180,7 +1180,7 @@ export function ChampionPoolEditor({
                 Privacy Notice
               </p>
               <p className="text-[11px] leading-relaxed text-[#d6d3c4]">
-                Your champion pools are stored locally and encrypted in your
+                Your champion pools are stored locally (encrypted) in your
                 browser. They are never published, and require your passphrase
                 to unlock and view (no, the web admin can&apos;t see them
                 either). Forgotten passphrases cannot be recovered.
