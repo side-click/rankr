@@ -71,7 +71,7 @@ export function BlogCard({
       <Link
         href={`/blog/${blog.id}`}
         style={cardStyle}
-        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
+        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_135px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
         <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
           {profile?.avatar_url ? (
@@ -103,30 +103,34 @@ export function BlogCard({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {seasonLogo && (
+        <div className="flex items-center gap-2 min-w-0">
+          {seasonLogo ? (
             <img
               src={seasonLogo}
               alt={scopeLabel}
-              width={20}
-              height={20}
-              className="w-5 h-5 object-contain shrink-0"
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain shrink-0"
             />
+          ) : (
+            <span className="w-6 h-6 shrink-0" aria-hidden="true" />
           )}
-          <div className="w-7 h-7 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0">
-            <FileText className="w-4 h-4 text-[#f0c020]" />
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          <div className="text-xs font-bold text-[#f0ede0] truncate">
-            {blog.title}
-          </div>
-          {blog.subtitle && (
-            <div className="text-[11px] text-[#a6a89e] truncate">
-              {blog.subtitle}
+          <span
+            title="Blog Post"
+            className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+          >
+            <FileText className="w-3.5 h-3.5 text-[#f0c020]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold text-[#c7c5b8] truncate">
+              {blog.title}
             </div>
-          )}
+            {blog.subtitle && (
+              <div className="text-[11px] text-[#a6a89e] truncate">
+                {blog.subtitle}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="text-[11px] text-[#a6a89e] whitespace-nowrap text-right shrink-0">
