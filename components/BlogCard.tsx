@@ -208,12 +208,16 @@ export function BlogCard({
           </span>
         </div>
 
-        <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5 pr-16 space-y-0.5">
-          <div className="text-xs font-bold text-[#d4d2c5]">Blog Post</div>
+        <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5 space-y-0.5">
+          <div className="wow-heading text-[15px] sm:text-base font-bold text-[#f0ede0] leading-tight truncate pr-12">
+            Blog Post
+          </div>
           {hasSeason && (
-            <div className="text-xs text-[#a6a89e] truncate">{scopeLabel}</div>
+            <div className="text-xs font-bold text-[#93c5fd] leading-tight truncate">
+              {scopeLabel}
+            </div>
           )}
-          <h3 className="wow-heading text-sm font-bold text-[#f0ede0] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug pt-0.5">
+          <h3 className="text-xs font-semibold text-[#c7c5b8] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug pt-0.5">
             {blog.title}
           </h3>
         </div>
