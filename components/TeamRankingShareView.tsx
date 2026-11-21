@@ -692,7 +692,11 @@ export function TeamRankingShareView({
                             <span className="text-[9px] text-white/40">LOGO</span>
                           )}
                         </div>
-                        <div className="font-black text-xl text-[#f7f5eb] group-hover:text-[#f0c020] transition-colors tracking-tight leading-tight">
+                        <div
+                          className={`font-black ${
+                            hasAnyCommentary ? "text-xl" : "text-2xl"
+                          } text-[#f7f5eb] group-hover:text-[#f0c020] transition-colors tracking-tight leading-tight`}
+                        >
                           {entry.team_name_snapshot}
                         </div>
                       </Link>
@@ -710,7 +714,11 @@ export function TeamRankingShareView({
                             <span className="text-[9px] text-white/40">LOGO</span>
                           )}
                         </div>
-                        <div className="font-black text-xl text-[#f7f5eb] tracking-tight leading-tight">
+                        <div
+                          className={`font-black ${
+                            hasAnyCommentary ? "text-xl" : "text-2xl"
+                          } text-[#f7f5eb] tracking-tight leading-tight`}
+                        >
                           {entry.team_name_snapshot}
                         </div>
                       </>
