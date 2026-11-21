@@ -71,39 +71,65 @@ export function BlogCard({
       <Link
         href={`/blog/${blog.id}`}
         style={cardStyle}
-        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_minmax(0,1fr)_auto] xl:grid-cols-[148px_135px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
+        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2 lg:grid lg:grid-cols-[148px_165px_minmax(0,1fr)_auto] xl:grid-cols-[148px_135px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={authorDisplay}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
-            />
-          ) : (
-            <span className="w-8 h-8 rounded-md bg-[#2563eb] text-white text-sm font-bold inline-flex items-center justify-center shrink-0">
-              {authorDisplay.slice(0, 1).toUpperCase()}
+        <div className="flex items-center gap-3 min-w-0 lg:contents">
+          <div className="w-36 sm:w-40 lg:w-full shrink-0 flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={authorDisplay}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-md bg-[#2563eb] text-white text-sm font-bold inline-flex items-center justify-center shrink-0">
+                {authorDisplay.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="text-sm font-bold text-[#f0c020] truncate">
+              {authorDisplay}
             </span>
-          )}
-          <span className="text-sm font-bold text-[#f0c020] truncate">
-            {authorDisplay}
-          </span>
-        </div>
-
-        <div className="min-w-0">
-          <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-            Blog Post
           </div>
-          {hasSeason && (
-            <div className="text-xs font-bold text-[#93c5fd] leading-tight truncate mt-0.5">
-              {scopeLabel}
+
+          <div className="min-w-0 flex-1 lg:flex-none">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <div className="min-w-0">
+                <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                  Blog Post
+                </div>
+                {hasSeason && (
+                  <div className="text-xs font-bold text-[#93c5fd] leading-tight truncate mt-0.5">
+                    {scopeLabel}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
+                {seasonLogo && (
+                  <img
+                    src={seasonLogo}
+                    alt={scopeLabel}
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 object-contain shrink-0"
+                  />
+                )}
+                <span
+                  title="Blog Post"
+                  className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                >
+                  <FileText className="w-3 h-3 text-[#f0c020]" />
+                </span>
+              </div>
             </div>
-          )}
+            <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate mt-0.5">
+              {blog.title}
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="hidden lg:flex items-center gap-2 min-w-0">
           {seasonLogo ? (
             <img
               src={seasonLogo}
