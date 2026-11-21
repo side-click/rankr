@@ -190,7 +190,7 @@ export function ContentCard({
             : `/rankings/${ballot.id}`
         }
         style={cardStyle}
-        className="xp-panel relative overflow-hidden px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_auto_1fr] xl:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
+        className="xp-panel relative overflow-hidden px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_145px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
         {newBadge}
         {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
@@ -291,14 +291,16 @@ export function ContentCard({
           </div>
         </div>
 
-        {/* Wide Desktop Col 4: Top 3 / Top Tier Preview (xl+ only, also acts as 1fr spacer) */}
-        <div className="hidden xl:flex items-center gap-1.5 min-w-0">
+        {/* Desktop Col 4: Top 3 / Tier List Config Preview (centered; collapses to #1 / compact at lg) */}
+        <div className="hidden lg:flex items-center justify-center gap-1.5 min-w-0">
           {hasPreview && (
             <>
-              {top3Teams.map((t) => (
+              {top3Teams.map((t, idx) => (
                 <span
                   key={t.rank}
-                  className="inline-flex items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]"
+                  className={`${
+                    idx === 0 ? "inline-flex" : "hidden xl:inline-flex"
+                  } items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]`}
                 >
                   <span className="text-[#f0c020]">#{t.rank}</span>
                   {t.logoUrl && (
@@ -315,16 +317,16 @@ export function ContentCard({
               ))}
               {playerConfigPreview && (
                 <>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0] whitespace-nowrap">
-                    <span className="text-[#f0c020]">
-                      {playerConfigPreview.presetLabel}
-                    </span>
-                    <span className="text-white/30">•</span>
-                    <span>{playerConfigPreview.splitLabel}</span>
+                  <span className="inline-flex items-center px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0c020] whitespace-nowrap">
+                    {playerConfigPreview.presetLabel} Tiers
                   </span>
-                  {playerConfigPreview.populatedRoles.length > 0 && (
-                    <span className="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-semibold text-[#c7c5b8] whitespace-nowrap">
-                      {playerConfigPreview.populatedRoles.map((r) => (
+                  <span className="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-semibold text-[#c7c5b8] whitespace-nowrap">
+                    {playerConfigPreview.splitLabel === "Overall" ? (
+                      <span>All Roles Combined</span>
+                    ) : playerConfigPreview.populatedRoles.length === 5 ? (
+                      <span>All Roles Split</span>
+                    ) : playerConfigPreview.populatedRoles.length > 0 ? (
+                      playerConfigPreview.populatedRoles.map((r) => (
                         <span
                           key={r.key}
                           className="inline-flex items-center gap-1"
@@ -338,9 +340,11 @@ export function ContentCard({
                           />
                           <span>{r.label}</span>
                         </span>
-                      ))}
-                    </span>
-                  )}
+                      ))
+                    ) : (
+                      <span>Split Roles</span>
+                    )}
+                  </span>
                 </>
               )}
             </>
