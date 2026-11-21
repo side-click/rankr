@@ -286,10 +286,10 @@ export function RoleLeaderboardExportCard({
               {leagueName} ({seasonName})
             </div>
             <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight truncate">
-              {divisionName} {roleMeta.label} Leaderboard
+              {roleMeta.label} Leaderboard
             </h2>
             <div className="text-xs font-bold text-[#c7c5b8] mt-0.5">
-              As of {currentEditionName}
+              {divisionName} &middot; As of {currentEditionName}
             </div>
           </div>
         </div>

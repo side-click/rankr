@@ -2592,7 +2592,7 @@ export function StatsDashboard({
 
       {roleFilter !== "all" && roleLeaderboardPlayers.length > 0 && (
         <div className="fixed -left-[9999px] top-0 pointer-events-none">
-          <div ref={roleExportCardRef} className="w-[800px] p-2.5">
+          <div ref={roleExportCardRef} className="w-[680px] p-2.5">
             <RoleLeaderboardExportCard
               role={roleFilter}
               players={roleLeaderboardPlayers}
