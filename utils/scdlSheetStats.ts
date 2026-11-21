@@ -227,16 +227,24 @@ export interface SheetSourceConfig {
 }
 
 const fetchMergedDraftsFromDb = unstable_cache(
-  async (): Promise<Record<string, DraftRecord>> => {
-    const merged: Record<string, DraftRecord> = { ...DRAFTS_BY_GAME_ID };
+  async (
+    seasonId?: string,
+    seasonSlug?: string
+  ): Promise<Record<string, DraftRecord>> => {
+    const merged: Record<string, DraftRecord> =
+      !seasonId || seasonSlug === "season-4-5" ? { ...DRAFTS_BY_GAME_ID } : {};
     const sb = getSnapshotClient(false);
     if (!sb) return merged;
     try {
-      const { data, error } = await sb
+      let q = sb
         .from("match_drafts")
         .select(
           "game_id, blue_team, red_team, blue_bans, red_bans, blue_picks, red_picks, source_url"
         );
+      if (seasonId) {
+        q = q.eq("season_id", seasonId);
+      }
+      const { data, error } = await q;
       if (error || !Array.isArray(data)) return merged;
       for (const row of data) {
         const gameId = String(row.game_id ?? "").trim();
@@ -273,7 +281,10 @@ const fetchMergedDraftsFromDb = unstable_cache(
   { revalidate: 60, tags: ["public-stats", "match-drafts"] }
 );
 
-const loadMergedDraftsCached = cache(async () => fetchMergedDraftsFromDb());
+const loadMergedDraftsCached = cache(
+  async (seasonId?: string, seasonSlug?: string) =>
+    fetchMergedDraftsFromDb(seasonId, seasonSlug)
+);
 
 async function loadSupabaseNativeRows(
   seasonId: string
@@ -536,7 +547,10 @@ export async function fetchScdlSheetStats(
 ): Promise<SheetSyncSummary> {
   const [uniqueRows, draftsByGameId] = await Promise.all([
     loadUniqueSheetRows(config),
-    loadMergedDraftsCached(),
+    loadMergedDraftsCached(
+      config?.seasonId ?? undefined,
+      config?.seasonSlug ?? undefined
+    ),
   ]);
 
   // Group by gameId + teamName for team totals
@@ -1141,7 +1155,10 @@ export async function fetchAllScdlSeries(
 ): Promise<ScdlSeriesDetail[]> {
   const [rows, draftsByGameId] = await Promise.all([
     loadUniqueSheetRows(config).catch(() => []),
-    loadMergedDraftsCached(),
+    loadMergedDraftsCached(
+      config?.seasonId ?? undefined,
+      config?.seasonSlug ?? undefined
+    ),
   ]);
   const byGame = new Map<string, ParsedSheetRow[]>();
   for (const r of rows) {

@@ -9,11 +9,33 @@ import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Team Stats | Rankr",
-};
-
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ teamId: string }>;
+}): Promise<Metadata> {
+  const { teamId } = await params;
+  const encodedId = encodeURIComponent(decodeURIComponent(teamId));
+  const title = "Team Stats | Rankr";
+  const ogUrl = `/stats/team/${encodedId}/opengraph-image`;
+
+  return {
+    title,
+    openGraph: {
+      type: "website",
+      siteName: "Rankr",
+      title,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      images: [ogUrl],
+    },
+  };
+}
 
 export default async function PublicTeamStatsPage({
   params,

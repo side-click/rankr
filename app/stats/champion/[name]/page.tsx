@@ -4,11 +4,48 @@ import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { fetchAllScdlSeries } from "@/utils/scdlSheetStats";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
-export const metadata: Metadata = {
-  title: "Champion Stats | Rankr",
-};
-
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ name: string }>;
+  searchParams: Promise<{ division?: string; season?: string }>;
+}): Promise<Metadata> {
+  const [{ name }, { division, season }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+  const championName = decodeURIComponent(name);
+  const encodedName = encodeURIComponent(championName);
+  const title = `${championName} Stats | Rankr`;
+
+  const hasDiv = Boolean(division && division !== "all");
+  const ogParams = new URLSearchParams();
+  if (hasDiv && division) ogParams.set("division", division);
+  if (season) ogParams.set("season", season);
+
+  const ogUrl =
+    hasDiv || season
+      ? `/api/og/champion/${encodedName}?${ogParams.toString()}`
+      : `/stats/champion/${encodedName}/opengraph-image`;
+
+  return {
+    title,
+    openGraph: {
+      type: "website",
+      siteName: "Rankr",
+      title,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      images: [ogUrl],
+    },
+  };
+}
 
 export default async function PublicChampionStatsPage({
   params,

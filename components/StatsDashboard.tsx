@@ -85,6 +85,7 @@ interface StatsDashboardProps {
   leagueLogoUrl: string | null;
   seasonName: string;
   seasonId: string | null;
+  seasonSlug?: string | null;
   currentEditionName: string;
   divisions: DivisionItem[];
   players: AggregatedPlayerStats[];
@@ -154,6 +155,7 @@ export function StatsDashboard({
   leagueLogoUrl,
   seasonName,
   seasonId,
+  seasonSlug,
   currentEditionName,
   divisions,
   players,
@@ -166,6 +168,10 @@ export function StatsDashboard({
 }: StatsDashboardProps) {
   const router = useRouter();
   const basePath = isAdminView ? "/admin/stats" : "/stats";
+  const playerHref = (playerKey: string) =>
+    `${basePath}/player/${encodeURIComponent(playerKey)}${
+      seasonSlug ? `?season=${encodeURIComponent(seasonSlug)}` : ""
+    }`;
   const resolveDivId = (raw: string | null | undefined): string | null => {
     if (!raw) return null;
     if (raw === "all") return "all";
@@ -1472,9 +1478,7 @@ export function StatsDashboard({
                     return (
                       <Link
                         key={roleMeta.key}
-                        href={`${basePath}/player/${encodeURIComponent(
-                          player.playerKey
-                        )}`}
+                        href={playerHref(player.playerKey)}
                         className="group relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 hover:border-[#f0c020]/80 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5 transition"
                       >
                         {signatureChamp && (
@@ -1811,9 +1815,7 @@ export function StatsDashboard({
                 {card.rows.map((p, idx) => (
                   <Link
                     key={p.playerKey}
-                    href={`${basePath}/player/${encodeURIComponent(
-                      p.playerKey
-                    )}`}
+                    href={playerHref(p.playerKey)}
                     className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -1884,9 +1886,7 @@ export function StatsDashboard({
                 {ratingCard.rows.map((p, idx) => (
                   <Link
                     key={p.playerKey}
-                    href={`${basePath}/player/${encodeURIComponent(
-                      p.playerKey
-                    )}`}
+                    href={playerHref(p.playerKey)}
                     className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
                       idx === 0 ? "bg-[#f0c020]/10" : ""
                     }`}
@@ -2279,6 +2279,7 @@ export function StatsDashboard({
             kpiCardStyle={kpiCardStyle}
             selectedDivisionPrimaryColor={selectedDivisionTheme?.primary_color}
             selectedDivisionSlug={selectedDivision?.slug ?? null}
+            seasonSlug={seasonSlug}
           />
         )}
 
@@ -2473,13 +2474,7 @@ export function StatsDashboard({
                   return (
                     <tr
                       key={p.playerKey}
-                      onClick={() =>
-                        router.push(
-                          `${basePath}/player/${encodeURIComponent(
-                            p.playerKey
-                          )}`
-                        )
-                      }
+                      onClick={() => router.push(playerHref(p.playerKey))}
                       className="hover:bg-white/5 transition cursor-pointer"
                     >
                       <td className="px-3 py-2 font-bold text-[#f0ede0] whitespace-nowrap">

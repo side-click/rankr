@@ -65,6 +65,7 @@ interface StatsDivisionTabProps {
   kpiCardStyle: React.CSSProperties;
   selectedDivisionPrimaryColor?: string | null;
   selectedDivisionSlug?: string | null;
+  seasonSlug?: string | null;
 }
 
 function normChampKey(name: string): string {
@@ -108,13 +109,15 @@ export function StatsDivisionTab({
   kpiCardStyle,
   selectedDivisionPrimaryColor,
   selectedDivisionSlug,
+  seasonSlug,
 }: StatsDivisionTabProps) {
-  const champHref = (name: string) =>
-    `/stats/champion/${encodeURIComponent(name)}${
-      selectedDivisionSlug
-        ? `?division=${encodeURIComponent(selectedDivisionSlug)}`
-        : ""
-    }`;
+  const champHref = (name: string) => {
+    const qp = new URLSearchParams();
+    if (selectedDivisionSlug) qp.set("division", selectedDivisionSlug);
+    if (seasonSlug) qp.set("season", seasonSlug);
+    const qs = qp.toString();
+    return `/stats/champion/${encodeURIComponent(name)}${qs ? `?${qs}` : ""}`;
+  };
   const allChampions = useAllChampions(ddVersion);
   const untouched = useMemo(() => {
     if (allChampions.length === 0) return [];

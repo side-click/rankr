@@ -105,6 +105,7 @@ export default async function PublicStatsPage({
       leagueLogoUrl={ctx.leagueLogoUrl}
       seasonName={ctx.seasonName}
       seasonId={ctx.seasonId}
+      seasonSlug={ctx.seasonSlug}
       currentEditionName={ctx.currentEditionName}
       divisions={ctx.divisions}
       players={sheetSummary ? [] : ctx.players}
