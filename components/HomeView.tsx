@@ -120,7 +120,7 @@ export function HomeView({ data }: { data: HomeData }) {
                     Stats
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Leaderboards, standings, scouting and more
+                    Leaderboards, scouting and more
                   </div>
                 </div>
               </Link>
