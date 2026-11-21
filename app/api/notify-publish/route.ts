@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import type { PlayerTierListPayload } from "@/types/database";
-import { evaluateContentModeration } from "@/utils/contentModeration";
+import { evaluateContentModerationServer } from "@/utils/contentModerationServer";
 import {
   getServiceRoleClient,
   logModerationEvent,
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const mod = evaluateContentModeration(
+    const mod = await evaluateContentModerationServer(
       [
         { field: "Username", value: profile?.username },
         { field: "Author Name", value: blog.author_name },
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
     ),
   ];
 
-  const mod = evaluateContentModeration(fields);
+  const mod = await evaluateContentModerationServer(fields);
   const overlayCount = Array.isArray(ballot.overlays)
     ? ballot.overlays.length
     : 0;

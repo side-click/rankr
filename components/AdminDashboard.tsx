@@ -174,6 +174,16 @@ export function AdminDashboard({
   >([]);
   const [moderationLoading, setModerationLoading] = useState(false);
   const [moderationError, setModerationError] = useState<string | null>(null);
+  const [moderationRules, setModerationRules] = useState<
+    { id: string; term: string; rule_type: "allow" | "block" | "flag" }[]
+  >([]);
+  const [moderationRulesError, setModerationRulesError] = useState<
+    string | null
+  >(null);
+  const [newRuleTerm, setNewRuleTerm] = useState("");
+  const [newRuleType, setNewRuleType] = useState<"allow" | "block" | "flag">(
+    "allow"
+  );
   const [newAllowedDiscordId, setNewAllowedDiscordId] = useState("");
   const [newAllowedLabel, setNewAllowedLabel] = useState("");
   const [userSearch, setUserSearch] = useState("");
@@ -259,20 +269,64 @@ export function AdminDashboard({
   async function loadModerationEvents() {
     setModerationLoading(true);
     setModerationError(null);
+    setModerationRulesError(null);
     try {
-      const { data, error } = await supabase
-        .from("moderation_events")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(40);
-      if (error) {
-        setModerationError(error.message);
-      } else if (data) {
-        setModerationEvents(data);
+      const [evRes, rulesRes] = await Promise.all([
+        supabase
+          .from("moderation_events")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(40),
+        supabase
+          .from("moderation_rules")
+          .select("id, term, rule_type")
+          .order("created_at", { ascending: false }),
+      ]);
+      if (evRes.error) {
+        setModerationError(evRes.error.message);
+      } else if (evRes.data) {
+        setModerationEvents(evRes.data);
+      }
+      if (rulesRes.error) {
+        setModerationRulesError(rulesRes.error.message);
+      } else if (rulesRes.data) {
+        setModerationRules(rulesRes.data);
       }
     } finally {
       setModerationLoading(false);
     }
+  }
+
+  async function handleAddModerationRule(e: React.FormEvent) {
+    e.preventDefault();
+    const clean = newRuleTerm.trim();
+    if (!clean) return;
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("moderation_rules")
+      .insert({ term: clean, rule_type: newRuleType })
+      .select("id, term, rule_type")
+      .single();
+    if (error) {
+      setStatusMsg(`Rule error: ${error.message}`);
+    } else if (data) {
+      setModerationRules((prev) => [data, ...prev]);
+      setNewRuleTerm("");
+      setStatusMsg(`Added ${newRuleType} rule "${clean}".`);
+    }
+    setBusy(false);
+  }
+
+  async function handleDeleteModerationRule(ruleId: string) {
+    setBusy(true);
+    const { error } = await supabase
+      .from("moderation_rules")
+      .delete()
+      .eq("id", ruleId);
+    if (!error) {
+      setModerationRules((prev) => prev.filter((r) => r.id !== ruleId));
+    }
+    setBusy(false);
   }
 
   useEffect(() => {
@@ -3451,6 +3505,94 @@ export function AdminDashboard({
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* Custom Moderation Rules (Allowlist / Block / Flag) */}
+          <div className="xp-panel p-3 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                Custom Moderation Rules ({moderationRules.length})
+              </h2>
+              <span className="text-[11px] text-[#a6a89e]">
+                Allowlist overrides AI/filters • Block prevents publish • Flag alerts mods
+              </span>
+            </div>
+            {moderationRulesError ? (
+              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                Run migration{" "}
+                <code className="text-[#f0c020]">029_moderation_rules.sql</code>{" "}
+                in Supabase to manage custom allowlist/block/flag rules here.
+              </div>
+            ) : (
+              <>
+                <form
+                  onSubmit={handleAddModerationRule}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <select
+                    value={newRuleType}
+                    onChange={(e) =>
+                      setNewRuleType(
+                        e.target.value as "allow" | "block" | "flag"
+                      )
+                    }
+                    className="xp-inset px-2 py-1 text-xs"
+                  >
+                    <option value="allow">Allowlist (Safe)</option>
+                    <option value="block">Block (Hard)</option>
+                    <option value="flag">Flag (Soft Alert)</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={newRuleTerm}
+                    onChange={(e) => setNewRuleTerm(e.target.value)}
+                    placeholder="Word or phrase (e.g. player IGN or custom term)..."
+                    className="xp-inset px-2.5 py-1 text-xs flex-1 min-w-[200px]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy || !newRuleTerm.trim()}
+                    className="xp-btn xp-btn-primary text-xs"
+                  >
+                    + Add Rule
+                  </button>
+                </form>
+                {moderationRules.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {moderationRules.map((rule) => {
+                      const pillColor =
+                        rule.rule_type === "allow"
+                          ? "border-[#2f6343] bg-[#11241a] text-[#7cd438]"
+                          : rule.rule_type === "block"
+                          ? "border-[#ff857a]/50 bg-[#3d1414] text-[#ff857a]"
+                          : "border-[#f0c020]/50 bg-[#3d2e12] text-[#f0c020]";
+                      return (
+                        <span
+                          key={rule.id}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[11px] font-bold ${pillColor}`}
+                        >
+                          <span className="uppercase text-[9px] opacity-80">
+                            {rule.rule_type}
+                          </span>
+                          <span>{rule.term}</span>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void handleDeleteModerationRule(rule.id)
+                            }
+                            className="hover:text-white cursor-pointer"
+                            title="Delete rule"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Moderation Alerts Log */}

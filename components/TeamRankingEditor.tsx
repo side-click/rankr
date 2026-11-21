@@ -33,10 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import {
-  evaluateContentModeration,
-  formatBlockedMessage,
-} from "@/utils/contentModeration";
+import { formatBlockedMessage } from "@/utils/contentModeration";
 import type {
   Division,
   DivisionTheme,
@@ -746,34 +743,40 @@ export function TeamRankingEditor({
       }`;
 
       if (targetStatus === "published") {
-        const mod = evaluateContentModeration([
-          { field: "Author Name", value: resolvedAuthor },
-          { field: "Title", value: defaultTitle },
-          { field: "General Notes", value: authorNotes },
-          ...rankedItems.map((item) => ({
-            field: `${item.team.name} Commentary`,
-            value: item.commentary,
-          })),
-        ]);
-        if (mod.action === "block") {
-          setMessage({
-            type: "error",
-            text: formatBlockedMessage(mod.blockedFields),
-          });
-          setSaving(false);
-          fetch("/api/moderation/report-block", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contentType: "ranking",
-              contentId: existingBallotId,
-              title: defaultTitle,
-              blockedFields: mod.blockedFields,
-              categories: mod.categories,
-              matchedTerms: mod.matchedTerms,
-            }),
-          }).catch(() => {});
-          return;
+        const modRes = await fetch("/api/moderation/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: "ranking",
+            contentId: existingBallotId,
+            title: defaultTitle,
+            fields: [
+              { field: "Author Name", value: resolvedAuthor },
+              { field: "Title", value: defaultTitle },
+              { field: "General Notes", value: authorNotes },
+              ...rankedItems.map((item) => ({
+                field: `${item.team.name} Commentary`,
+                value: item.commentary,
+              })),
+            ],
+          }),
+        }).catch(() => null);
+        if (modRes?.ok) {
+          const modJson = (await modRes.json().catch(() => null)) as {
+            action?: string;
+            blockedFields?: string[];
+            message?: string;
+          } | null;
+          if (modJson?.action === "block") {
+            setMessage({
+              type: "error",
+              text:
+                modJson.message ||
+                formatBlockedMessage(modJson.blockedFields ?? []),
+            });
+            setSaving(false);
+            return;
+          }
         }
       }
 
