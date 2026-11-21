@@ -85,7 +85,7 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
   }
 
   return (
-    <RetroWindow title={windowTitle} theme="scdl">
+    <RetroWindow title="Blog Post" theme="scdl">
       <div className="space-y-5">
         {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">

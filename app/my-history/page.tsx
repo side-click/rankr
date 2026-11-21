@@ -283,15 +283,15 @@ export default async function MyRankingsPage() {
                     <img
                       src={seasonLogo}
                       alt={scopeLabel}
-                      width={24}
-                      height={24}
-                      className="w-6 h-6 object-contain shrink-0"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 object-contain shrink-0"
                     />
                   )}
-                  <div className="w-8 h-8 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-[#f0c020]" />
                   </div>
-                  <div className="text-sm font-bold text-[#f0ede0] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug min-w-0">
+                  <div className="text-xs font-bold text-[#f0ede0] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug min-w-0">
                     {blog.title}
                   </div>
                 </div>
