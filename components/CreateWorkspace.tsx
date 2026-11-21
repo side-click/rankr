@@ -111,7 +111,7 @@ export function CreateWorkspace({
   return (
     <div className="space-y-4">
       {/* Graphical Mode Selector: Team Power Rankings vs Player Tier List vs Blog Post vs Champion Pool */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <button
           type="button"
           onClick={() => handleSelectContentType("team")}
