@@ -144,14 +144,14 @@ export function CreateWorkspace({
           onClick={() => handleSelectContentType("player")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
             contentType === "player"
-              ? "bg-[#11241a] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
               contentType === "player"
-                ? "bg-[#1b3827] border-[#f0c020] text-[#f0c020]"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
@@ -171,14 +171,14 @@ export function CreateWorkspace({
           onClick={() => handleSelectContentType("blog")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
             contentType === "blog"
-              ? "bg-[#141e2e] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
               contentType === "blog"
-                ? "bg-[#1c2b42] border-[#f0c020] text-[#f0c020]"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
@@ -198,14 +198,14 @@ export function CreateWorkspace({
           onClick={() => handleSelectContentType("champion_pool")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
             contentType === "champion_pool"
-              ? "bg-[#11241a] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
               contentType === "champion_pool"
-                ? "bg-[#1b3827] border-[#f0c020] text-[#f0c020]"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
