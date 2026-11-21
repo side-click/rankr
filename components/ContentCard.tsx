@@ -378,7 +378,7 @@ export function ContentCard({
         </div>
 
         {/* Footer / Right Column */}
-        <div className="flex items-center justify-between lg:justify-end pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
+        <div className="flex items-center justify-end pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10 text-[11px] shrink-0">
           <span className="text-[#a6a89e] whitespace-nowrap">
             {publishedDate ? `Published ${publishedDate}` : ""}
           </span>
@@ -463,7 +463,7 @@ export function ContentCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[11px]">
+      <div className="flex items-center justify-end pt-2 border-t border-white/10 text-[11px]">
         <span className="text-[#a6a89e]">
           {publishedDate ? `Published ${publishedDate}` : ""}
         </span>
