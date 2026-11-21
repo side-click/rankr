@@ -2,10 +2,9 @@
   <img src="public/images/brand/rankr-wordmark.png" alt="Rankr" height="48" />
 </p>
 
-
 Power rankings and player tier lists for amateur esports leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
 
-<img width="500" alt="season-4-5-baron-midseason-consensus" src="https://github.com/user-attachments/assets/c283905c-77ab-4c96-b23d-0a461a474a53" />
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/1dd5182c-b732-4453-b61b-da5c38f806c7" />
 
 ## Features
 - **Team Power Rankings**: Drag-and-drop weekly division rankings with commentary, automatic edition-to-edition rank change tracking, and shareable PNG / Discord OpenGraph cards.
