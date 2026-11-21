@@ -5,10 +5,12 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { AuthButton } from "@/components/AuthButton";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { DeleteDraftButton } from "@/components/DeleteDraftButton";
+import { DeleteChampionPoolButton } from "@/components/DeleteChampionPoolButton";
+import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
 import { getLeaguePrefix } from "@/components/ContentCard";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { Award, Edit3, Lock, ShieldCheck, User } from "lucide-react";
+import { Award, Edit3, Lock, User } from "lucide-react";
 
 import type { Metadata } from "next";
 
@@ -107,33 +109,52 @@ export default async function MyRankingsPage() {
 
   return (
     <RetroWindow title="My History" theme="scdl">
-      <div className="mb-3 p-3 rounded-lg bg-[#11241a] border border-[#2f6343] flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 p-3 rounded-lg bg-[#221d12] border border-[#c89b3c]/70 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-5 h-5 text-[#7cd438] shrink-0" />
+          <ChampionHelmetIcon className="w-5 h-5 text-[#f0c020] shrink-0" />
           <div>
             <p className="text-xs font-black text-[#f0ede0] flex items-center gap-1.5">
-              Private Champion Pool
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 text-[10px] font-bold text-[#7cd438]">
-                <Lock className="w-2.5 h-2.5" /> Encrypted
+              Champion Pool
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/35 border border-[#c89b3c]/40 text-[10px] font-bold text-[#f0c020]">
+                <Lock className="w-2.5 h-2.5" /> Private
               </span>
             </p>
-            <p className="text-[11px] text-[#b9cbb6]">
-              {championPool
-                ? `Last updated ${new Date(
-                    championPool.updated_at
-                  ).toLocaleDateString("en-US", {
-                    timeZone: "America/New_York",
-                  })}`
-                : "Not created yet — build your personal per-role champion tier list."}
-            </p>
+            {!championPool && (
+              <p className="text-[11px] text-[#c7c5b8]">
+                Not created yet — build your personal per-role champion tier list.
+              </p>
+            )}
           </div>
         </div>
-        <Link
-          href="/create?type=champion_pool"
-          className="xp-btn xp-btn-primary text-xs px-3 py-1.5"
-        >
-          {championPool ? "Open / Add Roles" : "Create Champion Pool"}
-        </Link>
+        <div className="flex items-center justify-end gap-2.5 ml-auto">
+          {championPool && (
+            <span className="text-[11px] text-[#a6a89e] whitespace-nowrap">
+              Last updated{" "}
+              {new Date(championPool.updated_at).toLocaleDateString("en-US", {
+                timeZone: "America/New_York",
+              })}
+            </span>
+          )}
+          {championPool ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/create?type=champion_pool"
+                className="xp-btn text-xs w-[88px] justify-center"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </Link>
+              <DeleteChampionPoolButton poolId={championPool.id} />
+            </div>
+          ) : (
+            <Link
+              href="/create?type=champion_pool"
+              className="xp-btn xp-btn-primary text-xs px-3 py-1.5"
+            >
+              Create Champion Pool
+            </Link>
+          )}
+        </div>
       </div>
 
       {!ballots || ballots.length === 0 ? (
