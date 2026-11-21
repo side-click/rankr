@@ -6,16 +6,15 @@ import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import {
   AlertTriangle,
-  ArrowUpDown,
   Award,
   Check,
   ChevronDown,
-  ChevronUp,
   Copy,
   Crown,
   Download,
+  Eye,
+  EyeOff,
   Trophy,
-  Users,
 } from "lucide-react";
 import { RankChangeBadge } from "@/components/RankChangeBadge";
 import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
@@ -111,7 +110,6 @@ export function ConsensusRankingsView({
   >(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showChange, setShowChange] = useState(true);
   const [isPending, startTransition] = useTransition();
 
@@ -518,33 +516,20 @@ export function ConsensusRankingsView({
         {/* Action Controls */}
         <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
           {rows.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={() => setShowChange((prev) => !prev)}
-                className={`xp-btn text-xs ${
-                  showChange ? "xp-btn-primary" : ""
-                }`}
-              >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-                <span>{showChange ? "Hide Change" : "Show Change"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowBreakdown((prev) => !prev)}
-                className={`xp-btn text-xs ${
-                  showBreakdown ? "xp-btn-primary" : ""
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>{showBreakdown ? "Hide Voter Ranks" : "Show Voter Ranks"}</span>
-                {showBreakdown ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => setShowChange((prev) => !prev)}
+              className={`xp-btn text-xs ${
+                !showChange ? "xp-btn-primary" : ""
+              }`}
+            >
+              {showChange ? (
+                <EyeOff className="w-3.5 h-3.5" />
+              ) : (
+                <Eye className="w-3.5 h-3.5" />
+              )}
+              <span>{showChange ? "Hide Change" : "Show Change"}</span>
+            </button>
           )}
           <button
             type="button"
@@ -776,22 +761,6 @@ export function ConsensusRankingsView({
                                     </div>
                                   )}
                                 </div>
-                              </div>
-                            )}
-                            {showBreakdown && (
-                              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                                {row.voterRanks.map((vr) => (
-                                  <Link
-                                    key={`${row.teamKey}-${vr.rankingId}`}
-                                    href={`/rankings/${vr.rankingId}`}
-                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 hover:bg-black/60 border border-white/10 text-[11px] text-[#d6d3c4] transition"
-                                  >
-                                    <span className="font-bold text-[#f0c020]">
-                                      #{vr.rank}
-                                    </span>
-                                    <span>{vr.username}</span>
-                                  </Link>
-                                ))}
                               </div>
                             )}
                           </div>

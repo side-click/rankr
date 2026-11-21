@@ -637,94 +637,98 @@ export function PlayerTierShareView({
                 )}`
               : "Draft Preview"}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isOwner && isEditionEditable && (
-              <Link href={`/create?${editParams.toString()}`} className="xp-btn text-xs">
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Tier List</span>
-              </Link>
-            )}
-            {rawHasAnyCommentary && (
-              <button
-                type="button"
-                onClick={() => setHideComments((v) => !v)}
-                className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
-                title="Toggle comments in view and PNG export"
-              >
-                {hideComments ? (
-                  <Eye className="w-3.5 h-3.5" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-                <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
-              </button>
-            )}
-            {canEditOverlays && !editingOverlays && (
-              overlays.length > 0 ? (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {rawHasAnyCommentary && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setOverlayError(null);
-                    setEditingOverlays(true);
-                  }}
-                  className="xp-btn text-xs"
+                  onClick={() => setHideComments((v) => !v)}
+                  className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
+                  title="Toggle comments in view and PNG export"
                 >
-                  <ImagePlus className="w-3.5 h-3.5" />
-                  <span>Edit Overlays</span>
+                  {hideComments ? (
+                    <Eye className="w-3.5 h-3.5" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  )}
+                  <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
                 </button>
-              ) : (
-                <label className="xp-btn text-xs cursor-pointer">
-                  <ImagePlus className="w-3.5 h-3.5" />
-                  <span>
-                    {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    disabled={uploadingOverlay}
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUploadOverlay(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              )
-            )}
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="xp-btn text-xs"
-            >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-[#7cd438]" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
               )}
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPng}
-              disabled={exporting}
-              className="xp-btn xp-btn-gold text-xs"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{exporting ? "Exporting..." : "Export PNG"}</span>
-            </button>
-            {isAdmin && (
+              {canEditOverlays && !editingOverlays && (
+                overlays.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOverlayError(null);
+                      setEditingOverlays(true);
+                    }}
+                    className="xp-btn text-xs"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    <span>Edit Overlays</span>
+                  </button>
+                ) : (
+                  <label className="xp-btn text-xs cursor-pointer">
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    <span>
+                      {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      disabled={uploadingOverlay}
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadOverlay(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {isOwner && isEditionEditable && (
+                <Link href={`/create?${editParams.toString()}`} className="xp-btn text-xs">
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Tier List</span>
+                </Link>
+              )}
               <button
                 type="button"
-                onClick={handleAdminDelete}
-                disabled={deleting}
-                className="xp-btn xp-btn-danger text-xs"
-                title="Admin: Delete this published player tier list"
+                onClick={handleCopyLink}
+                className="xp-btn text-xs"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>{deleting ? "Deleting..." : "Admin Delete"}</span>
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-[#7cd438]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+                <span>{copied ? "Copied!" : "Copy Link"}</span>
               </button>
-            )}
+              <button
+                type="button"
+                onClick={handleExportPng}
+                disabled={exporting}
+                className="xp-btn xp-btn-gold text-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{exporting ? "Exporting..." : "Export PNG"}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAdminDelete}
+                  disabled={deleting}
+                  className="xp-btn xp-btn-danger text-xs"
+                  title="Admin: Delete this published player tier list"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{deleting ? "Deleting..." : "Admin Delete"}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

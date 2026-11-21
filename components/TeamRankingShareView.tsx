@@ -112,6 +112,7 @@ export function TeamRankingShareView({
   const [overlayError, setOverlayError] = useState<string | null>(null);
   const [hideComments, setHideComments] = useState(false);
   const [hideRosters, setHideRosters] = useState(false);
+  const [hideChange, setHideChange] = useState(false);
 
   const profile = Array.isArray(ballot.profiles)
     ? ballot.profiles[0]
@@ -382,9 +383,14 @@ export function TeamRankingShareView({
   const hasAnyRoster = entries.some(
     (e) => normalizeRoster(e.roster_snapshot).length > 0
   );
+  const showChange = !hideChange;
   const teamGridCols = hasAnyCommentary
-    ? "grid-cols-[68px_88px_1.45fr_1.55fr]"
-    : "grid-cols-[68px_88px_1fr]";
+    ? showChange
+      ? "grid-cols-[68px_88px_1.45fr_1.55fr]"
+      : "grid-cols-[68px_1.45fr_1.55fr]"
+    : showChange
+    ? "grid-cols-[68px_88px_1fr]"
+    : "grid-cols-[68px_1fr]";
 
   const headerAccentBg =
     theme === "dragon"
@@ -406,112 +412,129 @@ export function TeamRankingShareView({
                 )}`
               : "Draft Preview"}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isOwner && isEditionEditable && (
-              <Link
-                href={`/create?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
-                className="xp-btn text-xs"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Ranking</span>
-              </Link>
-            )}
-            {rawHasAnyCommentary && (
-              <button
-                type="button"
-                onClick={() => setHideComments((v) => !v)}
-                className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
-                title="Toggle comments in view and PNG export"
-              >
-                {hideComments ? (
-                  <Eye className="w-3.5 h-3.5" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-                <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
-              </button>
-            )}
-            {hasAnyRoster && (
-              <button
-                type="button"
-                onClick={() => setHideRosters((v) => !v)}
-                className={`xp-btn text-xs ${hideRosters ? "xp-btn-primary" : ""}`}
-                title="Toggle rosters in view and PNG export"
-              >
-                {hideRosters ? (
-                  <Eye className="w-3.5 h-3.5" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-                <span>{hideRosters ? "Show Rosters" : "Hide Rosters"}</span>
-              </button>
-            )}
-            {canEditOverlays && !editingOverlays && (
-              overlays.length > 0 ? (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {rawHasAnyCommentary && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setOverlayError(null);
-                    setEditingOverlays(true);
-                  }}
-                  className="xp-btn text-xs"
+                  onClick={() => setHideComments((v) => !v)}
+                  className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
+                  title="Toggle comments in view and PNG export"
                 >
-                  <ImagePlus className="w-3.5 h-3.5" />
-                  <span>Edit Overlays</span>
+                  {hideComments ? (
+                    <Eye className="w-3.5 h-3.5" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  )}
+                  <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
                 </button>
-              ) : (
-                <label className="xp-btn text-xs cursor-pointer">
-                  <ImagePlus className="w-3.5 h-3.5" />
-                  <span>
-                    {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    disabled={uploadingOverlay}
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUploadOverlay(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              )
-            )}
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="xp-btn text-xs"
-            >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-[#7cd438]" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
               )}
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPng}
-              disabled={exporting}
-              className="xp-btn xp-btn-gold text-xs"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{exporting ? "Exporting..." : "Export PNG"}</span>
-            </button>
-            {isAdmin && (
+              {hasAnyRoster && (
+                <button
+                  type="button"
+                  onClick={() => setHideRosters((v) => !v)}
+                  className={`xp-btn text-xs ${hideRosters ? "xp-btn-primary" : ""}`}
+                  title="Toggle rosters in view and PNG export"
+                >
+                  {hideRosters ? (
+                    <Eye className="w-3.5 h-3.5" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  )}
+                  <span>{hideRosters ? "Show Rosters" : "Hide Rosters"}</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleAdminDelete}
-                disabled={deleting}
-                className="xp-btn xp-btn-danger text-xs"
-                title="Admin: Delete this published ranking"
+                onClick={() => setHideChange((v) => !v)}
+                className={`xp-btn text-xs ${hideChange ? "xp-btn-primary" : ""}`}
+                title="Toggle change column in view and PNG export"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>{deleting ? "Deleting..." : "Admin Delete"}</span>
+                {hideChange ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{hideChange ? "Show Change" : "Hide Change"}</span>
               </button>
-            )}
+              {canEditOverlays && !editingOverlays && (
+                overlays.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOverlayError(null);
+                      setEditingOverlays(true);
+                    }}
+                    className="xp-btn text-xs"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    <span>Edit Overlays</span>
+                  </button>
+                ) : (
+                  <label className="xp-btn text-xs cursor-pointer">
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    <span>
+                      {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      disabled={uploadingOverlay}
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadOverlay(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {isOwner && isEditionEditable && (
+                <Link
+                  href={`/create?season=${season?.slug}&division=${division?.slug}&edition=${edition?.slug}`}
+                  className="xp-btn text-xs"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Ranking</span>
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="xp-btn text-xs"
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-[#7cd438]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+                <span>{copied ? "Copied!" : "Copy Link"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPng}
+                disabled={exporting}
+                className="xp-btn xp-btn-gold text-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{exporting ? "Exporting..." : "Export PNG"}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAdminDelete}
+                  disabled={deleting}
+                  className="xp-btn xp-btn-danger text-xs"
+                  title="Admin: Delete this published ranking"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{deleting ? "Deleting..." : "Admin Delete"}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -676,7 +699,7 @@ export function TeamRankingShareView({
             className={`grid ${teamGridCols} gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2`}
           >
             <div className="text-center">Rank</div>
-            <div className="text-center">Change</div>
+            {showChange && <div className="text-center">Change</div>}
             <div className="pl-[92px]">Team</div>
             {hasAnyCommentary && <div className="text-center">Comments</div>}
           </div>
@@ -706,12 +729,14 @@ export function TeamRankingShareView({
                     </span>
                   </div>
 
-                  <div className="flex justify-center">
-                    <RankChangeBadge
-                      previousRank={entry.previous_rank}
-                      rankChange={entry.rank_change}
-                    />
-                  </div>
+                  {showChange && (
+                    <div className="flex justify-center">
+                      <RankChangeBadge
+                        previousRank={entry.previous_rank}
+                        rankChange={entry.rank_change}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-3 min-w-0">
                     {ballot.season_id && ballot.division_id && entry.team_id ? (
