@@ -151,6 +151,9 @@ export function AdminDashboard({
     useState<SeasonPlayer[]>(initialSeasonPlayers);
   const [appSettings, setAppSettings] =
     useState<AppSettings>(initialAppSettings);
+  const [existingBlogIds, setExistingBlogIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
   const [publishedBallots, setPublishedBallots] = useState<
     AdminPublishedBallot[]
@@ -287,6 +290,22 @@ export function AdminDashboard({
         setModerationError(evRes.error.message);
       } else if (evRes.data) {
         setModerationEvents(evRes.data);
+        const blogIds = Array.from(
+          new Set(
+            evRes.data
+              .filter((e) => e.content_type === "blog" && e.content_id)
+              .map((e) => e.content_id as string)
+          )
+        );
+        if (blogIds.length > 0) {
+          const { data: blogRows } = await supabase
+            .from("blogs")
+            .select("id")
+            .in("id", blogIds);
+          setExistingBlogIds(new Set((blogRows ?? []).map((b) => b.id)));
+        } else {
+          setExistingBlogIds(new Set());
+        }
       }
       if (rulesRes.error) {
         setModerationRulesError(rulesRes.error.message);
@@ -3839,7 +3858,9 @@ export function AdminDashboard({
                             ev.content_type === "tierlist") &&
                             !publishedBallots.some(
                               (b) => b.id === ev.content_id
-                            ))) && (
+                            )) ||
+                          (ev.content_type === "blog" &&
+                            !existingBlogIds.has(ev.content_id))) && (
                           <button
                             type="button"
                             disabled={busy}
