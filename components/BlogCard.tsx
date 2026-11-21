@@ -148,10 +148,28 @@ export function BlogCard({
     <Link
       href={`/blog/${blog.id}`}
       style={cardStyle}
-      className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-3"
+      className="xp-panel relative overflow-hidden p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
-      <div className="flex items-start gap-3 min-w-0">
-        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
+      <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+        {seasonLogo && (
+          <img
+            src={seasonLogo}
+            alt={scopeLabel}
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain shrink-0"
+          />
+        )}
+        <div
+          className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0"
+          title="Blog Post"
+        >
+          <FileText className="w-3.5 h-3.5 text-[#f0c020]" />
+        </div>
+      </div>
+
+      <div className="flex items-stretch gap-3 min-w-0">
+        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
@@ -168,25 +186,7 @@ export function BlogCard({
           </span>
         </div>
 
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center justify-end gap-1.5">
-            {seasonLogo && (
-              <img
-                src={seasonLogo}
-                alt={scopeLabel}
-                width={22}
-                height={22}
-                className="w-[22px] h-[22px] object-contain shrink-0"
-              />
-            )}
-            <div
-              className="w-7 h-7 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0"
-              title="Blog Post"
-            >
-              <FileText className="w-4 h-4 text-[#f0c020]" />
-            </div>
-          </div>
-
+        <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5 pr-16 space-y-0.5">
           <div className="text-xs font-bold text-[#d4d2c5]">Blog Post</div>
           {hasSeason && (
             <div className="text-xs text-[#a6a89e] truncate">{scopeLabel}</div>
@@ -197,11 +197,9 @@ export function BlogCard({
         </div>
       </div>
 
-      {publishedDate && (
-        <div className="text-[11px] text-[#a6a89e] text-right">
-          Published {publishedDate}
-        </div>
-      )}
+      <div className="pt-2 border-t border-white/10 flex items-center justify-end text-[11px] text-[#a6a89e]">
+        {publishedDate ? `Published ${publishedDate}` : ""}
+      </div>
     </Link>
   );
 }

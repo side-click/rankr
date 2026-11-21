@@ -423,7 +423,7 @@ export function ContentCard({
       </div>
 
       <div className="flex items-stretch gap-3 min-w-0">
-        <div className="w-[116px] sm:w-[128px] shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-1.5 py-2 rounded bg-black/25 border border-white/10">
+        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
