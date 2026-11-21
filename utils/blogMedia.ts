@@ -98,4 +98,36 @@ export async function cleanupBlogMedia(
   }
 }
 
+/**
+ * Best-effort removal of `ballot-overlays` objects attached to a deleted ranking/tier list.
+ */
+export async function cleanupRankingOverlays(
+  supabase: SupabaseClient,
+  overlays?: { url?: string | null }[] | null
+): Promise<void> {
+  if (!Array.isArray(overlays) || overlays.length === 0) return;
+  const marker = "/storage/v1/object/public/ballot-overlays/";
+  const paths = new Set<string>();
+  for (const item of overlays) {
+    const url = item?.url;
+    if (!url) continue;
+    const idx = url.indexOf(marker);
+    if (idx === -1) continue;
+    const raw = url.slice(idx + marker.length).split("?")[0];
+    if (raw) {
+      try {
+        paths.add(decodeURIComponent(raw));
+      } catch {
+        paths.add(raw);
+      }
+    }
+  }
+  if (paths.size === 0) return;
+  try {
+    await supabase.storage.from("ballot-overlays").remove(Array.from(paths));
+  } catch {
+    // Non-fatal
+  }
+}
+
 export { BLOG_MEDIA_PUBLIC_MARKER };

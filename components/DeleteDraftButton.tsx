@@ -5,7 +5,10 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { cleanupBlogMedia } from "@/utils/blogMedia";
+import {
+  cleanupBlogMedia,
+  cleanupRankingOverlays,
+} from "@/utils/blogMedia";
 
 interface DeleteDraftButtonProps {
   ballotId: string;
@@ -65,6 +68,18 @@ export function DeleteDraftButton({
         .maybeSingle();
       if (blogRow) {
         await cleanupBlogMedia(supabase, blogRow.banner_url, blogRow.content);
+      }
+    } else if (table === "rankings") {
+      const { data: rankingRow } = await supabase
+        .from("rankings")
+        .select("overlays")
+        .eq("id", ballotId)
+        .maybeSingle();
+      if (rankingRow?.overlays) {
+        await cleanupRankingOverlays(
+          supabase,
+          rankingRow.overlays as { url?: string | null }[]
+        );
       }
     }
 
