@@ -341,6 +341,7 @@ export default async function MyRankingsPage() {
                     <DeleteDraftButton
                       ballotId={blog.id}
                       table="blogs"
+                      contentKind="blog"
                       status={isPublished ? "published" : "draft"}
                       title={blog.title}
                     />
@@ -584,6 +585,7 @@ export default async function MyRankingsPage() {
                     )}
                     <DeleteDraftButton
                       ballotId={b.id}
+                      contentKind={isPlayer ? "tierlist" : "ranking"}
                       status={isPublished ? "published" : "draft"}
                       title={`${edName} (${hasDivision ? divName : "All Divisions"})`}
                     />
