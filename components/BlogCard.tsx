@@ -191,15 +191,15 @@ export function BlogCard({
       </div>
 
       <div className="flex items-stretch gap-3 min-w-0">
-        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
+        <div className="w-20 sm:w-24 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={authorDisplay}
-              className="w-14 h-14 rounded-md object-cover border border-white/30 shrink-0"
+              className="w-12 h-12 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (
-            <span className="w-14 h-14 rounded-md bg-[#2563eb] text-white text-xl font-bold inline-flex items-center justify-center shrink-0">
+            <span className="w-12 h-12 rounded-md bg-[#2563eb] text-white text-lg font-bold inline-flex items-center justify-center shrink-0">
               {authorDisplay.slice(0, 1).toUpperCase()}
             </span>
           )}
