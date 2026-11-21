@@ -329,14 +329,31 @@ export function BlogEditor({
 
         <div className="xp-panel p-3">
           <div className="w-full sm:w-80">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold text-[#c7c5b8] flex items-center gap-1">
+                {showAuthorField && (
+                  <UserCheck className="w-3 h-3 text-[#f0c020]" />
+                )}
+                <span>Author</span>
+              </label>
+              {showAuthorField && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAuthorField(false);
+                    setAuthorName(discordDefaultName);
+                  }}
+                  className="text-[10px] text-[#a6a89e] hover:text-white cursor-pointer"
+                >
+                  Reset to Discord
+                </button>
+              )}
+            </div>
             {!showAuthorField ? (
               <div className="flex items-center justify-between gap-2 xp-inset px-2.5 py-1.5 text-xs">
-                <span className="text-[#c7c5b8] truncate">
-                  Author:{" "}
-                  <strong className="text-[#f0ede0]">
-                    {discordDefaultName}
-                  </strong>
-                </span>
+                <strong className="text-[#f0ede0] truncate">
+                  {discordDefaultName}
+                </strong>
                 <button
                   type="button"
                   onClick={() => setShowAuthorField(true)}
@@ -346,32 +363,14 @@ export function BlogEditor({
                 </button>
               </div>
             ) : (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-[#c7c5b8] flex items-center gap-1">
-                    <UserCheck className="w-3 h-3 text-[#f0c020]" />
-                    <span>Author Name</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAuthorField(false);
-                      setAuthorName(discordDefaultName);
-                    }}
-                    className="text-[10px] text-[#a6a89e] hover:text-white cursor-pointer"
-                  >
-                    Reset to Discord
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder={discordDefaultName}
-                  maxLength={60}
-                  className="w-full xp-inset px-2.5 py-1.5 text-xs"
-                />
-              </div>
+              <input
+                type="text"
+                value={authorName}
+                onChange={(e) => setAuthorName(e.target.value)}
+                placeholder={discordDefaultName}
+                maxLength={60}
+                className="w-full xp-inset px-2.5 py-1.5 text-xs"
+              />
             )}
           </div>
         </div>
@@ -387,7 +386,7 @@ export function BlogEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give your blog post a headline..."
-              maxLength={80}
+              maxLength={64}
               className="w-full max-w-xl xp-inset px-3 py-2 text-sm font-bold"
             />
           </div>
@@ -402,7 +401,7 @@ export function BlogEditor({
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="A short deck or summary..."
               maxLength={140}
-              className="w-full max-w-2xl xp-inset px-3 py-1.5 text-xs"
+              className="w-full xp-inset px-3 py-1.5 text-xs"
             />
           </div>
 
