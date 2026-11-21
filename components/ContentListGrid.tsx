@@ -7,9 +7,15 @@ import {
   type ContentCardData,
   type ContentCardLayout,
 } from "@/components/ContentCard";
+import { BlogCard, type BlogCardData } from "@/components/BlogCard";
+
+export type ContentItem =
+  | { kind: "ballot"; id: string; publishedAt: string | null; data: ContentCardData }
+  | { kind: "blog"; id: string; publishedAt: string | null; data: BlogCardData };
 
 interface ContentListGridProps {
-  ballots: ContentCardData[];
+  ballots?: ContentCardData[];
+  items?: ContentItem[];
   defaultView?: ContentCardLayout;
   showViewToggle?: boolean;
   emptyMessage?: string;
@@ -19,15 +25,25 @@ interface ContentListGridProps {
 
 export function ContentListGrid({
   ballots,
+  items,
   defaultView = "grid",
   showViewToggle = true,
-  emptyMessage = "No published rankings match your filters.",
+  emptyMessage = "No published content matches your filters.",
   showCount = false,
   headerLeft,
 }: ContentListGridProps) {
   const [viewMode, setViewMode] = useState<ContentCardLayout>(defaultView);
 
-  if (ballots.length === 0) {
+  const resolvedItems: ContentItem[] = items
+    ? items
+    : (ballots ?? []).map((b) => ({
+        kind: "ballot" as const,
+        id: b.id,
+        publishedAt: b.published_at,
+        data: b,
+      }));
+
+  if (resolvedItems.length === 0) {
     return (
       <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
         {emptyMessage}
@@ -47,7 +63,9 @@ export function ContentListGrid({
             {headerLeft
               ? headerLeft
               : showCount
-              ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
+              ? `${resolvedItems.length} ${
+                  resolvedItems.length === 1 ? "published item" : "published items"
+                }`
               : null}
           </div>
           {showViewToggle && (
@@ -85,21 +103,53 @@ export function ContentListGrid({
 
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {ballots.map((b) => (
-            <ContentCard key={b.id} ballot={b} layout="grid" />
-          ))}
+          {resolvedItems.map((item) =>
+            item.kind === "blog" ? (
+              <BlogCard key={`blog-${item.id}`} blog={item.data} layout="grid" />
+            ) : (
+              <ContentCard
+                key={`ballot-${item.id}`}
+                ballot={item.data}
+                layout="grid"
+              />
+            )
+          )}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 md:hidden">
-            {ballots.map((b) => (
-              <ContentCard key={b.id} ballot={b} layout="grid" />
-            ))}
+            {resolvedItems.map((item) =>
+              item.kind === "blog" ? (
+                <BlogCard
+                  key={`blog-${item.id}`}
+                  blog={item.data}
+                  layout="grid"
+                />
+              ) : (
+                <ContentCard
+                  key={`ballot-${item.id}`}
+                  ballot={item.data}
+                  layout="grid"
+                />
+              )
+            )}
           </div>
           <div className="hidden md:block space-y-2.5">
-            {ballots.map((b) => (
-              <ContentCard key={b.id} ballot={b} layout="list" />
-            ))}
+            {resolvedItems.map((item) =>
+              item.kind === "blog" ? (
+                <BlogCard
+                  key={`blog-${item.id}`}
+                  blog={item.data}
+                  layout="list"
+                />
+              ) : (
+                <ContentCard
+                  key={`ballot-${item.id}`}
+                  ballot={item.data}
+                  layout="list"
+                />
+              )
+            )}
           </div>
         </>
       )}

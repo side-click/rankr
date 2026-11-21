@@ -10,7 +10,7 @@ import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
 import { getLeaguePrefix } from "@/components/ContentCard";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
-import { Award, Edit3, Lock, User } from "lucide-react";
+import { Award, Edit3, FileText, Lock, User } from "lucide-react";
 
 import type { Metadata } from "next";
 
@@ -78,7 +78,7 @@ export default async function MyRankingsPage() {
     );
   }
 
-  const [{ data: ballots }, { data: championPool }] = await Promise.all([
+  const [{ data: ballots }, { data: blogs }, { data: championPool }] = await Promise.all([
     supabase
       .from("rankings")
       .select(
@@ -105,11 +105,31 @@ export default async function MyRankingsPage() {
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
     supabase
+      .from("blogs")
+      .select(
+        `
+      id,
+      title,
+      subtitle,
+      status,
+      published_at,
+      updated_at,
+      season_name_snapshot,
+      league_name_snapshot,
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) )
+    `
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
       .from("champion_pools")
       .select("id, updated_at")
       .eq("user_id", user.id)
       .maybeSingle(),
   ]);
+
+  const hasBallots = Boolean(ballots && ballots.length > 0);
+  const hasBlogs = Boolean(blogs && blogs.length > 0);
 
   return (
     <RetroWindow title="My History" theme="scdl">
@@ -161,18 +181,176 @@ export default async function MyRankingsPage() {
         </div>
       </div>
 
-      {!ballots || ballots.length === 0 ? (
+      {!hasBallots && !hasBlogs ? (
         <div className="xp-inset p-8 text-center space-y-3">
           <p className="text-xs text-[#a6a89e]">
-            No rankings yet.
+            No published content or drafts yet.
           </p>
           <Link href="/create" className="xp-btn xp-btn-primary text-xs">
-            Create Your First Ranking
+            Create New Content
           </Link>
         </div>
       ) : (
         <div className="space-y-2.5">
-          {ballots.map((b) => {
+          {(blogs ?? []).map((blog) => {
+            const season = Array.isArray(blog.seasons)
+              ? blog.seasons[0]
+              : blog.seasons;
+            const rawLeague = (
+              season as {
+                leagues?:
+                  | {
+                      name?: string;
+                      short_name?: string | null;
+                      slug?: string;
+                      logo_url?: string | null;
+                    }
+                  | {
+                      name?: string;
+                      short_name?: string | null;
+                      slug?: string;
+                      logo_url?: string | null;
+                    }[];
+              } | null
+            )?.leagues;
+            const league = Array.isArray(rawLeague)
+              ? rawLeague[0] ?? null
+              : rawLeague ?? null;
+            const leaguePrefix = getLeaguePrefix(
+              league,
+              blog.league_name_snapshot
+            );
+            const sName = season?.name ?? blog.season_name_snapshot ?? "";
+            const hasSeason = Boolean(sName);
+            const scopeLabel = hasSeason
+              ? `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`
+              : "Blog Post";
+            const seasonLogo = hasSeason ? league?.logo_url ?? null : null;
+            const isPublished = blog.status === "published";
+            const dateStr = isPublished && blog.published_at
+              ? `Published ${new Date(blog.published_at).toLocaleDateString("en-US", {
+                  timeZone: "America/New_York",
+                })}`
+              : `Updated ${new Date(blog.updated_at).toLocaleDateString("en-US", {
+                  timeZone: "America/New_York",
+                })}`;
+            const cardHref = isPublished
+              ? `/blog/${blog.id}`
+              : `/create?type=blog&edit=${blog.id}`;
+
+            return (
+              <div
+                key={`blog-${blog.id}`}
+                style={{
+                  borderLeftWidth: "3px",
+                  borderLeftColor: "#3b82f6",
+                  backgroundImage:
+                    "linear-gradient(110deg, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0.08) 46%, rgba(18, 22, 21, 0.92) 100%)",
+                }}
+                className="relative overflow-hidden xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[124px_165px_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-3"
+              >
+                <Link
+                  href={cardHref}
+                  aria-label={blog.title}
+                  className="absolute inset-0 z-0"
+                />
+
+                <div className="relative z-10 flex items-center gap-3 min-w-0 lg:contents pointer-events-none">
+                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center">
+                    <span
+                      className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-xs border ${
+                        isPublished
+                          ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                          : "bg-[#3d3012] text-[#f0c020] border-[#8c6b16]"
+                      }`}
+                    >
+                      {blog.status}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                        Blog Post
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
+                        {seasonLogo && (
+                          <img
+                            src={seasonLogo}
+                            alt={scopeLabel}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 object-contain shrink-0"
+                          />
+                        )}
+                        <span
+                          title="Blog Post"
+                          className="w-5 h-5 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                        >
+                          <FileText className="w-3 h-3 text-[#f0c020]" />
+                        </span>
+                      </div>
+                    </div>
+                    {hasSeason && (
+                      <div className="text-xs font-bold text-[#93c5fd] leading-tight truncate mt-0.5">
+                        {scopeLabel}
+                      </div>
+                    )}
+                    <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate mt-0.5">
+                      {blog.title}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 pointer-events-none hidden lg:flex items-center gap-2 min-w-0">
+                  {seasonLogo ? (
+                    <img
+                      src={seasonLogo}
+                      alt={scopeLabel}
+                      width={24}
+                      height={24}
+                      className="w-6 h-6 object-contain shrink-0"
+                    />
+                  ) : (
+                    <span className="w-6 h-6 shrink-0" aria-hidden="true" />
+                  )}
+                  <span
+                    title="Blog Post"
+                    className="w-6 h-6 rounded bg-[#2a2210] border border-[#c89b3c]/70 inline-flex items-center justify-center shrink-0"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#f0c020]" />
+                  </span>
+                  <div className="text-xs font-semibold text-[#c7c5b8] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug min-w-0">
+                    {blog.title}
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex items-center justify-between gap-2 pt-1.5 border-t border-white/10 lg:border-t-0 lg:pt-0 lg:contents pointer-events-none">
+                  <div className="text-[11px] text-[#a6a89e] whitespace-nowrap">
+                    {dateStr}
+                  </div>
+
+                  <div className="relative z-10 flex items-center gap-2 shrink-0 pointer-events-auto">
+                    <Link
+                      href={`/create?type=blog&edit=${blog.id}`}
+                      className="xp-btn text-xs w-[88px] justify-center"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </Link>
+                    <DeleteDraftButton
+                      ballotId={blog.id}
+                      table="blogs"
+                      contentKind="blog"
+                      status={isPublished ? "published" : "draft"}
+                      title={blog.title}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {(ballots ?? []).map((b) => {
             const season = Array.isArray(b.seasons) ? b.seasons[0] : b.seasons;
             const division = Array.isArray(b.divisions)
               ? b.divisions[0]
@@ -276,7 +454,7 @@ export default async function MyRankingsPage() {
 
                 {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
                 <div className="flex items-center gap-3 min-w-0 lg:contents pointer-events-none">
-                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center px-2.5 py-2 rounded bg-black/25 border border-white/10">
+                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center">
                     <span
                       className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-xs border ${
                         isPublished
@@ -291,7 +469,7 @@ export default async function MyRankingsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2 min-w-0">
                       <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                        {edName}
+                        {isPlayer ? "Player Tier List" : "Power Rankings"}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                         {displayLogo ? (
@@ -325,7 +503,7 @@ export default async function MyRankingsPage() {
                     </div>
                     <div className="lg:hidden text-[11px] text-[#c7c5b8] leading-snug">
                       <div className="truncate">
-                        {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                        {edName}
                         <span className="hidden sm:inline text-[#a6a89e]">
                           {" "}• {leagueSeasonLabel}
                         </span>
@@ -362,7 +540,7 @@ export default async function MyRankingsPage() {
                   </span>
                   <div className="whitespace-nowrap">
                     <div className="text-xs font-semibold text-[#c7c5b8]">
-                      {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                      {edName}
                     </div>
                     <div className="text-[11px] text-[#a6a89e]">
                       {leagueSeasonLabel}
@@ -407,6 +585,7 @@ export default async function MyRankingsPage() {
                     )}
                     <DeleteDraftButton
                       ballotId={b.id}
+                      contentKind={isPlayer ? "tierlist" : "ranking"}
                       status={isPublished ? "published" : "draft"}
                       title={`${edName} (${hasDivision ? divName : "All Divisions"})`}
                     />

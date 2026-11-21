@@ -2,16 +2,17 @@
 
 import React, { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Lock, User } from "lucide-react";
+import { FileText, Lock, User } from "lucide-react";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
-import { RetroWindow } from "@/components/RetroWindow";
+import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
+  Blog,
+  CreateContentType,
   Division,
   DivisionTheme,
   Edition,
-  RankingType,
   Season,
   SeasonPlayer,
   Team,
@@ -19,6 +20,7 @@ import type {
 import { TeamRankingEditor } from "@/components/TeamRankingEditor";
 import { ChampionPoolEditor } from "@/components/ChampionPoolEditor";
 import { PlayerTierEditor } from "@/components/PlayerTierEditor";
+import { BlogEditor } from "@/components/BlogEditor";
 
 interface CreateWorkspaceProps {
   userId: string | null;
@@ -31,11 +33,18 @@ interface CreateWorkspaceProps {
   editions: Edition[];
   teams: Team[];
   seasonPlayers: SeasonPlayer[];
-  initialType?: RankingType;
+  initialType?: CreateContentType;
   initialSeasonSlug?: string;
   initialDivisionSlug?: string;
   initialEditionSlug?: string;
+  initialBlog?: Blog | null;
   requireAllowlist?: boolean;
+  blockedUser?: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+    discordId: string | null;
+  } | null;
 }
 
 export function CreateWorkspace({
@@ -53,15 +62,17 @@ export function CreateWorkspace({
   initialSeasonSlug,
   initialDivisionSlug,
   initialEditionSlug,
+  initialBlog,
   requireAllowlist = false,
+  blockedUser = null,
 }: CreateWorkspaceProps) {
-  const [rankingType, setRankingType] = useState<RankingType>(initialType);
+  const [contentType, setContentType] = useState<CreateContentType>(initialType);
   const [activeTabDirty, setActiveTabDirty] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  function handleSelectRankingType(nextType: RankingType) {
-    if (nextType === rankingType) return;
+  function handleSelectContentType(nextType: CreateContentType) {
+    if (nextType === contentType) return;
     if (
       activeTabDirty &&
       !window.confirm(
@@ -71,7 +82,7 @@ export function CreateWorkspace({
       return;
     }
     setActiveTabDirty(false);
-    setRankingType(nextType);
+    setContentType(nextType);
     const params = new URLSearchParams(
       typeof window !== "undefined"
         ? window.location.search
@@ -79,12 +90,18 @@ export function CreateWorkspace({
     );
     if (nextType === "player") {
       params.set("type", "player");
+      params.delete("edit");
+    } else if (nextType === "blog") {
+      params.set("type", "blog");
+      params.delete("variant");
     } else if (nextType === "champion_pool") {
       params.set("type", "champion_pool");
       params.delete("variant");
+      params.delete("edit");
     } else {
       params.delete("type");
       params.delete("variant");
+      params.delete("edit");
     }
     const qs = params.toString();
     const nextUrl = qs ? `${pathname}?${qs}` : pathname;
@@ -93,20 +110,20 @@ export function CreateWorkspace({
 
   return (
     <div className="space-y-4">
-      {/* Graphical Mode Selector: Team Power Rankings vs Player Tier List vs Champion Pool */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Graphical Mode Selector: Team Power Rankings vs Player Tier List vs Blog Post vs Champion Pool */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <button
           type="button"
-          onClick={() => handleSelectRankingType("team")}
+          onClick={() => handleSelectContentType("team")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
-            rankingType === "team"
+            contentType === "team"
               ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
-              rankingType === "team"
+              contentType === "team"
                 ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
@@ -115,7 +132,7 @@ export function CreateWorkspace({
           </div>
           <span
             className={`font-black text-sm tracking-tight ${
-              rankingType === "team" ? "text-[#f0c020]" : "text-[#f0ede0]"
+              contentType === "team" ? "text-[#f0c020]" : "text-[#f0ede0]"
             }`}
           >
             Team Power Rankings
@@ -124,17 +141,17 @@ export function CreateWorkspace({
 
         <button
           type="button"
-          onClick={() => handleSelectRankingType("player")}
+          onClick={() => handleSelectContentType("player")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
-            rankingType === "player"
-              ? "bg-[#11241a] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+            contentType === "player"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
-              rankingType === "player"
-                ? "bg-[#1b3827] border-[#f0c020] text-[#f0c020]"
+              contentType === "player"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
@@ -142,7 +159,7 @@ export function CreateWorkspace({
           </div>
           <span
             className={`font-black text-sm tracking-tight ${
-              rankingType === "player" ? "text-[#f0c020]" : "text-[#f0ede0]"
+              contentType === "player" ? "text-[#f0c020]" : "text-[#f0ede0]"
             }`}
           >
             Player Tier List
@@ -151,17 +168,44 @@ export function CreateWorkspace({
 
         <button
           type="button"
-          onClick={() => handleSelectRankingType("champion_pool")}
+          onClick={() => handleSelectContentType("blog")}
           className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
-            rankingType === "champion_pool"
-              ? "bg-[#11241a] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+            contentType === "blog"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
               : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
           }`}
         >
           <div
             className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
-              rankingType === "champion_pool"
-                ? "bg-[#1b3827] border-[#f0c020] text-[#f0c020]"
+              contentType === "blog"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
+                : "bg-black/30 border-white/15 text-[#c89b3c]/70"
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+          </div>
+          <span
+            className={`font-black text-sm tracking-tight ${
+              contentType === "blog" ? "text-[#f0c020]" : "text-[#f0ede0]"
+            }`}
+          >
+            Blog Post
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectContentType("champion_pool")}
+          className={`text-left p-2.5 rounded-lg border-2 transition-all cursor-pointer flex items-center gap-3 ${
+            contentType === "champion_pool"
+              ? "bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]"
+              : "bg-[#15181f] border-white/10 hover:border-white/25 opacity-75 hover:opacity-100"
+          }`}
+        >
+          <div
+            className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
+              contentType === "champion_pool"
+                ? "bg-[#382e12] border-[#f0c020] text-[#f0c020]"
                 : "bg-black/30 border-white/15 text-[#c89b3c]/70"
             }`}
           >
@@ -170,7 +214,7 @@ export function CreateWorkspace({
           <div className="min-w-0">
             <span
               className={`font-black text-sm tracking-tight block ${
-                rankingType === "champion_pool"
+                contentType === "champion_pool"
                   ? "text-[#f0c020]"
                   : "text-[#f0ede0]"
               }`}
@@ -184,17 +228,22 @@ export function CreateWorkspace({
         </button>
       </div>
 
-      {rankingType === "champion_pool" ? (
+      {contentType === "champion_pool" ? (
         <ChampionPoolEditor
-          userId={userId}
+          userId={blockedUser ? null : userId}
           authorName={initialAuthorName || discordDefaultName}
           authorAvatarUrl={initialAuthorAvatarUrl}
           discordDefaultName={discordDefaultName}
           onUnsavedChange={setActiveTabDirty}
         />
+      ) : blockedUser ? (
+        <AllowlistBlockedWindow
+          title="Publishable Content Editors - Invite Only"
+          user={blockedUser}
+        />
       ) : !userId ? (
         <SignInRequiredWindow requireAllowlist={requireAllowlist} />
-      ) : rankingType === "team" ? (
+      ) : contentType === "team" ? (
         <TeamRankingEditor
           userId={userId}
           initialAuthorName={initialAuthorName}
@@ -211,7 +260,7 @@ export function CreateWorkspace({
           initialEditionSlug={initialEditionSlug}
           onUnsavedChange={setActiveTabDirty}
         />
-      ) : (
+      ) : contentType === "player" ? (
         <PlayerTierEditor
           userId={userId}
           initialAuthorName={initialAuthorName}
@@ -226,6 +275,15 @@ export function CreateWorkspace({
           initialDivisionSlug={initialDivisionSlug}
           initialEditionSlug={initialEditionSlug}
           onUnsavedChange={setActiveTabDirty}
+        />
+      ) : (
+        <BlogEditor
+          userId={userId}
+          initialAuthorName={initialAuthorName}
+          discordDefaultName={discordDefaultName}
+          seasons={seasons}
+          initialSeasonSlug={initialSeasonSlug}
+          initialBlog={initialBlog}
         />
       )}
     </div>

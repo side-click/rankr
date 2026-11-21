@@ -3,9 +3,8 @@ import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { checkUserAllowlisted } from "@/utils/allowlist";
 import { CreateWorkspace } from "@/components/CreateWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
-import type { RankingType } from "@/types/database";
+import type { Blog, CreateContentType } from "@/types/database";
 import { Lock } from "lucide-react";
 
 import type { Metadata } from "next";
@@ -24,6 +23,7 @@ export default async function RankPage({
     season?: string;
     division?: string;
     edition?: string;
+    edit?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -41,8 +41,10 @@ export default async function RankPage({
       .eq("id", 1)
       .maybeSingle();
 
-    const guestInitialType: RankingType =
-      params.type === "player"
+    const guestInitialType: CreateContentType =
+      params.type === "blog" || params.edit
+        ? "blog"
+        : params.type === "player"
         ? "player"
         : params.type === "team"
         ? "team"
@@ -105,15 +107,34 @@ export default async function RankPage({
   ]);
 
   if (!isAllowlisted) {
+    const blockedInitialType: CreateContentType =
+      params.type === "blog" || params.edit
+        ? "blog"
+        : params.type === "player"
+        ? "player"
+        : params.type === "team"
+        ? "team"
+        : "champion_pool";
+
     return (
-      <AllowlistBlockedWindow
-        title="Rankings Editor — Invite Only"
-        user={{
+      <CreateWorkspace
+        userId={user.id}
+        initialAuthorName={profile?.username ?? "Discord User"}
+        initialAuthorAvatarUrl={profile?.avatar_url ?? null}
+        discordDefaultName={profile?.username ?? "Discord User"}
+        blockedUser={{
           id: user.id,
           username: profile?.username ?? "Discord User",
           avatarUrl: profile?.avatar_url ?? null,
           discordId: profile?.discord_id ?? null,
         }}
+        seasons={[]}
+        divisions={[]}
+        themes={[]}
+        editions={[]}
+        teams={[]}
+        seasonPlayers={[]}
+        initialType={blockedInitialType}
       />
     );
   }
@@ -156,9 +177,11 @@ export default async function RankPage({
         )
       : undefined;
 
-  const initialType: RankingType =
+  const initialType: CreateContentType =
     params.type === "champion_pool"
       ? "champion_pool"
+      : params.type === "blog" || params.edit
+      ? "blog"
       : params.type === "player"
       ? "player"
       : params.type === "team"
@@ -166,6 +189,17 @@ export default async function RankPage({
       : matchedEdition?.is_players_only
       ? "player"
       : "team";
+
+  let initialBlog: Blog | null = null;
+  if (params.edit) {
+    const { data: existingBlog } = await supabase
+      .from("blogs")
+      .select("*")
+      .eq("id", params.edit)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    initialBlog = (existingBlog as Blog | null) ?? null;
+  }
 
   return (
     <CreateWorkspace
@@ -187,6 +221,7 @@ export default async function RankPage({
       initialSeasonSlug={effectiveSeason}
       initialDivisionSlug={params.division}
       initialEditionSlug={params.edition}
+      initialBlog={initialBlog}
     />
   );
 }

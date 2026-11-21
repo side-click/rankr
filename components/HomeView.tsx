@@ -270,7 +270,22 @@ export function HomeView({ data }: { data: HomeData }) {
         </div>
       </div>
 
-      {/* 2. Consensus Power Rankings Snapshot */}
+      {/* 2. Recently Published Content */}
+      <RetroWindow title="Recently Published Content" theme="scdl">
+        {data.recentContent.length === 0 ? (
+          <div className="xp-inset p-4 text-xs text-[#a6a89e]">
+            No published content yet for this scope.
+          </div>
+        ) : (
+          <RecentContentPanel
+            initialItems={data.recentContent}
+            browseHref={browseHref}
+            seasonIds={data.recentSeasonIds}
+          />
+        )}
+      </RetroWindow>
+
+      {/* 3. Consensus Power Rankings Snapshot */}
       {data.consensusSnapshots.length > 0 && (
         <RetroWindow title="Consensus Power Rankings" theme="scdl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -677,21 +692,6 @@ export function HomeView({ data }: { data: HomeData }) {
           </div>
         </RetroWindow>
       )}
-
-      {/* 4. Recently Published Content */}
-      <RetroWindow title="Recently Published Content" theme="scdl">
-        {data.recentBallots.length === 0 ? (
-          <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-            No published content yet for this scope.
-          </div>
-        ) : (
-          <RecentContentPanel
-            ballots={data.recentBallots}
-            browseHref={browseHref}
-            seasonIds={data.recentSeasonIds}
-          />
-        )}
-      </RetroWindow>
     </div>
   );
 }

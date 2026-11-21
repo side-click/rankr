@@ -2,9 +2,12 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { ContentCardData } from "@/components/ContentCard";
 import {
+  RECENT_BLOG_SELECT,
   RECENT_CONTENT_PAGE_SIZE,
   RECENT_CONTENT_SELECT,
 } from "@/utils/recentContentQuery";
+import type { BlogCardData } from "@/components/BlogCard";
+import type { ContentItem } from "@/components/ContentListGrid";
 import {
   computeAverageTeamRankings,
   type ConsensusRankingInput,
@@ -115,6 +118,7 @@ export interface HomeData {
   archivedSeasons: HomeSeasonSummary[];
   focusedSeason: HomeSeasonSummary | null;
   recentBallots: ContentCardData[];
+  recentContent: ContentItem[];
   recentSeasonIds: string[];
   divisionStandings: HomeDivisionStandings[];
   divisionTopPerformers: HomeDivisionTopPerformers[];
@@ -380,6 +384,19 @@ export async function loadHomeData(
     ballotsQuery = ballotsQuery.in("season_id", targetSeasonIds);
   }
 
+  let blogsQuery = supabase
+    .from("blogs")
+    .select(RECENT_BLOG_SELECT)
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(RECENT_CONTENT_PAGE_SIZE);
+
+  if (targetSeasonIds.length > 0) {
+    blogsQuery = blogsQuery.or(
+      `season_id.in.(${targetSeasonIds.join(",")}),season_id.is.null`
+    );
+  }
+
   // Fetch all published team rankings for targetSeasons in ONE single live query
   // (instead of calling loadConsensusPageData per division, which re-queried seasons/divisions/themes/editions 2x)
   let consensusRankingsQuery = supabase
@@ -415,6 +432,7 @@ export async function loadHomeData(
 
   const [
     { data: recentBallotsRaw },
+    { data: recentBlogsRaw },
     { data: consensusRankingsRaw },
     {
       divisionStandings,
@@ -424,6 +442,7 @@ export async function loadHomeData(
     },
   ] = await Promise.all([
     ballotsQuery,
+    blogsQuery,
     consensusRankingsQuery,
     loadCachedHomeStatsBlock(statsSeasonSlug),
   ]);
@@ -498,12 +517,36 @@ export async function loadHomeData(
     }
   }
 
+  const recentBallots = (recentBallotsRaw ?? []) as unknown as ContentCardData[];
+  const recentBlogs = (recentBlogsRaw ?? []) as unknown as BlogCardData[];
+  const recentContent: ContentItem[] = [
+    ...recentBallots.map((b) => ({
+      kind: "ballot" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b,
+    })),
+    ...recentBlogs.map((b) => ({
+      kind: "blog" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b,
+    })),
+  ]
+    .sort((a, b) => {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, RECENT_CONTENT_PAGE_SIZE);
+
   return {
     allSeasons,
     liveSeasons,
     archivedSeasons,
     focusedSeason,
-    recentBallots: (recentBallotsRaw ?? []) as unknown as ContentCardData[],
+    recentBallots,
+    recentContent,
     recentSeasonIds: targetSeasonIds,
     divisionStandings,
     divisionTopPerformers,

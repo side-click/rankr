@@ -1,4 +1,4 @@
-import { Lock, Save, Send, User } from "lucide-react";
+import { FileText, Lock, Save, Send, User } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
@@ -27,7 +27,7 @@ export default async function RankLoading() {
   return (
     <div className="space-y-4">
       {/* Mode Selector: exact match to RankWorkspace */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="text-left p-2.5 rounded-lg border-2 flex items-center gap-3 bg-[#221d12] border-[#f0c020] shadow-[0_0_20px_rgba(240,192,32,0.18)]">
           <div className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 bg-[#382e12] border-[#f0c020] text-[#f0c020]">
             <TeamGroupIcon className="w-5 h-5" />
@@ -43,6 +43,15 @@ export default async function RankLoading() {
           </div>
           <span className="font-black text-sm tracking-tight text-[#f0ede0]">
             Player Tier List
+          </span>
+        </div>
+
+        <div className="text-left p-2.5 rounded-lg border-2 flex items-center gap-3 bg-[#15181f] border-white/10 opacity-75">
+          <div className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 bg-black/30 border-white/15 text-[#c89b3c]/70">
+            <FileText className="w-5 h-5" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-[#f0ede0]">
+            Blog Post
           </span>
         </div>
       </div>

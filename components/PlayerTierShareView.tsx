@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupRankingOverlays } from "@/utils/blogMedia";
 import type {
   Ranking,
   RankingOverlay,
@@ -445,6 +446,7 @@ export function PlayerTierShareView({
     setDeleting(true);
     setDeleteError(null);
     const supabase = createClient();
+    await cleanupRankingOverlays(supabase, ballot.overlays);
     const { error } = await supabase
       .from("rankings")
       .delete()
@@ -508,6 +510,7 @@ export function PlayerTierShareView({
     setOverlayError(null);
     setSavingOverlays(true);
     const supabase = createClient();
+    await cleanupRankingOverlays(supabase, ballot.overlays);
     const { error } = await supabase
       .from("rankings")
       .update({

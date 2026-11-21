@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
-import { ContentListGrid } from "@/components/ContentListGrid";
+import {
+  ContentListGrid,
+  type ContentItem,
+} from "@/components/ContentListGrid";
+import type { ContentCardData } from "@/components/ContentCard";
+import type { BlogCardData } from "@/components/BlogCard";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { Search } from "lucide-react";
 
@@ -38,6 +43,12 @@ export default async function BrowsePage({
       supabase.from("editions").select("*").order("sort_order", { ascending: true }),
     ]);
 
+  const includeBallots = params.type !== "blog";
+  const includeBlogs =
+    (params.type === "" || !params.type || params.type === "blog") &&
+    !params.division &&
+    !params.edition;
+
   let query = supabase
     .from("rankings")
     .select(
@@ -69,9 +80,12 @@ export default async function BrowsePage({
   if (params.type === "team" || params.type === "player") {
     query = query.eq("ranking_type", params.type);
   }
-  if (effectiveSeason) {
-    const s = seasons?.find((x) => x.slug === effectiveSeason);
-    if (s) query = query.eq("season_id", s.id);
+  const focusedSeasonRow = effectiveSeason
+    ? seasons?.find((x) => x.slug === effectiveSeason)
+    : undefined;
+
+  if (focusedSeasonRow) {
+    query = query.eq("season_id", focusedSeasonRow.id);
   }
   if (params.division) {
     const matchingDivIds = (divisions ?? [])
@@ -90,13 +104,66 @@ export default async function BrowsePage({
     }
   }
 
-  const { data: ballots } = await query.limit(60);
+  let blogQuery = supabase
+    .from("blogs")
+    .select(
+      `
+      id,
+      title,
+      subtitle,
+      banner_url,
+      author_name,
+      published_at,
+      season_id,
+      season_name_snapshot,
+      league_name_snapshot,
+      profiles ( username, avatar_url ),
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) )
+    `
+    )
+    .eq("status", "published")
+    .order("published_at", { ascending: false });
+
+  if (focusedSeasonRow) {
+    blogQuery = blogQuery.eq("season_id", focusedSeasonRow.id);
+  }
+
+  const [{ data: ballots }, { data: blogs }] = await Promise.all([
+    includeBallots ? query.limit(60) : Promise.resolve({ data: [] }),
+    includeBlogs ? blogQuery.limit(60) : Promise.resolve({ data: [] }),
+  ]);
 
   const authorFilter = params.author?.trim().toLowerCase() ?? "";
   const filteredBallots = (ballots ?? []).filter((b) => {
     if (!authorFilter) return true;
     const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
     return (profile?.username ?? "").toLowerCase().includes(authorFilter);
+  });
+
+  const filteredBlogs = (blogs ?? []).filter((b) => {
+    if (!authorFilter) return true;
+    const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
+    const authorDisplay = b.author_name?.trim() || profile?.username || "";
+    return authorDisplay.toLowerCase().includes(authorFilter);
+  });
+
+  const mergedItems: ContentItem[] = [
+    ...filteredBallots.map((b) => ({
+      kind: "ballot" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b as unknown as ContentCardData,
+    })),
+    ...filteredBlogs.map((b) => ({
+      kind: "blog" as const,
+      id: b.id,
+      publishedAt: b.published_at,
+      data: b as unknown as BlogCardData,
+    })),
+  ].sort((a, b) => {
+    const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return tb - ta;
   });
 
   const uniqueDivisionSlugs = Array.from(
@@ -125,6 +192,7 @@ export default async function BrowsePage({
             <option value="">All Types</option>
             <option value="team">Team Power Rankings</option>
             <option value="player">Player Tier Lists</option>
+            <option value="blog">Blogs</option>
           </select>
         </div>
 
@@ -216,7 +284,7 @@ export default async function BrowsePage({
         </div>
       </form>
 
-      <ContentListGrid ballots={filteredBallots} showCount />
+      <ContentListGrid items={mergedItems} showCount />
     </RetroWindow>
   );
 }

@@ -38,15 +38,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const supabase = createPublicClient();
-    const [{ data: rankings }, { data: activeSeasons }] = await Promise.all([
-      supabase
-        .from("rankings")
-        .select("id, ranking_type, published_at, updated_at")
-        .eq("status", "published")
-        .order("published_at", { ascending: false })
-        .limit(500),
-      supabase.from("seasons").select("id").eq("is_active", true),
-    ]);
+    const [{ data: rankings }, { data: blogs }, { data: activeSeasons }] =
+      await Promise.all([
+        supabase
+          .from("rankings")
+          .select("id, ranking_type, published_at, updated_at")
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("blogs")
+          .select("id, published_at, updated_at")
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(500),
+        supabase.from("seasons").select("id").eq("is_active", true),
+      ]);
 
     for (const r of rankings ?? []) {
       const path =
@@ -54,6 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const mod = r.updated_at || r.published_at;
       entries.push({
         url: `${siteUrl}${path}`,
+        lastModified: mod ? new Date(mod) : undefined,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+
+    for (const b of blogs ?? []) {
+      const mod = b.updated_at || b.published_at;
+      entries.push({
+        url: `${siteUrl}/blog/${b.id}`,
         lastModified: mod ? new Date(mod) : undefined,
         changeFrequency: "weekly",
         priority: 0.7,

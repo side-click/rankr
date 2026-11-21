@@ -20,4 +20,18 @@ export const RECENT_CONTENT_SELECT = `
       ranking_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
 `;
 
+export const RECENT_BLOG_SELECT = `
+      id,
+      title,
+      subtitle,
+      banner_url,
+      author_name,
+      published_at,
+      season_id,
+      season_name_snapshot,
+      league_name_snapshot,
+      profiles ( username, avatar_url ),
+      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) )
+`;
+
 export const RECENT_CONTENT_PAGE_SIZE = 6;

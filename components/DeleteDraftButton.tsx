@@ -5,19 +5,51 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  cleanupBlogMedia,
+  cleanupRankingOverlays,
+} from "@/utils/blogMedia";
 
 interface DeleteDraftButtonProps {
   ballotId: string;
   title: string;
   status?: "draft" | "published";
+  table?: "rankings" | "blogs";
+  contentKind?: "ranking" | "tierlist" | "blog";
 }
 
 export function DeleteDraftButton({
   ballotId,
   title,
   status = "draft",
+  table = "rankings",
+  contentKind = "ranking",
 }: DeleteDraftButtonProps) {
   const isPublished = status === "published";
+  const noun =
+    contentKind === "blog"
+      ? "blog post"
+      : contentKind === "tierlist"
+      ? "tier list"
+      : "ranking";
+  const headingLabel = isPublished
+    ? contentKind === "blog"
+      ? "Delete Published Blog Post"
+      : contentKind === "tierlist"
+      ? "Delete Published Tier List"
+      : "Delete Published Ranking"
+    : "Delete Draft";
+  const confirmLabel = isPublished
+    ? contentKind === "blog"
+      ? "Delete Blog Post"
+      : contentKind === "tierlist"
+      ? "Delete Tier List"
+      : "Delete Ranking"
+    : "Delete Draft";
+  const publishedWarning =
+    contentKind === "ranking"
+      ? "This will permanently remove it from public rankings and consensus. This cannot be undone."
+      : "This will permanently remove it from public content. This cannot be undone.";
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +59,32 @@ export function DeleteDraftButton({
   async function handleConfirmDelete() {
     setDeleting(true);
     setError(null);
+
+    if (table === "blogs") {
+      const { data: blogRow } = await supabase
+        .from("blogs")
+        .select("banner_url, content")
+        .eq("id", ballotId)
+        .maybeSingle();
+      if (blogRow) {
+        await cleanupBlogMedia(supabase, blogRow.banner_url, blogRow.content);
+      }
+    } else if (table === "rankings") {
+      const { data: rankingRow } = await supabase
+        .from("rankings")
+        .select("overlays")
+        .eq("id", ballotId)
+        .maybeSingle();
+      if (rankingRow?.overlays) {
+        await cleanupRankingOverlays(
+          supabase,
+          rankingRow.overlays as { url?: string | null }[]
+        );
+      }
+    }
+
     const { error: delError } = await supabase
-      .from("rankings")
+      .from(table)
       .delete()
       .eq("id", ballotId);
 
@@ -52,7 +108,7 @@ export function DeleteDraftButton({
           setConfirmOpen(true);
         }}
         className="xp-btn xp-btn-danger text-xs"
-        title={isPublished ? "Delete Published Ranking" : "Delete Draft"}
+        title={headingLabel}
       >
         <Trash2 className="w-3.5 h-3.5" />
         <span>Delete</span>
@@ -72,9 +128,7 @@ export function DeleteDraftButton({
               <div className="xp-titlebar px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-white">
                   <Trash2 className="w-3.5 h-3.5 text-[#ff857a]" />
-                  <span>
-                    {isPublished ? "Delete Published Ranking" : "Delete Draft"}
-                  </span>
+                  <span>{headingLabel}</span>
                 </div>
                 <button
                   type="button"
@@ -89,16 +143,13 @@ export function DeleteDraftButton({
               <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
                 <p className="leading-relaxed">
                   Are you sure you want to permanently delete{" "}
-                  {isPublished ? "your published ranking" : "the draft"}{" "}
+                  {isPublished ? `your published ${noun}` : "the draft"}{" "}
                   <strong className="text-[#f0ede0]">{title}</strong>?{" "}
-                  {isPublished
-                    ? "This will permanently remove it from public rankings and consensus. This cannot be undone."
-                    : "This cannot be undone."}
+                  {isPublished ? publishedWarning : "This cannot be undone."}
                 </p>
                 {error && (
                   <div className="p-2 bg-[#451717] border border-[#9e3535] text-[#ff857a] text-[11px] font-bold">
-                    Failed to delete {isPublished ? "ranking" : "draft"}:{" "}
-                    {error}
+                    Failed to delete {isPublished ? noun : "draft"}: {error}
                   </div>
                 )}
                 <div className="flex items-center justify-end gap-2">
@@ -117,13 +168,7 @@ export function DeleteDraftButton({
                     className="xp-btn xp-btn-danger text-xs min-w-[82px] justify-center"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>
-                      {deleting
-                        ? "Deleting..."
-                        : isPublished
-                        ? "Delete Ranking"
-                        : "Delete Draft"}
-                    </span>
+                    <span>{deleting ? "Deleting..." : confirmLabel}</span>
                   </button>
                 </div>
               </div>

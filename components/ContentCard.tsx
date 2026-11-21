@@ -218,7 +218,7 @@ export function ContentCard({
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="flex items-center gap-1.5 min-w-0">
                 <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                  {edName}
+                  {isPlayer ? "Player Tier List" : "Power Rankings"}
                 </span>
               </span>
               {hasPreview && (
@@ -278,7 +278,7 @@ export function ContentCard({
               {hasDivision ? divName : "All Divisions"}
             </div>
             <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
+              {edName} •{" "}
               <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
             </div>
           </div>
@@ -309,7 +309,7 @@ export function ContentCard({
           </span>
           <div className="whitespace-nowrap">
             <div className="text-xs font-semibold text-[#c7c5b8]">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+              {edName}
             </div>
             <div className="text-[11px] text-[#a6a89e]">
               {leagueSeasonLabel}
@@ -423,17 +423,17 @@ export function ContentCard({
       </div>
 
       <div className="flex items-stretch gap-3 min-w-0">
-        <div className="w-[116px] sm:w-[128px] shrink-0 flex flex-col items-center justify-center text-center gap-1.5 px-1.5 py-2 rounded bg-black/25 border border-white/10">
+        <div className="w-20 sm:w-24 shrink-0 flex flex-col items-center justify-center text-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={profile.username}
-              width={56}
-              height={56}
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-md object-cover border border-white/30 shrink-0"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (
-            <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-md bg-[#5865f2] text-white text-lg font-bold inline-flex items-center justify-center shrink-0">
+            <span className="w-12 h-12 rounded-md bg-[#5865f2] text-white text-lg font-bold inline-flex items-center justify-center shrink-0">
               {(profile?.username ?? "?").slice(0, 1).toUpperCase()}
             </span>
           )}
@@ -443,9 +443,9 @@ export function ContentCard({
         </div>
 
         <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
-          <div className="flex items-center gap-1.5 min-w-0 pr-14">
-            <span className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate">
-              {edName}
+          <div className="flex items-center gap-1.5 min-w-0 pr-12">
+            <span className="wow-heading text-[15px] sm:text-base font-bold text-[#f0ede0] leading-tight truncate">
+              {isPlayer ? "Player Tier List" : "Power Rankings"}
             </span>
           </div>
           <div
@@ -455,7 +455,7 @@ export function ContentCard({
             {hasDivision ? divName : "All Divisions"}
           </div>
           <div className="text-xs font-semibold text-[#c7c5b8] truncate">
-            {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            {edName}
           </div>
           <div className="text-[11px] text-[#a6a89e] truncate">
             {leagueSeasonLabel}
