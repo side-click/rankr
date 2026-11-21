@@ -2,13 +2,19 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { RetroWindow } from "@/components/RetroWindow";
 import {
-  BallotListGrid,
-  type ContentCardItem,
-} from "@/components/BallotListGrid";
-import type { BallotCardData } from "@/components/BallotCard";
+  ContentListGrid,
+  type ContentItem,
+} from "@/components/ContentListGrid";
+import type { ContentCardData } from "@/components/ContentCard";
 import type { BlogCardData } from "@/components/BlogCard";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import { Search } from "lucide-react";
+
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Browse Content | Rankr",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +50,7 @@ export default async function BrowsePage({
     !params.edition;
 
   let query = supabase
-    .from("ballots")
+    .from("rankings")
     .select(
       `
       id,
@@ -65,7 +71,7 @@ export default async function BrowsePage({
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug ),
-      ballot_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
+      ranking_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
     `
     )
     .eq("status", "published")
@@ -141,12 +147,12 @@ export default async function BrowsePage({
     return authorDisplay.toLowerCase().includes(authorFilter);
   });
 
-  const mergedItems: ContentCardItem[] = [
+  const mergedItems: ContentItem[] = [
     ...filteredBallots.map((b) => ({
       kind: "ballot" as const,
       id: b.id,
       publishedAt: b.published_at,
-      data: b as unknown as BallotCardData,
+      data: b as unknown as ContentCardData,
     })),
     ...filteredBlogs.map((b) => ({
       kind: "blog" as const,
@@ -168,7 +174,7 @@ export default async function BrowsePage({
   );
 
   return (
-    <RetroWindow title="Browse Published Content" theme="scdl">
+    <RetroWindow title="Browse Content" theme="scdl">
       <form
         key={`${params.type ?? ""}|${effectiveSeason ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
         method="GET"
@@ -278,7 +284,7 @@ export default async function BrowsePage({
         </div>
       </form>
 
-      <BallotListGrid items={mergedItems} showCount />
+      <ContentListGrid items={mergedItems} showCount />
     </RetroWindow>
   );
 }

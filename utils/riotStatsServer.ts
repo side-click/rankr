@@ -25,7 +25,7 @@ export interface StatsContextQueryOptions {
   playerKeyFilter?: string;
 }
 
-export interface LoadedAdminStatsContext {
+export interface LoadedStatsContext {
   authorized: boolean;
   missingTable: boolean;
   hasRiotKey: boolean;
@@ -34,6 +34,7 @@ export interface LoadedAdminStatsContext {
   leagueLogoUrl: string | null;
   seasonName: string;
   seasonId: string | null;
+  seasonSlug: string | null;
   currentEditionName: string;
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
   players: AggregatedPlayerStats[];
@@ -43,7 +44,7 @@ export interface LoadedAdminStatsContext {
 
 export async function loadAdminStatsContext(
   queryOpts?: StatsContextQueryOptions
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   const [auth, ddVersion] = await Promise.all([
     getServerAuthContext(),
     getLatestDdragonVersion(),
@@ -60,6 +61,7 @@ export async function loadAdminStatsContext(
       leagueLogoUrl: null,
       seasonName: "",
       seasonId: null,
+      seasonSlug: null,
       currentEditionName: "",
       divisions: [],
       players: [],
@@ -83,7 +85,7 @@ const loadCachedPublicStatsContext = unstable_cache(
     includeRiotStats: boolean,
     teamIdFilter: string | undefined,
     playerKeyFilter: string | undefined
-  ): Promise<LoadedAdminStatsContext> => {
+  ): Promise<LoadedStatsContext> => {
     const supabase = createPublicClient();
     const ddVersion = await getLatestDdragonVersion();
     return loadStatsContextInternal(
@@ -191,7 +193,7 @@ export async function loadPublicSoloPrioMap(
 export async function loadPublicStatsContext(
   seasonSlug?: string,
   queryOpts?: StatsContextQueryOptions
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   return loadCachedPublicStatsContext(
     seasonSlug,
     queryOpts?.includeRiotStats ?? true,
@@ -212,7 +214,7 @@ async function loadStatsContextInternal(
     teamIdFilter?: string;
     playerKeyFilter?: string;
   }
-): Promise<LoadedAdminStatsContext> {
+): Promise<LoadedStatsContext> {
   const {
     authorized,
     hasRiotKey,
@@ -228,7 +230,9 @@ async function loadStatsContextInternal(
     ? (() => {
         let q = supabase.from("riot_player_stats").select("*");
         if (playerKeyFilter) {
-          q = q.eq("player_key", playerKeyFilter);
+          q = playerKeyFilter.includes("#")
+            ? q.eq("player_key", playerKeyFilter)
+            : q.ilike("player_key", `${playerKeyFilter}#%`);
         } else if (teamIdFilter) {
           q = q.eq("team_id", teamIdFilter);
         }
@@ -269,7 +273,20 @@ async function loadStatsContextInternal(
         statsRes.error.message.includes("riot_player_stats"))
   );
 
+  const teamOwnerSeason = teamIdFilter
+    ? (() => {
+        const tr = (teams ?? []).find((t) => t.id === teamIdFilter);
+        const dr = tr
+          ? (divisions ?? []).find((d) => d.id === tr.division_id)
+          : null;
+        return dr
+          ? (seasons ?? []).find((s) => s.id === dr.season_id) ?? null
+          : null;
+      })()
+    : null;
+
   const activeSeason =
+    teamOwnerSeason ??
     (seasonSlug
       ? (seasons ?? []).find((s) => s.slug === seasonSlug)
       : null) ??
@@ -392,16 +409,23 @@ async function loadStatsContextInternal(
   }
 
   const seasonSheetRow = activeSeason as unknown as {
+    stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
     stats_sheet_id?: string | null;
     stats_sheet_gids?: string[] | null;
+    stats_credits_label?: string | null;
+    stats_credits_url?: string | null;
+    stats_credits_attribution?: string | null;
   } | null;
-  const sheetConfig: SheetSourceConfig | undefined =
-    seasonSheetRow?.stats_sheet_id || seasonSheetRow?.stats_sheet_gids?.length
-      ? {
-          sheetId: seasonSheetRow.stats_sheet_id,
-          gids: seasonSheetRow.stats_sheet_gids,
-        }
-      : undefined;
+  const sheetConfig: SheetSourceConfig = {
+    seasonId: activeSeason?.id ?? null,
+    seasonSlug: activeSeason?.slug ?? null,
+    provider: seasonSheetRow?.stats_provider ?? "google_sheet",
+    sheetId: seasonSheetRow?.stats_sheet_id ?? null,
+    gids: seasonSheetRow?.stats_sheet_gids ?? null,
+    creditsLabel: seasonSheetRow?.stats_credits_label ?? null,
+    creditsUrl: seasonSheetRow?.stats_credits_url ?? null,
+    creditsAttribution: seasonSheetRow?.stats_credits_attribution ?? null,
+  };
 
   return {
     authorized,
@@ -412,6 +436,7 @@ async function loadStatsContextInternal(
     leagueLogoUrl,
     seasonName: activeSeason?.name ?? "Active Season",
     seasonId: activeSeason?.id ?? null,
+    seasonSlug: activeSeason?.slug ?? null,
     currentEditionName,
     divisions: seasonDivisions.map((d) => ({
       id: d.id,
@@ -432,11 +457,12 @@ export interface TeamScoutingPayload {
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
   divisionThemeKey: string;
+  divisionSlug: string | null;
   roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
 }
 
 export async function loadTeamScoutingData(
-  ctx: LoadedAdminStatsContext,
+  ctx: LoadedStatsContext,
   teamId: string
 ): Promise<TeamScoutingPayload | null> {
   const team = ctx.teams.find((t) => t.teamId === teamId);
@@ -464,8 +490,9 @@ export async function loadTeamScoutingData(
     teamLogoMap[t.teamName.toLowerCase()] = t.logoUrl;
   }
 
-  const divisionThemeKey =
-    ctx.divisions.find((d) => d.id === team.divisionId)?.theme_key ?? "scdl";
+  const divisionObj = ctx.divisions.find((d) => d.id === team.divisionId);
+  const divisionThemeKey = divisionObj?.theme_key ?? "scdl";
+  const divisionSlug = divisionObj?.slug ?? null;
 
   const roleRankByPlayerKey: Record<string, { rank: number; total: number }> =
     {};
@@ -492,6 +519,7 @@ export async function loadTeamScoutingData(
     seriesHistory,
     teamLogoMap,
     divisionThemeKey,
+    divisionSlug,
     roleRankByPlayerKey,
   };
 }

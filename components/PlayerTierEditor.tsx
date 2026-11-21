@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Save,
   Send,
+  Settings,
   Trash2,
   X,
 } from "lucide-react";
@@ -46,6 +47,8 @@ import type {
   TierRowData,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
+import { useUnsavedChangesGuard } from "@/utils/useUnsavedChangesGuard";
 import {
   CAPTAIN_ICON,
   getRoleMeta,
@@ -76,6 +79,7 @@ interface PlayerTierEditorProps {
   initialSeasonSlug?: string;
   initialDivisionSlug?: string;
   initialEditionSlug?: string;
+  onUnsavedChange?: (dirty: boolean) => void;
 }
 
 interface DragPlayerMeta {
@@ -166,6 +170,8 @@ function PlayerTileVisual({
           <X className="w-3 h-3" />
         </button>
       )}
+
+
     </div>
   );
 }
@@ -237,6 +243,8 @@ function DraggablePlayerTile({
         showRemoveButton={isPlaced}
         onRemove={onRemove}
       />
+
+
     </div>
   );
 }
@@ -374,6 +382,8 @@ function DroppablePoolArea({
           ))
         )}
       </div>
+
+
     </div>
   );
 }
@@ -415,8 +425,38 @@ function DroppableTierRow({
     },
   });
 
+  const [showControls, setShowControls] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showControls) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(e.target as Node)
+      ) {
+        setShowControls(false);
+        setShowColorPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showControls]);
+
   const contrastText = getTierContrastText(tier.color);
+  const labelLen = (tier.label || "").trim().length;
+  const labelSizeClass = !showControls
+    ? labelLen <= 3
+      ? "text-3xl"
+      : labelLen <= 8
+      ? "text-lg"
+      : "text-sm"
+    : labelLen <= 3
+    ? "text-xl"
+    : labelLen <= 8
+    ? "text-sm"
+    : "text-xs";
 
   return (
     <div
@@ -429,33 +469,61 @@ function DroppableTierRow({
       <div className="flex flex-col md:flex-row items-stretch">
         {/* Left: Tier Badge + Editable Label + Tier Row Controls */}
         <div
+          ref={headerRef}
           style={{
             backgroundColor: tier.color,
             color: contrastText,
           }}
-          className="md:w-[152px] shrink-0 p-2.5 flex flex-row md:flex-col items-center justify-between gap-2 border-b md:border-b-0 md:border-r border-black/30 rounded-t-lg md:rounded-t-none md:rounded-l-lg"
+          className={`relative md:w-[152px] shrink-0 p-2.5 pl-7 md:pl-2.5 flex flex-row md:flex-col items-center ${
+            showControls ? "justify-between" : "justify-center"
+          } gap-2 border-b md:border-b-0 md:border-r border-black/30 rounded-t-lg md:rounded-t-none md:rounded-l-lg`}
         >
-          <div className="inline-grid items-center justify-items-center max-w-full">
-            <span
-              aria-hidden="true"
-              className="col-start-1 row-start-1 invisible whitespace-pre px-2 py-1 font-black text-sm leading-tight min-w-[2ch]"
-            >
-              {tier.label || "Tier..."}
-            </span>
-            <input
-              type="text"
-              size={1}
-              disabled={disabled}
-              value={tier.label}
-              maxLength={13}
-              onChange={(e) => onLabelChange(e.target.value)}
-              placeholder="Tier..."
-              style={{ color: contrastText }}
-              className="col-start-1 row-start-1 w-full min-w-0 bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black text-sm leading-tight focus:outline-none placeholder:text-white/50 disabled:opacity-75"
-            />
+          <div className="flex-1 flex items-center justify-center w-full min-w-0">
+            <div className="inline-grid items-center justify-items-center max-w-full">
+              <span
+                aria-hidden="true"
+                className={`col-start-1 row-start-1 invisible whitespace-pre px-2 py-1 font-black ${labelSizeClass} leading-tight min-w-[2ch]`}
+              >
+                {tier.label || "Tier..."}
+              </span>
+              <input
+                type="text"
+                size={1}
+                disabled={disabled}
+                value={tier.label}
+                maxLength={13}
+                onChange={(e) => onLabelChange(e.target.value)}
+                placeholder="Tier..."
+                style={{ color: contrastText }}
+                className={`col-start-1 row-start-1 w-full min-w-0 bg-transparent focus:bg-black/30 focus:ring-1 focus:ring-white/30 rounded px-2 py-1 text-center font-black ${labelSizeClass} leading-tight focus:outline-none placeholder:text-white/50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
           </div>
 
           {!disabled && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowControls((prev) => {
+                  if (prev) setShowColorPicker(false);
+                  return !prev;
+                });
+              }}
+              title={showControls ? "Hide tier controls" : "Tier settings"}
+              aria-label={showControls ? "Hide tier controls" : "Show tier controls"}
+              aria-expanded={showControls}
+              style={{ color: contrastText }}
+              className={`absolute bottom-1.5 left-1.5 z-10 w-5 h-5 flex items-center justify-center rounded transition-opacity cursor-pointer ${
+                showControls
+                  ? "opacity-90 bg-black/25"
+                  : "opacity-40 hover:opacity-90"
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {!disabled && showControls && (
             <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
               <button
                 type="button"
@@ -624,6 +692,8 @@ function DroppableTierRow({
           })()}
         </div>
       </div>
+
+
     </div>
   );
 }
@@ -641,6 +711,7 @@ export function PlayerTierEditor({
   initialSeasonSlug,
   initialDivisionSlug,
   initialEditionSlug,
+  onUnsavedChange,
 }: PlayerTierEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -961,6 +1032,8 @@ export function PlayerTierEditor({
   const lastLoadedKeyRef = useRef<string>("");
   const lastScopeKeyRef = useRef<string>("");
   const [saving, setSaving] = useState(false);
+  const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
     targetStatus: "draft" | "published";
     existingStatus: string;
@@ -1010,7 +1083,7 @@ export function PlayerTierEditor({
 
       try {
         let query = supabase
-          .from("ballots")
+          .from("rankings")
           .select("*")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1149,6 +1222,12 @@ export function PlayerTierEditor({
     );
   }, [totalPlacedPlayers, authorNotes, tierPayload]);
 
+  useUnsavedChangesGuard(hasTierWork);
+
+  useEffect(() => {
+    onUnsavedChange?.(hasTierWork);
+  }, [hasTierWork, onUnsavedChange]);
+
   function confirmSwitchScope(): boolean {
     if (!hasTierWork) return true;
     return window.confirm(
@@ -1202,14 +1281,14 @@ export function PlayerTierEditor({
   }
 
   function handleResetPlacements() {
-    if (
-      totalPlacedPlayers > 0 &&
-      !window.confirm(
-        `Return all ${totalPlacedPlayers} placed players back to the unranked pool?`
-      )
-    ) {
+    if (totalPlacedPlayers > 0) {
+      setResetConfirmOpen(true);
       return;
     }
+    performResetPlacements();
+  }
+
+  function performResetPlacements() {
     setTierPayload((prev) => ({
       ...prev,
       sections: prev.sections.map((sec) => ({
@@ -1472,7 +1551,7 @@ export function PlayerTierEditor({
 
       if (!skipOverwriteConfirm && !existingBallotId) {
         let checkQuery = supabase
-          .from("ballots")
+          .from("rankings")
           .select("id, status, tier_variant")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1560,7 +1639,7 @@ export function PlayerTierEditor({
       let targetBallotId = existingBallotId;
       if (!targetBallotId) {
         let lookup = supabase
-          .from("ballots")
+          .from("rankings")
           .select("id")
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1579,13 +1658,13 @@ export function PlayerTierEditor({
 
       const ballotQuery = targetBallotId
         ? supabase
-            .from("ballots")
+            .from("rankings")
             .update(payload)
             .eq("id", targetBallotId)
             .select("id, status")
             .single()
         : supabase
-            .from("ballots")
+            .from("rankings")
             .insert(payload)
             .select("id, status")
             .single();
@@ -1602,7 +1681,7 @@ export function PlayerTierEditor({
         // Keep only one published player tier list per user/season/division/edition;
         // revert any other published variant for this scope back to a saved draft.
         let unpubQuery = supabase
-          .from("ballots")
+          .from("rankings")
           .update({ status: "draft", published_at: null })
           .eq("user_id", userId)
           .eq("season_id", seasonId)
@@ -1629,7 +1708,10 @@ export function PlayerTierEditor({
         text:
           targetStatus === "published"
             ? "Player Tier List published!"
-            : "Draft saved.",
+            : `Draft saved at ${new Date().toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}.`,
       });
       router.refresh();
     } catch (err) {
@@ -1697,12 +1779,12 @@ export function PlayerTierEditor({
                   const nextSeason = seasons.find((s) => s.id === newId);
                   if (nextSeason?.slug) {
                     router.replace(
-                      `/rank?type=player&season=${encodeURIComponent(
+                      `/create?type=player&season=${encodeURIComponent(
                         nextSeason.slug
                       )}`
                     );
                   } else {
-                    router.replace("/rank?type=player");
+                    router.replace("/create?type=player");
                   }
                 }}
                 className="w-full xp-inset px-2 py-1.5 text-xs font-bold"
@@ -1940,7 +2022,7 @@ export function PlayerTierEditor({
                   <button
                     type="button"
                     onClick={handleResetPlacements}
-                    className="xp-btn text-[11px] order-2 sm:order-1"
+                    className="xp-btn xp-btn-danger text-[11px] order-2 sm:order-1"
                     title="Move all placed players back to pool"
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -1948,15 +2030,6 @@ export function PlayerTierEditor({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleRandomizeTiers}
-                  className="xp-btn text-[11px] order-1 sm:order-2"
-                  title="Randomly distribute all players across tiers"
-                >
-                  <Dices className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <span>Randomize</span>
-                </button>
               </div>
             )}
           </div>
@@ -2066,20 +2139,12 @@ export function PlayerTierEditor({
                 (partial tiers allowed)
               </span>
             )}
-            {hasTierWork && !isEditDisabled && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] italic text-[#f0c020]">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Changing dropdowns or toggles will clear unsaved/unpublished work.
-                </span>
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {existingBallotId && ballotStatus === "published" && (
               <Link
-                href={`/ballot/${existingBallotId}`}
+                href={`/tierlist/${existingBallotId}`}
                 className="xp-btn text-xs"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -2089,11 +2154,23 @@ export function PlayerTierEditor({
             <button
               type="button"
               disabled={saving || isEditDisabled || totalPlacedPlayers === 0}
-              onClick={() => void savePlayerTierList("draft")}
+              onClick={() => {
+                if (ballotStatus === "published") {
+                  setUnpublishConfirmOpen(true);
+                } else {
+                  void savePlayerTierList("draft");
+                }
+              }}
               className="xp-btn text-xs"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saving ? "Saving..." : "Save Draft"}</span>
+              <span>
+                {saving
+                  ? "Saving..."
+                  : `Save Draft${hasTierWork ? "*" : ""}${
+                      ballotStatus === "published" ? " (Unpublish)" : ""
+                    }`}
+              </span>
             </button>
             <button
               type="button"
@@ -2105,9 +2182,11 @@ export function PlayerTierEditor({
               <span>
                 {saving
                   ? "Publishing..."
-                  : ballotStatus === "published"
-                  ? "Update Tier List"
-                  : "Publish Tier List"}
+                  : `${
+                      ballotStatus === "published"
+                        ? "Update Tier List"
+                        : "Publish Tier List"
+                    }${hasTierWork ? "*" : ""}`}
               </span>
             </button>
           </div>
@@ -2327,6 +2406,31 @@ export function PlayerTierEditor({
           </div>,
           document.body
         )}
+      <RetroConfirmModal
+        open={unpublishConfirmOpen}
+        title="Unpublish & Save as Draft?"
+        message="Saving as a draft will unpublish your currently published tier list from Browse and Consensus until you publish again. Continue?"
+        confirmLabel="Save Draft (Unpublish)"
+        danger
+        loading={saving}
+        onConfirm={() => {
+          setUnpublishConfirmOpen(false);
+          void savePlayerTierList("draft");
+        }}
+        onCancel={() => setUnpublishConfirmOpen(false)}
+      />
+      <RetroConfirmModal
+        open={resetConfirmOpen}
+        title="Reset All Players"
+        message={`Return all ${totalPlacedPlayers} placed players back to the unranked pool?`}
+        confirmLabel="Reset All Players"
+        danger
+        onConfirm={() => {
+          setResetConfirmOpen(false);
+          performResetPlacements();
+        }}
+        onCancel={() => setResetConfirmOpen(false)}
+      />
     </div>
   );
 }

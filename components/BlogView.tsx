@@ -107,7 +107,7 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
 
             {isOwner && (
               <Link
-                href={`/rank?type=blog&edit=${blog.id}`}
+                href={`/create?type=blog&edit=${blog.id}`}
                 className="xp-btn text-xs"
               >
                 <Edit3 className="w-3.5 h-3.5 text-[#f0c020]" />

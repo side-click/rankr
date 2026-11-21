@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { CompactRiotMatch } from "@/utils/riotApi";
 import draftsData from "@/data/scdl_drafts.json";
@@ -214,9 +215,135 @@ function parseCsvRows(csvText: string, startOrder: number): ParsedSheetRow[] {
 }
 
 export interface SheetSourceConfig {
+  seasonId?: string | null;
+  seasonSlug?: string | null;
+  provider?: "google_sheet" | "supabase_native" | "none" | null;
   sheetId?: string | null;
   gids?: string[] | null;
+  creditsLabel?: string | null;
+  creditsUrl?: string | null;
+  creditsAttribution?: string | null;
   bypassCache?: boolean;
+}
+
+const fetchMergedDraftsFromDb = unstable_cache(
+  async (
+    seasonId?: string,
+    seasonSlug?: string
+  ): Promise<Record<string, DraftRecord>> => {
+    const merged: Record<string, DraftRecord> =
+      !seasonId || seasonSlug === "season-4-5" ? { ...DRAFTS_BY_GAME_ID } : {};
+    const sb = getSnapshotClient(false);
+    if (!sb) return merged;
+    try {
+      let q = sb
+        .from("match_drafts")
+        .select(
+          "game_id, blue_team, red_team, blue_bans, red_bans, blue_picks, red_picks, source_url"
+        );
+      if (seasonId) {
+        q = q.eq("season_id", seasonId);
+      }
+      const { data, error } = await q;
+      if (error || !Array.isArray(data)) return merged;
+      for (const row of data) {
+        const gameId = String(row.game_id ?? "").trim();
+        if (!gameId) continue;
+        const blueBans = Array.isArray(row.blue_bans)
+          ? (row.blue_bans as string[])
+          : [];
+        const redBans = Array.isArray(row.red_bans)
+          ? (row.red_bans as string[])
+          : [];
+        const bluePicks = Array.isArray(row.blue_picks)
+          ? (row.blue_picks as string[])
+          : [];
+        const redPicks = Array.isArray(row.red_picks)
+          ? (row.red_picks as string[])
+          : [];
+        merged[gameId] = {
+          blueTeam: String(row.blue_team ?? "Blue"),
+          redTeam: String(row.red_team ?? "Red"),
+          blueBans,
+          redBans,
+          bluePicks,
+          redPicks,
+          bans: [...blueBans, ...redBans],
+          sourceUrl: String(row.source_url ?? ""),
+        };
+      }
+    } catch {
+      // Non-fatal if match_drafts migration hasn't been applied yet
+    }
+    return merged;
+  },
+  ["merged-match-drafts"],
+  { revalidate: 60, tags: ["public-stats", "match-drafts"] }
+);
+
+const loadMergedDraftsCached = cache(
+  async (seasonId?: string, seasonSlug?: string) =>
+    fetchMergedDraftsFromDb(seasonId, seasonSlug)
+);
+
+async function loadSupabaseNativeRows(
+  seasonId: string
+): Promise<ParsedSheetRow[]> {
+  const sb = getSnapshotClient(false);
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb
+      .from("league_game_participants")
+      .select("*")
+      .eq("season_id", seasonId)
+      .order("row_order", { ascending: true });
+    if (error || !Array.isArray(data)) return [];
+    return data.map((r, idx) => ({
+      matchLabel: String(r.match_label ?? r.game_id ?? ""),
+      gameId: String(r.game_id ?? ""),
+      teamName: String(r.team_name ?? ""),
+      playerName: String(r.player_name ?? ""),
+      champion: String(r.champion ?? ""),
+      role: normalizeRoleKey(String(r.role ?? "mid")),
+      kills: Number(r.kills ?? 0),
+      deaths: Number(r.deaths ?? 0),
+      assists: Number(r.assists ?? 0),
+      gold: Number(r.gold ?? 0),
+      cs: Number(r.cs ?? 0),
+      damageDealt: Number(r.damage_dealt ?? 0),
+      gameLength: Number(r.game_length ?? 0),
+      visionScore: Number(r.vision_score ?? 0),
+      win: Boolean(r.win),
+      side: String(r.side ?? "Blue").toLowerCase() === "red" ? "Red" : "Blue",
+      doubleKills: Number(r.double_kills ?? 0),
+      tripleKills: Number(r.triple_kills ?? 0),
+      quadraKills: Number(r.quadra_kills ?? 0),
+      pentaKills: Number(r.penta_kills ?? 0),
+      soloKills: Number(r.solo_kills ?? 0),
+      firstBlood: Boolean(r.first_blood),
+      teamKills: Number(r.team_kills ?? 0),
+      damageTaken: Number(r.damage_taken ?? 0),
+      damageMitigated: Number(r.damage_mitigated ?? 0),
+      ccScore: Number(r.cc_score ?? 0),
+      wardsPlaced: Number(r.wards_placed ?? 0),
+      wardsDestroyed: Number(r.wards_destroyed ?? 0),
+      controlWardsBought: Number(r.control_wards_bought ?? 0),
+      damageToObjectives: Number(r.damage_to_objectives ?? 0),
+      damageToTurrets: Number(r.damage_to_turrets ?? 0),
+      dragons: Number(r.dragons ?? 0),
+      barons: Number(r.barons ?? 0),
+      largestKillingSpree: Number(r.largest_killing_spree ?? 0),
+      goldDiff15: Number(r.gold_diff_15 ?? 0),
+      turretPlates: Number(r.turret_plates ?? 0),
+      objectivesStolen: Number(r.objectives_stolen ?? 0),
+      questionPings: Number(r.question_pings ?? 0),
+      flashKey:
+        r.flash_key === "D" || r.flash_key === "F" ? r.flash_key : undefined,
+      rowOrder: Number(r.row_order ?? idx + 1),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 const SNAPSHOT_WRITE_INTERVAL_MS = 5 * 60_000;
@@ -263,13 +390,13 @@ async function saveSheetSnapshot(
 
 async function loadSheetSnapshotFallback(
   sheetId: string
-): Promise<ParsedSheetRow[] | null> {
+): Promise<{ rows: ParsedSheetRow[]; fetchedAtMs: number } | null> {
   const sb = getSnapshotClient(false);
   if (!sb) return null;
   try {
     const { data, error } = await sb
       .from("sheet_snapshots")
-      .select("csv_tabs")
+      .select("csv_tabs, fetched_at")
       .eq("sheet_id", sheetId)
       .maybeSingle();
     if (error || !Array.isArray(data?.csv_tabs)) return null;
@@ -277,7 +404,12 @@ async function loadSheetSnapshotFallback(
       (t): t is string => typeof t === "string" && t.length > 0
     );
     if (csvTexts.length === 0) return null;
-    return dedupeParsedRows(csvTexts);
+    const rows = dedupeParsedRows(csvTexts);
+    if (rows.length === 0) return null;
+    const fetchedAtMs = data.fetched_at
+      ? new Date(String(data.fetched_at)).getTime()
+      : 0;
+    return { rows, fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : 0 };
   } catch {
     return null;
   }
@@ -303,21 +435,44 @@ async function fetchCsvTabsFromGoogle(
   );
 }
 
+const SNAPSHOT_STALE_MS = 120_000;
+const inFlightRefreshBySheet = new Set<string>();
+
+function refreshSheetFromGoogleInBackground(sheetId: string, gids: string[]) {
+  if (inFlightRefreshBySheet.has(sheetId)) return;
+  inFlightRefreshBySheet.add(sheetId);
+  void fetchCsvTabsFromGoogle(sheetId, gids, true)
+    .then(async (csvTexts) => {
+      const rows = dedupeParsedRows(csvTexts);
+      if (rows.length > 0) {
+        await saveSheetSnapshot(sheetId, gids, csvTexts, true);
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      inFlightRefreshBySheet.delete(sheetId);
+    });
+}
+
 const fetchUniqueSheetRowsCached = cache(
   async (sheetId: string, gidsKey: string): Promise<ParsedSheetRow[]> => {
     const gids = gidsKey.split(",").filter(Boolean);
-    try {
-      const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
-      const rows = dedupeParsedRows(csvTexts);
-      if (rows.length > 0) {
-        void saveSheetSnapshot(sheetId, gids, csvTexts, false);
-        return rows;
+    // 1. Stale-while-revalidate: serve from fast Supabase snapshot (~15ms) first if available
+    const snap = await loadSheetSnapshotFallback(sheetId);
+    if (snap && snap.rows.length > 0) {
+      if (Date.now() - snap.fetchedAtMs > SNAPSHOT_STALE_MS) {
+        refreshSheetFromGoogleInBackground(sheetId, gids);
       }
-    } catch {
-      // Fall back to Supabase snapshot below
+      return snap.rows;
     }
-    const fallback = await loadSheetSnapshotFallback(sheetId);
-    if (fallback) return fallback;
+
+    // 2. Cold start (no snapshot row exists yet): fetch from Google Sheets and seed snapshot
+    const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
+    const rows = dedupeParsedRows(csvTexts);
+    if (rows.length > 0) {
+      void saveSheetSnapshot(sheetId, gids, csvTexts, true);
+      return rows;
+    }
     throw new Error(`Failed to load SCDL sheet ${sheetId} and no backup snapshot exists`);
   }
 );
@@ -343,11 +498,29 @@ function dedupeParsedRows(csvTexts: string[]): ParsedSheetRow[] {
 async function loadUniqueSheetRows(
   config?: SheetSourceConfig
 ): Promise<ParsedSheetRow[]> {
-  const sheetId = config?.sheetId?.trim() || SCDL_SHEET_ID;
+  if (config?.provider === "none") {
+    return [];
+  }
+  if (config?.provider === "supabase_native") {
+    return config.seasonId ? loadSupabaseNativeRows(config.seasonId) : [];
+  }
+
+  const isLegacy45 =
+    !config ||
+    !config.seasonSlug ||
+    config.seasonSlug === "season-4-5" ||
+    config.seasonSlug.includes("4-5");
+  const sheetId =
+    config?.sheetId?.trim() || (isLegacy45 ? SCDL_SHEET_ID : "");
+  if (!sheetId) return [];
+
   const gids =
     config?.gids && config.gids.length > 0
       ? config.gids
-      : SCDL_SHEET_GIDS.map((g) => g.gid);
+      : isLegacy45
+      ? SCDL_SHEET_GIDS.map((g) => g.gid)
+      : [];
+  if (gids.length === 0) return [];
 
   if (config?.bypassCache) {
     try {
@@ -359,7 +532,7 @@ async function loadUniqueSheetRows(
       }
     } catch (err) {
       const fallback = await loadSheetSnapshotFallback(sheetId);
-      if (fallback) return fallback;
+      if (fallback) return fallback.rows;
       throw err;
     }
   }
@@ -372,7 +545,13 @@ export async function fetchScdlSheetStats(
   rosterTeams: AggregatedTeamStats[],
   config?: SheetSourceConfig
 ): Promise<SheetSyncSummary> {
-  const uniqueRows = await loadUniqueSheetRows(config);
+  const [uniqueRows, draftsByGameId] = await Promise.all([
+    loadUniqueSheetRows(config),
+    loadMergedDraftsCached(
+      config?.seasonId ?? undefined,
+      config?.seasonSlug ?? undefined
+    ),
+  ]);
 
   // Group by gameId + teamName for team totals
   const teamGameTotals = new Map<
@@ -479,7 +658,7 @@ export async function fetchScdlSheetStats(
         o.role === r.role
     );
 
-    const draftRecord = DRAFTS_BY_GAME_ID[r.gameId];
+    const draftRecord = draftsByGameId[r.gameId];
     if (!draftRecord && r.gameId && !missingDraftMap.has(r.gameId)) {
       missingDraftMap.set(r.gameId, {
         gameId: r.gameId,
@@ -527,7 +706,7 @@ export async function fetchScdlSheetStats(
       largestKillingSpree: r.largestKillingSpree,
       dragonKills: r.dragons,
       baronKills: r.barons,
-      bans: DRAFTS_BY_GAME_ID[r.gameId]?.bans,
+      bans: draftsByGameId[r.gameId]?.bans,
       flashKey: r.flashKey,
       goldDiff15: r.goldDiff15,
       questionPings: r.questionPings,
@@ -974,7 +1153,13 @@ function formatRoundLabel(matchLabel: string): string {
 export async function fetchAllScdlSeries(
   config?: SheetSourceConfig
 ): Promise<ScdlSeriesDetail[]> {
-  const rows = await loadUniqueSheetRows(config).catch(() => []);
+  const [rows, draftsByGameId] = await Promise.all([
+    loadUniqueSheetRows(config).catch(() => []),
+    loadMergedDraftsCached(
+      config?.seasonId ?? undefined,
+      config?.seasonSlug ?? undefined
+    ),
+  ]);
   const byGame = new Map<string, ParsedSheetRow[]>();
   for (const r of rows) {
     const list = byGame.get(r.gameId) ?? [];
@@ -1040,7 +1225,7 @@ export async function fetchAllScdlSeries(
       redAssists: redRows.reduce((s, r) => s + r.assists, 0),
       redDragons: redRows.reduce((s, r) => s + r.dragons, 0),
       redBarons: redRows.reduce((s, r) => s + r.barons, 0),
-      draft: DRAFTS_BY_GAME_ID[gameId] ?? null,
+      draft: draftsByGameId[gameId] ?? null,
       players,
     };
 

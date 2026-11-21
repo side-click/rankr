@@ -152,7 +152,7 @@ export async function POST(request: Request) {
   const [{ data: ballot }, { data: entries }, { data: profile }] =
     await Promise.all([
       supabase
-        .from("ballots")
+        .from("rankings")
         .select(
           "id, title, status, ranking_type, tier_data, user_id, author_notes, overlays, league_name_snapshot, season_name_snapshot"
         )
@@ -161,9 +161,9 @@ export async function POST(request: Request) {
         .eq("status", "published")
         .maybeSingle(),
       supabase
-        .from("ballot_entries")
+        .from("ranking_entries")
         .select("team_name_snapshot, commentary")
-        .eq("ballot_id", ballotId),
+        .eq("ranking_id", ballotId),
       supabase
         .from("profiles")
         .select("username, discord_id")
@@ -190,7 +190,10 @@ export async function POST(request: Request) {
   ]);
 
   const origin = new URL(request.url).origin;
-  const ballotUrl = `${origin}/ballot/${ballot.id}`;
+  const ballotUrl =
+    ballot.ranking_type === "player"
+      ? `${origin}/tierlist/${ballot.id}`
+      : `${origin}/rankings/${ballot.id}`;
   const isFlagged = flagged.length > 0;
 
   const overlayCount = Array.isArray(ballot.overlays)

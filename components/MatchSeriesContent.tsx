@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Trophy } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
-import type { LoadedAdminStatsContext } from "@/utils/riotStatsServer";
+import type { LoadedStatsContext } from "@/utils/riotStatsServer";
 import {
   fetchAllScdlSeries,
   type ScdlGameDetail,
@@ -43,6 +44,7 @@ function SideBoxScore({
   durationSec,
   ddVersion,
   basePath,
+  divisionSlug,
   playerKeyByName,
 }: {
   side: "Blue" | "Red";
@@ -54,8 +56,13 @@ function SideBoxScore({
   durationSec: number;
   ddVersion: string;
   basePath: string;
+  divisionSlug?: string | null;
   playerKeyByName: Map<string, string>;
 }) {
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
   const mins = Math.max(durationSec / 60, 1);
   const sideColor =
     side === "Blue"
@@ -100,14 +107,42 @@ function SideBoxScore({
           <thead>
             <tr className="border-b border-[#252824] text-[11px] uppercase tracking-wider text-[#8e9286] whitespace-nowrap">
               <th className="py-2 px-2.5 text-left">Player</th>
-              <th className="py-2 px-2.5 text-center">K/D/A</th>
-              <th className="py-2 px-2.5 text-right">CS</th>
-              <th className="py-2 px-2.5 text-right">Gold</th>
-              <th className="py-2 px-2.5 text-right">DPM</th>
-              <th className="py-2 px-2.5 text-right">VS</th>
-              <th className="py-2 px-2.5 text-right">GD</th>
-              <th className="py-2 px-2.5 text-right">GD@15</th>
-              <th className="py-2 px-2.5 text-right">SK</th>
+              <th
+                className="py-2 px-2.5 text-center"
+                title="Kills / Deaths / Assists"
+              >
+                K/D/A
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Creep Score">
+                CS
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Total Gold Earned">
+                Gold
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Damage to Champions / Min"
+              >
+                DPM
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Vision Score">
+                VS
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Total Gold Diff vs Lane Opponent"
+              >
+                GD
+              </th>
+              <th
+                className="py-2 px-2.5 text-right"
+                title="Gold Diff at 15 Minutes vs Lane Opponent"
+              >
+                GD@15
+              </th>
+              <th className="py-2 px-2.5 text-right" title="Solo Kills">
+                SK
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -131,11 +166,16 @@ function SideBoxScore({
                           className="w-4 h-4 shrink-0 opacity-85"
                         />
                       )}
-                      <img
-                        src={getChampionIconUrl(p.champion, ddVersion)}
-                        alt={p.champion}
-                        className="w-8 h-8 rounded border border-[#3a3e37] shrink-0 object-cover"
-                      />
+                      <Link
+                        href={champHref(p.champion)}
+                        className="contents"
+                      >
+                        <img
+                          src={getChampionIconUrl(p.champion, ddVersion)}
+                          alt={p.champion}
+                          className="w-8 h-8 rounded border border-[#3a3e37] shrink-0 object-cover"
+                        />
+                      </Link>
                       <div className="min-w-0">
                         {matchedKey ? (
                           <Link
@@ -151,9 +191,12 @@ function SideBoxScore({
                             {p.displayName}
                           </div>
                         )}
-                        <div className="text-xs text-[#9aa092]">
+                        <Link
+                          href={champHref(p.champion)}
+                          className="text-xs text-[#9aa092] hover:text-[#f0c020] transition-colors block truncate"
+                        >
                           {p.champion}
-                        </div>
+                        </Link>
                       </div>
                     </div>
                   </td>
@@ -204,12 +247,20 @@ function SideBoxScore({
 function DraftStrip({
   game,
   ddVersion,
+  basePath = "/stats",
+  divisionSlug,
 }: {
   game: ScdlGameDetail;
   ddVersion: string;
+  basePath?: string;
+  divisionSlug?: string | null;
 }) {
   const draft = game.draft;
   if (!draft) return null;
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
 
   const hasPicks = draft.bluePicks.length > 0 || draft.redPicks.length > 0;
   const hasBans = draft.blueBans.length > 0 || draft.redBans.length > 0;
@@ -250,11 +301,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Blue Ban ${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full grayscale opacity-80 object-cover"
-                    />
+                    <Link
+                      href={champHref(champ)}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full grayscale opacity-80 object-cover"
+                      />
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -272,11 +328,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#2a4569] bg-[#142030] overflow-hidden shrink-0"
                     title={`B${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full object-cover"
-                    />
+                    <Link
+                      href={champHref(champ)}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full object-cover"
+                      />
+                    </Link>
                     <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#78b7ff] rounded-br">
                       B{i + 1}
                     </span>
@@ -303,11 +364,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#3a2828] bg-[#201616] overflow-hidden shrink-0"
                     title={`Red Ban ${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full grayscale opacity-80 object-cover"
-                    />
+                    <Link
+                      href={champHref(champ)}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full grayscale opacity-80 object-cover"
+                      />
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -325,11 +391,16 @@ function DraftStrip({
                     className="relative w-8 h-8 rounded border border-[#612d2a] bg-[#2a1717] overflow-hidden shrink-0"
                     title={`R${i + 1}: ${champ}`}
                   >
-                    <img
-                      src={getChampionIconUrl(champ, ddVersion)}
-                      alt={champ}
-                      className="w-full h-full object-cover"
-                    />
+                    <Link
+                      href={champHref(champ)}
+                      className="contents"
+                    >
+                      <img
+                        src={getChampionIconUrl(champ, ddVersion)}
+                        alt={champ}
+                        className="w-full h-full object-cover"
+                      />
+                    </Link>
                     <span className="absolute top-0 left-0 px-1 text-[9px] font-bold leading-tight bg-black/80 text-[#ff8f85] rounded-br">
                       R{i + 1}
                     </span>
@@ -349,7 +420,7 @@ export async function MatchSeriesContent({
   decodedKey,
   basePath = "/admin/stats",
 }: {
-  ctx: LoadedAdminStatsContext;
+  ctx: LoadedStatsContext;
   decodedKey: string;
   basePath?: string;
 }) {
@@ -399,42 +470,14 @@ export async function MatchSeriesContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href={basePath}
+          href={`${basePath}?division=${encodeURIComponent(
+            divId ?? "all"
+          )}&tab=division`}
           className="xp-btn inline-flex items-center gap-1.5 text-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Stats Dashboard</span>
         </Link>
-        {teamAData && (
-          <Link
-            href={`${basePath}/team/${encodeURIComponent(teamAData.teamId)}`}
-            className="xp-btn inline-flex items-center gap-1.5 text-xs"
-          >
-            {teamAData.logoUrl && (
-              <img
-                src={teamAData.logoUrl}
-                alt={teamAData.teamName}
-                className="w-4 h-4 object-contain"
-              />
-            )}
-            <span>{teamAData.teamName} Team Stats</span>
-          </Link>
-        )}
-        {teamBData && (
-          <Link
-            href={`${basePath}/team/${encodeURIComponent(teamBData.teamId)}`}
-            className="xp-btn inline-flex items-center gap-1.5 text-xs"
-          >
-            {teamBData.logoUrl && (
-              <img
-                src={teamBData.logoUrl}
-                alt={teamBData.teamName}
-                className="w-4 h-4 object-contain"
-              />
-            )}
-            <span>{teamBData.teamName} Team Stats</span>
-          </Link>
-        )}
       </div>
 
       <RetroWindow title="Match Results" theme={windowTheme} customTheme={divTheme}>
@@ -531,7 +574,12 @@ export async function MatchSeriesContent({
                   </div>
                 </div>
 
-                <DraftStrip game={g} ddVersion={ctx.ddVersion} />
+                <DraftStrip
+                  game={g}
+                  ddVersion={ctx.ddVersion}
+                  basePath={basePath}
+                  divisionSlug={division?.slug}
+                />
 
                 <div className="space-y-3">
                   <SideBoxScore
@@ -552,6 +600,7 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />
                   <SideBoxScore
@@ -572,12 +621,21 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />
                 </div>
               </div>
             );
           })}
+        </div>
+        <div className="mt-4">
+          <StatsDataCredits
+            leagueName={ctx.leagueName}
+            seasonName={ctx.seasonName}
+            sheetConfig={ctx.sheetConfig}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>

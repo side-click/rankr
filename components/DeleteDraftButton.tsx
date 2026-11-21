@@ -28,7 +28,7 @@ export function DeleteDraftButton({
     setDeleting(true);
     setError(null);
     const { error: delError } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballotId);
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { getLeaguePrefix } from "@/components/BallotCard";
+import { getLeaguePrefix } from "@/components/ContentCard";
 
 type MaybeArray<T> = T | T[] | null | undefined;
 

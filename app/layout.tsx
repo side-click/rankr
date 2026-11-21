@@ -18,7 +18,7 @@ import { ShieldAlert } from "lucide-react";
 
 const siteTitle = "Rankr — League Rankings & Tier Lists";
 const siteDescription =
-  "Rank teams or players, drop your hot takes, and share them with the world.";
+  "Community power rankings, player tier lists, scouting, and league stats for League of Legends amateur and draft leagues.";
 
 export const viewport: Viewport = {
   themeColor: "#c89b3c",
@@ -26,13 +26,22 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://leaguerankr.com"
   ),
   title: siteTitle,
   description: siteDescription,
+  keywords: [
+    "Rankr",
+    "League of Legends",
+    "Power Rankings",
+    "Tier Lists",
+    "Draft League",
+    "SCDL",
+    "LoL Stats",
+  ],
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
   openGraph: {
     type: "website",

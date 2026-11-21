@@ -113,3 +113,11 @@ export async function resolveOgImageSrc(
   }
   return null;
 }
+
+export function getOgChampionCenteredSplashJpg(championName: string): string {
+  const clean = championName.trim();
+  const ddKey = clean.toLowerCase() === "fiddlesticks" ? "FiddleSticks" : clean;
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${encodeURIComponent(
+    ddKey
+  )}_0.jpg`;
+}

@@ -20,7 +20,7 @@ const defaultPages = [
   { name: "browse", path: "/browse" },
   { name: "consensus", path: "/consensus" },
   { name: "stats", path: "/stats" },
-  { name: "rank", path: "/rank" },
+  { name: "create", path: "/create" },
 ];
 
 const pages = argVal("--pages=")
@@ -147,9 +147,10 @@ async function auditColdPage(browser, pageDef, runIndex) {
   });
 
   const t0 = Date.now();
-  await page.goto(`${baseUrl}${pageDef.path}`, { waitUntil: "networkidle", timeout: 45000 });
-  await page.waitForTimeout(500);
+  await page.goto(`${baseUrl}${pageDef.path}`, { waitUntil: "load", timeout: 45000 });
   const wallMs = Date.now() - t0;
+  // Brief settle window after load only so buffered LCP/CLS observers flush before reading
+  await page.waitForTimeout(250);
 
   const data = await page.evaluate(() => {
     const nav = performance.getEntriesByType("navigation")[0];
@@ -330,7 +331,7 @@ async function main() {
         const nav = res.nav || {};
         const v = res.vitals || {};
         console.log(
-          `[COLD #${i}] ${res.route.padEnd(11)} | cache=${String(res.docHeaders.xVercelCache || "-").padEnd(9)} | DNS=${round(nav.dnsMs)}ms TLS=${round(nav.tlsMs)}ms TTFB=${round(nav.ttfbMs)}ms | FCP=${round(v.fcpMs)}ms LCP=${round(v.lcpMs)}ms TBT=${round(v.tbtMs)}ms CLS=${v.cls} | reqs=${res.resourcesSummary.count} xfer=${kb(res.resourcesSummary.totalTransferBytes)}KB | wall=${res.wallMs}ms`
+          `[COLD #${i}] ${res.route.padEnd(11)} | cache=${String(res.docHeaders.xVercelCache || "-").padEnd(9)} | DNS=${round(nav.dnsMs)}ms TLS=${round(nav.tlsMs)}ms TTFB=${round(nav.ttfbMs)}ms | FCP=${round(v.fcpMs)}ms LCP=${round(v.lcpMs)}ms DCL=${round(nav.domContentLoadedMs)}ms Load=${round(nav.loadEventMs)}ms | TBT=${round(v.tbtMs)}ms CLS=${v.cls} | reqs=${res.resourcesSummary.count} xfer=${kb(res.resourcesSummary.totalTransferBytes)}KB`
         );
       }
     }

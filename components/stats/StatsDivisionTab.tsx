@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
   BarChart3,
@@ -63,6 +64,43 @@ interface StatsDivisionTabProps {
   ddVersion: string;
   kpiCardStyle: React.CSSProperties;
   selectedDivisionPrimaryColor?: string | null;
+  selectedDivisionSlug?: string | null;
+  seasonSlug?: string | null;
+}
+
+function normChampKey(name: string): string {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+const ddChampionCache = new Map<string, { id: string; name: string }[]>();
+
+function useAllChampions(ddVersion: string) {
+  const [all, setAll] = useState<{ id: string; name: string }[]>(
+    () => ddChampionCache.get(ddVersion) ?? []
+  );
+  useEffect(() => {
+    if (ddChampionCache.has(ddVersion)) return;
+    let cancelled = false;
+    fetch(
+      `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!json?.data || cancelled) return;
+        const list = (
+          Object.values(json.data) as { id: string; name: string }[]
+        )
+          .map((c) => ({ id: c.id, name: c.name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        ddChampionCache.set(ddVersion, list);
+        setAll(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [ddVersion]);
+  return all;
 }
 
 export function StatsDivisionTab({
@@ -70,7 +108,28 @@ export function StatsDivisionTab({
   ddVersion,
   kpiCardStyle,
   selectedDivisionPrimaryColor,
+  selectedDivisionSlug,
+  seasonSlug,
 }: StatsDivisionTabProps) {
+  const champHref = (name: string) => {
+    const qp = new URLSearchParams();
+    if (selectedDivisionSlug) qp.set("division", selectedDivisionSlug);
+    if (seasonSlug) qp.set("season", seasonSlug);
+    const qs = qp.toString();
+    return `/stats/champion/${encodeURIComponent(name)}${qs ? `?${qs}` : ""}`;
+  };
+  const allChampions = useAllChampions(ddVersion);
+  const untouched = useMemo(() => {
+    if (allChampions.length === 0) return [];
+    const touched = new Set<string>();
+    for (const c of overview.champs) touched.add(normChampKey(c.name));
+    for (const b of overview.bannedChamps) touched.add(normChampKey(b.name));
+    return allChampions.filter(
+      (c) =>
+        !touched.has(normChampKey(c.id)) && !touched.has(normChampKey(c.name))
+    );
+  }, [allChampions, overview.champs, overview.bannedChamps]);
+
   return (
     <>
       {/* Top Overview KPI Strip (10 Cards) */}
@@ -366,12 +425,13 @@ export function StatsDivisionTab({
           <div className="p-3">
             <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
               {overview.champs.slice(0, 36).map((c) => (
-                <div
+                <Link
                   key={c.name}
+                  href={champHref(c.name)}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
                     0
                   )}% WR)`}
-                  className="rounded border border-white/15 bg-[#121615] overflow-hidden flex flex-col"
+                  className="rounded border border-white/15 bg-[#121615] hover:border-[#f0c020]/70 transition overflow-hidden flex flex-col"
                 >
                   <img
                     src={getChampionIconUrl(c.name, ddVersion)}
@@ -388,7 +448,7 @@ export function StatsDivisionTab({
                       {c.winRate.toFixed(0)}%
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
             {overview.bannedChamps.length > 0 && (
@@ -403,12 +463,13 @@ export function StatsDivisionTab({
                 </div>
                 <div className="grid grid-cols-6 sm:grid-cols-9 md:grid-cols-12 gap-1.5">
                   {overview.bannedChamps.slice(0, 12).map((b) => (
-                    <div
+                    <Link
                       key={b.name}
+                      href={champHref(b.name)}
                       title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
                         0
                       )}% ban rate)`}
-                      className="bg-black/40 border border-white/10 rounded overflow-hidden"
+                      className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden block"
                     >
                       <img
                         src={getChampionIconUrl(b.name, ddVersion)}
@@ -421,6 +482,33 @@ export function StatsDivisionTab({
                           {b.banRate.toFixed(0)}%
                         </span>
                       </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {untouched.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#a6a89e]">
+                    Untouched Champions ({untouched.length})
+                  </span>
+                  <span className="text-[11px] text-[#a6a89e]">
+                    Never picked or banned
+                  </span>
+                </div>
+                <div className="grid grid-cols-8 sm:grid-cols-12 md:grid-cols-[repeat(20,minmax(0,1fr))] gap-1">
+                  {untouched.map((c) => (
+                    <div
+                      key={c.id}
+                      title={`${c.name} — no picks or bans`}
+                      className="rounded border border-white/10 bg-black/40 overflow-hidden cursor-default"
+                    >
+                      <img
+                        src={getChampionIconUrl(c.id, ddVersion)}
+                        alt={c.name}
+                        className="w-full aspect-square object-cover block grayscale opacity-50"
+                      />
                     </div>
                   ))}
                 </div>

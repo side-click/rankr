@@ -1,5 +1,1 @@
-import { StatsLoadingSkeleton } from "@/components/StatsLoadingSkeleton";
-
-export default function StatsLoading() {
-  return <StatsLoadingSkeleton />;
-}
+export { RetroLoadingWindow as default } from "@/components/RetroLoadingWindow";

@@ -4,7 +4,7 @@ import {
   attachConsensusChanges,
   computeAverageTeamRankings,
   type AverageTeamRow,
-  type ConsensusBallotInput,
+  type ConsensusRankingInput,
 } from "@/utils/averageRankings";
 import { resolveDivisionTheme } from "@/utils/themes";
 import type { DivisionTheme } from "@/types/database";
@@ -39,7 +39,7 @@ export interface ConsensusDataResult {
     slug: string;
     isOpen: boolean;
     isArchived: boolean;
-    ballotCount: number;
+    rankingCount: number;
   }[];
   selectedSeasonSlug: string;
   selectedDivisionSlug: string;
@@ -57,7 +57,7 @@ export interface ConsensusDataResult {
   latestEditionCount: number;
   rows: AverageTeamRow[];
   contributors: {
-    ballotId: string;
+    rankingId: string;
     username: string;
     avatarUrl: string | null;
   }[];
@@ -126,10 +126,10 @@ const loadConsensusPageDataCached = cache(
 
   const seasonEditionsDesc = [...seasonEditionsAsc].reverse();
 
-  const ballotCountByEditionId = new Map<string, number>();
+  const rankingCountByEditionId = new Map<string, number>();
   if (selectedSeason && selectedDivision) {
     const { data: countRows } = await supabase
-      .from("ballots")
+      .from("rankings")
       .select("edition_id")
       .eq("status", "published")
       .eq("ranking_type", "team")
@@ -138,9 +138,9 @@ const loadConsensusPageDataCached = cache(
 
     for (const row of countRows ?? []) {
       if (!row.edition_id) continue;
-      ballotCountByEditionId.set(
+      rankingCountByEditionId.set(
         row.edition_id,
-        (ballotCountByEditionId.get(row.edition_id) ?? 0) + 1
+        (rankingCountByEditionId.get(row.edition_id) ?? 0) + 1
       );
     }
   }
@@ -154,7 +154,7 @@ const loadConsensusPageDataCached = cache(
 
   const mostRecentWithMin2 =
     seasonEditionsDesc.find(
-      (ed) => (ballotCountByEditionId.get(ed.id) ?? 0) >= 2
+      (ed) => (rankingCountByEditionId.get(ed.id) ?? 0) >= 2
     ) ?? null;
 
   const selectedEdition =
@@ -166,7 +166,7 @@ const loadConsensusPageDataCached = cache(
     null;
 
   const latestEditionCount = latestOpenEdition
-    ? ballotCountByEditionId.get(latestOpenEdition.id) ?? 0
+    ? rankingCountByEditionId.get(latestOpenEdition.id) ?? 0
     : 0;
 
   const isFallbackOutdated = Boolean(
@@ -183,13 +183,13 @@ const loadConsensusPageDataCached = cache(
     selectedIdx >= 0
       ? seasonEditionsDesc
           .slice(selectedIdx + 1)
-          .find((ed) => (ballotCountByEditionId.get(ed.id) ?? 0) >= 1) ?? null
+          .find((ed) => (rankingCountByEditionId.get(ed.id) ?? 0) >= 1) ?? null
       : null;
 
-  const ballotSelectQuery = `
+  const rankingSelectQuery = `
     id,
     profiles ( username, avatar_url ),
-    ballot_entries (
+    ranking_entries (
       rank,
       team_id,
       team_name_snapshot,
@@ -197,13 +197,13 @@ const loadConsensusPageDataCached = cache(
     )
   `;
 
-  let ballots: ConsensusBallotInput[] = [];
-  let prevBallots: ConsensusBallotInput[] = [];
+  let rankings: ConsensusRankingInput[] = [];
+  let prevRankings: ConsensusRankingInput[] = [];
   if (selectedSeason && selectedDivision && selectedEdition) {
-    const [{ data: ballotRows }, prevRes] = await Promise.all([
+    const [{ data: rankingRows }, prevRes] = await Promise.all([
       supabase
-        .from("ballots")
-        .select(ballotSelectQuery)
+        .from("rankings")
+        .select(rankingSelectQuery)
         .eq("status", "published")
         .eq("ranking_type", "team")
         .eq("season_id", selectedSeason.id)
@@ -212,8 +212,8 @@ const loadConsensusPageDataCached = cache(
         .order("published_at", { ascending: false }),
       previousEdition
         ? supabase
-            .from("ballots")
-            .select(ballotSelectQuery)
+            .from("rankings")
+            .select(rankingSelectQuery)
             .eq("status", "published")
             .eq("ranking_type", "team")
             .eq("season_id", selectedSeason.id)
@@ -222,19 +222,19 @@ const loadConsensusPageDataCached = cache(
         : Promise.resolve({ data: [] }),
     ]);
 
-    ballots = (ballotRows ?? []) as ConsensusBallotInput[];
-    prevBallots = (prevRes.data ?? []) as ConsensusBallotInput[];
+    rankings = (rankingRows ?? []) as ConsensusRankingInput[];
+    prevRankings = (prevRes.data ?? []) as ConsensusRankingInput[];
   }
 
   const averageRows = attachConsensusChanges(
-    computeAverageTeamRankings(ballots),
-    computeAverageTeamRankings(prevBallots)
+    computeAverageTeamRankings(rankings),
+    computeAverageTeamRankings(prevRankings)
   );
 
-  const contributors = ballots.map((b) => {
+  const contributors = rankings.map((b) => {
     const prof = unwrap(b.profiles);
     return {
-      ballotId: b.id,
+      rankingId: b.id,
       username: prof?.username ?? "Voter",
       avatarUrl: prof?.avatar_url ?? null,
     };
@@ -289,7 +289,7 @@ const loadConsensusPageDataCached = cache(
     slug: ed.slug,
     isOpen: ed.is_open,
     isArchived: Boolean(ed.is_archived),
-    ballotCount: ballotCountByEditionId.get(ed.id) ?? 0,
+    rankingCount: rankingCountByEditionId.get(ed.id) ?? 0,
   }));
 
   const selectedSeasonLeague = selectedSeason
@@ -325,7 +325,7 @@ const loadConsensusPageDataCached = cache(
       selectedDivision?.logo_url ?? selectedDivTheme.default_logo_url ?? null,
     divisionTheme: selectedDivTheme,
     editionName: selectedEdition?.name ?? "",
-    submissionCount: ballots.length,
+    submissionCount: rankings.length,
     isFallbackOutdated,
     latestEditionName: latestOpenEdition?.name ?? null,
     latestEditionCount,

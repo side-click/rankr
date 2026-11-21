@@ -660,7 +660,7 @@ export function BlogEditor({
                     setErrorMsg(`Delete failed: ${error.message}`);
                     return;
                   }
-                  router.push("/my-rankings");
+                  router.push("/my-history");
                   router.refresh();
                 }}
                 className="xp-btn text-xs text-[#ff857a]"

@@ -1,22 +1,52 @@
 import Link from "next/link";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AdminTeamScoutingView } from "@/components/AdminTeamScoutingView";
+import { TeamScoutingView } from "@/components/TeamScoutingView";
 import {
   loadPublicStatsContext,
   loadTeamScoutingData,
 } from "@/utils/riotStatsServer";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
 
-export default async function PublicTeamStatsPage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ teamId: string }>;
-}) {
+}): Promise<Metadata> {
   const { teamId } = await params;
+  const encodedId = encodeURIComponent(decodeURIComponent(teamId));
+  const title = "Team Stats | Rankr";
+  const ogUrl = `/stats/team/${encodedId}/opengraph-image`;
+
+  return {
+    title,
+    openGraph: {
+      type: "website",
+      siteName: "Rankr",
+      title,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      images: [ogUrl],
+    },
+  };
+}
+
+export default async function PublicTeamStatsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ season?: string }>;
+}) {
+  const [{ teamId }, { season }] = await Promise.all([params, searchParams]);
   const decodedId = decodeURIComponent(teamId);
-  const effectiveSeason = await getFocusedSeasonSlug();
+  const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     teamIdFilter: decodedId,
   });
@@ -38,7 +68,7 @@ export default async function PublicTeamStatsPage({
   }
 
   return (
-    <AdminTeamScoutingView
+    <TeamScoutingView
       ddVersion={ctx.ddVersion}
       leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}

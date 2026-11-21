@@ -16,12 +16,13 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type {
-  Ballot,
-  BallotOverlay,
+  Ranking,
+  RankingOverlay,
   DivisionTheme,
   PlayerTierListPayload,
 } from "@/types/database";
 import { RetroWindow } from "@/components/RetroWindow";
+import { RetroConfirmModal } from "@/components/RetroConfirmModal";
 import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import {
   CAPTAIN_ICON,
@@ -33,7 +34,7 @@ import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import { getRoleSectionTitle } from "@/utils/tierPresets";
 
 interface PlayerTierShareViewProps {
-  ballot: Ballot;
+  ballot: Ranking;
   themes?: DivisionTheme[];
   isOwner: boolean;
   isAdmin?: boolean;
@@ -204,16 +205,16 @@ function renderPlayerPill(
     team_name?: string | null;
     is_captain?: boolean;
   },
-  size: PillSize
+  size: PillSize,
+  linkToStats = false,
+  seasonSlug?: string | null
 ) {
   const styles = PILL_STYLES[size];
-  return (
-    <div
-      key={pl.id}
-      className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] ${styles.container}`}
-    >
+  const displayName = pl.name.split("#")[0].trim() || pl.name;
+  const content = (
+    <>
       <span className="font-bold leading-none whitespace-nowrap">
-        {pl.name.split("#")[0].trim() || pl.name}
+        {displayName}
       </span>
       {pl.team_logo_url ? (
         <img
@@ -238,6 +239,30 @@ function renderPlayerPill(
           className={`${styles.captain} object-contain shrink-0`}
         />
       )}
+    </>
+  );
+
+  if (linkToStats && displayName) {
+    return (
+      <Link
+        key={pl.id}
+        href={`/stats/player/${encodeURIComponent(
+          pl.name.trim().toLowerCase()
+        )}${seasonSlug ? `?season=${encodeURIComponent(seasonSlug)}` : ""}`}
+        title={`View ${displayName} stats`}
+        className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] hover:border-[#f0c020]/70 hover:text-[#f0c020] transition-colors ${styles.container}`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      key={pl.id}
+      className={`inline-flex items-center rounded border border-[#3a4350] bg-[#1f252e] text-[#f5f3ea] ${styles.container}`}
+    >
+      {content}
     </div>
   );
 }
@@ -253,6 +278,8 @@ export function PlayerTierShareView({
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialRoleParam = searchParams.get("role");
@@ -278,12 +305,12 @@ export function PlayerTierShareView({
     }
   }, [roleFilter, pathname, searchParams]);
 
-  const initialOverlays: BallotOverlay[] = Array.isArray(ballot.overlays)
+  const initialOverlays: RankingOverlay[] = Array.isArray(ballot.overlays)
     ? ballot.overlays
     : [];
-  const [overlays, setOverlays] = useState<BallotOverlay[]>(initialOverlays);
+  const [overlays, setOverlays] = useState<RankingOverlay[]>(initialOverlays);
   const [savedOverlays, setSavedOverlays] =
-    useState<BallotOverlay[]>(initialOverlays);
+    useState<RankingOverlay[]>(initialOverlays);
   const [editingOverlays, setEditingOverlays] = useState(false);
   const [uploadingOverlay, setUploadingOverlay] = useState(false);
   const [savingOverlays, setSavingOverlays] = useState(false);
@@ -409,25 +436,25 @@ export function PlayerTierShareView({
     }
   }
 
-  async function handleAdminDelete() {
-    if (
-      !confirm(
-        "Are you sure you want to permanently delete this published player tier list?"
-      )
-    ) {
-      return;
-    }
+  function handleAdminDelete() {
+    setDeleteError(null);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function confirmAdminDelete() {
     setDeleting(true);
+    setDeleteError(null);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     if (error) {
-      alert(`Failed to delete tier list: ${error.message}`);
+      setDeleteError(`Failed to delete tier list: ${error.message}`);
       setDeleting(false);
       return;
     }
+    setDeleteConfirmOpen(false);
     router.push("/browse");
     router.refresh();
   }
@@ -449,7 +476,7 @@ export function PlayerTierShareView({
     const path = `${ballot.user_id}/${ballot.id}-${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .upload(path, file, { upsert: true });
 
     if (uploadErr) {
@@ -459,10 +486,10 @@ export function PlayerTierShareView({
     }
 
     const { data: pub } = supabase.storage
-      .from("ballot-overlays")
+      .from("ranking-overlays")
       .getPublicUrl(path);
 
-    const newItem: BallotOverlay = {
+    const newItem: RankingOverlay = {
       id:
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -482,7 +509,7 @@ export function PlayerTierShareView({
     setSavingOverlays(true);
     const supabase = createClient();
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .update({
         overlays,
         updated_at: new Date().toISOString(),
@@ -605,7 +632,7 @@ export function PlayerTierShareView({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {isOwner && isEditionEditable && (
-              <Link href={`/rank?${editParams.toString()}`} className="xp-btn text-xs">
+              <Link href={`/create?${editParams.toString()}`} className="xp-btn text-xs">
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Tier List</span>
               </Link>
@@ -1010,7 +1037,15 @@ export function PlayerTierShareView({
                                         />
                                         <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
                                           {rolePlayers.map((pl) =>
-                                            renderPlayerPill(pl, pillSize)
+                                            renderPlayerPill(
+                                              pl,
+                                              pillSize,
+                                              Boolean(
+                                                ballot.season_id &&
+                                                  ballot.division_id
+                                              ),
+                                              ballot.seasons?.slug
+                                            )
                                           )}
                                         </div>
                                       </div>
@@ -1020,7 +1055,14 @@ export function PlayerTierShareView({
                               ) : (
                                 <div className="flex flex-wrap items-center content-center gap-2">
                                   {tier.players.map((pl) =>
-                                    renderPlayerPill(pl, pillSize)
+                                    renderPlayerPill(
+                                      pl,
+                                      pillSize,
+                                      Boolean(
+                                        ballot.season_id && ballot.division_id
+                                      ),
+                                      ballot.seasons?.slug
+                                    )
                                   )}
                                 </div>
                               )}
@@ -1099,6 +1141,18 @@ export function PlayerTierShareView({
           </div>
         </ScaledGraphicFrame>
       </RetroWindow>
+
+      <RetroConfirmModal
+        open={deleteConfirmOpen}
+        title="Delete Published Tier List"
+        message="Are you sure you want to permanently delete this published player tier list?"
+        confirmLabel="Delete Tier List"
+        danger
+        loading={deleting}
+        error={deleteError}
+        onConfirm={confirmAdminDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }

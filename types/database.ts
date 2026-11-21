@@ -43,11 +43,30 @@ export interface Season {
   name: string;
   slug: string;
   is_active: boolean;
+  stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
+  stats_sheet_id?: string | null;
+  stats_sheet_gids?: string[] | null;
+  stats_credits_label?: string | null;
+  stats_credits_url?: string | null;
+  stats_credits_attribution?: string | null;
   created_at: string;
   leagues?: Pick<
     League,
     "id" | "name" | "short_name" | "slug" | "logo_url" | "theme_key"
   >;
+}
+
+export interface MatchDraftRow {
+  game_id: string;
+  season_id: string | null;
+  blue_team: string;
+  red_team: string;
+  blue_bans: string[];
+  red_bans: string[];
+  blue_picks: string[];
+  red_picks: string[];
+  source_url: string | null;
+  updated_at?: string;
 }
 
 export interface DivisionTheme {
@@ -82,7 +101,7 @@ export interface Edition {
   created_at: string;
 }
 
-export type RankingType = "team" | "player";
+export type RankingType = "team" | "player" | "champion_pool";
 
 export type CreateContentType = RankingType | "blog";
 
@@ -150,7 +169,7 @@ export interface Team {
   updated_at: string;
 }
 
-export interface BallotOverlay {
+export interface RankingOverlay {
   id: string;
   url: string;
   x: number;
@@ -158,7 +177,7 @@ export interface BallotOverlay {
   width: number;
 }
 
-export interface Ballot {
+export interface Ranking {
   id: string;
   user_id: string;
   season_id: string | null;
@@ -169,7 +188,7 @@ export interface Ballot {
   tier_data?: PlayerTierListPayload | null;
   title: string | null;
   author_notes: string;
-  overlays?: BallotOverlay[];
+  overlays?: RankingOverlay[];
   status: "draft" | "published";
   published_at: string | null;
   league_name_snapshot?: string | null;
@@ -186,9 +205,9 @@ export interface Ballot {
   editions?: Pick<Edition, "id" | "name" | "slug" | "sort_order" | "is_open"> | null;
 }
 
-export interface BallotEntry {
+export interface RankingEntry {
   id: string;
-  ballot_id: string;
+  ranking_id: string;
   team_id: string | null;
   rank: number;
   previous_rank: number | null;
@@ -217,4 +236,42 @@ export interface Blog {
   updated_at: string;
   profiles?: Pick<Profile, "id" | "username" | "avatar_url"> | null;
   seasons?: Pick<Season, "id" | "name" | "slug" | "leagues"> | null;
+}
+
+export interface ChampionPoolTierItem {
+  championId: string;
+  name: string;
+  isBlindable?: boolean;
+}
+
+export interface ChampionTierRowData {
+  id: string;
+  label: string;
+  color: string;
+  commentary: string;
+  champions: ChampionPoolTierItem[];
+}
+
+export interface ChampionRoleSection {
+  role: LeagueRole;
+  preset: TierPresetKey;
+  tiers: ChampionTierRowData[];
+}
+
+export interface ChampionPoolPayload {
+  version: 1;
+  title: string;
+  generalNotes?: string;
+  roles: Partial<Record<LeagueRole, ChampionRoleSection>>;
+}
+
+export interface EncryptedChampionPoolRecord {
+  id: string;
+  user_id: string;
+  encrypted_payload: string;
+  encryption_salt: string;
+  encryption_iv: string;
+  encryption_version: number;
+  created_at: string;
+  updated_at: string;
 }

@@ -8,17 +8,17 @@ export interface ConsensusEntryInput {
     | null;
 }
 
-export interface ConsensusBallotInput {
+export interface ConsensusRankingInput {
   id: string;
   profiles:
     | { username: string; avatar_url: string | null }
     | { username: string; avatar_url: string | null }[]
     | null;
-  ballot_entries: ConsensusEntryInput[] | null;
+  ranking_entries: ConsensusEntryInput[] | null;
 }
 
 export interface VoterRankPoint {
-  ballotId: string;
+  rankingId: string;
   username: string;
   avatarUrl: string | null;
   rank: number;
@@ -33,7 +33,7 @@ export interface AverageTeamRow {
   bestRank: number;
   worstRank: number;
   firstPlaceVotes: number;
-  ballotCount: number;
+  rankingCount: number;
   stdDev: number;
   voterRanks: VoterRankPoint[];
   previousRank?: number | null;
@@ -41,7 +41,7 @@ export interface AverageTeamRow {
 }
 
 export function computeAverageTeamRankings(
-  ballots: ConsensusBallotInput[]
+  rankings: ConsensusRankingInput[]
 ): AverageTeamRow[] {
   const buckets = new Map<
     string,
@@ -54,14 +54,14 @@ export function computeAverageTeamRankings(
     }
   >();
 
-  for (const ballot of ballots) {
-    const profile = Array.isArray(ballot.profiles)
-      ? ballot.profiles[0]
-      : ballot.profiles;
+  for (const ranking of rankings) {
+    const profile = Array.isArray(ranking.profiles)
+      ? ranking.profiles[0]
+      : ranking.profiles;
     const username = profile?.username ?? "Voter";
     const avatarUrl = profile?.avatar_url ?? null;
-    const entries = Array.isArray(ballot.ballot_entries)
-      ? ballot.ballot_entries
+    const entries = Array.isArray(ranking.ranking_entries)
+      ? ranking.ranking_entries
       : [];
 
     for (const entry of entries) {
@@ -93,7 +93,7 @@ export function computeAverageTeamRankings(
 
       bucket.ranks.push(entry.rank);
       bucket.voterRanks.push({
-        ballotId: ballot.id,
+        rankingId: ranking.id,
         username,
         avatarUrl,
         rank: entry.rank,
@@ -107,7 +107,7 @@ export function computeAverageTeamRankings(
     const count = bucket.ranks.length;
     if (count === 0) continue;
 
-    // Olympic scoring: when at least 5 ballots exist for a team, drop the single best and single worst rank
+    // Olympic scoring: when at least 5 rankings exist for a team, drop the single best and single worst rank
     const sortedRanks = [...bucket.ranks].sort((a, b) => a - b);
     const effectiveRanks =
       sortedRanks.length >= 5 ? sortedRanks.slice(1, -1) : sortedRanks;
@@ -135,7 +135,7 @@ export function computeAverageTeamRankings(
       bestRank,
       worstRank,
       firstPlaceVotes,
-      ballotCount: count,
+      rankingCount: count,
       stdDev,
       voterRanks: bucket.voterRanks,
     });

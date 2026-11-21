@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AdminTeamScoutingView } from "@/components/AdminTeamScoutingView";
+import { TeamScoutingView } from "@/components/TeamScoutingView";
 import {
   loadAdminStatsContext,
   loadTeamScoutingData,
@@ -46,7 +46,7 @@ export default async function AdminTeamStatsPage({
   }
 
   return (
-    <AdminTeamScoutingView
+    <TeamScoutingView
       ddVersion={ctx.ddVersion}
       leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}

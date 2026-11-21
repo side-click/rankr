@@ -30,11 +30,11 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
 
       <nav className="hidden lg:flex flex-1 items-center justify-center gap-1.5 xl:gap-2 text-xs font-bold min-w-0 overflow-hidden">
         <Link
-          href="/rank"
+          href="/create"
           className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
         >
           <ListOrdered className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
-          <span>Create New</span>
+          <span>Create</span>
         </Link>
         <Link
           href="/browse"
@@ -59,7 +59,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         </Link>
         {isLoggedIn && (
           <Link
-            href="/my-rankings"
+            href="/my-history"
             className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-white/95 hover:bg-white/15 border border-transparent hover:border-white/30 whitespace-nowrap"
           >
             <History className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
@@ -98,12 +98,12 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
           }`}
         >
             <Link
-              href="/rank"
+              href="/create"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
             >
               <ListOrdered className="w-4 h-4 text-[#f0c020] shrink-0" />
-              <span>Create New</span>
+              <span>Create</span>
             </Link>
             <Link
               href="/browse"
@@ -131,7 +131,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
             </Link>
             {isLoggedIn && (
               <Link
-                href="/my-rankings"
+                href="/my-history"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 rounded bg-black/25 hover:bg-white/10 text-white border border-white/10"
               >

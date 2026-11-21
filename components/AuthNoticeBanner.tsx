@@ -9,8 +9,8 @@ export function AuthNoticeBanner() {
   const [copied, setCopied] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const authError = searchParams.get("auth_error");
-  const discordId = searchParams.get("discord_id");
+  const authError = searchParams?.get("auth_error");
+  const discordId = searchParams?.get("discord_id");
 
   if (
     dismissed ||

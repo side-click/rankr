@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   ExternalLink,
+  History,
+  RotateCcw,
   Search,
   Trash2,
   User,
@@ -56,6 +58,16 @@ interface ConflictingBallotInfo {
   published_at: string | null;
 }
 
+interface RankingRevisionSummary {
+  id: string;
+  ranking_id: string;
+  operation: "UPDATE" | "DELETE";
+  title: string | null;
+  ranking_type: string | null;
+  status: string | null;
+  created_at: string;
+}
+
 interface Props {
   initialBallots: AdminLogBallot[];
   seasons: (Season & { leagues?: League | null })[];
@@ -77,6 +89,57 @@ export function AdminPublishingsLog({
   const [ballots, setBallots] = useState<AdminLogBallot[]>(initialBallots);
   const [busy, setBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [revisions, setRevisions] = useState<RankingRevisionSummary[]>([]);
+
+  async function loadRevisions() {
+    setRevisionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("ranking_revisions")
+        .select(
+          "id, ranking_id, operation, title, ranking_type, status, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) {
+        setStatusMsg(`Revisions error: ${error.message}`);
+      } else {
+        setRevisions((data ?? []) as RankingRevisionSummary[]);
+      }
+    } finally {
+      setRevisionsLoading(false);
+    }
+  }
+
+  async function handleRestoreRevision(rev: RankingRevisionSummary) {
+    if (
+      !window.confirm(
+        `Restore snapshot of "${rev.title ?? rev.ranking_id}" from ${new Date(
+          rev.created_at
+        ).toLocaleString()}?`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("restore_ranking_revision", {
+        target_revision_id: rev.id,
+      });
+      if (error) {
+        setStatusMsg(`Restore failed: ${error.message}`);
+      } else {
+        setStatusMsg(
+          `Restored "${rev.title ?? rev.ranking_id}" from revision snapshot.`
+        );
+        router.refresh();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<"all" | "team" | "player">(() => {
@@ -213,7 +276,7 @@ export function AdminPublishingsLog({
     }
     setBusy(true);
     const { error } = await supabase
-      .from("ballots")
+      .from("rankings")
       .delete()
       .eq("id", ballot.id);
     if (error) {
@@ -237,7 +300,7 @@ export function AdminPublishingsLog({
     const rankingType = ballot.ranking_type ?? "team";
     setCheckingConflict(true);
     let query = supabase
-      .from("ballots")
+      .from("rankings")
       .select("id, title, status, updated_at, published_at")
       .eq("user_id", ballot.user_id)
       .eq("edition_id", nextEditionId)
@@ -345,7 +408,7 @@ export function AdminPublishingsLog({
     try {
       if (conflictBallot) {
         const { error: delErr } = await supabase
-          .from("ballots")
+          .from("rankings")
           .delete()
           .eq("id", conflictBallot.id);
         if (delErr) {
@@ -357,7 +420,7 @@ export function AdminPublishingsLog({
 
       const nextTitle = moveTitle.trim() || movingBallot.title;
       const { error: updErr } = await supabase
-        .from("ballots")
+        .from("rankings")
         .update({
           edition_id: targetEd.id,
           edition_name_snapshot: targetEd.name,
@@ -403,10 +466,24 @@ export function AdminPublishingsLog({
     <div className="space-y-3">
       {/* Top Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/admin" className="xp-btn text-xs">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Admin Console</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin" className="xp-btn text-xs">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Admin Console</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !revisionsOpen;
+              setRevisionsOpen(next);
+              if (next) void loadRevisions();
+            }}
+            className={`xp-btn text-xs ${revisionsOpen ? "xp-btn-gold" : ""}`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Revision History &amp; Restore</span>
+          </button>
+        </div>
         <div className="text-xs text-[#a6a89e]">
           Showing{" "}
           <span className="font-bold text-[#f0ede0]">
@@ -417,6 +494,73 @@ export function AdminPublishingsLog({
           published rankings
         </div>
       </div>
+
+      {revisionsOpen && (
+        <div className="xp-panel p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5" />
+              Recent Ranking Revisions &amp; Deleted Snapshots
+            </h3>
+            <button
+              type="button"
+              onClick={() => void loadRevisions()}
+              disabled={revisionsLoading}
+              className="xp-btn text-[11px] px-2 py-0.5"
+            >
+              {revisionsLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+          {revisions.length === 0 ? (
+            <p className="text-xs text-[#a6a89e] italic">
+              {revisionsLoading
+                ? "Loading revisions..."
+                : "No revision snapshots recorded yet."}
+            </p>
+          ) : (
+            <div className="divide-y divide-white/10 max-h-64 overflow-y-auto text-xs">
+              {revisions.map((rev) => (
+                <div
+                  key={rev.id}
+                  className="py-1.5 px-2 flex flex-wrap items-center justify-between gap-2 hover:bg-white/5"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                        rev.operation === "DELETE"
+                          ? "bg-[#ff857a]/15 text-[#ff857a] border border-[#ff857a]/40"
+                          : "bg-[#6bb8ff]/15 text-[#6bb8ff] border border-[#6bb8ff]/40"
+                      }`}
+                    >
+                      {rev.operation}
+                    </span>
+                    <span className="font-bold text-[#f7f5eb] truncate">
+                      {rev.title || rev.ranking_id}
+                    </span>
+                    <span className="text-[11px] text-[#a6a89e]">
+                      ({rev.ranking_type ?? "team"} • {rev.status ?? "draft"})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[11px] text-[#a6a89e] tabular-nums">
+                      {new Date(rev.created_at).toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleRestoreRevision(rev)}
+                      className="xp-btn text-[11px] px-2 py-0.5 inline-flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Restore
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {statusMsg && (
         <div className="xp-inset px-3 py-2 text-xs text-[#f0c020] flex items-center justify-between gap-2">
@@ -588,7 +732,11 @@ export function AdminPublishingsLog({
                       )}
                     </span>
                     <Link
-                      href={`/ballot/${b.id}`}
+                      href={
+                        b.ranking_type === "player"
+                          ? `/tierlist/${b.id}`
+                          : `/rankings/${b.id}`
+                      }
                       className="font-bold text-[#f0ede0] hover:text-[#f0c020] truncate"
                     >
                       {b.title || "Untitled Ranking"}
@@ -633,7 +781,11 @@ export function AdminPublishingsLog({
                     </button>
                   )}
                   <Link
-                    href={`/ballot/${b.id}`}
+                    href={
+                      b.ranking_type === "player"
+                        ? `/tierlist/${b.id}`
+                        : `/rankings/${b.id}`
+                    }
                     className="xp-btn text-[11px] px-2 py-1"
                     title="View Ranking"
                   >

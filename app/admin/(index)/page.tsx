@@ -3,6 +3,12 @@ import { RetroWindow } from "@/components/RetroWindow";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { ShieldAlert } from "lucide-react";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Console | Rankr",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
@@ -64,7 +70,7 @@ export default async function AdminPage() {
     supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("profiles").select("*").order("created_at", { ascending: false }),
     supabase
-      .from("ballots")
+      .from("rankings")
       .select(
         "id, title, status, ranking_type, tier_variant, published_at, user_id, season_id, division_id, edition_id, division_name_snapshot, edition_name_snapshot, profiles ( id, username, discord_id, is_banned )"
       )

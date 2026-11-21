@@ -3,6 +3,7 @@ import { ArrowLeft, Calendar, ExternalLink } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
+import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import {
@@ -12,7 +13,7 @@ import {
   getPriorityPickRanks,
   getRoleFilteredSoloChampions,
 } from "@/utils/riotStatsAggregation";
-import type { LoadedAdminStatsContext } from "@/utils/riotStatsServer";
+import type { LoadedStatsContext } from "@/utils/riotStatsServer";
 import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
@@ -135,11 +136,16 @@ export async function PlayerStatsContent({
   decodedKey,
   basePath = "/admin/stats",
 }: {
-  ctx: LoadedAdminStatsContext;
+  ctx: LoadedStatsContext;
   decodedKey: string;
   basePath?: string;
 }) {
-  const soloPlayer = ctx.players.find((p) => p.playerKey === decodedKey);
+  const soloPlayer = ctx.players.find(
+    (p) =>
+      p.playerKey === decodedKey ||
+      p.displayName.toLowerCase() === decodedKey ||
+      p.riotId.split("#")[0]?.trim().toLowerCase() === decodedKey
+  );
   if (!soloPlayer) {
     return (
       <RetroWindow title="Player Not Found" theme="scdl">
@@ -187,6 +193,7 @@ export async function PlayerStatsContent({
     roundLabel: string;
     oppTeam: string;
     duration: number;
+    teamKills: number;
     row: ScdlGamePlayerRow;
     oppRow: ScdlGamePlayerRow | null;
     pickSlot: string | null;
@@ -229,6 +236,7 @@ export async function PlayerStatsContent({
         roundLabel: g.roundLabel,
         oppTeam,
         duration: g.gameDuration,
+        teamKills: isBlue ? g.blueKills : g.redKills,
         row: myRow,
         oppRow,
         pickSlot,
@@ -243,9 +251,13 @@ export async function PlayerStatsContent({
     soloPlayer.soloLp
   );
   const leaguePrefix = deriveLeaguePrefix(ctx.leagueName);
-  const divThemeKey =
-    ctx.divisions.find((d) => d.id === soloPlayer.divisionId)?.theme_key ??
-    "scdl";
+  const playerDiv = ctx.divisions.find((d) => d.id === soloPlayer.divisionId);
+  const divThemeKey = playerDiv?.theme_key ?? "scdl";
+  const divisionSlug = playerDiv?.slug ?? null;
+  const champHref = (name: string) =>
+    `${basePath}/champion/${encodeURIComponent(name)}${
+      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
+    }`;
   const divTheme = resolveDivisionTheme(divThemeKey);
   const windowTheme =
     divThemeKey === "dragon"
@@ -277,25 +289,15 @@ export async function PlayerStatsContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={basePath} className="xp-btn text-xs">
+          <Link
+            href={`${basePath}?division=${encodeURIComponent(
+              soloPlayer.divisionId ?? "all"
+            )}&tab=players`}
+            className="xp-btn text-xs"
+          >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Stats Dashboard</span>
           </Link>
-          {soloPlayer.teamId && (
-            <Link
-              href={`${basePath}/team/${encodeURIComponent(soloPlayer.teamId)}`}
-              className="xp-btn text-xs"
-            >
-              {soloPlayer.teamLogoUrl && (
-                <img
-                  src={soloPlayer.teamLogoUrl}
-                  alt={soloPlayer.teamName}
-                  className="w-3.5 h-3.5 object-contain"
-                />
-              )}
-              <span>{soloPlayer.teamName} Team Stats</span>
-            </Link>
-          )}
         </div>
 
         <div className="flex items-center gap-1.5 text-[11px] text-[#a6a89e]">
@@ -328,16 +330,36 @@ export async function PlayerStatsContent({
                 </span>
               </div>
               <div className="mt-1 space-y-0.5 text-sm">
-                <div className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-[#f0ede0]">
-                  {soloPlayer.teamLogoUrl && (
-                    <img
-                      src={soloPlayer.teamLogoUrl}
-                      alt={soloPlayer.teamName}
-                      className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
-                    />
-                  )}
-                  <span>{soloPlayer.teamName}</span>
-                </div>
+                {soloPlayer.teamId ? (
+                  <Link
+                    href={`${basePath}/team/${encodeURIComponent(
+                      soloPlayer.teamId
+                    )}`}
+                    className="group inline-flex items-center gap-2 text-base sm:text-lg font-extrabold text-[#f0ede0] hover:text-[#f0c020] transition-colors"
+                  >
+                    {soloPlayer.teamLogoUrl && (
+                      <img
+                        src={soloPlayer.teamLogoUrl}
+                        alt={soloPlayer.teamName}
+                        className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                      />
+                    )}
+                    <span className="group-hover:text-[#f0c020] transition-colors">
+                      {soloPlayer.teamName}
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-[#f0ede0]">
+                    {soloPlayer.teamLogoUrl && (
+                      <img
+                        src={soloPlayer.teamLogoUrl}
+                        alt={soloPlayer.teamName}
+                        className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                      />
+                    )}
+                    <span>{soloPlayer.teamName}</span>
+                  </div>
+                )}
                 <div className="font-bold text-[#f0c020]">
                   <span style={{ color: divTheme.accent_text_color }}>
                     {soloPlayer.divisionName}
@@ -554,9 +576,10 @@ export async function PlayerStatsContent({
                   const prioRank = leaguePrioRanks.get(c.name);
                   const losses = c.games - c.wins;
                   return (
-                    <div
+                    <Link
                       key={c.name}
-                      className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] ${
+                      href={champHref(c.name)}
+                      className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
                           : "border-white/10 bg-black/30"
@@ -568,14 +591,14 @@ export async function PlayerStatsContent({
                           alt={c.name}
                           className="w-6 h-6 rounded object-cover shrink-0"
                         />
-                        <span className="font-bold text-[#f0ede0] truncate">
+                        <span className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
                           {c.name}
                         </span>
                       </div>
                       <span className="tabular-nums font-bold text-[#7cd438] shrink-0">
                         {c.wins}-{losses}
                       </span>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -601,9 +624,10 @@ export async function PlayerStatsContent({
                   const prioRank = soloPrioRanks.get(c.name);
                   const wr = (c.wins / c.games) * 100;
                   return (
-                    <div
+                    <Link
                       key={c.name}
-                      className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] ${
+                      href={champHref(c.name)}
+                      className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
                           : "border-white/10 bg-black/30"
@@ -615,7 +639,7 @@ export async function PlayerStatsContent({
                           alt={c.name}
                           className="w-6 h-6 rounded object-cover shrink-0"
                         />
-                        <span className="font-bold text-[#f0ede0] truncate">
+                        <span className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
                           {c.name}
                         </span>
                       </div>
@@ -634,7 +658,7 @@ export async function PlayerStatsContent({
                           {wr.toFixed(0)}%
                         </span>
                       </span>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -653,10 +677,11 @@ export async function PlayerStatsContent({
             {soloPlayer.masteryTop4.length > 0 ? (
               <div className="grid grid-cols-4 lg:grid-cols-2 gap-2.5">
                 {soloPlayer.masteryTop4.map((m) => (
-                  <div
+                  <Link
                     key={m.championName}
+                    href={champHref(m.championName)}
                     title={`${m.championName} • ${m.championPoints.toLocaleString()} pts`}
-                    className="bg-black/40 border border-white/10 rounded overflow-hidden text-center"
+                    className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden text-center block"
                   >
                     <img
                       src={getChampionIconUrl(m.championName, ctx.ddVersion)}
@@ -666,7 +691,7 @@ export async function PlayerStatsContent({
                     <div className="text-xs font-bold text-[#f0c020] py-1">
                       {formatMasteryPoints(m.championPoints)}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -697,6 +722,12 @@ export async function PlayerStatsContent({
                   g.row.deaths > 0
                     ? ((g.row.kills + g.row.assists) / g.row.deaths).toFixed(2)
                     : (g.row.kills + g.row.assists).toFixed(2);
+                const isSupport = soloPlayer.role === "support";
+                const kpPct =
+                  g.teamKills > 0
+                    ? ((g.row.kills + g.row.assists) / g.teamKills) * 100
+                    : 0;
+                const vspm = g.row.visionScore / mins;
                 return (
                   <Link
                     key={`${g.seriesKey}-${idx}`}
@@ -758,13 +789,26 @@ export async function PlayerStatsContent({
                         </strong>{" "}
                         <span className="text-[#a6a89e]">({kda})</span>
                       </div>
-                      <div className="text-[#c7c5b8]">
-                        {g.row.cs} CS ({(g.row.cs / mins).toFixed(1)}/m)
-                      </div>
-                      <div className="text-[#ff857a] font-bold">{dpm} DPM</div>
-                      <div className="text-[#f0c020] font-bold">
-                        GD@15 {formatSigned(g.row.goldDiff15)}
-                      </div>
+                      {isSupport ? (
+                        <>
+                          <div className="text-[#5ea3ff] font-bold">
+                            {g.teamKills > 0 ? `${kpPct.toFixed(0)}%` : "—"} KP
+                          </div>
+                          <div className="text-[#f0c020] font-bold">
+                            {vspm.toFixed(2)} VS/m
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[#c7c5b8]">
+                            {g.row.cs} CS ({(g.row.cs / mins).toFixed(1)}/m)
+                          </div>
+                          <div className="text-[#ff857a] font-bold">{dpm} DPM</div>
+                          <div className="text-[#f0c020] font-bold">
+                            GD@15 {formatSigned(g.row.goldDiff15)}
+                          </div>
+                        </>
+                      )}
                       <ExternalLink className="w-4 h-4 text-[#a6a89e]" />
                     </div>
                   </Link>
@@ -776,6 +820,14 @@ export async function PlayerStatsContent({
               No {leaguePrefix} games recorded yet.
             </div>
           )}
+        </div>
+        <div className="mt-4">
+          <StatsDataCredits
+            leagueName={ctx.leagueName}
+            seasonName={ctx.seasonName}
+            sheetConfig={ctx.sheetConfig}
+            variant="compact"
+          />
         </div>
       </RetroWindow>
     </div>
