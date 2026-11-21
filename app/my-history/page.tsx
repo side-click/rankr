@@ -330,7 +330,7 @@ export default async function MyRankingsPage() {
                     {dateStr}
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+                  <div className="relative z-10 flex items-center gap-2 shrink-0 pointer-events-auto">
                     <Link
                       href={`/create?type=blog&edit=${blog.id}`}
                       className="xp-btn text-xs w-[88px] justify-center"

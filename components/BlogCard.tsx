@@ -71,7 +71,7 @@ export function BlogCard({
       <Link
         href={`/blog/${blog.id}`}
         style={cardStyle}
-        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2 lg:grid lg:grid-cols-[148px_165px_minmax(0,1fr)_auto] xl:grid-cols-[148px_135px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
+        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2 lg:grid lg:grid-cols-[148px_145px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
         <div className="flex items-center gap-3 min-w-0 lg:contents">
           <div className="w-36 sm:w-40 lg:w-full shrink-0 flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
