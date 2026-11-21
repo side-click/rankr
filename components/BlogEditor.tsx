@@ -386,8 +386,8 @@ export function BlogEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give your blog post a headline..."
-              maxLength={64}
-              className="w-full max-w-xl xp-inset px-3 py-2 text-sm font-bold"
+              maxLength={70}
+              className="w-full max-w-2xl xp-inset px-3 py-2 text-sm font-bold"
             />
           </div>
 
@@ -400,7 +400,7 @@ export function BlogEditor({
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="A short deck or summary..."
-              maxLength={140}
+              maxLength={155}
               className="w-full xp-inset px-3 py-1.5 text-xs"
             />
           </div>
@@ -576,14 +576,20 @@ export function BlogEditor({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={16}
+                maxLength={25000}
                 placeholder={`Write your post using basic Markdown...\n\n## Section Heading\nShare your thoughts, breakdowns, or stories.\n\n![Caption](https://...)`}
                 className="w-full xp-inset p-3 text-sm font-mono leading-relaxed resize-y min-h-[280px]"
               />
-              <p className="text-[11px] text-[#a6a89e]">
-                Supports Markdown headings (<code>##</code>, <code>###</code>),
-                bold, italic, quotes (<code>&gt;</code>), lists, links, dividers (
-                <code>---</code>), and images/GIFs (<code>![alt](url)</code>).
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#a6a89e]">
+                <span>
+                  Supports Markdown headings (<code>##</code>, <code>###</code>),
+                  bold, italic, quotes (<code>&gt;</code>), lists, links, dividers (
+                  <code>---</code>), and images/GIFs (<code>![alt](url)</code>).
+                </span>
+                <span className="tabular-nums shrink-0">
+                  {content.length.toLocaleString()} / 25,000
+                </span>
+              </div>
             </div>
           ) : (
             <div className="xp-inset p-4 sm:p-6 space-y-5 min-h-[280px]">
