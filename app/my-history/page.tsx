@@ -192,9 +192,6 @@ export default async function MyRankingsPage() {
         </div>
       ) : (
         <div className="space-y-2.5">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#f0c020]">
-            My Content
-          </h2>
           {(blogs ?? []).map((blog) => {
             const season = Array.isArray(blog.seasons)
               ? blog.seasons[0]
@@ -250,7 +247,7 @@ export default async function MyRankingsPage() {
                   backgroundImage:
                     "linear-gradient(110deg, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0.08) 46%, rgba(18, 22, 21, 0.92) 100%)",
                 }}
-                className="relative overflow-hidden xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[116px_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-3"
+                className="relative overflow-hidden xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[124px_165px_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-3"
               >
                 <Link
                   href={cardHref}
@@ -258,38 +255,44 @@ export default async function MyRankingsPage() {
                   className="absolute inset-0 z-0"
                 />
 
-                <div className="relative z-10 pointer-events-none w-[116px] shrink-0 flex items-center justify-center px-2 py-2 rounded bg-black/25 border border-white/10">
+                <div className="relative z-10 pointer-events-none w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center">
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
+                    className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-xs border ${
                       isPublished
-                        ? "bg-[#14301a] text-[#7cd438] border border-[#7cd438]/40"
-                        : "bg-[#2a2210] text-[#f0c020] border border-[#c89b3c]/40"
+                        ? "bg-[#173b24] text-[#7cd438] border-[#3a804d]"
+                        : "bg-[#3d3012] text-[#f0c020] border-[#8c6b16]"
                     }`}
                   >
-                    {isPublished ? "Published" : "Draft"}
+                    {blog.status}
                   </span>
                 </div>
 
-                <div className="relative z-10 pointer-events-none flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0">
+                <div className="relative z-10 pointer-events-none min-w-0">
+                  <div className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                    Blog Post
+                  </div>
+                  {hasSeason && (
+                    <div className="text-xs font-bold text-[#93c5fd] leading-tight truncate mt-0.5">
+                      {scopeLabel}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative z-10 pointer-events-none flex items-center gap-2.5 min-w-0">
+                  {seasonLogo && (
+                    <img
+                      src={seasonLogo}
+                      alt={scopeLabel}
+                      width={24}
+                      height={24}
+                      className="w-6 h-6 object-contain shrink-0"
+                    />
+                  )}
+                  <div className="w-8 h-8 rounded bg-[#2a2210] border border-[#c89b3c]/70 flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-[#f0c020]" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="wow-heading text-sm font-bold text-[#f0ede0] truncate">
-                      {blog.title}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-[#a6a89e] truncate">
-                      {seasonLogo && (
-                        <img
-                          src={seasonLogo}
-                          alt={scopeLabel}
-                          width={14}
-                          height={14}
-                          className="w-3.5 h-3.5 object-contain shrink-0"
-                        />
-                      )}
-                      <span>{hasSeason ? `${scopeLabel} • Blog Post` : "Blog Post"}</span>
-                    </div>
+                  <div className="text-sm font-bold text-[#f0ede0] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug min-w-0">
+                    {blog.title}
                   </div>
                 </div>
 
@@ -419,7 +422,7 @@ export default async function MyRankingsPage() {
 
                 {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
                 <div className="flex items-center gap-3 min-w-0 lg:contents pointer-events-none">
-                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center px-2.5 py-2 rounded bg-black/25 border border-white/10">
+                  <div className="w-28 sm:w-32 lg:w-full shrink-0 flex items-center justify-center">
                     <span
                       className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-xs border ${
                         isPublished
