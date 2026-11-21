@@ -304,77 +304,75 @@ export function BlogEditor({
       theme="scdl"
     >
       <div className="space-y-4">
-        {/* Top Metadata: Season + Author */}
-        <div className="xp-panel p-3 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
-                Associated Season (optional)
-              </label>
-              <select
-                value={seasonId}
-                onChange={(e) => setSeasonId(e.target.value)}
-                className="w-full xp-inset px-2.5 py-1.5 text-xs"
-              >
-                <option value="">General Post (No Associated Season)</option>
-                {seasons.map((s) => {
-                  const prefix = getLeaguePrefix(s);
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {prefix ? `${prefix}: ` : ""}
-                      {s.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+        {/* Top Metadata: Associated Season + Author in separate frames */}
+        <div className="xp-panel p-3">
+          <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
+            Associated Season (optional)
+          </label>
+          <select
+            value={seasonId}
+            onChange={(e) => setSeasonId(e.target.value)}
+            className="w-full sm:w-80 xp-inset px-2.5 py-1.5 text-xs"
+          >
+            <option value="">General Post (No Associated Season)</option>
+            {seasons.map((s) => {
+              const prefix = getLeaguePrefix(s);
+              return (
+                <option key={s.id} value={s.id}>
+                  {prefix ? `${prefix}: ` : ""}
+                  {s.name}
+                </option>
+              );
+            })}
+          </select>
+        </div>
 
-            <div className="flex flex-col justify-end">
-              {!showAuthorField ? (
-                <div className="flex items-center justify-between gap-2 xp-inset px-2.5 py-1.5 text-xs">
-                  <span className="text-[#c7c5b8] truncate">
-                    Author:{" "}
-                    <strong className="text-[#f0ede0]">
-                      {discordDefaultName}
-                    </strong>
-                  </span>
+        <div className="xp-panel p-3">
+          <div className="w-full sm:w-80">
+            {!showAuthorField ? (
+              <div className="flex items-center justify-between gap-2 xp-inset px-2.5 py-1.5 text-xs">
+                <span className="text-[#c7c5b8] truncate">
+                  Author:{" "}
+                  <strong className="text-[#f0ede0]">
+                    {discordDefaultName}
+                  </strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthorField(true)}
+                  className="text-[11px] font-bold text-[#f0c020] hover:underline shrink-0 cursor-pointer"
+                >
+                  + Custom Name
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-[#c7c5b8] flex items-center gap-1">
+                    <UserCheck className="w-3 h-3 text-[#f0c020]" />
+                    <span>Author Name</span>
+                  </label>
                   <button
                     type="button"
-                    onClick={() => setShowAuthorField(true)}
-                    className="text-[11px] font-bold text-[#f0c020] hover:underline shrink-0 cursor-pointer"
+                    onClick={() => {
+                      setShowAuthorField(false);
+                      setAuthorName(discordDefaultName);
+                    }}
+                    className="text-[10px] text-[#a6a89e] hover:text-white cursor-pointer"
                   >
-                    + Custom Name
+                    Reset to Discord
                   </button>
                 </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-bold text-[#c7c5b8] flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 text-[#f0c020]" />
-                      <span>Author Name</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAuthorField(false);
-                        setAuthorName(discordDefaultName);
-                      }}
-                      className="text-[10px] text-[#a6a89e] hover:text-white cursor-pointer"
-                    >
-                      Reset to Discord
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={authorName}
-                    onChange={(e) => setAuthorName(e.target.value)}
-                    placeholder={discordDefaultName}
-                    maxLength={60}
-                    className="w-full xp-inset px-2.5 py-1.5 text-xs"
-                  />
-                </div>
-              )}
-            </div>
+                <input
+                  type="text"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  placeholder={discordDefaultName}
+                  maxLength={60}
+                  className="w-full xp-inset px-2.5 py-1.5 text-xs"
+                />
+              </div>
+            )}
           </div>
         </div>
 
