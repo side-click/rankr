@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { FileText, Lock, User } from "lucide-react";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
+import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import type {
@@ -38,6 +39,12 @@ interface CreateWorkspaceProps {
   initialEditionSlug?: string;
   initialBlog?: Blog | null;
   requireAllowlist?: boolean;
+  blockedUser?: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+    discordId: string | null;
+  } | null;
 }
 
 export function CreateWorkspace({
@@ -57,6 +64,7 @@ export function CreateWorkspace({
   initialEditionSlug,
   initialBlog,
   requireAllowlist = false,
+  blockedUser = null,
 }: CreateWorkspaceProps) {
   const [contentType, setContentType] = useState<CreateContentType>(initialType);
   const [activeTabDirty, setActiveTabDirty] = useState(false);
@@ -222,11 +230,16 @@ export function CreateWorkspace({
 
       {contentType === "champion_pool" ? (
         <ChampionPoolEditor
-          userId={userId}
+          userId={blockedUser ? null : userId}
           authorName={initialAuthorName || discordDefaultName}
           authorAvatarUrl={initialAuthorAvatarUrl}
           discordDefaultName={discordDefaultName}
           onUnsavedChange={setActiveTabDirty}
+        />
+      ) : blockedUser ? (
+        <AllowlistBlockedWindow
+          title="Publishable Content Editors - Invite Only"
+          user={blockedUser}
         />
       ) : !userId ? (
         <SignInRequiredWindow requireAllowlist={requireAllowlist} />

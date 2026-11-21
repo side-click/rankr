@@ -3,7 +3,6 @@ import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { checkUserAllowlisted } from "@/utils/allowlist";
 import { CreateWorkspace } from "@/components/CreateWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import type { Blog, CreateContentType } from "@/types/database";
 import { Lock } from "lucide-react";
@@ -108,15 +107,34 @@ export default async function RankPage({
   ]);
 
   if (!isAllowlisted) {
+    const blockedInitialType: CreateContentType =
+      params.type === "blog" || params.edit
+        ? "blog"
+        : params.type === "player"
+        ? "player"
+        : params.type === "team"
+        ? "team"
+        : "champion_pool";
+
     return (
-      <AllowlistBlockedWindow
-        title="Rankings Editor — Invite Only"
-        user={{
+      <CreateWorkspace
+        userId={user.id}
+        initialAuthorName={profile?.username ?? "Discord User"}
+        initialAuthorAvatarUrl={profile?.avatar_url ?? null}
+        discordDefaultName={profile?.username ?? "Discord User"}
+        blockedUser={{
           id: user.id,
           username: profile?.username ?? "Discord User",
           avatarUrl: profile?.avatar_url ?? null,
           discordId: profile?.discord_id ?? null,
         }}
+        seasons={[]}
+        divisions={[]}
+        themes={[]}
+        editions={[]}
+        teams={[]}
+        seasonPlayers={[]}
+        initialType={blockedInitialType}
       />
     );
   }

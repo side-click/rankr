@@ -27,9 +27,9 @@ export function AllowlistBlockedWindow({
           Invite-Only Authoring
         </h1>
         <p className="text-xs sm:text-sm text-[#c7c5b8] max-w-md mx-auto">
-          Creating and editing rankings is currently limited to authorized
-          Discord users. You can still browse all published rankings, or ask an
-          admin to allowlist your Discord ID
+          Creating and editing publishable content is currently limited to
+          authorized Discord users. You can still browse all published content,
+          or ask an admin to allowlist your Discord ID
           {user.discordId ? (
             <>
               :{" "}
