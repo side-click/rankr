@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupBlogMedia } from "@/utils/blogMedia";
 
 interface DeleteDraftButtonProps {
   ballotId: string;
@@ -55,6 +56,18 @@ export function DeleteDraftButton({
   async function handleConfirmDelete() {
     setDeleting(true);
     setError(null);
+
+    if (table === "blogs") {
+      const { data: blogRow } = await supabase
+        .from("blogs")
+        .select("banner_url, content")
+        .eq("id", ballotId)
+        .maybeSingle();
+      if (blogRow) {
+        await cleanupBlogMedia(supabase, blogRow.banner_url, blogRow.content);
+      }
+    }
+
     const { error: delError } = await supabase
       .from(table)
       .delete()

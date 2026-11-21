@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, Edit3, FileText, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupBlogMedia } from "@/utils/blogMedia";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BlogMarkdown } from "@/components/BlogMarkdown";
 import type { Blog } from "@/types/database";
@@ -74,6 +75,7 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
     setDeleting(true);
     setErrorMsg(null);
     const supabase = createClient();
+    await cleanupBlogMedia(supabase, blog.banner_url, blog.content);
     const { error } = await supabase.from("blogs").delete().eq("id", blog.id);
     if (error) {
       setErrorMsg(`Failed to delete: ${error.message}`);

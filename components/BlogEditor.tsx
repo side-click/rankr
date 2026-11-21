@@ -21,6 +21,10 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  cleanupBlogMedia,
+  optimizeBlogImageForUpload,
+} from "@/utils/blogMedia";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BlogMarkdown } from "@/components/BlogMarkdown";
 import type { Blog, Season } from "@/types/database";
@@ -120,15 +124,16 @@ export function BlogEditor({
       return null;
     }
 
+    const optimized = await optimizeBlogImageForUpload(file, prefix);
     const supabase = createClient();
-    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const ext = optimized.name.split(".").pop()?.toLowerCase() || "png";
     const path = `${userId}/${prefix}-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 7)}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
       .from("blog-media")
-      .upload(path, file, { upsert: true });
+      .upload(path, optimized, { upsert: true });
 
     if (uploadErr) {
       setErrorMsg(`Upload failed: ${uploadErr.message}`);
@@ -647,6 +652,7 @@ export function BlogEditor({
                     return;
                   }
                   const supabase = createClient();
+                  await cleanupBlogMedia(supabase, bannerUrl, content);
                   const { error } = await supabase
                     .from("blogs")
                     .delete()
