@@ -360,6 +360,25 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+  async function handleDeleteModerationEvent(evId: string, label: string) {
+    if (
+      !window.confirm(
+        `Permanently remove the moderation alert for "${label}" from the log?`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("moderation_events")
+      .delete()
+      .eq("id", evId);
+    if (!error) {
+      setModerationEvents((prev) => prev.filter((row) => row.id !== evId));
+    }
+    setBusy(false);
+  }
+
   async function refreshAll() {
     const [l, s, d, th, e, t, sp, cfg, prof, bal, allow] = await Promise.all([
       supabase.from("leagues").select("*").order("created_at", { ascending: true }),
@@ -3812,6 +3831,30 @@ export function AdminDashboard({
                         >
                           {ev.resolved ? "Reopen" : "Resolve"}
                         </button>
+                        {(ev.action === "blocked" ||
+                          ev.action === "auto_unpublished" ||
+                          ev.resolved ||
+                          !ev.content_id ||
+                          ((ev.content_type === "ranking" ||
+                            ev.content_type === "tierlist") &&
+                            !publishedBallots.some(
+                              (b) => b.id === ev.content_id
+                            ))) && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void handleDeleteModerationEvent(
+                                ev.id,
+                                ev.title_snapshot || ev.content_type
+                              )
+                            }
+                            className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                            title="Remove alert from log"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
