@@ -2,6 +2,10 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { ContentCardData } from "@/components/ContentCard";
 import {
+  RECENT_CONTENT_PAGE_SIZE,
+  RECENT_CONTENT_SELECT,
+} from "@/utils/recentContentQuery";
+import {
   computeAverageTeamRankings,
   type ConsensusRankingInput,
 } from "@/utils/averageRankings";
@@ -111,6 +115,7 @@ export interface HomeData {
   archivedSeasons: HomeSeasonSummary[];
   focusedSeason: HomeSeasonSummary | null;
   recentBallots: ContentCardData[];
+  recentSeasonIds: string[];
   divisionStandings: HomeDivisionStandings[];
   divisionTopPerformers: HomeDivisionTopPerformers[];
   topPerformers: HomeTopPerformer[];
@@ -366,31 +371,10 @@ export async function loadHomeData(
   // Query recent published ballots scoped to targetSeasons
   let ballotsQuery = supabase
     .from("rankings")
-    .select(
-      `
-      id,
-      title,
-      ranking_type,
-      tier_variant,
-      tier_data,
-      published_at,
-      season_id,
-      division_id,
-      league_name_snapshot,
-      season_name_snapshot,
-      division_name_snapshot,
-      division_logo_snapshot,
-      edition_name_snapshot,
-      profiles ( username, avatar_url ),
-      seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
-      divisions ( name, slug, theme_key, logo_url ),
-      editions ( name ),
-      ranking_entries ( rank, team_name_snapshot, teams ( name, logo_url ) )
-    `
-    )
+    .select(RECENT_CONTENT_SELECT)
     .eq("status", "published")
     .order("published_at", { ascending: false })
-    .limit(6);
+    .limit(RECENT_CONTENT_PAGE_SIZE);
 
   if (targetSeasonIds.length > 0) {
     ballotsQuery = ballotsQuery.in("season_id", targetSeasonIds);
@@ -520,6 +504,7 @@ export async function loadHomeData(
     archivedSeasons,
     focusedSeason,
     recentBallots: (recentBallotsRaw ?? []) as unknown as ContentCardData[],
+    recentSeasonIds: targetSeasonIds,
     divisionStandings,
     divisionTopPerformers,
     topPerformers,

@@ -68,6 +68,8 @@ export function getLeaguePrefix(
 
 export type ContentCardLayout = "grid" | "list";
 
+const NEW_WINDOW_MS = 48 * 60 * 60 * 1000;
+
 export function ContentCard({
   ballot,
   layout = "grid",
@@ -92,6 +94,15 @@ export function ContentCard({
   const sName = season?.name ?? ballot.season_name_snapshot ?? "";
   const leaguePrefix = getLeaguePrefix(league, ballot.league_name_snapshot);
   const leagueSeasonLabel = `${leaguePrefix ? `${leaguePrefix}: ` : ""}${sName}`;
+  const isNew =
+    !!ballot.published_at &&
+    Date.now() - new Date(ballot.published_at).getTime() < NEW_WINDOW_MS;
+  const newBadge = isNew ? (
+    <span className="shrink-0 px-1.5 py-px rounded bg-[#f0c020] text-[#1a1408] text-[10px] font-black uppercase tracking-wide leading-tight">
+      New!
+    </span>
+  ) : null;
+
   const publishedDate = ballot.published_at
     ? new Date(ballot.published_at).toLocaleDateString("en-US", {
         timeZone: "America/New_York",
@@ -196,8 +207,11 @@ export function ContentCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2 min-w-0">
-              <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                {edName}
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
+                  {edName}
+                </span>
+                {newBadge}
               </span>
               <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                 {displayLogo ? (
@@ -390,8 +404,11 @@ export function ContentCard({
         </div>
 
         <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
-          <div className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate pr-14">
-            {edName}
+          <div className="flex items-center gap-1.5 min-w-0 pr-14">
+            <span className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate">
+              {edName}
+            </span>
+            {newBadge}
           </div>
           <div
             style={{ color: resolvedTheme.accent_text_color }}

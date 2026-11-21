@@ -370,6 +370,11 @@ export function TeamRankingShareView({
   const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
   const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
 
+  const hasAnyCommentary = entries.some((e) => Boolean(e.commentary?.trim()));
+  const teamGridCols = hasAnyCommentary
+    ? "grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr]"
+    : "grid-cols-[68px_88px_1.2fr_1fr]";
+
   const headerAccentBg =
     theme === "dragon"
       ? "from-[#6b1a1c] via-[#3b1c4a] to-[#1e1024]"
@@ -627,13 +632,13 @@ export function TeamRankingShareView({
 
 
           <div
-            className="grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2"
+            className={`grid ${teamGridCols} gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2`}
           >
             <div className="text-center">Rank</div>
             <div className="text-center">Change</div>
             <div className="pl-[92px]">Team</div>
-            <div />
-            <div className="text-center">Comments</div>
+            {hasAnyCommentary ? <div /> : <div>Roster</div>}
+            {hasAnyCommentary && <div className="text-center">Comments</div>}
           </div>
 
           <div className="divide-y divide-white/10">
@@ -644,7 +649,7 @@ export function TeamRankingShareView({
                 <div
                   key={entry.id}
                   style={{ background: rankColor.cardBg }}
-                  className={`grid grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr] gap-x-3 items-center px-10 ${
+                  className={`grid ${teamGridCols} gap-x-3 items-center px-10 ${
                     isLast ? "pt-3.5 pb-6" : "py-3.5"
                   }`}
                 >
@@ -766,7 +771,9 @@ export function TeamRankingShareView({
                     </ul>
                   </div>
 
-                  <AutoFitComment text={entry.commentary} />
+                  {hasAnyCommentary && (
+                    <AutoFitComment text={entry.commentary} />
+                  )}
                 </div>
               );
             })}

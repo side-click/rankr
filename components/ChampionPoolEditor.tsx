@@ -1879,53 +1879,6 @@ export function ChampionPoolEditor({
           </div>
         </div>
 
-        {/* Row 2: Role Selector (right-justified) */}
-        <div className="flex flex-wrap items-center justify-end gap-2">
-            {LEAGUE_ROLES.map((r) => {
-              const sec = pool.roles[r.key];
-              const isRoleDirty =
-                JSON.stringify(sec ?? null) !==
-                (savedRolesJson[r.key] ?? "null");
-              const isActive = activeRole === r.key;
-
-              return (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setActiveRole(r.key)}
-                  className={`xp-btn text-xs sm:w-[104px] justify-center whitespace-nowrap ${
-                    isActive ? "xp-btn-gold" : ""
-                  }`}
-                >
-                  <img
-                    src={r.icon}
-                    alt={r.label}
-                    className="w-4 h-4 shrink-0"
-                  />
-                  <span className="hidden sm:inline">
-                    {r.label}
-                    <span className="inline-block w-2 text-left">
-                      {isRoleDirty ? "*" : ""}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-        </div>
-
-        {saveMessage && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded bg-[#11241a] border border-[#2f6343] text-xs text-[#7cd438]">
-            <CheckCircle2 className="w-4 h-4" />
-            {saveMessage}
-          </div>
-        )}
-
-        {saveError && (
-          <div className="px-3 py-2 rounded bg-[#2e1414] border border-[#ff857a]/40 text-xs text-[#ff857a]">
-            {saveError}
-          </div>
-        )}
-
         {changePassOpen && (
           <form
             onSubmit={handleChangePassphrase}
@@ -1967,6 +1920,52 @@ export function ChampionPoolEditor({
               Cancel
             </button>
           </form>
+        )}
+
+        {/* Row 2: Role Selector (right-justified) */}
+        <div className="grid grid-cols-5 gap-1.5">
+            {LEAGUE_ROLES.map((r) => {
+              const sec = pool.roles[r.key];
+              const isRoleDirty =
+                JSON.stringify(sec ?? null) !==
+                (savedRolesJson[r.key] ?? "null");
+              const isActive = activeRole === r.key;
+
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => setActiveRole(r.key)}
+                  title={isRoleDirty ? `${r.label} (unsaved changes)` : r.label}
+                  className={`relative p-2 rounded border flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
+                    isActive
+                      ? "bg-[#221d12] border-[#f0c020] text-[#f0c020]"
+                      : "bg-[#141820] border-white/10 text-[#a6a89e] hover:border-white/25"
+                  }`}
+                >
+                  {isRoleDirty && (
+                    <span className="absolute top-0.5 right-1 text-sm leading-none text-[#f0c020]">
+                      *
+                    </span>
+                  )}
+                  <img src={r.icon} alt={r.label} className="w-5 h-5" />
+                  <span>{r.label}</span>
+                </button>
+              );
+            })}
+        </div>
+
+        {saveMessage && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded bg-[#11241a] border border-[#2f6343] text-xs text-[#7cd438]">
+            <CheckCircle2 className="w-4 h-4" />
+            {saveMessage}
+          </div>
+        )}
+
+        {saveError && (
+          <div className="px-3 py-2 rounded bg-[#2e1414] border border-[#ff857a]/40 text-xs text-[#ff857a]">
+            {saveError}
+          </div>
         )}
 
         {/* Row 3: Tier & Save/Export Actions (right-justified) */}

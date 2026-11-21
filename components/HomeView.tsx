@@ -688,6 +688,7 @@ export function HomeView({ data }: { data: HomeData }) {
           <RecentContentPanel
             ballots={data.recentBallots}
             browseHref={browseHref}
+            seasonIds={data.recentSeasonIds}
           />
         )}
       </RetroWindow>
