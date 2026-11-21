@@ -1,4 +1,5 @@
 import {
+  BUILTIN_SAFE_WORDS,
   inspectMarkdownImages,
   type ModerationCategory,
   type ModerationFieldInput,
@@ -17,41 +18,6 @@ interface PatternRule {
   severity: "block" | "flag";
   regex: RegExp;
 }
-
-const BUILTIN_SAFE_WORDS = new Set([
-  "assassin",
-  "assassins",
-  "class",
-  "classic",
-  "knight",
-  "knights",
-  "night",
-  "scunthorpe",
-  "cassiopeia",
-  "fiddlesticks",
-  "grape",
-  "grapes",
-  "cocktail",
-  "cocktails",
-  "shaco",
-  "pass",
-  "passing",
-  "passed",
-  "bass",
-  "mass",
-  "grass",
-  "brass",
-  "glass",
-  "title",
-  "subtitle",
-  "analytics",
-  "analysis",
-  "banal",
-  "canal",
-  "therapist",
-  "scrape",
-  "scraping",
-]);
 
 // Lightweight deterministic fallback rules (no slurs stored in repo; AI moderation + DB rules handle broad speech)
 const DETERMINISTIC_RULES: PatternRule[] = [

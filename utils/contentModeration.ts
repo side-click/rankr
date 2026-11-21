@@ -25,6 +25,41 @@ export interface ModerationResult {
 
 const BLOG_MEDIA_PUBLIC_MARKER = "/storage/v1/object/public/blog-media/";
 
+export const BUILTIN_SAFE_WORDS = new Set([
+  "assassin",
+  "assassins",
+  "class",
+  "classic",
+  "knight",
+  "knights",
+  "night",
+  "scunthorpe",
+  "cassiopeia",
+  "fiddlesticks",
+  "grape",
+  "grapes",
+  "cocktail",
+  "cocktails",
+  "shaco",
+  "pass",
+  "passing",
+  "passed",
+  "bass",
+  "mass",
+  "grass",
+  "brass",
+  "glass",
+  "title",
+  "subtitle",
+  "analytics",
+  "analysis",
+  "banal",
+  "canal",
+  "therapist",
+  "scrape",
+  "scraping",
+]);
+
 export function inspectMarkdownImages(markdown: string | null | undefined): {
   totalImages: number;
   externalImages: number;

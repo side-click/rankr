@@ -26,6 +26,7 @@ import {
   type LeagueRole,
 } from "@/utils/roles";
 import { DEFAULT_DIVISION_THEMES } from "@/utils/themes";
+import { BUILTIN_SAFE_WORDS } from "@/utils/contentModeration";
 import {
   Archive,
   ArrowDown,
@@ -3509,14 +3510,9 @@ export function AdminDashboard({
 
           {/* Custom Moderation Rules (Allowlist / Block / Flag) */}
           <div className="xp-panel p-3 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                Custom Moderation Rules ({moderationRules.length})
-              </h2>
-              <span className="text-[11px] text-[#a6a89e]">
-                Allowlist overrides AI/filters • Block prevents publish • Flag alerts mods
-              </span>
-            </div>
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Custom Moderation Rules ({moderationRules.length})
+            </h2>
             {moderationRulesError ? (
               <div className="xp-inset p-3 text-xs text-[#a6a89e]">
                 Run migration{" "}
@@ -3557,40 +3553,136 @@ export function AdminDashboard({
                     + Add Rule
                   </button>
                 </form>
-                {moderationRules.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {moderationRules.map((rule) => {
-                      const pillColor =
-                        rule.rule_type === "allow"
-                          ? "border-[#2f6343] bg-[#11241a] text-[#7cd438]"
-                          : rule.rule_type === "block"
-                          ? "border-[#ff857a]/50 bg-[#3d1414] text-[#ff857a]"
-                          : "border-[#f0c020]/50 bg-[#3d2e12] text-[#f0c020]";
-                      return (
-                        <span
-                          key={rule.id}
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[11px] font-bold ${pillColor}`}
-                        >
-                          <span className="uppercase text-[9px] opacity-80">
-                            {rule.rule_type}
-                          </span>
-                          <span>{rule.term}</span>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              void handleDeleteModerationRule(rule.id)
-                            }
-                            className="hover:text-white cursor-pointer"
-                            title="Delete rule"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+
+                {(() => {
+                  const customAllow = moderationRules
+                    .filter((r) => r.rule_type === "allow")
+                    .map((r) => ({ id: r.id, term: r.term, builtIn: false }));
+                  const builtInAllow = Array.from(BUILTIN_SAFE_WORDS).map(
+                    (w) => ({ id: `builtin:${w}`, term: w, builtIn: true })
+                  );
+                  const allowList = [...customAllow, ...builtInAllow].sort(
+                    (a, b) => a.term.localeCompare(b.term)
+                  );
+                  const blockList = moderationRules
+                    .filter((r) => r.rule_type === "block")
+                    .sort((a, b) => a.term.localeCompare(b.term));
+                  const flagList = moderationRules
+                    .filter((r) => r.rule_type === "flag")
+                    .sort((a, b) => a.term.localeCompare(b.term));
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                      {/* Allowlist */}
+                      <div className="xp-inset p-2 space-y-1.5">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#7cd438]">
+                          Allowlist ({allowList.length})
+                        </div>
+                        <div className="max-h-[160px] overflow-y-auto divide-y divide-white/5 pr-1">
+                          {allowList.map((item) => (
+                            <div
+                              key={item.id}
+                              className="py-1 flex items-center justify-between gap-2 text-xs"
+                            >
+                              <span className="text-[#e8e5d8] truncate">
+                                {item.term}
+                              </span>
+                              {item.builtIn ? (
+                                <span className="text-[9px] uppercase text-[#6e7268] shrink-0">
+                                  built-in
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void handleDeleteModerationRule(item.id)
+                                  }
+                                  className="text-[#a6a89e] hover:text-[#ff857a] shrink-0 cursor-pointer"
+                                  title="Delete rule"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Block */}
+                      <div className="xp-inset p-2 space-y-1.5">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#ff857a]">
+                          Block ({blockList.length})
+                        </div>
+                        <div className="max-h-[160px] overflow-y-auto divide-y divide-white/5 pr-1">
+                          {blockList.length === 0 ? (
+                            <div className="py-2 text-[11px] text-[#6e7268]">
+                              No custom block rules
+                            </div>
+                          ) : (
+                            blockList.map((rule) => (
+                              <div
+                                key={rule.id}
+                                className="py-1 flex items-center justify-between gap-2 text-xs"
+                              >
+                                <span className="text-[#e8e5d8] truncate">
+                                  {rule.term}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void handleDeleteModerationRule(rule.id)
+                                  }
+                                  className="text-[#a6a89e] hover:text-[#ff857a] shrink-0 cursor-pointer"
+                                  title="Delete rule"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Flag */}
+                      <div className="xp-inset p-2 space-y-1.5">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#f0c020]">
+                          Flag ({flagList.length})
+                        </div>
+                        <div className="max-h-[160px] overflow-y-auto divide-y divide-white/5 pr-1">
+                          {flagList.length === 0 ? (
+                            <div className="py-2 text-[11px] text-[#6e7268]">
+                              No custom flag rules
+                            </div>
+                          ) : (
+                            flagList.map((rule) => (
+                              <div
+                                key={rule.id}
+                                className="py-1 flex items-center justify-between gap-2 text-xs"
+                              >
+                                <span className="text-[#e8e5d8] truncate">
+                                  {rule.term}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void handleDeleteModerationRule(rule.id)
+                                  }
+                                  className="text-[#a6a89e] hover:text-[#ff857a] shrink-0 cursor-pointer"
+                                  title="Delete rule"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
