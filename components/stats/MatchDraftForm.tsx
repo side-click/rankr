@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { getChampionIconUrl } from "@/utils/riotApi";
 
@@ -28,17 +29,44 @@ function ChampionMultiInput({
 }: ChampionMultiInputProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        wrapRef.current &&
+        !wrapRef.current.contains(target) &&
+        (!menuRef.current || !menuRef.current.contains(target))
+      ) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function updatePos() {
+      if (!wrapRef.current) return;
+      const r = wrapRef.current.getBoundingClientRect();
+      setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    updatePos();
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [open, value.length]);
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -117,30 +145,45 @@ function ChampionMultiInput({
         )}
       </div>
 
-      {open && filtered.length > 0 && value.length < max && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-40 max-h-48 overflow-y-auto rounded border border-[#c89b3c]/60 bg-[#141816] shadow-2xl divide-y divide-white/5">
-          {filtered.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => addChampion(c)}
-              className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-xs text-[#f0ede0] hover:bg-[#2a2210] cursor-pointer"
-            >
-              <img
-                src={getChampionIconUrl(c.id, ddVersion)}
-                alt={c.name}
-                className="w-4 h-4 rounded-xs object-cover shrink-0"
-              />
-              <span className="font-semibold">{c.name}</span>
-              {c.id !== c.name && (
-                <span className="text-[10px] text-[#8e9286] ml-auto">
-                  {c.id}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        filtered.length > 0 &&
+        value.length < max &&
+        menuRect &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: menuRect.top,
+              left: menuRect.left,
+              width: menuRect.width,
+            }}
+            className="z-50 max-h-48 overflow-y-auto rounded border border-[#c89b3c]/60 bg-[#141816] shadow-2xl divide-y divide-white/5"
+          >
+            {filtered.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => addChampion(c)}
+                className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-xs text-[#f0ede0] hover:bg-[#2a2210] cursor-pointer"
+              >
+                <img
+                  src={getChampionIconUrl(c.id, ddVersion)}
+                  alt={c.name}
+                  className="w-4 h-4 rounded-xs object-cover shrink-0"
+                />
+                <span className="font-semibold">{c.name}</span>
+                {c.id !== c.name && (
+                  <span className="text-[10px] text-[#8e9286] ml-auto">
+                    {c.id}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
