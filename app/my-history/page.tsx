@@ -469,7 +469,7 @@ export default async function MyRankingsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2 min-w-0">
                       <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                        {edName}
+                        {isPlayer ? "Player Tier List" : "Team Power Rankings"}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                         {displayLogo ? (
@@ -503,7 +503,7 @@ export default async function MyRankingsPage() {
                     </div>
                     <div className="lg:hidden text-[11px] text-[#c7c5b8] leading-snug">
                       <div className="truncate">
-                        {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                        {edName}
                         <span className="hidden sm:inline text-[#a6a89e]">
                           {" "}• {leagueSeasonLabel}
                         </span>
@@ -540,7 +540,7 @@ export default async function MyRankingsPage() {
                   </span>
                   <div className="whitespace-nowrap">
                     <div className="text-xs font-semibold text-[#c7c5b8]">
-                      {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                      {edName}
                     </div>
                     <div className="text-[11px] text-[#a6a89e]">
                       {leagueSeasonLabel}

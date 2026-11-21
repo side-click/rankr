@@ -218,7 +218,7 @@ export function ContentCard({
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="flex items-center gap-1.5 min-w-0">
                 <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                  {edName}
+                  {isPlayer ? "Player Tier List" : "Team Power Rankings"}
                 </span>
               </span>
               {hasPreview && (
@@ -278,7 +278,7 @@ export function ContentCard({
               {hasDivision ? divName : "All Divisions"}
             </div>
             <div className="lg:hidden text-[11px] text-[#c7c5b8] truncate">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"} •{" "}
+              {edName} •{" "}
               <span className="text-[#a6a89e]">{leagueSeasonLabel}</span>
             </div>
           </div>
@@ -309,7 +309,7 @@ export function ContentCard({
           </span>
           <div className="whitespace-nowrap">
             <div className="text-xs font-semibold text-[#c7c5b8]">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+              {edName}
             </div>
             <div className="text-[11px] text-[#a6a89e]">
               {leagueSeasonLabel}
@@ -445,7 +445,7 @@ export function ContentCard({
         <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
           <div className="flex items-center gap-1.5 min-w-0 pr-14">
             <span className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate">
-              {edName}
+              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
             </span>
           </div>
           <div
@@ -455,7 +455,7 @@ export function ContentCard({
             {hasDivision ? divName : "All Divisions"}
           </div>
           <div className="text-xs font-semibold text-[#c7c5b8] truncate">
-            {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+            {edName}
           </div>
           <div className="text-[11px] text-[#a6a89e] truncate">
             {leagueSeasonLabel}
