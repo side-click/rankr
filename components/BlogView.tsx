@@ -167,12 +167,12 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
               )}
             </div>
 
-            <h1 className="wow-heading text-2xl sm:text-4xl font-bold text-[#f0ede0] leading-tight">
+            <h1 className="wow-heading text-2xl sm:text-4xl font-bold text-[#f0ede0] leading-tight break-words [overflow-wrap:anywhere]">
               {blog.title}
             </h1>
 
             {blog.subtitle && (
-              <p className="text-base sm:text-lg text-[#c7c5b8] leading-snug">
+              <p className="text-base sm:text-lg text-[#c7c5b8] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
                 {blog.subtitle}
               </p>
             )}

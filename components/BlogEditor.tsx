@@ -309,14 +309,14 @@ export function BlogEditor({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
-                Season (Optional)
+                Associated Season (optional)
               </label>
               <select
                 value={seasonId}
                 onChange={(e) => setSeasonId(e.target.value)}
                 className="w-full xp-inset px-2.5 py-1.5 text-xs"
               >
-                <option value="">General (No Season)</option>
+                <option value="">General Post (No Associated Season)</option>
                 {seasons.map((s) => {
                   const prefix = getLeaguePrefix(s);
                   return (
@@ -389,8 +389,8 @@ export function BlogEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give your blog post a headline..."
-              maxLength={140}
-              className="w-full xp-inset px-3 py-2 text-sm font-bold"
+              maxLength={80}
+              className="w-full max-w-xl xp-inset px-3 py-2 text-sm font-bold"
             />
           </div>
 
@@ -403,8 +403,8 @@ export function BlogEditor({
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="A short deck or summary..."
-              maxLength={220}
-              className="w-full xp-inset px-3 py-1.5 text-xs"
+              maxLength={140}
+              className="w-full max-w-2xl xp-inset px-3 py-1.5 text-xs"
             />
           </div>
 
@@ -417,8 +417,8 @@ export function BlogEditor({
                 type="url"
                 value={bannerUrl}
                 onChange={(e) => setBannerUrl(e.target.value)}
-                placeholder="Paste an image or GIF URL, or upload..."
-                className="flex-1 min-w-[200px] xp-inset px-2.5 py-1.5 text-xs"
+                placeholder="Paste image/GIF URL or upload..."
+                className="w-full sm:w-72 xp-inset px-2.5 py-1.5 text-xs"
               />
               <input
                 ref={bannerInputRef}
@@ -448,15 +448,6 @@ export function BlogEditor({
                 </button>
               )}
             </div>
-            {bannerUrl && (
-              <div className="mt-2 relative rounded-lg overflow-hidden border border-white/15 bg-black/40 max-h-56">
-                <img
-                  src={bannerUrl}
-                  alt="Banner preview"
-                  className="w-full max-h-56 object-cover"
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -508,6 +499,7 @@ export function BlogEditor({
                   title="Subsection Heading (###)"
                 >
                   <Heading3 className="w-3.5 h-3.5" />
+                  <span>Subsection</span>
                 </button>
                 <button
                   type="button"
@@ -613,11 +605,11 @@ export function BlogEditor({
                     ? `${getLeaguePrefix(selectedSeason) ? `${getLeaguePrefix(selectedSeason)}: ` : ""}${selectedSeason.name}`
                     : "General"}
                 </div>
-                <h1 className="wow-heading text-2xl sm:text-3xl font-bold text-[#f0ede0]">
+                <h1 className="wow-heading text-2xl sm:text-3xl font-bold text-[#f0ede0] break-words [overflow-wrap:anywhere]">
                   {title.trim() || "Untitled Blog Post"}
                 </h1>
                 {subtitle.trim() && (
-                  <p className="text-sm sm:text-base text-[#c7c5b8]">
+                  <p className="text-sm sm:text-base text-[#c7c5b8] line-clamp-2 break-words [overflow-wrap:anywhere]">
                     {subtitle.trim()}
                   </p>
                 )}
