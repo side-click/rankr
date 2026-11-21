@@ -38,6 +38,7 @@ import { StatsDivisionTab } from "@/components/stats/StatsDivisionTab";
 import { StatsTeamsTab } from "@/components/stats/StatsTeamsTab";
 import { StatsUnrosteredModal } from "@/components/stats/StatsUnrosteredModal";
 import { RoleLeaderboardExportCard } from "@/components/stats/RoleLeaderboardExportCard";
+import { MatchDraftForm } from "@/components/stats/MatchDraftForm";
 import { getChampionCenteredSplashUrl, getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
@@ -1038,94 +1039,12 @@ export function StatsDashboard({
             );
           })()}
 
-          <details className="xp-inset p-2.5 text-xs">
-            <summary className="cursor-pointer font-bold text-[#f0c020] select-none">
-              + Add / Update Match Draft (public.match_drafts)
-            </summary>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const splitCsv = (raw: FormDataEntryValue | null) =>
-                  String(raw ?? "")
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                const res = await fetch("/api/admin/scdl-sheet-stats", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    gameId: fd.get("gameId"),
-                    seasonId,
-                    blueTeam: fd.get("blueTeam"),
-                    redTeam: fd.get("redTeam"),
-                    blueBans: splitCsv(fd.get("blueBans")),
-                    redBans: splitCsv(fd.get("redBans")),
-                    bluePicks: splitCsv(fd.get("bluePicks")),
-                    redPicks: splitCsv(fd.get("redPicks")),
-                    sourceUrl: fd.get("sourceUrl"),
-                  }),
-                });
-                const json = await res.json();
-                if (!res.ok) {
-                  setSheetError(json.error || "Failed to save draft");
-                } else {
-                  void loadSheetStats(true);
-                }
-              }}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2.5"
-            >
-              <input
-                name="gameId"
-                required
-                placeholder="Game ID (e.g. 5680632994)"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="blueTeam"
-                required
-                placeholder="Blue Team Name"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="redTeam"
-                required
-                placeholder="Red Team Name"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="blueBans"
-                placeholder="Blue Bans (B1-B5, comma-sep)"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="redBans"
-                placeholder="Red Bans (R1-R5, comma-sep)"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="sourceUrl"
-                placeholder="Draft URL (optional)"
-                className="xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                name="bluePicks"
-                placeholder="Blue Picks (B1-B5 in pick order, comma-sep)"
-                className="xp-inset px-2 py-1 text-xs sm:col-span-1"
-              />
-              <input
-                name="redPicks"
-                placeholder="Red Picks (R1-R5 in pick order, comma-sep)"
-                className="xp-inset px-2 py-1 text-xs sm:col-span-1"
-              />
-              <button
-                type="submit"
-                className="xp-btn xp-btn-primary text-xs justify-center"
-              >
-                Save Draft to DB
-              </button>
-            </form>
-          </details>
+          <MatchDraftForm
+            seasonId={seasonId}
+            ddVersion={ddVersion}
+            onSaved={() => void loadSheetStats(true)}
+            onError={(msg) => setSheetError(msg)}
+          />
         </div>
       </RetroWindow>
       )}
