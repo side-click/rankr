@@ -221,6 +221,32 @@ export function ContentCard({
                   {edName}
                 </span>
               </span>
+              {hasPreview && (
+                <div className="hidden md:flex lg:hidden items-center gap-1.5 shrink-0">
+                  {top3Teams[0] && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0ede0]">
+                      <span className="text-[#f0c020]">#1</span>
+                      {top3Teams[0].logoUrl && (
+                        <img
+                          src={top3Teams[0].logoUrl}
+                          alt={top3Teams[0].name}
+                          width={16}
+                          height={16}
+                          className="w-4 h-4 object-contain shrink-0"
+                        />
+                      )}
+                      <span className="whitespace-nowrap">
+                        {top3Teams[0].name}
+                      </span>
+                    </span>
+                  )}
+                  {playerConfigPreview && (
+                    <span className="inline-flex items-center px-2 py-1 rounded bg-black/30 border border-white/10 text-[11px] font-bold text-[#f0c020] whitespace-nowrap">
+                      {playerConfigPreview.presetLabel} Tiers
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                 {displayLogo ? (
                   <img
