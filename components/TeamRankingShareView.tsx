@@ -9,6 +9,8 @@ import {
   Copy,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   ImagePlus,
   Save,
   Trash2,
@@ -108,6 +110,8 @@ export function TeamRankingShareView({
   const [uploadingOverlay, setUploadingOverlay] = useState(false);
   const [savingOverlays, setSavingOverlays] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
+  const [hideComments, setHideComments] = useState(false);
+  const [hideRosters, setHideRosters] = useState(false);
 
   const profile = Array.isArray(ballot.profiles)
     ? ballot.profiles[0]
@@ -373,10 +377,14 @@ export function TeamRankingShareView({
   const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
   const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
 
-  const hasAnyCommentary = entries.some((e) => Boolean(e.commentary?.trim()));
+  const rawHasAnyCommentary = entries.some((e) => Boolean(e.commentary?.trim()));
+  const hasAnyCommentary = rawHasAnyCommentary && !hideComments;
+  const hasAnyRoster = entries.some(
+    (e) => normalizeRoster(e.roster_snapshot).length > 0
+  );
   const teamGridCols = hasAnyCommentary
-    ? "grid-cols-[68px_88px_1.2fr_0.85fr_2.05fr]"
-    : "grid-cols-[68px_88px_1.2fr_1fr]";
+    ? "grid-cols-[68px_88px_1.45fr_1.55fr]"
+    : "grid-cols-[68px_88px_1fr]";
 
   const headerAccentBg =
     theme === "dragon"
@@ -407,6 +415,36 @@ export function TeamRankingShareView({
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Ranking</span>
               </Link>
+            )}
+            {rawHasAnyCommentary && (
+              <button
+                type="button"
+                onClick={() => setHideComments((v) => !v)}
+                className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
+                title="Toggle comments in view and PNG export"
+              >
+                {hideComments ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
+              </button>
+            )}
+            {hasAnyRoster && (
+              <button
+                type="button"
+                onClick={() => setHideRosters((v) => !v)}
+                className={`xp-btn text-xs ${hideRosters ? "xp-btn-primary" : ""}`}
+                title="Toggle rosters in view and PNG export"
+              >
+                {hideRosters ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{hideRosters ? "Show Rosters" : "Hide Rosters"}</span>
+              </button>
             )}
             {canEditOverlays && !editingOverlays && (
               overlays.length > 0 ? (
@@ -640,7 +678,6 @@ export function TeamRankingShareView({
             <div className="text-center">Rank</div>
             <div className="text-center">Change</div>
             <div className="pl-[92px]">Team</div>
-            {hasAnyCommentary ? <div /> : <div>Roster</div>}
             {hasAnyCommentary && <div className="text-center">Comments</div>}
           </div>
 
@@ -680,43 +717,47 @@ export function TeamRankingShareView({
                     {ballot.season_id && ballot.division_id && entry.team_id ? (
                       <Link
                         href={`/stats/team/${encodeURIComponent(entry.team_id)}`}
-                        className="group flex items-center gap-3 min-w-0"
+                        className="w-20 h-20 shrink-0 flex items-center justify-center"
                         title={`View ${entry.team_name_snapshot} stats`}
                       >
-                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                          {entry.team_logo_snapshot ? (
-                            <img
-                              src={entry.team_logo_snapshot}
-                              alt={entry.team_name_snapshot}
-                              crossOrigin="anonymous"
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <span className="text-[9px] text-white/40">LOGO</span>
-                          )}
-                        </div>
-                        <div
-                          className={`font-black ${
-                            hasAnyCommentary ? "text-xl" : "text-2xl"
-                          } text-[#f7f5eb] group-hover:text-[#f0c020] transition-colors tracking-tight leading-tight`}
-                        >
-                          {entry.team_name_snapshot}
-                        </div>
+                        {entry.team_logo_snapshot ? (
+                          <img
+                            src={entry.team_logo_snapshot}
+                            alt={entry.team_name_snapshot}
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-white/40">LOGO</span>
+                        )}
                       </Link>
                     ) : (
-                      <>
-                        <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                          {entry.team_logo_snapshot ? (
-                            <img
-                              src={entry.team_logo_snapshot}
-                              alt={entry.team_name_snapshot}
-                              crossOrigin="anonymous"
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <span className="text-[9px] text-white/40">LOGO</span>
-                          )}
-                        </div>
+                      <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+                        {entry.team_logo_snapshot ? (
+                          <img
+                            src={entry.team_logo_snapshot}
+                            alt={entry.team_name_snapshot}
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-white/40">LOGO</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      {ballot.season_id && ballot.division_id && entry.team_id ? (
+                        <Link
+                          href={`/stats/team/${encodeURIComponent(entry.team_id)}`}
+                          className={`block font-black ${
+                            hasAnyCommentary ? "text-xl" : "text-2xl"
+                          } text-[#f7f5eb] hover:text-[#f0c020] transition-colors tracking-tight leading-tight`}
+                          title={`View ${entry.team_name_snapshot} stats`}
+                        >
+                          {entry.team_name_snapshot}
+                        </Link>
+                      ) : (
                         <div
                           className={`font-black ${
                             hasAnyCommentary ? "text-xl" : "text-2xl"
@@ -724,62 +765,69 @@ export function TeamRankingShareView({
                         >
                           {entry.team_name_snapshot}
                         </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <ul className="space-y-0.5 text-[11px] font-mono text-[#e5e3d8]">
-                      {normalizeRoster(entry.roster_snapshot).map(
-                        (slot, pIdx) => {
-                          const roleMeta = getRoleMeta(slot.role);
-                          const displayName =
-                            slot.name.split("#")[0].trim() || slot.name;
-                          return (
-                            <li
-                              key={pIdx}
-                              className="flex items-center gap-1.5 truncate"
-                            >
-                              <img
-                                src={roleMeta.icon}
-                                alt={roleMeta.label}
-                                crossOrigin="anonymous"
-                                className="w-3.5 h-3.5 object-contain shrink-0"
-                              />
-                              {ballot.season_id &&
-                              ballot.division_id &&
-                              displayName ? (
-                                <Link
-                                  href={`/stats/player/${encodeURIComponent(
-                                    slot.name.trim().toLowerCase()
-                                  )}${
-                                    ballot.seasons?.slug
-                                      ? `?season=${encodeURIComponent(
-                                          ballot.seasons.slug
-                                        )}`
-                                      : ""
-                                  }`}
-                                  className="truncate hover:text-[#f0c020] transition-colors"
-                                  title={`View ${displayName} stats`}
-                                >
-                                  {displayName}
-                                </Link>
-                              ) : (
-                                <span className="truncate">{displayName}</span>
-                              )}
-                              {slot.is_captain && (
-                                <img
-                                  src={CAPTAIN_ICON}
-                                  alt="Captain"
-                                  crossOrigin="anonymous"
-                                  className="w-3 h-3 object-contain shrink-0"
-                                />
-                              )}
-                            </li>
-                          );
-                        }
                       )}
-                    </ul>
+
+                      {!hideRosters &&
+                        normalizeRoster(entry.roster_snapshot).length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                            {normalizeRoster(entry.roster_snapshot).map(
+                              (slot, pIdx) => {
+                                const roleMeta = getRoleMeta(slot.role);
+                                const displayName =
+                                  slot.name.split("#")[0].trim() || slot.name;
+                                const pillContent = (
+                                  <>
+                                    <img
+                                      src={roleMeta.icon}
+                                      alt={roleMeta.label}
+                                      crossOrigin="anonymous"
+                                      className="w-3 h-3 object-contain shrink-0"
+                                    />
+                                    <span className="truncate max-w-[120px]">
+                                      {displayName}
+                                    </span>
+                                    {slot.is_captain && (
+                                      <img
+                                        src={CAPTAIN_ICON}
+                                        alt="Captain"
+                                        crossOrigin="anonymous"
+                                        className="w-3 h-3 object-contain shrink-0"
+                                      />
+                                    )}
+                                  </>
+                                );
+                                return ballot.season_id &&
+                                  ballot.division_id &&
+                                  displayName ? (
+                                  <Link
+                                    key={pIdx}
+                                    href={`/stats/player/${encodeURIComponent(
+                                      slot.name.trim().toLowerCase()
+                                    )}${
+                                      ballot.seasons?.slug
+                                        ? `?season=${encodeURIComponent(
+                                            ballot.seasons.slug
+                                          )}`
+                                        : ""
+                                    }`}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/40 hover:bg-black/60 border border-white/10 hover:border-[#f0c020]/50 text-[11px] text-[#d6d3c4] hover:text-[#f0c020] transition"
+                                    title={`View ${displayName} stats`}
+                                  >
+                                    {pillContent}
+                                  </Link>
+                                ) : (
+                                  <span
+                                    key={pIdx}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/40 border border-white/10 text-[11px] text-[#d6d3c4]"
+                                  >
+                                    {pillContent}
+                                  </span>
+                                );
+                              }
+                            )}
+                          </div>
+                        )}
+                    </div>
                   </div>
 
                   {hasAnyCommentary && (

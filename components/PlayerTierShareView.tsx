@@ -9,6 +9,8 @@ import {
   Copy,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   ImagePlus,
   Save,
   Trash2,
@@ -389,13 +391,15 @@ export function PlayerTierShareView({
     return filtered.length > 0 ? filtered : activeSections;
   }, [tierData.splitByRole, activeSections, roleFilter]);
 
-  const hasAnyCommentary = useMemo(
+  const rawHasAnyCommentary = useMemo(
     () =>
       activeSections.some((sec) =>
         sec.tiers.some((t) => Boolean(t.commentary?.trim()))
       ),
     [activeSections]
   );
+  const [hideComments, setHideComments] = useState(false);
+  const hasAnyCommentary = rawHasAnyCommentary && !hideComments;
 
   const isMultiRoleCompact =
     tierData.splitByRole && roleFilter === "all" && visibleSections.length > 1;
@@ -639,6 +643,21 @@ export function PlayerTierShareView({
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Tier List</span>
               </Link>
+            )}
+            {rawHasAnyCommentary && (
+              <button
+                type="button"
+                onClick={() => setHideComments((v) => !v)}
+                className={`xp-btn text-xs ${hideComments ? "xp-btn-primary" : ""}`}
+                title="Toggle comments in view and PNG export"
+              >
+                {hideComments ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
+              </button>
             )}
             {canEditOverlays && !editingOverlays && (
               overlays.length > 0 ? (
