@@ -117,6 +117,7 @@ export interface HomeData {
   liveSeasons: HomeSeasonSummary[];
   archivedSeasons: HomeSeasonSummary[];
   focusedSeason: HomeSeasonSummary | null;
+  hasExplicitSeasonFocus: boolean;
   recentBallots: ContentCardData[];
   recentContent: ContentItem[];
   recentSeasonIds: string[];
@@ -391,7 +392,9 @@ export async function loadHomeData(
     .order("published_at", { ascending: false })
     .limit(RECENT_CONTENT_PAGE_SIZE);
 
-  if (focusedSeason) {
+  const hasExplicitSeasonFocus = Boolean(focusedSeasonSlug && focusedSeason);
+
+  if (hasExplicitSeasonFocus && focusedSeason) {
     blogsQuery = blogsQuery.eq("season_id", focusedSeason.id);
   } else if (targetSeasonIds.length > 0) {
     blogsQuery = blogsQuery.or(
@@ -547,6 +550,7 @@ export async function loadHomeData(
     liveSeasons,
     archivedSeasons,
     focusedSeason,
+    hasExplicitSeasonFocus,
     recentBallots,
     recentContent,
     recentSeasonIds: targetSeasonIds,
