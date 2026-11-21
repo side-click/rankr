@@ -33,6 +33,7 @@ import {
   RotateCcw,
   Save,
   Search,
+  Settings,
   ShieldCheck,
   Trash2,
   Unlock,
@@ -367,7 +368,24 @@ function DroppableTierRow({
   activeGapId: string | null;
   iconsOnly?: boolean;
 }) {
+  const [showControls, setShowControls] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showControls) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(e.target as Node)
+      ) {
+        setShowControls(false);
+        setShowColorPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showControls]);
 
   const { setNodeRef: setBlindRef, isOver: isOverBlind } = useDroppable({
     id: `tier-blind:${tier.id}`,
@@ -389,7 +407,17 @@ function DroppableTierRow({
 
   const contrastColor = getTierContrastText(tier.color);
   const labelLen = (tier.label || "").trim().length;
-  const labelSizeClass = labelLen <= 18 ? "text-2xl" : "text-sm";
+  const labelSizeClass = !showControls
+    ? labelLen <= 4
+      ? "text-4xl"
+      : labelLen <= 18
+      ? "text-2xl"
+      : "text-base"
+    : labelLen <= 4
+    ? "text-2xl"
+    : labelLen <= 18
+    ? "text-lg"
+    : "text-sm";
   const blindableChamps = tier.champions.filter((c) => Boolean(c.isBlindable));
   const generalChamps = tier.champions.filter((c) => !c.isBlindable);
 
@@ -398,32 +426,59 @@ function DroppableTierRow({
       <div className="flex flex-col sm:flex-row">
         {/* Tier Label & Controls (matches PlayerTierEditor) */}
         <div
-          className="md:w-[152px] sm:w-36 shrink-0 p-2.5 flex flex-row sm:flex-col items-center justify-between gap-2 border-b sm:border-b-0 sm:border-r border-black/30 rounded-t sm:rounded-tr-none sm:rounded-l"
+          ref={headerRef}
+          className={`relative md:w-[152px] sm:w-36 shrink-0 p-2.5 pl-7 sm:pl-2.5 flex flex-row sm:flex-col items-center ${
+            showControls ? "justify-between" : "justify-center"
+          } gap-2 border-b sm:border-b-0 sm:border-r border-black/30 rounded-t sm:rounded-tr-none sm:rounded-l`}
           style={{ backgroundColor: tier.color, color: contrastColor }}
         >
-          <div className="inline-grid items-center justify-items-center max-w-full">
-            <span
-              aria-hidden="true"
-              className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 font-black ${labelSizeClass} leading-tight text-center min-w-[2ch] max-w-[132px]`}
-            >
-              {(tier.label || "Tier...") + "\u200b"}
-            </span>
-            <textarea
-              rows={1}
-              cols={1}
-              value={tier.label}
-              onChange={(e) =>
-                onLabelChange(e.target.value.replace(/\r?\n/g, " "))
-              }
-              maxLength={40}
-              placeholder="Tier..."
-              aria-label="Tier label"
-              style={{ color: contrastColor }}
-              className={`col-start-1 row-start-1 w-full h-full min-w-0 resize-none overflow-hidden bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black ${labelSizeClass} leading-tight focus:outline-none placeholder:text-white/50`}
-            />
+          <div className="flex-1 flex items-center justify-center w-full min-w-0">
+            <div className="inline-grid items-center justify-items-center max-w-full">
+              <span
+                aria-hidden="true"
+                className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 font-black ${labelSizeClass} leading-tight text-center min-w-[2ch] max-w-[132px]`}
+              >
+                {(tier.label || "Tier...") + "\u200b"}
+              </span>
+              <textarea
+                rows={1}
+                cols={1}
+                value={tier.label}
+                onChange={(e) =>
+                  onLabelChange(e.target.value.replace(/\r?\n/g, " "))
+                }
+                maxLength={40}
+                placeholder="Tier..."
+                aria-label="Tier label"
+                style={{ color: contrastColor }}
+                className={`col-start-1 row-start-1 w-full h-full min-w-0 resize-none overflow-hidden bg-transparent focus:bg-black/30 focus:ring-1 focus:ring-white/30 rounded px-2 py-1 text-center font-black ${labelSizeClass} leading-tight focus:outline-none placeholder:text-white/50 transition-colors`}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowControls((prev) => {
+                if (prev) setShowColorPicker(false);
+                return !prev;
+              });
+            }}
+            title={showControls ? "Hide tier controls" : "Tier settings"}
+            aria-label={showControls ? "Hide tier controls" : "Show tier controls"}
+            aria-expanded={showControls}
+            style={{ color: contrastColor }}
+            className={`absolute bottom-1.5 left-1.5 z-10 w-5 h-5 flex items-center justify-center rounded transition-opacity cursor-pointer ${
+              showControls
+                ? "opacity-90 bg-black/25"
+                : "opacity-40 hover:opacity-90"
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+
+          {showControls && (
+            <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
             <button
               type="button"
               onClick={() => setShowColorPicker((prev) => !prev)}
@@ -507,6 +562,7 @@ function DroppableTierRow({
               <ArrowDown className="w-3 h-3" />
             </button>
           </div>
+          )}
         </div>
 
         {/* Droppable Blindable (Front) + General (Main) Zones */}
@@ -1165,7 +1221,7 @@ export function ChampionPoolEditor({
         hour: "numeric",
         minute: "2-digit",
       });
-      setSaveMessage(`${activeRoleMeta.label} pool saved at ${timeStr}`);
+      setSaveMessage(`All pools saved at ${timeStr}`);
     } catch (err) {
       setSaveError(
         err instanceof Error ? err.message : "Failed to save champion pool."
@@ -1485,7 +1541,11 @@ export function ChampionPoolEditor({
       : "";
   const effectiveTitle = customTitleValue || defaultRoleTitle;
   const displayAuthorName =
-    customAuthorInput.trim() || discordDefaultName || savedAuthorName;
+    customAuthorInput.trim() ||
+    discordDefaultName ||
+    savedAuthorName ||
+    authorName ||
+    "Anonymous";
 
   if (loadingRecord) {
     return (
@@ -1688,28 +1748,28 @@ export function ChampionPoolEditor({
         {/* Row 1: Name Shown + Custom Author + Custom Title (left) | Change Passphrase + Lock (top-right) */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 flex flex-wrap items-center gap-2">
-            {displayAuthorName && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAuthorInExport((v) => !v);
-                  setShowCustomAuthor(false);
-                }}
-                title={
-                  showAuthorInExport
-                    ? "Hide Discord name on exported PNG"
-                    : "Show Discord name on exported PNG"
-                }
-                className="xp-btn text-xs"
-              >
-                {showAuthorInExport ? (
-                  <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5 text-[#a6a89e]" />
-                )}
-                <span>{showAuthorInExport ? "Name Shown" : "Name Hidden"}</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowAuthorInExport((v) => !v);
+                setShowCustomAuthor(false);
+              }}
+              title={
+                showAuthorInExport
+                  ? "Hide author name on exported PNG"
+                  : "Show author name on exported PNG"
+              }
+              className="xp-btn text-xs"
+            >
+              {showAuthorInExport ? (
+                <EyeOff className="w-3.5 h-3.5 text-[#a6a89e]" />
+              ) : (
+                <Eye className="w-3.5 h-3.5 text-[#f0c020]" />
+              )}
+              <span>
+                {showAuthorInExport ? "Hide Author Name" : "Show Author Name"}
+              </span>
+            </button>
 
             {showAuthorInExport && (
               <div className="relative">
@@ -1922,8 +1982,9 @@ export function ChampionPoolEditor({
           </form>
         )}
 
-        {/* Row 2: Role Selector (right-justified) */}
-        <div className="grid grid-cols-5 gap-1.5">
+        {/* Row 2: Role Selector (compact, right-justified) */}
+        <div className="flex justify-end">
+          <div className="w-full max-w-[420px] grid grid-cols-5 gap-1.5">
             {LEAGUE_ROLES.map((r) => {
               const sec = pool.roles[r.key];
               const isRoleDirty =
@@ -1953,14 +2014,8 @@ export function ChampionPoolEditor({
                 </button>
               );
             })}
-        </div>
-
-        {saveMessage && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded bg-[#11241a] border border-[#2f6343] text-xs text-[#7cd438]">
-            <CheckCircle2 className="w-4 h-4" />
-            {saveMessage}
           </div>
-        )}
+        </div>
 
         {saveError && (
           <div className="px-3 py-2 rounded bg-[#2e1414] border border-[#ff857a]/40 text-xs text-[#ff857a]">
@@ -1968,8 +2023,17 @@ export function ChampionPoolEditor({
           </div>
         )}
 
-        {/* Row 3: Tier & Save/Export Actions (right-justified) */}
-        <div className="flex flex-wrap items-center justify-end gap-2 pb-3 border-b border-white/10 text-xs">
+        {/* Row 3: Save status (left) + Tier & Save/Export Actions (right-justified) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10 text-xs">
+          <div>
+            {saveMessage && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#11241a] border border-[#2f6343] text-xs text-[#7cd438]">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>{saveMessage}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => {
@@ -2017,6 +2081,7 @@ export function ChampionPoolEditor({
             <Download className="w-3.5 h-3.5" />
             {exportingPng ? "Exporting..." : "Export PNG"}
           </button>
+          </div>
         </div>
 
         {/* Drag-and-Drop Tier Board + Unplaced Champion Picker */}

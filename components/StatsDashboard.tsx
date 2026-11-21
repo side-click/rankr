@@ -37,6 +37,7 @@ import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { StatsDivisionTab } from "@/components/stats/StatsDivisionTab";
 import { StatsTeamsTab } from "@/components/stats/StatsTeamsTab";
 import { StatsUnrosteredModal } from "@/components/stats/StatsUnrosteredModal";
+import { RoleLeaderboardExportCard } from "@/components/stats/RoleLeaderboardExportCard";
 import { getChampionCenteredSplashUrl, getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
@@ -233,8 +234,11 @@ export function StatsDashboard({
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [showUnrosteredModal, setShowUnrosteredModal] = useState(false);
   const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
+  const [exportingRoleLeaderboard, setExportingRoleLeaderboard] =
+    useState(false);
   const [copiedRatingBlurb, setCopiedRatingBlurb] = useState(false);
   const leaderboardCardRef = useRef<HTMLDivElement>(null);
+  const roleExportCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -323,6 +327,14 @@ export function StatsDashboard({
     };
   }, [selectedDivisionTheme]);
 
+  const bannerGradient = useMemo(
+    () =>
+      selectedDivisionTheme
+        ? getThemeGradients(selectedDivisionTheme).bannerGradient
+        : "linear-gradient(135deg, #1b3626 0%, #121615 100%)",
+    [selectedDivisionTheme]
+  );
+
   const showLeaderboards =
     divisions.length <= 1 || selectedDivision !== null;
 
@@ -350,6 +362,33 @@ export function StatsDashboard({
       link.click();
     } finally {
       setExportingLeaderboard(false);
+    }
+  }
+
+  async function handleExportRoleLeaderboardPng() {
+    if (!roleExportCardRef.current || roleFilter === "all") return;
+    setExportingRoleLeaderboard(true);
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      const exportHeight = Math.ceil(roleExportCardRef.current.offsetHeight);
+      const dataUrl = await toPng(roleExportCardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 800,
+        height: exportHeight,
+        style: { margin: "0" },
+      });
+      const link = document.createElement("a");
+      const divPart = selectedDivision?.slug || "league";
+      link.download = `${divPart}-${roleFilter}-leaderboard.png`
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, "-");
+      link.href = dataUrl;
+      link.click();
+    } finally {
+      setExportingRoleLeaderboard(false);
     }
   }
 
@@ -812,6 +851,19 @@ export function StatsDashboard({
       return sortAsc ? av - bv : bv - av;
     });
   }, [filteredPlayers, roleFilter, sortKey, sortAsc]);
+
+  const roleLeaderboardPlayers = useMemo(() => {
+    if (roleFilter === "all") return [];
+    return filteredPlayers
+      .filter((p) => p.role === roleFilter)
+      .sort(
+        (a, b) =>
+          b.leagueRating - a.leagueRating ||
+          b.games - a.games ||
+          b.kda - a.kda ||
+          a.displayName.localeCompare(b.displayName)
+      );
+  }, [filteredPlayers, roleFilter]);
 
   const sortColorByPlayerKey = useMemo(() => {
     const map = new Map<string, string>();
@@ -1791,9 +1843,6 @@ export function StatsDashboard({
 
           const cardBorderColor =
             selectedDivisionTheme?.primary_color ?? "#c89b3c";
-          const bannerGradient = selectedDivisionTheme
-            ? getThemeGradients(selectedDivisionTheme).bannerGradient
-            : "linear-gradient(135deg, #1b3626 0%, #121615 100%)";
 
           const featuredRatingCard = (
             <div
@@ -2288,6 +2337,26 @@ export function StatsDashboard({
                   <span>{r.label}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={handleExportRoleLeaderboardPng}
+                disabled={
+                  roleFilter === "all" ||
+                  roleLeaderboardPlayers.length === 0 ||
+                  exportingRoleLeaderboard
+                }
+                title={
+                  roleFilter === "all"
+                    ? "Select a role to export its Role Leaderboard PNG"
+                    : `Export ${getRoleMeta(roleFilter).label} Leaderboard PNG`
+                }
+                className="xp-btn xp-btn-gold text-[10px] px-2.5 py-1 flex items-center gap-1.5 ml-1"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>
+                  {exportingRoleLeaderboard ? "Exporting..." : "Export PNG"}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -2605,6 +2674,24 @@ export function StatsDashboard({
           unrosteredPlayers={sheetData.unrosteredPlayers}
           onClose={() => setShowUnrosteredModal(false)}
         />
+      )}
+
+      {roleFilter !== "all" && roleLeaderboardPlayers.length > 0 && (
+        <div className="fixed -left-[9999px] top-0 pointer-events-none">
+          <div ref={roleExportCardRef} className="w-[800px] p-2.5">
+            <RoleLeaderboardExportCard
+              role={roleFilter}
+              players={roleLeaderboardPlayers}
+              leagueName={leagueName}
+              leagueLogoUrl={leagueLogoUrl}
+              seasonName={seasonName}
+              divisionName={selectedDivision?.name ?? "League"}
+              divisionLogoUrl={selectedDivision?.logo_url ?? null}
+              currentEditionName={currentEditionName}
+              bannerGradient={bannerGradient}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

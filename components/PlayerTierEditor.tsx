@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Save,
   Send,
+  Settings,
   Trash2,
   X,
 } from "lucide-react";
@@ -424,8 +425,38 @@ function DroppableTierRow({
     },
   });
 
+  const [showControls, setShowControls] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showControls) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(e.target as Node)
+      ) {
+        setShowControls(false);
+        setShowColorPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showControls]);
+
   const contrastText = getTierContrastText(tier.color);
+  const labelLen = (tier.label || "").trim().length;
+  const labelSizeClass = !showControls
+    ? labelLen <= 3
+      ? "text-3xl"
+      : labelLen <= 8
+      ? "text-lg"
+      : "text-sm"
+    : labelLen <= 3
+    ? "text-xl"
+    : labelLen <= 8
+    ? "text-sm"
+    : "text-xs";
 
   return (
     <div
@@ -438,33 +469,61 @@ function DroppableTierRow({
       <div className="flex flex-col md:flex-row items-stretch">
         {/* Left: Tier Badge + Editable Label + Tier Row Controls */}
         <div
+          ref={headerRef}
           style={{
             backgroundColor: tier.color,
             color: contrastText,
           }}
-          className="md:w-[152px] shrink-0 p-2.5 flex flex-row md:flex-col items-center justify-between gap-2 border-b md:border-b-0 md:border-r border-black/30 rounded-t-lg md:rounded-t-none md:rounded-l-lg"
+          className={`relative md:w-[152px] shrink-0 p-2.5 pl-7 md:pl-2.5 flex flex-row md:flex-col items-center ${
+            showControls ? "justify-between" : "justify-center"
+          } gap-2 border-b md:border-b-0 md:border-r border-black/30 rounded-t-lg md:rounded-t-none md:rounded-l-lg`}
         >
-          <div className="inline-grid items-center justify-items-center max-w-full">
-            <span
-              aria-hidden="true"
-              className="col-start-1 row-start-1 invisible whitespace-pre px-2 py-1 font-black text-sm leading-tight min-w-[2ch]"
-            >
-              {tier.label || "Tier..."}
-            </span>
-            <input
-              type="text"
-              size={1}
-              disabled={disabled}
-              value={tier.label}
-              maxLength={13}
-              onChange={(e) => onLabelChange(e.target.value)}
-              placeholder="Tier..."
-              style={{ color: contrastText }}
-              className="col-start-1 row-start-1 w-full min-w-0 bg-black/15 hover:bg-black/25 focus:bg-black/30 rounded px-2 py-1 text-center font-black text-sm leading-tight focus:outline-none placeholder:text-white/50 disabled:opacity-75"
-            />
+          <div className="flex-1 flex items-center justify-center w-full min-w-0">
+            <div className="inline-grid items-center justify-items-center max-w-full">
+              <span
+                aria-hidden="true"
+                className={`col-start-1 row-start-1 invisible whitespace-pre px-2 py-1 font-black ${labelSizeClass} leading-tight min-w-[2ch]`}
+              >
+                {tier.label || "Tier..."}
+              </span>
+              <input
+                type="text"
+                size={1}
+                disabled={disabled}
+                value={tier.label}
+                maxLength={13}
+                onChange={(e) => onLabelChange(e.target.value)}
+                placeholder="Tier..."
+                style={{ color: contrastText }}
+                className={`col-start-1 row-start-1 w-full min-w-0 bg-transparent focus:bg-black/30 focus:ring-1 focus:ring-white/30 rounded px-2 py-1 text-center font-black ${labelSizeClass} leading-tight focus:outline-none placeholder:text-white/50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
           </div>
 
           {!disabled && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowControls((prev) => {
+                  if (prev) setShowColorPicker(false);
+                  return !prev;
+                });
+              }}
+              title={showControls ? "Hide tier controls" : "Tier settings"}
+              aria-label={showControls ? "Hide tier controls" : "Show tier controls"}
+              aria-expanded={showControls}
+              style={{ color: contrastText }}
+              className={`absolute bottom-1.5 left-1.5 z-10 w-5 h-5 flex items-center justify-center rounded transition-opacity cursor-pointer ${
+                showControls
+                  ? "opacity-90 bg-black/25"
+                  : "opacity-40 hover:opacity-90"
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {!disabled && showControls && (
             <div className="grid grid-cols-3 gap-1 shrink-0 items-center justify-items-center relative">
               <button
                 type="button"

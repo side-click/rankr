@@ -98,8 +98,16 @@ export function ContentCard({
     !!ballot.published_at &&
     Date.now() - new Date(ballot.published_at).getTime() < NEW_WINDOW_MS;
   const newBadge = isNew ? (
-    <span className="shrink-0 px-1.5 py-px rounded bg-[#f0c020] text-[#1a1408] text-[10px] font-black uppercase tracking-wide leading-tight">
-      New!
+    <span aria-label="New" className="retro-new-badge">
+      {["N", "E", "W", "!"].map((ch, i) => (
+        <span
+          key={i}
+          style={{ animationDelay: `${i * 0.12}s` }}
+          className="retro-new-letter"
+        >
+          {ch}
+        </span>
+      ))}
     </span>
   ) : null;
 
@@ -182,8 +190,9 @@ export function ContentCard({
             : `/rankings/${ballot.id}`
         }
         style={cardStyle}
-        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_auto_1fr] xl:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
+        className="xp-panel relative overflow-hidden px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_165px_auto_1fr] xl:grid-cols-[148px_135px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
+        {newBadge}
         {/* Mobile/Tablet top row / Desktop Col 1 + Col 2 */}
         <div className="flex items-center gap-3 min-w-0 lg:contents">
           <div className="w-36 sm:w-40 lg:w-full shrink-0 flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
@@ -211,7 +220,6 @@ export function ContentCard({
                 <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
                   {edName}
                 </span>
-                {newBadge}
               </span>
               <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                 {displayLogo ? (
@@ -357,8 +365,9 @@ export function ContentCard({
           : `/rankings/${ballot.id}`
       }
       style={cardStyle}
-      className="xp-panel relative p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
+      className="xp-panel relative overflow-hidden p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
+      {newBadge}
       <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
         {displayLogo ? (
           <img
@@ -408,7 +417,6 @@ export function ContentCard({
             <span className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate">
               {edName}
             </span>
-            {newBadge}
           </div>
           <div
             style={{ color: resolvedTheme.accent_text_color }}
