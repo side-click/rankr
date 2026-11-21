@@ -37,9 +37,17 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
     blog.league_name_snapshot ||
     "";
   const seasonName = season?.name ?? blog.season_name_snapshot ?? "";
-  const seasonLabel = seasonName
+  const hasSeason = Boolean(seasonName);
+  const scopeLabel = hasSeason
     ? `${leaguePrefix ? `${leaguePrefix}: ` : ""}${seasonName}`
-    : "General";
+    : "Blog Post";
+  const seasonLogo = hasSeason ? league?.logo_url ?? null : null;
+
+  const truncatedTitle =
+    blog.title.length > 42 ? `${blog.title.slice(0, 42)}...` : blog.title;
+  const windowTitle = hasSeason
+    ? `${scopeLabel} Blog Post - ${truncatedTitle}`
+    : `Blog Post - ${truncatedTitle}`;
 
   const publishedDate = blog.published_at
     ? new Date(blog.published_at).toLocaleDateString("en-US", {
@@ -77,7 +85,7 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
   }
 
   return (
-    <RetroWindow title={blog.title} theme="scdl">
+    <RetroWindow title={windowTitle} theme="scdl">
       <div className="space-y-5">
         {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
@@ -148,22 +156,26 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
           )}
 
           <header className="space-y-3 border-b border-[#c89b3c]/25 pb-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c2b42] border border-[#60a5fa]/40 text-[11px] font-bold text-[#93c5fd]">
-                <FileText className="w-3 h-3" />
-                <span>Blog</span>
-              </span>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#d4d2c5]">
+              <FileText className="w-4 h-4 text-[#f0c020] shrink-0" />
+              {seasonLogo && (
+                <img
+                  src={seasonLogo}
+                  alt={scopeLabel}
+                  width={18}
+                  height={18}
+                  className="w-[18px] h-[18px] object-contain shrink-0"
+                />
+              )}
               {season?.slug ? (
                 <Link
                   href={`/browse?season=${encodeURIComponent(season.slug)}`}
-                  className="px-2 py-0.5 rounded bg-black/35 border border-[#c89b3c]/35 text-[11px] font-bold text-[#f0c020] hover:border-[#f0c020]"
+                  className="text-[#f0c020] hover:underline"
                 >
-                  {seasonLabel}
+                  {scopeLabel}
                 </Link>
               ) : (
-                <span className="px-2 py-0.5 rounded bg-black/35 border border-white/15 text-[11px] font-bold text-[#c7c5b8]">
-                  {seasonLabel}
-                </span>
+                <span>{scopeLabel}</span>
               )}
             </div>
 

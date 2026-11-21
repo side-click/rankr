@@ -47,9 +47,11 @@ export function BlogCard({
     blog.author_name?.trim() || profile?.username || "Unknown";
   const leaguePrefix = getLeaguePrefix(league, blog.league_name_snapshot);
   const seasonName = season?.name ?? blog.season_name_snapshot ?? "";
-  const scopeLabel = seasonName
+  const hasSeason = Boolean(seasonName);
+  const scopeLabel = hasSeason
     ? `${leaguePrefix ? `${leaguePrefix}: ` : ""}${seasonName}`
-    : "General";
+    : "Blog Post";
+  const seasonLogo = hasSeason ? league?.logo_url ?? null : null;
 
   const publishedDate = blog.published_at
     ? new Date(blog.published_at).toLocaleDateString("en-US", {
@@ -69,7 +71,7 @@ export function BlogCard({
       <Link
         href={`/blog/${blog.id}`}
         style={cardStyle}
-        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_1fr_auto] lg:items-center lg:gap-3"
+        className="xp-panel px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
         <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-black/25 border border-white/10 min-w-0">
           {profile?.avatar_url ? (
@@ -90,6 +92,31 @@ export function BlogCard({
           </span>
         </div>
 
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-8 h-8 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0">
+            <FileText className="w-4 h-4 text-[#f0c020]" />
+          </div>
+          <div className="min-w-0 leading-tight">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#f0ede0] whitespace-nowrap">
+              {seasonLogo && (
+                <img
+                  src={seasonLogo}
+                  alt={scopeLabel}
+                  width={16}
+                  height={16}
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+              )}
+              <span>{scopeLabel}</span>
+            </div>
+            {hasSeason && (
+              <div className="text-[11px] text-[#a6a89e] whitespace-nowrap">
+                Blog Post
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center gap-3 min-w-0">
           {blog.banner_url && (
             <img
@@ -99,14 +126,8 @@ export function BlogCard({
             />
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1c2b42] border border-[#60a5fa]/40 text-[10px] font-bold text-[#93c5fd] shrink-0">
-                <FileText className="w-2.5 h-2.5" />
-                <span>Blog</span>
-              </span>
-              <span className="wow-heading text-base font-bold text-[#f0ede0] truncate">
-                {blog.title}
-              </span>
+            <div className="wow-heading text-base font-bold text-[#f0ede0] truncate">
+              {blog.title}
             </div>
             {blog.subtitle && (
               <p className="text-xs text-[#c7c5b8] truncate mt-0.5">
@@ -116,11 +137,8 @@ export function BlogCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between lg:justify-end gap-2 text-[11px] text-[#a6a89e] shrink-0">
-          <span className="px-2 py-0.5 rounded bg-black/30 border border-white/10 text-[#d4d2c5] font-semibold">
-            {scopeLabel}
-          </span>
-          {publishedDate && <span>{publishedDate}</span>}
+        <div className="text-[11px] text-[#a6a89e] whitespace-nowrap text-right shrink-0">
+          {publishedDate ? `Published ${publishedDate}` : ""}
         </div>
       </Link>
     );
@@ -132,7 +150,7 @@ export function BlogCard({
       style={cardStyle}
       className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-3"
     >
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 min-w-0">
         {blog.banner_url && (
           <div className="rounded overflow-hidden border border-white/15 bg-black/30 h-32">
             <img
@@ -143,22 +161,33 @@ export function BlogCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 text-[11px]">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1c2b42] border border-[#60a5fa]/40 font-bold text-[#93c5fd]">
-            <FileText className="w-3 h-3" />
-            <span>Blog</span>
-          </span>
-          <span className="px-2 py-0.5 rounded bg-black/30 border border-white/10 text-[#d4d2c5] font-semibold truncate">
-            {scopeLabel}
-          </span>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-[#d4d2c5]">
+            {seasonLogo && (
+              <img
+                src={seasonLogo}
+                alt={scopeLabel}
+                width={16}
+                height={16}
+                className="w-4 h-4 object-contain shrink-0"
+              />
+            )}
+            <span className="truncate">{scopeLabel}</span>
+          </div>
+          <div
+            className="w-7 h-7 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0"
+            title="Blog Post"
+          >
+            <FileText className="w-4 h-4 text-[#f0c020]" />
+          </div>
         </div>
 
-        <div>
-          <h3 className="wow-heading text-base font-bold text-[#f0ede0] line-clamp-2 leading-snug">
+        <div className="min-w-0">
+          <h3 className="wow-heading text-base font-bold text-[#f0ede0] truncate leading-snug">
             {blog.title}
           </h3>
           {blog.subtitle && (
-            <p className="text-xs text-[#c7c5b8] line-clamp-2 mt-1">
+            <p className="text-xs text-[#c7c5b8] line-clamp-2 break-words [overflow-wrap:anywhere] mt-1">
               {blog.subtitle}
             </p>
           )}
@@ -184,7 +213,7 @@ export function BlogCard({
         </div>
         {publishedDate && (
           <span className="text-[11px] text-[#a6a89e] shrink-0">
-            {publishedDate}
+            Published {publishedDate}
           </span>
         )}
       </div>
