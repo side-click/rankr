@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       supabase
         .from("blogs")
         .select(
-          "id, title, subtitle, content, author_name, status, user_id, league_name_snapshot, season_name_snapshot"
+          "id, title, subtitle, content, banner_url, author_name, status, user_id, league_name_snapshot, season_name_snapshot"
         )
         .eq("id", blogId)
         .eq("user_id", user.id)
@@ -89,7 +89,13 @@ export async function POST(request: Request) {
       blog.content,
     ]);
 
-    if (flagged.length === 0) {
+    const isFlagged = flagged.length > 0;
+    const hasBanner = Boolean(blog.banner_url?.trim());
+    const inlineImageCount = (blog.content?.match(/!\[[^\]]*\]\([^)]+\)/g) ?? [])
+      .length;
+    const hasMedia = hasBanner || inlineImageCount > 0;
+
+    if (!isFlagged && !hasMedia) {
       return NextResponse.json({ ok: true, skipped: true });
     }
 
@@ -109,9 +115,11 @@ export async function POST(request: Request) {
           : {}),
         embeds: [
           {
-            title: "⚠️ Flagged Blog Published",
+            title: isFlagged
+              ? "⚠️ Flagged Blog Published"
+              : "📢 Blog Published",
             url: blogUrl,
-            color: 0xe84a1b,
+            color: isFlagged ? 0xe84a1b : 0x2d5a3f,
             description: `**${blog.title}**\n${
               blog.season_name_snapshot
                 ? `${
@@ -131,9 +139,26 @@ export async function POST(request: Request) {
               },
               {
                 name: "Moderation Check",
-                value: `Matched terms: \`${flagged.join("`, `")}\``,
+                value: isFlagged
+                  ? `Matched terms: \`${flagged.join("`, `")}\``
+                  : "No flagged terms detected",
                 inline: true,
               },
+              ...(hasMedia
+                ? [
+                    {
+                      name: "Images",
+                      value: `${hasBanner ? "Banner attached" : "No banner"}${
+                        inlineImageCount > 0
+                          ? ` • ${inlineImageCount} inline image${
+                              inlineImageCount === 1 ? "" : "s"
+                            }`
+                          : ""
+                      }`,
+                      inline: true,
+                    },
+                  ]
+                : []),
               {
                 name: "Link",
                 value: `[Open Blog](${blogUrl})`,
@@ -146,7 +171,7 @@ export async function POST(request: Request) {
       }),
     }).catch(() => {});
 
-    return NextResponse.json({ ok: true, flagged: true });
+    return NextResponse.json({ ok: true, flagged: isFlagged });
   }
 
   const [{ data: ballot }, { data: entries }, { data: profile }] =

@@ -80,12 +80,12 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
               </div>
               <div className="p-4 space-y-4 bg-[#1a1c23] text-xs text-[#d6d3c4]">
                 <p className="leading-relaxed">
-                  Sign-in and publishing rankings are currently for{" "}
+                  Publishing content is currently for{" "}
                   <strong className="text-[#f0c020]">
                     authorized creators only
                   </strong>
-                  . You can still browse and view all rankings without signing
-                  in.
+                  . You can still browse all published content and statistics
+                  without signing in.
                 </p>
                 <div className="flex items-center justify-end gap-2">
                   <button
