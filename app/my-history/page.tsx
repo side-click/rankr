@@ -16,6 +16,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "My History | Rankr",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const dynamic = "force-dynamic";
