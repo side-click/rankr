@@ -75,7 +75,7 @@ export function HomeView({ data }: { data: HomeData }) {
                     Create
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build and share power rankings and tier lists
+                    Drop your hot takes, then click to share
                   </div>
                 </div>
               </Link>
