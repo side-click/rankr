@@ -62,7 +62,7 @@ export function RecentContentPanel({
 
   return (
     <div className="space-y-3">
-      <ContentListGrid ballots={items} defaultView="list" />
+      <ContentListGrid ballots={items} defaultView="list" showViewToggle={false} />
       <div className="flex justify-end gap-2">
         {hasMore && (
           <button

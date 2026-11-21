@@ -11,6 +11,7 @@ import {
 interface ContentListGridProps {
   ballots: ContentCardData[];
   defaultView?: ContentCardLayout;
+  showViewToggle?: boolean;
   emptyMessage?: string;
   showCount?: boolean;
   headerLeft?: React.ReactNode;
@@ -19,6 +20,7 @@ interface ContentListGridProps {
 export function ContentListGrid({
   ballots,
   defaultView = "grid",
+  showViewToggle = true,
   emptyMessage = "No published rankings match your filters.",
   showCount = false,
   headerLeft,
@@ -35,47 +37,51 @@ export function ContentListGrid({
 
   return (
     <div className="space-y-3">
-      <div
-        className={`flex-wrap items-center justify-between gap-2 ${
-          headerLeft || showCount ? "flex" : "hidden md:flex"
-        }`}
-      >
-        <div className="text-[11px] text-[#a6a89e]">
-          {headerLeft
-            ? headerLeft
-            : showCount
-            ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
-            : null}
+      {(headerLeft || showCount || showViewToggle) && (
+        <div
+          className={`flex-wrap items-center justify-between gap-2 ${
+            headerLeft || showCount ? "flex" : "hidden md:flex"
+          }`}
+        >
+          <div className="text-[11px] text-[#a6a89e]">
+            {headerLeft
+              ? headerLeft
+              : showCount
+              ? `${ballots.length} ${ballots.length === 1 ? "ranking" : "rankings"}`
+              : null}
+          </div>
+          {showViewToggle && (
+            <div className="xp-inset p-0.5 hidden md:inline-flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                aria-label="Grid view"
+                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
+                    : "text-[#c7c5b8] hover:text-white"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                aria-label="List view"
+                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
+                  viewMode === "list"
+                    ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
+                    : "text-[#c7c5b8] hover:text-white"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>List</span>
+              </button>
+            </div>
+          )}
         </div>
-        <div className="xp-inset p-0.5 hidden md:inline-flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
-            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
-              viewMode === "grid"
-                ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
-                : "text-[#c7c5b8] hover:text-white"
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Grid</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-xs cursor-pointer transition-colors ${
-              viewMode === "list"
-                ? "bg-[#2a2210] border border-[#c89b3c] text-[#f0c020]"
-                : "text-[#c7c5b8] hover:text-white"
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>List</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
