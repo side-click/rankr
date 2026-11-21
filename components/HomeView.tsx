@@ -75,7 +75,7 @@ export function HomeView({ data }: { data: HomeData }) {
                     Create
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Build and share power rankings, tier lists, and blogs
+                    Build and share power rankings and tier lists
                   </div>
                 </div>
               </Link>
@@ -90,7 +90,7 @@ export function HomeView({ data }: { data: HomeData }) {
                     Browse Content
                   </div>
                   <div className="text-xs text-[#a6a89e] mt-0.5">
-                    Explore rankings, tier lists, and blogs published on Rankr
+                    Explore everything published on Rankr
                   </div>
                 </div>
               </Link>
