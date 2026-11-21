@@ -10,12 +10,14 @@ interface DeleteDraftButtonProps {
   ballotId: string;
   title: string;
   status?: "draft" | "published";
+  table?: "rankings" | "blogs";
 }
 
 export function DeleteDraftButton({
   ballotId,
   title,
   status = "draft",
+  table = "rankings",
 }: DeleteDraftButtonProps) {
   const isPublished = status === "published";
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -28,7 +30,7 @@ export function DeleteDraftButton({
     setDeleting(true);
     setError(null);
     const { error: delError } = await supabase
-      .from("rankings")
+      .from(table)
       .delete()
       .eq("id", ballotId);
 
