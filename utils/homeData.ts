@@ -392,11 +392,7 @@ export async function loadHomeData(
     .order("published_at", { ascending: false })
     .limit(RECENT_CONTENT_PAGE_SIZE);
 
-  const hasExplicitSeasonFocus = Boolean(focusedSeasonSlug && focusedSeason);
-
-  if (hasExplicitSeasonFocus && focusedSeason) {
-    blogsQuery = blogsQuery.eq("season_id", focusedSeason.id);
-  } else if (targetSeasonIds.length > 0) {
+  if (targetSeasonIds.length > 0) {
     blogsQuery = blogsQuery.or(
       `season_id.in.(${targetSeasonIds.join(",")}),season_id.is.null`
     );

@@ -73,9 +73,7 @@ export function RecentContentPanel({
         .eq("status", "published")
         .order("published_at", { ascending: false })
         .limit(RECENT_CONTENT_PAGE_SIZE);
-      if (hasFocusedSeason && seasonIds.length > 0) {
-        blogsQuery = blogsQuery.in("season_id", seasonIds);
-      } else if (seasonIds.length > 0) {
+      if (seasonIds.length > 0) {
         blogsQuery = blogsQuery.or(
           `season_id.in.(${seasonIds.join(",")}),season_id.is.null`
         );
