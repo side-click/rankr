@@ -158,24 +158,28 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
           <header className="space-y-3 border-b border-[#c89b3c]/25 pb-5">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#d4d2c5]">
               <FileText className="w-4 h-4 text-[#f0c020] shrink-0" />
-              {seasonLogo && (
-                <img
-                  src={seasonLogo}
-                  alt={scopeLabel}
-                  width={18}
-                  height={18}
-                  className="w-[18px] h-[18px] object-contain shrink-0"
-                />
-              )}
-              {season?.slug ? (
-                <Link
-                  href={`/browse?season=${encodeURIComponent(season.slug)}`}
-                  className="text-[#f0c020] hover:underline"
-                >
-                  {scopeLabel}
-                </Link>
-              ) : (
-                <span>{scopeLabel}</span>
+              {hasSeason && (
+                <>
+                  {seasonLogo && (
+                    <img
+                      src={seasonLogo}
+                      alt={scopeLabel}
+                      width={18}
+                      height={18}
+                      className="w-[18px] h-[18px] object-contain shrink-0"
+                    />
+                  )}
+                  {season?.slug ? (
+                    <Link
+                      href={`/browse?season=${encodeURIComponent(season.slug)}`}
+                      className="text-[#f0c020] hover:underline"
+                    >
+                      {scopeLabel}
+                    </Link>
+                  ) : (
+                    <span>{scopeLabel}</span>
+                  )}
+                </>
               )}
             </div>
 

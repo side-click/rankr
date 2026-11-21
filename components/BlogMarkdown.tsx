@@ -43,16 +43,24 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
           p: ({ children }) => (
             <p className="text-[15px] leading-7 text-[#e4e1d4]">{children}</p>
           ),
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#f0c020] underline decoration-[#f0c020]/50 hover:decoration-[#f0c020] hover:text-[#ffe57f] transition-colors"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            const rawHref = href ?? "";
+            const normalizedHref =
+              rawHref &&
+              !/^(https?:\/\/|mailto:|\/|#)/i.test(rawHref)
+                ? `https://${rawHref}`
+                : rawHref;
+            return (
+              <a
+                href={normalizedHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#f0c020] underline decoration-[#f0c020]/50 hover:decoration-[#f0c020] hover:text-[#ffe57f] transition-colors"
+              >
+                {children}
+              </a>
+            );
+          },
           strong: ({ children }) => (
             <strong className="font-extrabold text-[#f8f6ee]">{children}</strong>
           ),

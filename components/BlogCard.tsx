@@ -150,73 +150,58 @@ export function BlogCard({
       style={cardStyle}
       className="xp-panel p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-3"
     >
-      <div className="space-y-2.5 min-w-0">
-        {blog.banner_url && (
-          <div className="rounded overflow-hidden border border-white/15 bg-black/30 h-32">
-            <img
-              src={blog.banner_url}
-              alt={blog.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-[#d4d2c5]">
-            {seasonLogo && (
-              <img
-                src={seasonLogo}
-                alt={scopeLabel}
-                width={16}
-                height={16}
-                className="w-4 h-4 object-contain shrink-0"
-              />
-            )}
-            <span className="truncate">{scopeLabel}</span>
-          </div>
-          <div
-            className="w-7 h-7 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0"
-            title="Blog Post"
-          >
-            <FileText className="w-4 h-4 text-[#f0c020]" />
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          <h3 className="wow-heading text-base font-bold text-[#f0ede0] truncate leading-snug">
-            {blog.title}
-          </h3>
-          {blog.subtitle && (
-            <p className="text-xs text-[#c7c5b8] line-clamp-2 break-words [overflow-wrap:anywhere] mt-1">
-              {blog.subtitle}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10 text-xs">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center gap-1.5 p-2 rounded bg-black/25 border border-white/10">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={authorDisplay}
-              className="w-6 h-6 rounded-full object-cover border border-white/30 shrink-0"
+              className="w-14 h-14 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (
-            <span className="w-6 h-6 rounded-full bg-[#2563eb] text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
+            <span className="w-14 h-14 rounded-md bg-[#2563eb] text-white text-xl font-bold inline-flex items-center justify-center shrink-0">
               {authorDisplay.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <span className="font-bold text-[#f0c020] truncate">
+          <span className="text-xs font-bold text-[#f0c020] truncate w-full text-center">
             {authorDisplay}
           </span>
         </div>
-        {publishedDate && (
-          <span className="text-[11px] text-[#a6a89e] shrink-0">
-            Published {publishedDate}
-          </span>
-        )}
+
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center justify-end gap-1.5">
+            {seasonLogo && (
+              <img
+                src={seasonLogo}
+                alt={scopeLabel}
+                width={22}
+                height={22}
+                className="w-[22px] h-[22px] object-contain shrink-0"
+              />
+            )}
+            <div
+              className="w-7 h-7 rounded bg-black/35 border border-[#c89b3c]/40 flex items-center justify-center shrink-0"
+              title="Blog Post"
+            >
+              <FileText className="w-4 h-4 text-[#f0c020]" />
+            </div>
+          </div>
+
+          <div className="text-xs font-bold text-[#d4d2c5]">Blog Post</div>
+          {hasSeason && (
+            <div className="text-xs text-[#a6a89e] truncate">{scopeLabel}</div>
+          )}
+          <h3 className="wow-heading text-sm font-bold text-[#f0ede0] line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug pt-0.5">
+            {blog.title}
+          </h3>
+        </div>
       </div>
+
+      {publishedDate && (
+        <div className="text-[11px] text-[#a6a89e] text-right">
+          Published {publishedDate}
+        </div>
+      )}
     </Link>
   );
 }
