@@ -218,7 +218,7 @@ export function ContentCard({
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="flex items-center gap-1.5 min-w-0">
                 <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                  {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                  {isPlayer ? "Player Tier List" : "Power Rankings"}
                 </span>
               </span>
               {hasPreview && (
@@ -445,7 +445,7 @@ export function ContentCard({
         <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
           <div className="flex items-center gap-1.5 min-w-0 pr-14">
             <span className="wow-heading text-base sm:text-[17px] font-bold text-[#f0ede0] leading-tight truncate">
-              {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+              {isPlayer ? "Player Tier List" : "Power Rankings"}
             </span>
           </div>
           <div

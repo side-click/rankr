@@ -469,7 +469,7 @@ export default async function MyRankingsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2 min-w-0">
                       <span className="wow-heading text-base font-bold text-[#f0ede0] leading-tight truncate">
-                        {isPlayer ? "Player Tier List" : "Team Power Rankings"}
+                        {isPlayer ? "Player Tier List" : "Power Rankings"}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
                         {displayLogo ? (
