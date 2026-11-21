@@ -34,6 +34,10 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  evaluateContentModeration,
+  formatBlockedMessage,
+} from "@/utils/contentModeration";
 import type {
   Division,
   DivisionTheme,
@@ -1609,6 +1613,43 @@ export function PlayerTierEditor({
       const defaultTitle = `${scopeTitle} — ${
         currentEdition?.name ?? "Edition"
       }`;
+
+      if (targetStatus === "published") {
+        const mod = evaluateContentModeration([
+          { field: "Author Name", value: resolvedAuthor },
+          { field: "Title", value: defaultTitle },
+          { field: "General Notes", value: authorNotes },
+          ...(tierPayload?.sections ?? []).flatMap((sec) =>
+            sec.tiers.flatMap((t) => [
+              { field: `Tier "${t.label || "Untitled"}" Name`, value: t.label },
+              {
+                field: `Tier "${t.label || "Untitled"}" Notes`,
+                value: t.commentary,
+              },
+            ])
+          ),
+        ]);
+        if (mod.action === "block") {
+          setMessage({
+            type: "error",
+            text: formatBlockedMessage(mod.blockedFields),
+          });
+          setSaving(false);
+          fetch("/api/moderation/report-block", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentType: "tierlist",
+              contentId: existingBallotId,
+              title: defaultTitle,
+              blockedFields: mod.blockedFields,
+              categories: mod.categories,
+              matchedTerms: mod.matchedTerms,
+            }),
+          }).catch(() => {});
+          return;
+        }
+      }
 
       const payload = {
         user_id: userId,

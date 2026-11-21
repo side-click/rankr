@@ -156,6 +156,24 @@ export function AdminDashboard({
   >(initialPublishedBallots);
   const [allowedUsers, setAllowedUsers] =
     useState<AllowedDiscordUser[]>(initialAllowedUsers);
+  const [moderationEvents, setModerationEvents] = useState<
+    {
+      id: string;
+      user_id: string | null;
+      content_type: "ranking" | "tierlist" | "blog";
+      content_id: string | null;
+      action: "blocked" | "auto_unpublished" | "flagged" | "media_review";
+      categories: string[];
+      field_names: string[];
+      matched_terms: string[];
+      title_snapshot: string | null;
+      resolved: boolean;
+      resolved_at: string | null;
+      created_at: string;
+    }[]
+  >([]);
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationError, setModerationError] = useState<string | null>(null);
   const [newAllowedDiscordId, setNewAllowedDiscordId] = useState("");
   const [newAllowedLabel, setNewAllowedLabel] = useState("");
   const [userSearch, setUserSearch] = useState("");
@@ -237,6 +255,55 @@ export function AdminDashboard({
     bot: "",
     support: "",
   });
+
+  async function loadModerationEvents() {
+    setModerationLoading(true);
+    setModerationError(null);
+    try {
+      const { data, error } = await supabase
+        .from("moderation_events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(40);
+      if (error) {
+        setModerationError(error.message);
+      } else if (data) {
+        setModerationEvents(data);
+      }
+    } finally {
+      setModerationLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "moderation") {
+      void loadModerationEvents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  async function handleToggleModerationResolved(
+    evId: string,
+    currentResolved: boolean
+  ) {
+    setBusy(true);
+    const nextResolved = !currentResolved;
+    const resolvedAt = nextResolved ? new Date().toISOString() : null;
+    const { error } = await supabase
+      .from("moderation_events")
+      .update({ resolved: nextResolved, resolved_at: resolvedAt })
+      .eq("id", evId);
+    if (!error) {
+      setModerationEvents((prev) =>
+        prev.map((row) =>
+          row.id === evId
+            ? { ...row, resolved: nextResolved, resolved_at: resolvedAt }
+            : row
+        )
+      );
+    }
+    setBusy(false);
+  }
 
   async function refreshAll() {
     const [l, s, d, th, e, t, sp, cfg, prof, bal, allow] = await Promise.all([
@@ -3384,6 +3451,139 @@ export function AdminDashboard({
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* Moderation Alerts Log */}
+          <div className="xp-panel p-3 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+                Moderation Alerts Log ({moderationEvents.length})
+              </h2>
+              <button
+                type="button"
+                disabled={moderationLoading}
+                onClick={() => void loadModerationEvents()}
+                className="xp-btn text-[11px] px-2.5 py-1"
+              >
+                {moderationLoading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+            {moderationError ? (
+              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                Run migration{" "}
+                <code className="text-[#f0c020]">028_moderation_events.sql</code>{" "}
+                in Supabase to enable the Moderation Alerts Log.
+              </div>
+            ) : moderationEvents.length === 0 ? (
+              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                {moderationLoading
+                  ? "Loading moderation events..."
+                  : "No moderation events recorded yet."}
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+                {moderationEvents.map((ev) => {
+                  const authorProfile = ev.user_id
+                    ? profiles.find((p) => p.id === ev.user_id)
+                    : null;
+                  const contentHref =
+                    ev.content_id &&
+                    ev.action !== "blocked" &&
+                    ev.action !== "auto_unpublished"
+                      ? ev.content_type === "blog"
+                        ? `/blog/${ev.content_id}`
+                        : ev.content_type === "tierlist"
+                        ? `/tierlist/${ev.content_id}`
+                        : `/rankings/${ev.content_id}`
+                      : null;
+                  const badgeStyle =
+                    ev.action === "blocked" || ev.action === "auto_unpublished"
+                      ? "bg-[#3d1414] border-[#ff857a]/60 text-[#ff857a]"
+                      : ev.action === "flagged"
+                      ? "bg-[#3d2e12] border-[#f0c020]/60 text-[#f0c020]"
+                      : "bg-[#11241a] border-[#2f6343] text-[#7cd438]";
+                  const actionLabel =
+                    ev.action === "auto_unpublished"
+                      ? "Auto-Unpublished"
+                      : ev.action === "media_review"
+                      ? "Media Review"
+                      : ev.action === "blocked"
+                      ? "Blocked"
+                      : "Flagged";
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`xp-inset p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs ${
+                        ev.resolved ? "opacity-55" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 space-y-0.5 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase ${badgeStyle}`}
+                          >
+                            {actionLabel}
+                          </span>
+                          <span className="font-bold text-[#f0ede0] truncate">
+                            {ev.title_snapshot || `Untitled ${ev.content_type}`}
+                          </span>
+                          <span className="text-[11px] text-[#a6a89e]">
+                            by{" "}
+                            <strong className="text-[#d6d3c4]">
+                              {authorProfile?.username ?? "Unknown"}
+                            </strong>
+                          </span>
+                          <span className="text-[10px] text-[#8e9286]">
+                            • {new Date(ev.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#a6a89e] flex flex-wrap gap-x-3 gap-y-0.5">
+                          {ev.field_names.length > 0 && (
+                            <span>Fields: {ev.field_names.join(", ")}</span>
+                          )}
+                          {ev.categories.length > 0 && (
+                            <span>
+                              Categories: {ev.categories.join(", ")}
+                            </span>
+                          )}
+                          {ev.matched_terms.length > 0 && (
+                            <span className="text-[#ff857a]">
+                              Terms: {ev.matched_terms.join(", ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {contentHref && (
+                          <Link
+                            href={contentHref}
+                            className="xp-btn text-[11px] px-2 py-1"
+                            title="Open published content"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            void handleToggleModerationResolved(
+                              ev.id,
+                              ev.resolved
+                            )
+                          }
+                          className={`xp-btn text-[11px] px-2.5 py-1 ${
+                            ev.resolved ? "" : "xp-btn-primary"
+                          }`}
+                        >
+                          {ev.resolved ? "Reopen" : "Resolve"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

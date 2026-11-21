@@ -33,6 +33,10 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  evaluateContentModeration,
+  formatBlockedMessage,
+} from "@/utils/contentModeration";
 import type {
   Division,
   DivisionTheme,
@@ -740,6 +744,38 @@ export function TeamRankingEditor({
       const defaultTitle = `${currentDivision?.name ?? "Division"} — ${
         currentEdition?.name ?? "Edition"
       }`;
+
+      if (targetStatus === "published") {
+        const mod = evaluateContentModeration([
+          { field: "Author Name", value: resolvedAuthor },
+          { field: "Title", value: defaultTitle },
+          { field: "General Notes", value: authorNotes },
+          ...rankedItems.map((item) => ({
+            field: `${item.team.name} Commentary`,
+            value: item.commentary,
+          })),
+        ]);
+        if (mod.action === "block") {
+          setMessage({
+            type: "error",
+            text: formatBlockedMessage(mod.blockedFields),
+          });
+          setSaving(false);
+          fetch("/api/moderation/report-block", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentType: "ranking",
+              contentId: existingBallotId,
+              title: defaultTitle,
+              blockedFields: mod.blockedFields,
+              categories: mod.categories,
+              matchedTerms: mod.matchedTerms,
+            }),
+          }).catch(() => {});
+          return;
+        }
+      }
 
       const currentLeague = Array.isArray(currentSeason?.leagues)
         ? currentSeason?.leagues[0]

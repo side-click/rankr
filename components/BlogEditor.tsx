@@ -25,6 +25,10 @@ import {
   cleanupBlogMedia,
   optimizeBlogImageForUpload,
 } from "@/utils/blogMedia";
+import {
+  evaluateContentModeration,
+  formatBlockedMessage,
+} from "@/utils/contentModeration";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BlogMarkdown } from "@/components/BlogMarkdown";
 import type { Blog, Season } from "@/types/database";
@@ -224,6 +228,34 @@ export function BlogEditor({
     if (targetStatus === "published" && !content.trim()) {
       setErrorMsg("Please write some content before publishing.");
       return;
+    }
+
+    if (targetStatus === "published") {
+      const mod = evaluateContentModeration(
+        [
+          { field: "Title", value: trimmedTitle },
+          { field: "Subtitle", value: subtitle },
+          { field: "Author Name", value: displayAuthor },
+          { field: "Blog Body", value: content },
+        ],
+        { markdownContent: content }
+      );
+      if (mod.action === "block") {
+        setErrorMsg(formatBlockedMessage(mod.blockedFields));
+        fetch("/api/moderation/report-block", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: "blog",
+            contentId: blogId,
+            title: trimmedTitle,
+            blockedFields: mod.blockedFields,
+            categories: mod.categories,
+            matchedTerms: mod.matchedTerms,
+          }),
+        }).catch(() => {});
+        return;
+      }
     }
 
     if (targetStatus === "published") {
