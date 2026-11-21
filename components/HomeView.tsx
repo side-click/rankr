@@ -689,7 +689,6 @@ export function HomeView({ data }: { data: HomeData }) {
             initialItems={data.recentContent}
             browseHref={browseHref}
             seasonIds={data.recentSeasonIds}
-            hasFocusedSeason={data.hasExplicitSeasonFocus}
           />
         )}
       </RetroWindow>

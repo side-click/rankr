@@ -117,7 +117,6 @@ export interface HomeData {
   liveSeasons: HomeSeasonSummary[];
   archivedSeasons: HomeSeasonSummary[];
   focusedSeason: HomeSeasonSummary | null;
-  hasExplicitSeasonFocus: boolean;
   recentBallots: ContentCardData[];
   recentContent: ContentItem[];
   recentSeasonIds: string[];
@@ -546,7 +545,6 @@ export async function loadHomeData(
     liveSeasons,
     archivedSeasons,
     focusedSeason,
-    hasExplicitSeasonFocus,
     recentBallots,
     recentContent,
     recentSeasonIds: targetSeasonIds,
