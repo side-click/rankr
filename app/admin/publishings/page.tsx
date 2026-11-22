@@ -40,8 +40,7 @@ export default async function AdminPublishingsPage() {
             Admin Access Required
           </h1>
           <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
-            Set <code className="xp-inset px-1">is_admin = true</code> on your
-            row in <code className="xp-inset px-1">public.profiles</code>.
+            You do not have permission to access this page.
           </p>
         </div>
       </RetroWindow>
