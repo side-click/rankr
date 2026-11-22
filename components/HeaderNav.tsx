@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Eye, History, ListOrdered, Menu, Shield, Trophy, X } from "lucide-react";
 
@@ -11,6 +11,28 @@ interface HeaderNavProps {
 
 export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    function handleOutside(e: PointerEvent) {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(e.target as Node)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", handleOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -77,7 +99,7 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
         )}
       </nav>
 
-      <div className="relative ml-auto lg:hidden shrink-0">
+      <div ref={mobileMenuRef} className="relative ml-auto lg:hidden shrink-0">
         <button
           type="button"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
