@@ -71,7 +71,7 @@ export default function PrivacyPage() {
               My History
             </Link>{" "}
             page. To request full removal of your account profile, contact a
-            Rankr administrator via the league Discord or open an issue on{" "}
+            Rankr administrator via Discord or open an issue on{" "}
             <a
               href="https://github.com/side-click/rankr/issues"
               target="_blank"
