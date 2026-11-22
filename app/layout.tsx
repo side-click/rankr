@@ -15,6 +15,7 @@ import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { RetroWindow } from "@/components/RetroWindow";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { ShieldAlert } from "lucide-react";
+import { Analytics } from "@vercel/analytics/next";
 
 const siteTitle = "Rankr — League Rankings & Tier Lists";
 const siteDescription =
@@ -213,6 +214,7 @@ export default async function RootLayout({
             Inc.
           </div>
         </footer>
+        <Analytics />
       </body>
     </html>
   );
