@@ -122,7 +122,7 @@ export function TeamRankingShareView({
   const [savingOverlays, setSavingOverlays] = useState(false);
   const [overlayError, setOverlayError] = useState<string | null>(null);
   const [hideComments, setHideComments] = useState(false);
-  const [hideRosters, setHideRosters] = useState(false);
+  const [hideRosters, setHideRosters] = useState(true);
   const [hideChange, setHideChange] = useState(false);
 
   const profile = Array.isArray(ballot.profiles)
