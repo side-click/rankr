@@ -2064,7 +2064,7 @@ export function PlayerTierEditor({
             </div>
 
             {!isEditDisabled && seasonId && editionId && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 {totalPlacedPlayers > 0 && (
                   <button
                     type="button"
@@ -2188,7 +2188,7 @@ export function PlayerTierEditor({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {existingBallotId && ballotStatus === "published" && (
               <Link
                 href={`/tierlist/${existingBallotId}`}

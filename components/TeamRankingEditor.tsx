@@ -1239,7 +1239,7 @@ export function TeamRankingEditor({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {existingBallotId && ballotStatus === "published" && (
               <Link
                 href={`/rankings/${existingBallotId}`}

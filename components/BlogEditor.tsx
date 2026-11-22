@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bold,
+  ChevronDown,
   Eye,
   Heading2,
   Heading3,
@@ -17,6 +18,7 @@ import {
   Save,
   Send,
   Trash2,
+  Upload,
   UserCheck,
   X,
 } from "lucide-react";
@@ -103,12 +105,28 @@ export function BlogEditor({
   const [mode, setMode] = useState<"write" | "preview">("write");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingInline, setUploadingInline] = useState(false);
+  const [imageMenuOpen, setImageMenuOpen] = useState(false);
+  const imageMenuRef = useRef<HTMLDivElement | null>(null);
   const [inlineImageSize, setInlineImageSize] = useState<
     "full" | "medium" | "small"
   >("full");
   const [inlineImageAlign, setInlineImageAlign] = useState<
     "center" | "left" | "right"
   >("center");
+
+  useEffect(() => {
+    if (!imageMenuOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        imageMenuRef.current &&
+        !imageMenuRef.current.contains(e.target as Node)
+      ) {
+        setImageMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [imageMenuOpen]);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -170,6 +188,7 @@ export function BlogEditor({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setImageMenuOpen(false);
     setErrorMsg(null);
     setUploadingInline(true);
     const url = await uploadImageToBucket(file, "inline");
@@ -602,45 +621,73 @@ export function BlogEditor({
                   onChange={handleInlineImageUpload}
                   className="hidden"
                 />
-                <div className="flex items-center gap-1">
-                  <select
-                    value={inlineImageSize}
-                    onChange={(e) =>
-                      setInlineImageSize(
-                        e.target.value as "full" | "medium" | "small"
-                      )
-                    }
-                    className="xp-inset px-1.5 py-1 text-[11px]"
-                    title="Inserted image size"
-                  >
-                    <option value="full">Size: Full</option>
-                    <option value="medium">Size: Medium</option>
-                    <option value="small">Size: Small</option>
-                  </select>
-                  <select
-                    value={inlineImageAlign}
-                    onChange={(e) =>
-                      setInlineImageAlign(
-                        e.target.value as "center" | "left" | "right"
-                      )
-                    }
-                    className="xp-inset px-1.5 py-1 text-[11px]"
-                    title="Inserted image alignment"
-                  >
-                    <option value="center">Align: Center</option>
-                    <option value="left">Align: Left</option>
-                    <option value="right">Align: Right</option>
-                  </select>
+                <div ref={imageMenuRef} className="relative">
                   <button
                     type="button"
-                    onClick={() => inlineImageInputRef.current?.click()}
+                    onClick={() => setImageMenuOpen((v) => !v)}
                     disabled={uploadingInline}
-                    className="xp-btn px-2 py-1 text-[11px]"
-                    title="Upload Image or GIF into body"
+                    className={`xp-btn px-2 py-1 text-[11px] ${
+                      imageMenuOpen ? "xp-btn-primary" : ""
+                    }`}
+                    title="Insert Image or GIF with size and alignment options"
                   >
                     <ImagePlus className="w-3.5 h-3.5 text-[#f0c020]" />
                     <span>{uploadingInline ? "Uploading..." : "Image / GIF"}</span>
+                    <ChevronDown className="w-3 h-3 opacity-80" />
                   </button>
+                  {imageMenuOpen && (
+                    <div className="absolute right-0 sm:left-0 sm:right-auto top-full mt-1.5 z-30 w-56 xp-panel p-2.5 shadow-xl border border-[#c89b3c]/50 space-y-2">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-[#a6a89e] mb-1">
+                          Size
+                        </label>
+                        <select
+                          value={inlineImageSize}
+                          onChange={(e) =>
+                            setInlineImageSize(
+                              e.target.value as "full" | "medium" | "small"
+                            )
+                          }
+                          className="w-full xp-inset px-2 py-1 text-xs"
+                        >
+                          <option value="full">Full Width</option>
+                          <option value="medium">Medium (~360px)</option>
+                          <option value="small">Small (~220px)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-[#a6a89e] mb-1">
+                          Alignment
+                        </label>
+                        <select
+                          value={inlineImageAlign}
+                          onChange={(e) =>
+                            setInlineImageAlign(
+                              e.target.value as "center" | "left" | "right"
+                            )
+                          }
+                          className="w-full xp-inset px-2 py-1 text-xs"
+                        >
+                          <option value="center">Center (Block)</option>
+                          <option value="left">Float Left</option>
+                          <option value="right">Float Right</option>
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={uploadingInline}
+                        onClick={() => inlineImageInputRef.current?.click()}
+                        className="w-full xp-btn xp-btn-primary text-xs justify-center"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>
+                          {uploadingInline
+                            ? "Uploading..."
+                            : "Upload Image / GIF"}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

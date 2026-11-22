@@ -701,7 +701,7 @@ export function PlayerTierShareView({
     <div className="space-y-4">
       <RetroWindow title="Published Player Tier List" theme="scdl">
         {/* Top Action Bar */}
-        <div className="flex flex-wrap items-end justify-between gap-2 mb-4 pb-3 border-b border-white/10">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-end justify-between gap-2 mb-4 pb-3 border-b border-white/10">
           <div className="text-xs text-[#a6a89e]">
             {ballot.status === "published" && ballot.published_at
               ? `Published ${new Date(ballot.published_at).toLocaleDateString(
@@ -710,7 +710,7 @@ export function PlayerTierShareView({
                 )}`
               : "Draft Preview"}
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="w-full sm:w-auto ml-auto flex flex-col items-end gap-2">
             <div className="flex flex-wrap items-center justify-end gap-2">
               {rawHasAnyCommentary && (
                 <button

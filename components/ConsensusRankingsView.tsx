@@ -515,7 +515,7 @@ export function ConsensusRankingsView({
         )}
 
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {rows.length > 0 && (
             <button
               type="button"
