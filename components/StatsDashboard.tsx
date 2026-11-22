@@ -356,7 +356,7 @@ export function StatsDashboard({
       const dataUrl = await toPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 800,
+        width: 680,
         height: exportHeight,
         style: { margin: "0" },
       });
@@ -383,7 +383,7 @@ export function StatsDashboard({
       const dataUrl = await toPng(roleExportCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 800,
+        width: 680,
         height: exportHeight,
         style: { margin: "0" },
       });
