@@ -16,22 +16,22 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
   }
 
   return (
-    <div className="blog-markdown space-y-4 text-[#e8e5d8] text-[15px] leading-relaxed break-words [overflow-wrap:anywhere]">
+    <div className="blog-markdown flow-root space-y-4 text-[#e8e5d8] text-[15px] leading-relaxed break-words [overflow-wrap:anywhere]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="wow-heading text-2xl sm:text-3xl font-bold text-[#f0c020] pt-3 pb-1.5 border-b border-[#c89b3c]/35">
+            <h1 className="clear-both wow-heading text-2xl sm:text-3xl font-bold text-[#f0c020] pt-3 pb-1.5 border-b border-[#c89b3c]/35">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="wow-heading text-xl sm:text-2xl font-bold text-[#f0c020] pt-3 pb-1 border-b border-white/10">
+            <h2 className="clear-both wow-heading text-xl sm:text-2xl font-bold text-[#f0c020] pt-3 pb-1 border-b border-white/10">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-lg font-extrabold text-[#f0ede0] pt-2">
+            <h3 className="clear-both text-lg font-extrabold text-[#f0ede0] pt-2">
               {children}
             </h3>
           ),
@@ -83,7 +83,7 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
             </ol>
           ),
           li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-          hr: () => <hr className="border-t border-[#c89b3c]/30 my-5" />,
+          hr: () => <hr className="clear-both border-t border-[#c89b3c]/30 my-5" />,
           code: ({ className, children }) => {
             const isBlock = Boolean(className);
             if (isBlock) {
@@ -102,14 +102,41 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
           pre: ({ children }) => (
             <pre className="my-3 overflow-x-auto">{children}</pre>
           ),
-          img: ({ src, alt }) => {
+          img: ({ src, alt, title }) => {
             if (!src || typeof src !== "string") return null;
+            const tokens = (title ?? "")
+              .split("|")
+              .map((t) => t.trim().toLowerCase())
+              .filter(Boolean);
+            const size = tokens.find((t) =>
+              ["small", "medium", "full"].includes(t)
+            ) as "small" | "medium" | "full" | undefined;
+            const align = tokens.find((t) =>
+              ["left", "right", "center"].includes(t)
+            ) as "left" | "right" | "center" | undefined;
+            const isPresetTitle = Boolean(size || align);
+
+            const sizeClass =
+              size === "small"
+                ? "w-[180px] sm:w-[220px] max-w-full max-h-[260px]"
+                : size === "medium"
+                ? "w-[260px] sm:w-[360px] max-w-full max-h-[400px]"
+                : "max-w-full max-h-[540px]";
+
+            const figureClass =
+              align === "left"
+                ? "my-3 sm:my-1 sm:float-left sm:mr-5 sm:mb-3 flex flex-col items-center"
+                : align === "right"
+                ? "my-3 sm:my-1 sm:float-right sm:ml-5 sm:mb-3 flex flex-col items-center"
+                : "my-4 flex flex-col items-center";
+
             return (
-              <figure className="my-4">
+              <figure className={figureClass}>
                 <img
                   src={src}
                   alt={alt ?? "Blog image"}
-                  className="max-w-full max-h-[540px] mx-auto rounded-lg border border-white/15 bg-black/30 object-contain shadow-lg"
+                  title={!isPresetTitle && title ? title : undefined}
+                  className={`${sizeClass} rounded-lg border border-white/15 bg-black/30 object-contain shadow-lg`}
                 />
                 {alt && alt !== "image" && alt !== "Blog image" && (
                   <figcaption className="text-center text-xs text-[#a6a89e] mt-1.5">

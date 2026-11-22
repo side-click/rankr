@@ -103,6 +103,12 @@ export function BlogEditor({
   const [mode, setMode] = useState<"write" | "preview">("write");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingInline, setUploadingInline] = useState(false);
+  const [inlineImageSize, setInlineImageSize] = useState<
+    "full" | "medium" | "small"
+  >("full");
+  const [inlineImageAlign, setInlineImageAlign] = useState<
+    "center" | "left" | "right"
+  >("center");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -168,7 +174,12 @@ export function BlogEditor({
     setUploadingInline(true);
     const url = await uploadImageToBucket(file, "inline");
     if (url) {
-      insertSnippet(`\n![image](${url})\n`);
+      const hasPreset =
+        inlineImageSize !== "full" || inlineImageAlign !== "center";
+      const presetAttr = hasPreset
+        ? ` "${inlineImageSize}|${inlineImageAlign}"`
+        : "";
+      insertSnippet(`\n![image](${url}${presetAttr})\n`);
     }
     setUploadingInline(false);
   }
@@ -591,16 +602,46 @@ export function BlogEditor({
                   onChange={handleInlineImageUpload}
                   className="hidden"
                 />
-                <button
-                  type="button"
-                  onClick={() => inlineImageInputRef.current?.click()}
-                  disabled={uploadingInline}
-                  className="xp-btn px-2 py-1 text-[11px]"
-                  title="Upload Image or GIF into body"
-                >
-                  <ImagePlus className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <span>{uploadingInline ? "Uploading..." : "Image / GIF"}</span>
-                </button>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={inlineImageSize}
+                    onChange={(e) =>
+                      setInlineImageSize(
+                        e.target.value as "full" | "medium" | "small"
+                      )
+                    }
+                    className="xp-inset px-1.5 py-1 text-[11px]"
+                    title="Inserted image size"
+                  >
+                    <option value="full">Size: Full</option>
+                    <option value="medium">Size: Medium</option>
+                    <option value="small">Size: Small</option>
+                  </select>
+                  <select
+                    value={inlineImageAlign}
+                    onChange={(e) =>
+                      setInlineImageAlign(
+                        e.target.value as "center" | "left" | "right"
+                      )
+                    }
+                    className="xp-inset px-1.5 py-1 text-[11px]"
+                    title="Inserted image alignment"
+                  >
+                    <option value="center">Align: Center</option>
+                    <option value="left">Align: Left</option>
+                    <option value="right">Align: Right</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => inlineImageInputRef.current?.click()}
+                    disabled={uploadingInline}
+                    className="xp-btn px-2 py-1 text-[11px]"
+                    title="Upload Image or GIF into body"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5 text-[#f0c020]" />
+                    <span>{uploadingInline ? "Uploading..." : "Image / GIF"}</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -620,7 +661,8 @@ export function BlogEditor({
                 <span>
                   Supports Markdown headings (<code>##</code>, <code>###</code>),
                   bold, italic, quotes (<code>&gt;</code>), lists, links, dividers (
-                  <code>---</code>), and images/GIFs (<code>![alt](url)</code>).
+                  <code>---</code>), and images/GIFs (
+                  <code>![alt](url &quot;small|right&quot;)</code>).
                 </span>
                 <span className="tabular-nums shrink-0">
                   {content.length.toLocaleString()} / 25,000
