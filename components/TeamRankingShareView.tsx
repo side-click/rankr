@@ -40,6 +40,17 @@ interface TeamRankingShareViewProps {
   isAdmin?: boolean;
 }
 
+function handleSnapshotImgError(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget;
+  const rawSrc = img.getAttribute("src") ?? "";
+  if (/\.jpg$/i.test(rawSrc) && !img.dataset.triedPng) {
+    img.dataset.triedPng = "1";
+    img.src = rawSrc.replace(/\.jpg$/i, ".png");
+    return;
+  }
+  img.style.display = "none";
+}
+
 const MAX_COMMENT_HEIGHT_PX = 90;
 
 function AutoFitComment({ text }: { text: string | null | undefined }) {
@@ -173,13 +184,35 @@ export function TeamRankingShareView({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       const exportHeight = Math.ceil(cardRef.current.offsetHeight);
-      const dataUrl = await toPng(cardRef.current, {
-        cacheBust: true,
+      const exportOpts = {
         pixelRatio: 2,
-        width: 1080,
+        width: cardWidth,
         height: exportHeight,
         style: { margin: "0" },
-      });
+        filter: (node: HTMLElement) => {
+          if (node instanceof HTMLImageElement) {
+            const src = node.getAttribute("src");
+            if (!src || src.trim() === "") return false;
+            if (!node.complete || node.naturalWidth === 0) return false;
+          }
+          return true;
+        },
+      };
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(cardRef.current, {
+          ...exportOpts,
+          cacheBust: true,
+        });
+      } catch {
+        dataUrl = await toPng(cardRef.current, {
+          ...exportOpts,
+          cacheBust: false,
+          skipFonts: true,
+          imagePlaceholder:
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        });
+      }
       const link = document.createElement("a");
       const safeName = `${season?.slug ?? "rankr"}-${
         division?.slug ?? "div"
@@ -189,6 +222,20 @@ export function TeamRankingShareView({
       link.download = `${safeName}.png`;
       link.href = dataUrl;
       link.click();
+    } catch (err) {
+      console.warn(
+        "PNG export failed:",
+        err instanceof Event
+          ? {
+              type: err.type,
+              tag: (err.target as HTMLElement | null)?.tagName,
+              src: (err.target as HTMLImageElement | null)?.src,
+            }
+          : err
+      );
+      setOverlayError(
+        "PNG export failed. One of the images may have blocked cross-origin loading."
+      );
     } finally {
       setExporting(false);
     }
@@ -383,14 +430,35 @@ export function TeamRankingShareView({
   const hasAnyRoster = entries.some(
     (e) => normalizeRoster(e.roster_snapshot).length > 0
   );
+  const showRosters = hasAnyRoster && !hideRosters;
   const showChange = !hideChange;
-  const teamGridCols = hasAnyCommentary
+  const cardWidth = hasAnyCommentary
+    ? showRosters
+      ? showChange
+        ? 1020
+        : 960
+      : showChange
+      ? 940
+      : 880
+    : showRosters
     ? showChange
-      ? "grid-cols-[68px_88px_1.45fr_1.55fr]"
-      : "grid-cols-[68px_1.45fr_1.55fr]"
+      ? 800
+      : 740
     : showChange
-    ? "grid-cols-[68px_88px_1fr]"
-    : "grid-cols-[68px_1fr]";
+    ? 720
+    : 680;
+  const isNarrowCard = cardWidth <= 740;
+  const teamGridCols = hasAnyCommentary
+    ? showRosters
+      ? showChange
+        ? "grid-cols-[58px_76px_1.6fr_1.4fr]"
+        : "grid-cols-[58px_1.6fr_1.4fr]"
+      : showChange
+      ? "grid-cols-[58px_76px_1.45fr_1.55fr]"
+      : "grid-cols-[58px_1.45fr_1.55fr]"
+    : showChange
+    ? "grid-cols-[58px_76px_1fr]"
+    : "grid-cols-[58px_1fr]";
 
   const headerAccentBg =
     theme === "dragon"
@@ -403,7 +471,7 @@ export function TeamRankingShareView({
         title="Published Ranking"
         theme="scdl"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-white/10">
+        <div className="flex flex-wrap items-end justify-between gap-2 mb-4 pb-3 border-b border-white/10">
           <div className="text-xs text-[#a6a89e]">
             {ballot.status === "published" && ballot.published_at
               ? `Published ${new Date(ballot.published_at).toLocaleDateString(
@@ -610,8 +678,12 @@ export function TeamRankingShareView({
           </div>
         )}
 
-        <ScaledGraphicFrame designWidth={1080}>
-          <div ref={cardRef} className="w-[1080px] p-2.5">
+        <ScaledGraphicFrame designWidth={cardWidth}>
+          <div
+            ref={cardRef}
+            style={{ width: `${cardWidth}px` }}
+            className="mx-auto p-2.5"
+          >
             <div
               style={{
                 borderRadius: "44px",
@@ -630,15 +702,17 @@ export function TeamRankingShareView({
               style={{
                 background: getThemeGradients(resolvedTheme).bannerGradient,
               }}
-              className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
+              className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-7 py-4"
             >
-              <div className="flex items-center gap-4 text-left">
+              <div className="flex items-center gap-3.5 text-left min-w-0">
                 {leagueLogo && (
                   <img
                     src={leagueLogo}
                     alt={leagueName}
                     crossOrigin="anonymous"
-                    className="w-20 h-16 object-contain drop-shadow shrink-0"
+                    className={`${
+                      isNarrowCard ? "w-16 h-12" : "w-20 h-14"
+                    } object-contain drop-shadow shrink-0`}
                   />
                 )}
                 {divisionLogo && (
@@ -646,18 +720,32 @@ export function TeamRankingShareView({
                     src={divisionLogo}
                     alt={divisionName}
                     crossOrigin="anonymous"
-                    className="w-16 h-16 object-contain drop-shadow shrink-0"
+                    className={`${
+                      isNarrowCard ? "w-12 h-12" : "w-14 h-14"
+                    } object-contain drop-shadow shrink-0`}
                   />
                 )}
-                <div>
-                  <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                <div className="min-w-0">
+                  <div
+                    className={`${
+                      isNarrowCard ? "text-xs" : "text-sm"
+                    } uppercase tracking-wider font-bold text-[#f0c020]`}
+                  >
                     {leagueName} ({seasonName})
                   </div>
-                  <h1 className="wow-heading text-3xl font-extrabold text-white leading-tight">
+                  <h1
+                    className={`wow-heading ${
+                      isNarrowCard ? "text-2xl" : "text-3xl"
+                    } font-extrabold text-white leading-tight`}
+                  >
                     {editionName}
                   </h1>
-                  <div className="text-base font-bold text-white/90 leading-snug">
-                    {divisionName} Team Power Rankings
+                  <div
+                    className={`${
+                      isNarrowCard ? "text-sm" : "text-base"
+                    } font-bold text-white/90 leading-snug`}
+                  >
+                    {divisionName} &middot; Team Power Rankings
                   </div>
                   {ballot.author_notes && (
                     <p className="mt-1 text-sm text-[#e8e6b8]/95 leading-snug max-w-2xl line-clamp-1">
@@ -671,23 +759,39 @@ export function TeamRankingShareView({
               <Link
                 href={`/browse?author=${encodeURIComponent(profile.username)}`}
                 title={`View all published rankings by ${profile.username}`}
-                className="flex items-center gap-3 bg-black/45 hover:bg-black/65 px-4 py-2 rounded-lg border border-white/20 hover:border-[#f0c020]/70 transition-colors shrink-0"
+                className={`flex items-center gap-2.5 bg-black/45 hover:bg-black/65 ${
+                  isNarrowCard ? "px-3 py-1.5" : "px-4 py-2"
+                } rounded-lg border border-white/20 hover:border-[#f0c020]/70 transition-colors shrink-0`}
               >
                 {profile.avatar_url && (
                   <img
                     src={profile.avatar_url}
                     alt={profile.username}
                     crossOrigin="anonymous"
-                    className="w-10 h-10 rounded-md object-cover border border-white/50"
+                    className={`${
+                      isNarrowCard ? "w-8 h-8" : "w-10 h-10"
+                    } rounded-md object-cover border border-white/50`}
                   />
                 )}
-                <div className="text-lg font-extrabold text-white tracking-wide">
+                <div
+                  className={`${
+                    isNarrowCard ? "text-base" : "text-lg"
+                  } font-extrabold text-white tracking-wide`}
+                >
                   {profile.username}
                 </div>
               </Link>
             ) : (
-              <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-lg border border-white/20 shrink-0">
-                <div className="text-lg font-extrabold text-white tracking-wide">
+              <div
+                className={`flex items-center gap-2.5 bg-black/45 ${
+                  isNarrowCard ? "px-3 py-1.5" : "px-4 py-2"
+                } rounded-lg border border-white/20 shrink-0`}
+              >
+                <div
+                  className={`${
+                    isNarrowCard ? "text-base" : "text-lg"
+                  } font-extrabold text-white tracking-wide`}
+                >
                   Voter
                 </div>
               </div>
@@ -696,11 +800,11 @@ export function TeamRankingShareView({
 
 
           <div
-            className={`grid ${teamGridCols} gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2`}
+            className={`grid ${teamGridCols} gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-7 py-2`}
           >
             <div className="text-center">Rank</div>
             {showChange && <div className="text-center">Change</div>}
-            <div className="pl-[92px]">Team</div>
+            <div className={showChange ? "pl-[76px]" : "pl-[88px]"}>Team</div>
             {hasAnyCommentary && <div className="text-center">Comments</div>}
           </div>
 
@@ -712,8 +816,8 @@ export function TeamRankingShareView({
                 <div
                   key={entry.id}
                   style={{ background: rankColor.cardBg }}
-                  className={`grid ${teamGridCols} gap-x-3 items-center px-10 ${
-                    isLast ? "pt-3.5 pb-6" : "py-3.5"
+                  className={`grid ${teamGridCols} gap-x-3 items-center px-7 ${
+                    isLast ? "pt-2.5 pb-5" : "py-2.5"
                   }`}
                 >
                   <div className="flex items-center justify-center">
@@ -738,11 +842,11 @@ export function TeamRankingShareView({
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex items-center gap-3 min-w-0 ${!showChange ? "pl-3" : ""}`}>
                     {ballot.season_id && ballot.division_id && entry.team_id ? (
                       <Link
                         href={`/stats/team/${encodeURIComponent(entry.team_id)}`}
-                        className="w-20 h-20 shrink-0 flex items-center justify-center"
+                        className="w-16 h-16 shrink-0 flex items-center justify-center"
                         title={`View ${entry.team_name_snapshot} stats`}
                       >
                         {entry.team_logo_snapshot ? (
@@ -750,6 +854,7 @@ export function TeamRankingShareView({
                             src={entry.team_logo_snapshot}
                             alt={entry.team_name_snapshot}
                             crossOrigin="anonymous"
+                            onError={handleSnapshotImgError}
                             className="w-full h-full object-contain"
                           />
                         ) : (
@@ -757,12 +862,13 @@ export function TeamRankingShareView({
                         )}
                       </Link>
                     ) : (
-                      <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+                      <div className="w-16 h-16 shrink-0 flex items-center justify-center">
                         {entry.team_logo_snapshot ? (
                           <img
                             src={entry.team_logo_snapshot}
                             alt={entry.team_name_snapshot}
                             crossOrigin="anonymous"
+                            onError={handleSnapshotImgError}
                             className="w-full h-full object-contain"
                           />
                         ) : (
@@ -776,7 +882,13 @@ export function TeamRankingShareView({
                         <Link
                           href={`/stats/team/${encodeURIComponent(entry.team_id)}`}
                           className={`block font-black ${
-                            hasAnyCommentary ? "text-xl" : "text-2xl"
+                            !showRosters
+                              ? hasAnyCommentary
+                                ? "text-2xl"
+                                : "text-3xl"
+                              : hasAnyCommentary
+                              ? "text-xl"
+                              : "text-2xl"
                           } text-[#f7f5eb] hover:text-[#f0c020] transition-colors tracking-tight leading-tight`}
                           title={`View ${entry.team_name_snapshot} stats`}
                         >
@@ -785,7 +897,13 @@ export function TeamRankingShareView({
                       ) : (
                         <div
                           className={`font-black ${
-                            hasAnyCommentary ? "text-xl" : "text-2xl"
+                            !showRosters
+                              ? hasAnyCommentary
+                                ? "text-2xl"
+                                : "text-3xl"
+                              : hasAnyCommentary
+                              ? "text-xl"
+                              : "text-2xl"
                           } text-[#f7f5eb] tracking-tight leading-tight`}
                         >
                           {entry.team_name_snapshot}

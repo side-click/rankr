@@ -111,6 +111,7 @@ export function ConsensusRankingsView({
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showChange, setShowChange] = useState(true);
+  const cardWidth = showChange ? 860 : 780;
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -196,7 +197,7 @@ export function ConsensusRankingsView({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 1080,
+        width: cardWidth,
         height: exportHeight,
         style: { margin: "0" },
       });
@@ -582,8 +583,12 @@ export function ConsensusRankingsView({
               </div>
             )}
 
-            <ScaledGraphicFrame designWidth={1080}>
-              <div ref={cardRef} className="w-[1080px] p-2.5">
+            <ScaledGraphicFrame designWidth={cardWidth}>
+              <div
+                ref={cardRef}
+                style={{ width: `${cardWidth}px` }}
+                className="mx-auto p-2.5"
+              >
                 <div
                   style={
                     exporting
@@ -597,15 +602,15 @@ export function ConsensusRankingsView({
                 {/* Graphic Header Banner */}
                 <div
                   style={{ background: themeGradients.bannerGradient }}
-                  className="border-b-2 border-[#c89b3c]/60 text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
+                  className="border-b-2 border-[#c89b3c]/60 text-white flex flex-row items-center justify-between gap-4 px-7 py-4"
                 >
-                  <div className="flex items-center gap-4 text-left">
+                  <div className="flex items-center gap-3.5 text-left min-w-0">
                     {leagueLogoUrl && (
                       <img
                         src={leagueLogoUrl}
                         alt={leagueName}
                         crossOrigin="anonymous"
-                        className="w-20 h-16 object-contain drop-shadow shrink-0"
+                        className="w-16 h-12 object-contain drop-shadow shrink-0"
                       />
                     )}
                     {divisionLogoUrl && (
@@ -613,10 +618,10 @@ export function ConsensusRankingsView({
                         src={divisionLogoUrl}
                         alt={divisionName}
                         crossOrigin="anonymous"
-                        className="w-16 h-16 object-contain drop-shadow shrink-0"
+                        className="w-14 h-14 object-contain drop-shadow shrink-0"
                       />
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
                         {leagueName} ({seasonName})
                       </div>
@@ -624,12 +629,12 @@ export function ConsensusRankingsView({
                         {editionName} Consensus
                       </h2>
                       <div className="text-base font-bold text-white/90 leading-snug">
-                        {divisionName} Team Power Rankings
+                        {divisionName} &middot; Team Power Rankings
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-black/45 px-4 py-2.5 rounded-xl border border-[#f0c020]/50 shrink-0">
+                  <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-xl border border-[#f0c020]/50 shrink-0">
                     <div className="text-right">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-[#f0c020]">
                         Average Of
@@ -647,13 +652,13 @@ export function ConsensusRankingsView({
                 <div
                   className={`grid ${
                     showChange
-                      ? "grid-cols-[100px_88px_1fr_140px_120px] gap-x-6"
-                      : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
-                  } bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-10 py-2`}
+                      ? "grid-cols-[76px_76px_1fr_116px_112px] gap-x-4"
+                      : "grid-cols-[76px_1fr_116px_112px] gap-x-4"
+                  } bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-7 py-2`}
                 >
                   <div className="text-center">Rank</div>
                   {showChange && <div className="text-center">Change</div>}
-                  <div className="pl-[104px]">Team</div>
+                  <div className={showChange ? "pl-[80px]" : "pl-[92px]"}>Team</div>
                   <div className="text-center">Avg Rank</div>
                   <div className="text-center">
                     {submissionCount >= 5 ? "Trimmed Range" : "Range"}
@@ -669,18 +674,18 @@ export function ConsensusRankingsView({
                       <div
                         key={row.teamKey}
                         style={{ background: rankColor.cardBg }}
-                        className={`px-10 ${isLast ? "pt-4 pb-6" : "py-4"}`}
+                        className={`px-7 ${isLast ? "pt-2.5 pb-5" : "py-2.5"}`}
                       >
                         <div
                           className={`grid ${
                             showChange
-                              ? "grid-cols-[100px_88px_1fr_140px_120px] gap-x-6"
-                              : "grid-cols-[120px_1fr_150px_130px] gap-x-8"
+                              ? "grid-cols-[76px_76px_1fr_116px_112px] gap-x-4"
+                              : "grid-cols-[76px_1fr_116px_112px] gap-x-4"
                           } items-center`}
                         >
                           <div className="relative flex items-center justify-center">
                             {row.consensusRank === 1 && (
-                              <Crown className="w-[18px] h-[18px] text-[#f0c020] absolute -top-5 left-1/2 -translate-x-1/2 pointer-events-none" />
+                              <Crown className="w-4 h-4 text-[#f0c020] absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none" />
                             )}
                             <span
                               style={{
@@ -688,7 +693,7 @@ export function ConsensusRankingsView({
                                 borderColor: rankColor.borderColor,
                                 color: rankColor.badgeText,
                               }}
-                              className="w-14 h-14 rounded-xl border font-black text-2xl flex items-center justify-center shadow-sm"
+                              className="w-12 h-12 rounded-xl border font-black text-xl flex items-center justify-center shadow-sm"
                             >
                               {row.consensusRank}
                             </span>
@@ -703,13 +708,13 @@ export function ConsensusRankingsView({
                             </div>
                           )}
 
-                          <div className="min-w-0">
+                          <div className={`min-w-0 ${!showChange ? "pl-3" : ""}`}>
                             {!row.teamKey.startsWith("name:") ? (
                               <Link
                                 href={`/stats/team/${encodeURIComponent(
                                   row.teamKey
                                 )}`}
-                                className="group flex items-center gap-6 min-w-0"
+                                className="group flex items-center gap-4 min-w-0"
                                 title={`View ${row.teamName} stats`}
                               >
                                 {row.logoUrl ? (
@@ -717,15 +722,15 @@ export function ConsensusRankingsView({
                                     src={row.logoUrl}
                                     alt={row.teamName}
                                     crossOrigin="anonymous"
-                                    className="w-20 h-20 object-contain drop-shadow shrink-0"
+                                    className="w-16 h-16 object-contain drop-shadow shrink-0"
                                   />
                                 ) : (
-                                  <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
-                                    <Award className="w-9 h-9 text-[#c89b3c]" />
+                                  <div className="w-16 h-16 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
+                                    <Award className="w-7 h-7 text-[#c89b3c]" />
                                   </div>
                                 )}
                                 <div className="min-w-0">
-                                  <div className="text-4xl font-extrabold text-white group-hover:text-[#f0c020] transition-colors truncate leading-tight">
+                                  <div className="text-3xl font-extrabold text-white group-hover:text-[#f0c020] transition-colors truncate leading-tight">
                                     {row.teamName}
                                   </div>
                                   {row.rankingCount < submissionCount && (
@@ -737,21 +742,21 @@ export function ConsensusRankingsView({
                                 </div>
                               </Link>
                             ) : (
-                              <div className="flex items-center gap-6 min-w-0">
+                              <div className="flex items-center gap-4 min-w-0">
                                 {row.logoUrl ? (
                                   <img
                                     src={row.logoUrl}
                                     alt={row.teamName}
                                     crossOrigin="anonymous"
-                                    className="w-20 h-20 object-contain drop-shadow shrink-0"
+                                    className="w-16 h-16 object-contain drop-shadow shrink-0"
                                   />
                                 ) : (
-                                  <div className="w-20 h-20 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
-                                    <Award className="w-9 h-9 text-[#c89b3c]" />
+                                  <div className="w-16 h-16 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
+                                    <Award className="w-7 h-7 text-[#c89b3c]" />
                                   </div>
                                 )}
                                 <div className="min-w-0">
-                                  <div className="text-4xl font-extrabold text-white truncate leading-tight">
+                                  <div className="text-3xl font-extrabold text-white truncate leading-tight">
                                     {row.teamName}
                                   </div>
                                   {row.rankingCount < submissionCount && (
@@ -766,7 +771,7 @@ export function ConsensusRankingsView({
                           </div>
 
                           <div className="flex items-center justify-center">
-                            <span className="h-14 px-5 rounded-xl bg-black/40 border border-white/15 text-2xl font-black text-[#f0ede0] tabular-nums inline-flex items-center justify-center">
+                            <span className="h-12 px-4 rounded-xl bg-black/40 border border-white/15 text-xl font-black text-[#f0ede0] tabular-nums inline-flex items-center justify-center">
                               {row.averageRank.toFixed(2)}
                             </span>
                           </div>

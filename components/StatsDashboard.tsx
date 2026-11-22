@@ -2152,20 +2152,17 @@ export function StatsDashboard({
                                   {leagueName} ({seasonName})
                                 </div>
                                 <h2 className="wow-heading text-2xl font-extrabold text-white leading-tight">
-                                  <span>
-                                    {selectedDivision
-                                      ? selectedDivision.name
-                                      : "League"}
-                                  </span>{" "}
-                                  <span className="inline-block whitespace-nowrap">
-                                    Stat Leaderboards
-                                  </span>
+                                  Stat Leaderboards
                                 </h2>
                                 <div className="text-xs font-bold text-[#c7c5b8] mt-0.5">
-                                  As of {currentEditionName}
+                                  {selectedDivision
+                                    ? selectedDivision.name
+                                    : "League"}{" "}
+                                  &middot; As of {currentEditionName}
                                 </div>
                               </div>
                             </div>
+                            <Trophy className="w-10 h-10 text-[#c89b3c] opacity-90 drop-shadow shrink-0" />
                           </div>
 
                           {/* Card Body: Rankr Rating + 2x3 Selected Cards */}

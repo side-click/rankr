@@ -200,6 +200,17 @@ function getTierPillSize(
   return "sm";
 }
 
+function handleSnapshotImgError(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget;
+  const rawSrc = img.getAttribute("src") ?? "";
+  if (/\.jpg$/i.test(rawSrc) && !img.dataset.triedPng) {
+    img.dataset.triedPng = "1";
+    img.src = rawSrc.replace(/\.jpg$/i, ".png");
+    return;
+  }
+  img.style.display = "none";
+}
+
 function renderPlayerPill(
   pl: {
     id: string;
@@ -225,6 +236,7 @@ function renderPlayerPill(
           alt={pl.team_name ?? "Team"}
           title={pl.team_name ?? undefined}
           crossOrigin="anonymous"
+          onError={handleSnapshotImgError}
           className={`${styles.logo} object-contain shrink-0`}
         />
       ) : (
@@ -393,13 +405,40 @@ export function PlayerTierShareView({
 
   const rawHasAnyCommentary = useMemo(
     () =>
-      activeSections.some((sec) =>
+      visibleSections.some((sec) =>
         sec.tiers.some((t) => Boolean(t.commentary?.trim()))
       ),
-    [activeSections]
+    [visibleSections]
   );
   const [hideComments, setHideComments] = useState(false);
+  const [hideEmptyTiers, setHideEmptyTiers] = useState(true);
   const hasAnyCommentary = rawHasAnyCommentary && !hideComments;
+  const hasAnyEmptyTier = useMemo(
+    () =>
+      visibleSections.some((sec) =>
+        sec.tiers.some((t) => t.players.length === 0 && !t.commentary?.trim())
+      ),
+    [visibleSections]
+  );
+  const maxTierLabelLen = useMemo(() => {
+    let max = 1;
+    for (const sec of visibleSections) {
+      const nonEmpty = sec.tiers.filter(
+        (t) => t.players.length > 0 || Boolean(t.commentary?.trim())
+      );
+      const list = hideEmptyTiers && nonEmpty.length > 0 ? nonEmpty : sec.tiers;
+      for (const t of list) {
+        max = Math.max(max, t.label.trim().length);
+      }
+    }
+    return max;
+  }, [visibleSections, hideEmptyTiers]);
+  const tierColPx =
+    maxTierLabelLen <= 2 ? 64 : maxTierLabelLen <= 6 ? 96 : 136;
+  const tierGridStyle = hasAnyCommentary
+    ? { gridTemplateColumns: `${tierColPx}px 1fr 390px` }
+    : { gridTemplateColumns: `${tierColPx}px 1fr` };
+  const cardWidth = hasAnyCommentary ? 960 : 780;
 
   const isMultiRoleCompact =
     tierData.splitByRole && roleFilter === "all" && visibleSections.length > 1;
@@ -418,13 +457,35 @@ export function PlayerTierShareView({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       const exportHeight = Math.ceil(cardRef.current.offsetHeight);
-      const dataUrl = await toPng(cardRef.current, {
-        cacheBust: true,
+      const exportOpts = {
         pixelRatio: 2,
-        width: 1080,
+        width: cardWidth,
         height: exportHeight,
         style: { margin: "0" },
-      });
+        filter: (node: HTMLElement) => {
+          if (node instanceof HTMLImageElement) {
+            const src = node.getAttribute("src");
+            if (!src || src.trim() === "") return false;
+            if (!node.complete || node.naturalWidth === 0) return false;
+          }
+          return true;
+        },
+      };
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(cardRef.current, {
+          ...exportOpts,
+          cacheBust: true,
+        });
+      } catch {
+        dataUrl = await toPng(cardRef.current, {
+          ...exportOpts,
+          cacheBust: false,
+          skipFonts: true,
+          imagePlaceholder:
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        });
+      }
       const link = document.createElement("a");
       const safeName = `${season?.slug ?? "rankr"}-${
         division?.slug ?? "all-divisions"
@@ -436,6 +497,18 @@ export function PlayerTierShareView({
       link.download = `${safeName}.png`;
       link.href = dataUrl;
       link.click();
+    } catch (err) {
+      console.warn(
+        "PNG export failed:",
+        err instanceof Event
+          ? {
+              type: err.type,
+              tag: (err.target as HTMLElement | null)?.tagName,
+              src: (err.target as HTMLImageElement | null)?.src,
+            }
+          : err
+      );
+      setOverlayError("PNG export failed. One of the images may have blocked cross-origin loading.");
     } finally {
       setExporting(false);
     }
@@ -628,7 +701,7 @@ export function PlayerTierShareView({
     <div className="space-y-4">
       <RetroWindow title="Published Player Tier List" theme="scdl">
         {/* Top Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-white/10">
+        <div className="flex flex-wrap items-end justify-between gap-2 mb-4 pb-3 border-b border-white/10">
           <div className="text-xs text-[#a6a89e]">
             {ballot.status === "published" && ballot.published_at
               ? `Published ${new Date(ballot.published_at).toLocaleDateString(
@@ -652,6 +725,23 @@ export function PlayerTierShareView({
                     <EyeOff className="w-3.5 h-3.5" />
                   )}
                   <span>{hideComments ? "Show Comments" : "Hide Comments"}</span>
+                </button>
+              )}
+              {hasAnyEmptyTier && (
+                <button
+                  type="button"
+                  onClick={() => setHideEmptyTiers((v) => !v)}
+                  className={`xp-btn text-xs ${!hideEmptyTiers ? "xp-btn-primary" : ""}`}
+                  title="Toggle empty tier rows in view and PNG export"
+                >
+                  {hideEmptyTiers ? (
+                    <Eye className="w-3.5 h-3.5" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {hideEmptyTiers ? "Show Empty Tiers" : "Hide Empty Tiers"}
+                  </span>
                 </button>
               )}
               {canEditOverlays && !editingOverlays && (
@@ -845,8 +935,12 @@ export function PlayerTierShareView({
           </div>
         )}
 
-        <ScaledGraphicFrame designWidth={1080}>
-          <div ref={cardRef} className="w-[1080px] p-2.5">
+        <ScaledGraphicFrame designWidth={cardWidth}>
+          <div
+            ref={cardRef}
+            style={{ width: `${cardWidth}px` }}
+            className="mx-auto p-2.5"
+          >
             <div
               style={{
                 borderRadius: "44px",
@@ -864,15 +958,15 @@ export function PlayerTierShareView({
               style={{
                 background: getThemeGradients(resolvedTheme).bannerGradient,
               }}
-              className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-11 py-6"
+              className="border-b-2 border-[#4d5652] text-white flex flex-row items-center justify-between gap-4 px-7 py-4"
             >
-              <div className="flex items-center gap-4 text-left">
+              <div className="flex items-center gap-3.5 text-left min-w-0">
                 {leagueLogo && (
                   <img
                     src={leagueLogo}
                     alt={leagueName}
                     crossOrigin="anonymous"
-                    className="w-20 h-16 object-contain drop-shadow shrink-0"
+                    className="w-16 h-12 object-contain drop-shadow shrink-0"
                   />
                 )}
                 {divisionLogo && (
@@ -880,19 +974,19 @@ export function PlayerTierShareView({
                     src={divisionLogo}
                     alt={divisionName ?? "Division"}
                     crossOrigin="anonymous"
-                    className="w-16 h-16 object-contain drop-shadow shrink-0"
+                    className="w-14 h-14 object-contain drop-shadow shrink-0"
                   />
                 )}
-                <div>
-                  <div className="text-sm uppercase tracking-wider font-bold text-[#f0c020]">
+                <div className="min-w-0">
+                  <div className="text-xs uppercase tracking-wider font-bold text-[#f0c020]">
                     {leagueName} ({seasonName})
                   </div>
-                  <h1 className="wow-heading text-3xl font-extrabold text-white leading-tight">
+                  <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
                     {editionName}
                   </h1>
-                  <div className="text-base font-bold text-white/90 leading-snug">
+                  <div className="text-sm font-bold text-white/90 leading-snug">
                     {divisionName
-                      ? `${divisionName} Player Tier List`
+                      ? `${divisionName} · Player Tier List`
                       : "Player Tier List"}
                   </div>
                   {ballot.author_notes && (
@@ -907,23 +1001,23 @@ export function PlayerTierShareView({
                 <Link
                   href={`/browse?author=${encodeURIComponent(profile.username)}`}
                   title={`View all published rankings by ${profile.username}`}
-                  className="flex items-center gap-3 bg-black/45 hover:bg-black/65 px-4 py-2 rounded-lg border border-white/20 hover:border-[#f0c020]/70 transition-colors shrink-0"
+                  className="flex items-center gap-2.5 bg-black/45 hover:bg-black/65 px-3.5 py-2 rounded-lg border border-white/20 hover:border-[#f0c020]/70 transition-colors shrink-0"
                 >
                   {profile.avatar_url && (
                     <img
                       src={profile.avatar_url}
                       alt={profile.username}
                       crossOrigin="anonymous"
-                      className="w-10 h-10 rounded-md object-cover border border-white/50"
+                      className="w-9 h-9 rounded-md object-cover border border-white/50"
                     />
                   )}
-                  <div className="text-lg font-extrabold text-white tracking-wide">
+                  <div className="text-base font-extrabold text-white tracking-wide">
                     {profile.username}
                   </div>
                 </Link>
               ) : (
-                <div className="flex items-center gap-3 bg-black/45 px-4 py-2 rounded-lg border border-white/20 shrink-0">
-                  <div className="text-lg font-extrabold text-white tracking-wide">
+                <div className="flex items-center gap-2.5 bg-black/45 px-3.5 py-2 rounded-lg border border-white/20 shrink-0">
+                  <div className="text-base font-extrabold text-white tracking-wide">
                     Voter
                   </div>
                 </div>
@@ -932,52 +1026,53 @@ export function PlayerTierShareView({
 
             {/* Tier List Body */}
             <div
-              className={`grid ${
-                hasAnyCommentary
-                  ? "grid-cols-[148px_1fr_430px]"
-                  : "grid-cols-[148px_1fr]"
-              } gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-7 py-2`}
+              style={tierGridStyle}
+              className="grid gap-x-3 bg-[#121615] border-b border-[#39443f] text-[11px] font-bold uppercase text-[#c89b3c] px-5 py-2"
             >
               <div className="text-center">Tier</div>
-              <div className={isMultiRoleCompact ? "px-2.5" : "px-3"}>
+              <div className={isMultiRoleCompact ? "px-2" : "px-2.5"}>
                 Players
               </div>
               {hasAnyCommentary && <div className="text-center">Comments</div>}
             </div>
 
-            <div className="divide-y divide-[#39443f] pb-3">
+            <div className="divide-y divide-[#39443f] pb-2">
               {visibleSections.map((section, secIdx) => {
                 const roleMeta =
                   section.role !== "all" ? getRoleMeta(section.role) : null;
+                const nonEmptyTiers = section.tiers.filter(
+                  (t) => t.players.length > 0 || Boolean(t.commentary?.trim())
+                );
+                const renderedTiers =
+                  hideEmptyTiers && nonEmptyTiers.length > 0
+                    ? nonEmptyTiers
+                    : section.tiers;
 
                 return (
                   <div key={`${section.role}-${secIdx}`}>
                     {/* Role Header Strip when split by roles */}
                     {roleMeta && (
                       <div
-                        className={`bg-[#101514] border-b border-white/10 grid ${
-                          hasAnyCommentary
-                            ? "grid-cols-[148px_1fr_430px]"
-                            : "grid-cols-[148px_1fr]"
-                        } gap-x-3 items-center px-7 py-2`}
+                        style={tierGridStyle}
+                        className={`bg-[#101514] border-b border-white/10 grid gap-x-3 items-center px-5 ${
+                          isMultiRoleCompact ? "py-1" : "py-1.5"
+                        }`}
                       >
                         <div />
                         <div
-                          className={`flex items-center gap-3 min-w-0 ${
-                            isMultiRoleCompact ? "px-2.5" : "px-3 py-0.5"
+                          className={`flex items-center gap-2.5 min-w-0 ${
+                            isMultiRoleCompact ? "px-2" : "px-2.5 py-0.5"
                           }`}
                         >
                           <img
                             src={roleMeta.icon}
                             alt={roleMeta.label}
                             crossOrigin="anonymous"
-                            className={`${
-                              isMultiRoleCompact ? "w-6 h-6" : "w-7 h-7"
-                            } object-contain shrink-0`}
+                            className="w-5 h-5 object-contain shrink-0"
                           />
                           <span
                             className={`font-extrabold uppercase tracking-wider text-[#f0c020] ${
-                              isMultiRoleCompact ? "text-base" : "text-lg"
+                              isMultiRoleCompact ? "text-sm" : "text-base"
                             }`}
                           >
                             {getRoleSectionTitle(section.role)}
@@ -989,21 +1084,20 @@ export function PlayerTierShareView({
 
                     {/* Rows */}
                     <div className="divide-y divide-white/10">
-                      {section.tiers.map((tier) => {
+                      {renderedTiers.map((tier) => {
                         const contrastText = getTierContrastText(tier.color);
                         const isShortTierLabel = tier.label.trim().length <= 3;
                         return (
                           <div
                             key={tier.id}
                             style={{
+                              ...tierGridStyle,
                               background: `linear-gradient(90deg, ${tier.color}42 0%, ${tier.color}24 100%)`,
                             }}
-                            className={`grid ${
-                              hasAnyCommentary
-                                ? "grid-cols-[148px_1fr_430px]"
-                                : "grid-cols-[148px_1fr]"
-                            } gap-x-3 items-center px-7 py-3 ${
-                              isMultiRoleCompact ? "min-h-[82px]" : "min-h-[104px]"
+                            className={`grid gap-x-3 items-center px-5 ${
+                              isMultiRoleCompact
+                                ? "min-h-[48px] py-1.5"
+                                : "min-h-[68px] py-2"
                             }`}
                           >
                             {/* Tier Label Cell */}
@@ -1015,9 +1109,13 @@ export function PlayerTierShareView({
                                   color: contrastText,
                                 }}
                                 className={`w-fit max-w-full rounded-xl border font-black text-center flex items-center justify-center shadow-sm leading-tight whitespace-nowrap ${
-                                  isShortTierLabel
-                                    ? "min-w-[54px] px-3.5 py-2 text-xl min-h-[52px]"
-                                    : "min-w-[54px] px-4 py-2 text-[15px] min-h-[48px]"
+                                  isMultiRoleCompact
+                                    ? isShortTierLabel
+                                      ? "min-w-[46px] px-3 py-1 text-lg min-h-[36px]"
+                                      : "min-w-[46px] px-3 py-1 text-[13px] min-h-[36px]"
+                                    : isShortTierLabel
+                                    ? "min-w-[50px] px-3.5 py-1.5 text-xl min-h-[44px]"
+                                    : "min-w-[50px] px-3.5 py-1.5 text-[14px] min-h-[44px]"
                                 }`}
                               >
                                 {tier.label}
@@ -1035,7 +1133,7 @@ export function PlayerTierShareView({
                               return (
                             <div
                               className={`min-w-0 flex items-center ${
-                                isMultiRoleCompact ? "px-2.5 py-1.5" : "px-3 py-2"
+                                isMultiRoleCompact ? "px-2 py-0.5" : "px-2.5 py-1"
                               }`}
                             >
                               {tier.players.length === 0 ? (
