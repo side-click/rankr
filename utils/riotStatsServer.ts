@@ -105,7 +105,7 @@ const loadCachedPublicStatsContext = unstable_cache(
     );
   },
   ["public-stats-context"],
-  { revalidate: 60, tags: ["public-stats"] }
+  { revalidate: 3600, tags: ["public-stats"] }
 );
 
 export interface SoloPrioEntry {
@@ -180,7 +180,7 @@ const loadCachedSoloPrioMap = unstable_cache(
     return result;
   },
   ["public-solo-prio-map-v2"],
-  { revalidate: 300, tags: ["public-stats"] }
+  { revalidate: 3600, tags: ["public-stats"] }
 );
 
 export async function loadPublicSoloPrioMap(

@@ -381,7 +381,7 @@ const fetchMergedDraftsFromDb = unstable_cache(
     return merged;
   },
   ["merged-match-drafts"],
-  { revalidate: 60, tags: ["public-stats", "match-drafts"] }
+  { revalidate: 3600, tags: ["public-stats", "match-drafts"] }
 );
 
 const loadMergedDraftsCached = cache(
@@ -547,7 +547,7 @@ async function fetchCsvTabsFromGoogle(
       const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
       const res = await fetch(
         url,
-        bypassCache ? { cache: "no-store" } : { next: { revalidate: 120 } }
+        bypassCache ? { cache: "no-store" } : { next: { revalidate: 3600 } }
       );
       if (!res.ok) {
         throw new Error(`Failed to fetch SCDL sheet tab ${gid} (${res.status})`);

@@ -275,7 +275,7 @@ const loadCachedHomeStatsBlock = unstable_cache(
     };
   },
   ["home-stats-block"],
-  { revalidate: 60, tags: ["public-stats", "home-stats"] }
+  { revalidate: 3600, tags: ["public-stats", "home-stats"] }
 );
 
 export async function loadHomeData(
