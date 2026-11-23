@@ -2210,14 +2210,21 @@ export function StatsDashboard({
                         <span className="text-[10px] tabular-nums text-[#a6a89e] w-3">
                           {idx + 1}
                         </span>
-                        {p.teamLogoUrl && (
+                        {p.isSub ? (
+                          <img
+                            src={getRoleMeta(p.role as LeagueRole).icon}
+                            alt={getRoleMeta(p.role as LeagueRole).label}
+                            crossOrigin="anonymous"
+                            className="w-4 h-4 object-contain shrink-0"
+                          />
+                        ) : p.teamLogoUrl ? (
                           <img
                             src={p.teamLogoUrl}
                             alt={p.teamName}
                             crossOrigin="anonymous"
                             className="w-4 h-4 object-contain shrink-0"
                           />
-                        )}
+                        ) : null}
                         <span className="font-bold text-[#f0ede0] truncate">
                           {p.displayName}
                         </span>
@@ -2304,14 +2311,21 @@ export function StatsDashboard({
                         >
                           {idx + 1}
                         </span>
-                        {p.teamLogoUrl && (
+                        {p.isSub ? (
+                          <img
+                            src={getRoleMeta(p.role as LeagueRole).icon}
+                            alt={getRoleMeta(p.role as LeagueRole).label}
+                            crossOrigin="anonymous"
+                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                          />
+                        ) : p.teamLogoUrl ? (
                           <img
                             src={p.teamLogoUrl}
                             alt={p.teamName}
                             crossOrigin="anonymous"
                             className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
                           />
-                        )}
+                        ) : null}
                         <span
                           className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
                             idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
