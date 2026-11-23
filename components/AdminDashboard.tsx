@@ -618,6 +618,7 @@ export function AdminDashboard({
         season.stats_playoff_gids && season.stats_playoff_gids.length > 0
           ? season.stats_playoff_gids.map((g) => g.trim()).filter(Boolean)
           : null,
+      stats_schedule_gid: season.stats_schedule_gid?.trim() || null,
       regular_season_rounds:
         typeof season.regular_season_rounds === "number" &&
         Number.isFinite(season.regular_season_rounds) &&
@@ -2481,6 +2482,29 @@ export function AdminDashboard({
                                 )
                               }
                               placeholder="e.g., 987654321"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Schedule / Draft Links Tab GID (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={s.stats_schedule_gid ?? ""}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_schedule_gid: e.target.value,
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="e.g., 728267243"
                               className="w-full xp-inset px-2 py-1 text-xs"
                             />
                           </div>

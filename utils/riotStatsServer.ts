@@ -425,6 +425,7 @@ async function loadStatsContextInternal(
     stats_sheet_id?: string | null;
     stats_sheet_gids?: string[] | null;
     stats_playoff_gids?: string[] | null;
+    stats_schedule_gid?: string | null;
     regular_season_rounds?: number | null;
     stats_credits_label?: string | null;
     stats_credits_url?: string | null;
@@ -437,6 +438,7 @@ async function loadStatsContextInternal(
     sheetId: seasonSheetRow?.stats_sheet_id ?? null,
     gids: seasonSheetRow?.stats_sheet_gids ?? null,
     playoffGids: seasonSheetRow?.stats_playoff_gids ?? null,
+    scheduleGid: seasonSheetRow?.stats_schedule_gid ?? null,
     regularSeasonRounds: seasonSheetRow?.regular_season_rounds ?? null,
     creditsLabel: seasonSheetRow?.stats_credits_label ?? null,
     creditsUrl: seasonSheetRow?.stats_credits_url ?? null,

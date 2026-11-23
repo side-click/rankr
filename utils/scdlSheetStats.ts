@@ -25,7 +25,7 @@ export interface DraftRecord {
 
 const DRAFTS_BY_GAME_ID = draftsData as Record<string, DraftRecord>;
 
-const SCDL_SHEET_ID = "1tdi8ftaQ50sYS92H39YybU29SIPGVSyRNeT_HdOHP8A";
+export const SCDL_SHEET_ID = "1tdi8ftaQ50sYS92H39YybU29SIPGVSyRNeT_HdOHP8A";
 const SCDL_SHEET_GIDS = [
   { gid: "1733612942", label: "Tab 1" },
   { gid: "1849724071", label: "Tab 2" },
@@ -42,6 +42,12 @@ export interface IncompleteDataGame {
   gameId: string;
   matchLabel: string;
   issues: string[];
+}
+
+export interface DraftIntegrityIssue {
+  gameId: string;
+  matchLabel: string;
+  issue: string;
 }
 
 export interface PlayoffSeriesMatchup {
@@ -66,10 +72,12 @@ export interface PlayoffSeriesMatchup {
 
 export interface SheetSyncSummary {
   players: AggregatedPlayerStats[];
+  subPlayers: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   unrosteredPlayers: UnrosteredSheetPlayer[];
   missingDraftGames: { gameId: string; matchLabel: string }[];
   incompleteDataGames: IncompleteDataGame[];
+  draftIntegrityIssues: DraftIntegrityIssue[];
   playoffSeries: PlayoffSeriesMatchup[];
   fetchedAt: string;
   rowCount: number;
@@ -309,6 +317,7 @@ export interface SheetSourceConfig {
   sheetId?: string | null;
   gids?: string[] | null;
   playoffGids?: string[] | null;
+  scheduleGid?: string | null;
   regularSeasonRounds?: number | null;
   creditsLabel?: string | null;
   creditsUrl?: string | null;
@@ -650,7 +659,7 @@ function dedupeParsedRows(
   return uniqueRows;
 }
 
-async function loadUniqueSheetRows(
+export async function loadUniqueSheetRows(
   config?: SheetSourceConfig
 ): Promise<ParsedSheetRow[]> {
   if (config?.provider === "none") {
@@ -793,6 +802,22 @@ export async function fetchScdlSheetStats(
   const uniqueGames = new Set<string>();
   const unrosteredMap = new Map<string, UnrosteredSheetPlayer>();
   const missingDraftMap = new Map<string, { gameId: string; matchLabel: string }>();
+  const subMatchesByBucket = new Map<
+    string,
+    {
+      meta: {
+        playerKey: string;
+        riotId: string;
+        teamId: string | null;
+        teamName: string;
+        teamLogoUrl: string | null;
+        divisionId: string | null;
+        divisionName: string;
+        role: string;
+      };
+      matches: CompactRiotMatch[];
+    }
+  >();
 
   for (const r of uniqueRows) {
     uniqueGames.add(r.gameId);
@@ -801,6 +826,8 @@ export async function fetchScdlSheetStats(
 
     const matchedRoster =
       rosterByKey.get(normKey) ?? rosterByDisplay.get(dispKey);
+    let targetBucket: { matches: CompactRiotMatch[] } | undefined;
+
     if (!matchedRoster) {
       const existing = unrosteredMap.get(normKey);
       if (existing) {
@@ -813,10 +840,31 @@ export async function fetchScdlSheetStats(
           games: 1,
         });
       }
-      continue;
+      const teamMeta = teamMetaByName.get(r.teamName.trim().toLowerCase());
+      const subKey = `sub::${normKey}::${teamMeta?.divisionId ?? "none"}::${r.role}`;
+      let subBucket = subMatchesByBucket.get(subKey);
+      if (!subBucket) {
+        subBucket = {
+          meta: {
+            playerKey: subKey,
+            riotId: r.playerName,
+            teamId: null,
+            teamName: "",
+            teamLogoUrl: null,
+            divisionId: teamMeta?.divisionId ?? null,
+            divisionName: teamMeta?.divisionName ?? "Division",
+            role: r.role,
+          },
+          matches: [],
+        };
+        subMatchesByBucket.set(subKey, subBucket);
+      }
+      targetBucket = subBucket;
+    } else {
+      targetBucket = matchesByPlayerKey.get(matchedRoster.playerKey);
     }
 
-    const bucket = matchesByPlayerKey.get(matchedRoster.playerKey);
+    const bucket = targetBucket;
     if (!bucket) continue;
 
     const tgKey = `${r.gameId}::${r.teamName.toLowerCase()}`;
@@ -930,6 +978,40 @@ export async function fetchScdlSheetStats(
         divisionId: meta.divisionId,
         divisionName: meta.divisionName,
         role: meta.role,
+      })
+    );
+  }
+
+  const subPlayers: AggregatedPlayerStats[] = [];
+  for (const { meta, matches } of subMatchesByBucket.values()) {
+    const fakeRow: RiotPlayerStatRow = {
+      player_key: meta.playerKey,
+      riot_id: meta.riotId,
+      puuid: null,
+      season_id: null,
+      division_id: meta.divisionId,
+      team_id: meta.teamId,
+      role: meta.role,
+      solo_tier: null,
+      solo_rank: null,
+      solo_lp: null,
+      solo_wins: null,
+      solo_losses: null,
+      matches,
+      sync_error: null,
+      synced_at: matches.length > 0 ? nowIso : "",
+    };
+    subPlayers.push(
+      aggregatePlayerStats(fakeRow, {
+        playerKey: meta.playerKey,
+        riotId: meta.riotId,
+        teamId: meta.teamId,
+        teamName: meta.teamName,
+        teamLogoUrl: meta.teamLogoUrl,
+        divisionId: meta.divisionId,
+        divisionName: meta.divisionName,
+        role: meta.role,
+        isSub: true,
       })
     );
   }
@@ -1394,12 +1476,64 @@ export async function fetchScdlSheetStats(
       a.roundOrder - b.roundOrder || a.matchLabel.localeCompare(b.matchLabel)
   );
 
+  // Audit draft dataset integrity: duplicate source URLs and pick vs played-champion mismatches
+  const draftIntegrityIssues: DraftIntegrityIssue[] = [];
+  const normChamp = (s: string) => {
+    const k = s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (k === "wukong") return "monkeyking";
+    if (k === "renataglasc") return "renata";
+    return k;
+  };
+  const gamesBySourceUrl = new Map<string, string[]>();
+  for (const [gameId, gRows] of rowsByGame.entries()) {
+    const draft = draftsByGameId[gameId];
+    if (!draft) continue;
+    const matchLabel = gRows[0]?.matchLabel || gameId;
+    const src = draft.sourceUrl?.trim().replace(/\/+$/, "").toLowerCase();
+    if (src) {
+      const list = gamesBySourceUrl.get(src) ?? [];
+      list.push(gameId);
+      gamesBySourceUrl.set(src, list);
+    }
+    const draftPicks = [...draft.bluePicks, ...draft.redPicks]
+      .map(normChamp)
+      .filter(Boolean);
+    const playedSet = new Set(gRows.map((r) => normChamp(r.champion)));
+    if (draftPicks.length >= 10 && playedSet.size >= 8) {
+      const matchesCount = draftPicks.filter((c) => playedSet.has(c)).length;
+      if (matchesCount < 7) {
+        draftIntegrityIssues.push({
+          gameId,
+          matchLabel,
+          issue: `Pick mismatch: only ${matchesCount}/10 draft picks match played champions`,
+        });
+      }
+    }
+  }
+  for (const [src, gIds] of gamesBySourceUrl.entries()) {
+    if (gIds.length > 1) {
+      for (const gid of gIds) {
+        const gRows = rowsByGame.get(gid);
+        draftIntegrityIssues.push({
+          gameId: gid,
+          matchLabel: gRows?.[0]?.matchLabel || gid,
+          issue: `Duplicate draft URL shared across ${gIds.length} games (${src})`,
+        });
+      }
+    }
+  }
+  draftIntegrityIssues.sort((a, b) =>
+    a.matchLabel.localeCompare(b.matchLabel)
+  );
+
   return {
     players: aggregatedPlayers,
+    subPlayers,
     teams: aggregatedTeams,
     unrosteredPlayers,
     missingDraftGames,
     incompleteDataGames,
+    draftIntegrityIssues,
     playoffSeries,
     fetchedAt: nowIso,
     rowCount: uniqueRows.length,

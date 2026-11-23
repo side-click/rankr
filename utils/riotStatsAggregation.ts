@@ -34,6 +34,7 @@ export interface AggregatedPlayerStats {
   divisionName: string;
   role: string;
   altAccounts?: string[];
+  isSub?: boolean;
   soloTier: string | null;
   soloRank: string | null;
   soloLp: number | null;
@@ -153,6 +154,7 @@ export function aggregatePlayerStats(
     divisionName: string;
     role: string;
     altAccounts?: string[];
+    isSub?: boolean;
   }
 ): AggregatedPlayerStats {
   const matches = Array.isArray(row?.matches) ? row.matches : [];
@@ -249,6 +251,7 @@ export function aggregatePlayerStats(
     divisionId: meta.divisionId,
     divisionName: meta.divisionName,
     role: meta.role,
+    isSub: meta.isSub,
     ...(meta.altAccounts && meta.altAccounts.length > 0
       ? { altAccounts: meta.altAccounts }
       : {}),
@@ -604,6 +607,7 @@ export function filterPlayersByStage(
       divisionName: p.divisionName,
       role: p.role,
       altAccounts: p.altAccounts,
+      isSub: p.isSub,
     });
   });
 }

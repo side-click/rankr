@@ -48,6 +48,7 @@ export interface Season {
   stats_sheet_id?: string | null;
   stats_sheet_gids?: string[] | null;
   stats_playoff_gids?: string[] | null;
+  stats_schedule_gid?: string | null;
   regular_season_rounds?: number | null;
   stats_credits_label?: string | null;
   stats_credits_url?: string | null;

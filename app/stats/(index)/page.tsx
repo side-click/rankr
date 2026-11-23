@@ -124,6 +124,7 @@ export default async function PublicStatsPage({
         sheetSummary
           ? {
               players: sheetSummary.players,
+              subPlayers: sheetSummary.subPlayers,
               teams: sheetSummary.teams,
               playoffSeries: sheetSummary.playoffSeries,
               fetchedAt: sheetSummary.fetchedAt,

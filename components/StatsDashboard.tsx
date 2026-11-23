@@ -56,10 +56,12 @@ import {
 } from "@/utils/riotStatsAggregation";
 import type { SoloPrioEntry } from "@/utils/riotStatsServer";
 import type {
+  DraftIntegrityIssue,
   IncompleteDataGame,
   PlayoffSeriesMatchup,
   UnrosteredSheetPlayer,
 } from "@/utils/scdlSheetStats";
+import type { DraftImportSummary } from "@/utils/draftImporter";
 
 interface DivisionItem {
   id: string;
@@ -106,10 +108,12 @@ interface StatsDashboardProps {
   initialTab?: "players" | "teams" | "division";
   initialSheetData?: {
     players: AggregatedPlayerStats[];
+    subPlayers?: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
     unrosteredPlayers?: UnrosteredSheetPlayer[];
     missingDraftGames?: { gameId: string; matchLabel: string }[];
     incompleteDataGames?: IncompleteDataGame[];
+    draftIntegrityIssues?: DraftIntegrityIssue[];
     playoffSeries?: PlayoffSeriesMatchup[];
     fetchedAt: string;
     rowCount: number;
@@ -234,10 +238,12 @@ export function StatsDashboard({
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [sheetData, setSheetData] = useState<{
     players: AggregatedPlayerStats[];
+    subPlayers: AggregatedPlayerStats[];
     teams: AggregatedTeamStats[];
     unrosteredPlayers: UnrosteredSheetPlayer[];
     missingDraftGames: { gameId: string; matchLabel: string }[];
     incompleteDataGames: IncompleteDataGame[];
+    draftIntegrityIssues: DraftIntegrityIssue[];
     playoffSeries: PlayoffSeriesMatchup[];
     fetchedAt: string;
     rowCount: number;
@@ -246,15 +252,21 @@ export function StatsDashboard({
     initialSheetData
       ? {
           ...initialSheetData,
+          subPlayers: initialSheetData.subPlayers ?? [],
           unrosteredPlayers: initialSheetData.unrosteredPlayers ?? [],
           missingDraftGames: initialSheetData.missingDraftGames ?? [],
           incompleteDataGames: initialSheetData.incompleteDataGames ?? [],
+          draftIntegrityIssues: initialSheetData.draftIntegrityIssues ?? [],
           playoffSeries: initialSheetData.playoffSeries ?? [],
         }
       : null
   );
+  const [includeSubs, setIncludeSubs] = useState(false);
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [importingDrafts, setImportingDrafts] = useState(false);
+  const [draftImportResult, setDraftImportResult] =
+    useState<DraftImportSummary | null>(null);
   const [statsNotice, setStatsNotice] = useState<string | null>(
     initialStatsNotice ?? null
   );
@@ -443,10 +455,12 @@ export function StatsDashboard({
       const json = (await res.json().catch(() => ({}))) as {
         error?: string;
         players?: AggregatedPlayerStats[];
+        subPlayers?: AggregatedPlayerStats[];
         teams?: AggregatedTeamStats[];
         unrosteredPlayers?: UnrosteredSheetPlayer[];
         missingDraftGames?: { gameId: string; matchLabel: string }[];
         incompleteDataGames?: IncompleteDataGame[];
+        draftIntegrityIssues?: DraftIntegrityIssue[];
         playoffSeries?: PlayoffSeriesMatchup[];
         fetchedAt?: string;
         rowCount?: number;
@@ -457,10 +471,12 @@ export function StatsDashboard({
       }
       setSheetData({
         players: json.players,
+        subPlayers: json.subPlayers ?? [],
         teams: json.teams,
         unrosteredPlayers: json.unrosteredPlayers ?? [],
         missingDraftGames: json.missingDraftGames ?? [],
         incompleteDataGames: json.incompleteDataGames ?? [],
+        draftIntegrityIssues: json.draftIntegrityIssues ?? [],
         playoffSeries: json.playoffSeries ?? [],
         fetchedAt: json.fetchedAt ?? new Date().toISOString(),
         rowCount: json.rowCount ?? 0,
@@ -497,6 +513,19 @@ export function StatsDashboard({
     );
   }, [activePlayers, divisionFilter]);
 
+  const divisionSubPlayers = useMemo(() => {
+    return (sheetData?.subPlayers ?? []).filter((p) =>
+      divisionFilter === "all" ? true : p.divisionId === divisionFilter
+    );
+  }, [sheetData, divisionFilter]);
+
+  const stagedSubCount = useMemo(() => {
+    const wantPlayoffs = stageBucket === "playoffs";
+    return divisionSubPlayers.filter((p) =>
+      p.matches.some((m) => isMatchPlayoff(m) === wantPlayoffs)
+    ).length;
+  }, [divisionSubPlayers, stageBucket]);
+
   const stageMatchCounts = useMemo(() => {
     const regIds = new Set<string>();
     const playoffIds = new Set<string>();
@@ -519,9 +548,38 @@ export function StatsDashboard({
   }, [divisionFilter, hasPlayoffStats]);
 
   const filteredPlayers = useMemo(() => {
-    const staged = filterPlayersByStage(allDivisionPlayers, stageBucket);
+    const base = includeSubs
+      ? [...allDivisionPlayers, ...divisionSubPlayers]
+      : allDivisionPlayers;
+    const staged = filterPlayersByStage(base, stageBucket).filter(
+      (p) => !p.isSub || p.games > 0
+    );
     return computeRoleNormalizedRatings(staged);
-  }, [allDivisionPlayers, stageBucket]);
+  }, [allDivisionPlayers, divisionSubPlayers, includeSubs, stageBucket]);
+
+  async function handleImportMissingDrafts() {
+    setImportingDrafts(true);
+    setSheetError(null);
+    try {
+      const res = await fetch("/api/admin/import-drafts", { method: "POST" });
+      const json = (await res.json().catch(() => ({}))) as DraftImportSummary & {
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.error || `Import failed (${res.status})`);
+      }
+      setDraftImportResult(json);
+      if (json.imported.length > 0) {
+        await loadSheetStats(true);
+      }
+    } catch (err) {
+      setSheetError(
+        err instanceof Error ? err.message : "Failed to import missing drafts"
+      );
+    } finally {
+      setImportingDrafts(false);
+    }
+  }
 
   async function saveStatsNotice(nextNotice: string | null) {
     setSavingNotice(true);
@@ -1069,6 +1127,22 @@ export function StatsDashboard({
               )}
               <button
                 type="button"
+                disabled={importingDrafts || sheetLoading}
+                onClick={() => void handleImportMissingDrafts()}
+                title="Auto-import missing drafts from configured Schedule / Draft Links Google Sheet tab"
+                className="xp-btn text-xs justify-center disabled:opacity-50"
+              >
+                <Download
+                  className={`w-3.5 h-3.5 text-[#f0c020] ${
+                    importingDrafts ? "animate-pulse" : ""
+                  }`}
+                />
+                <span>
+                  {importingDrafts ? "Importing Drafts..." : "Import Drafts"}
+                </span>
+              </button>
+              <button
+                type="button"
                 disabled={sheetLoading}
                 onClick={() => void loadSheetStats(true)}
                 title="Fetch latest SCDL League stats from the public Google Sheet"
@@ -1083,6 +1157,99 @@ export function StatsDashboard({
               </button>
             </div>
           </div>
+
+          {sheetData && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              {sheetData.missingDraftGames.length === 0 &&
+              sheetData.incompleteDataGames.length === 0 &&
+              sheetData.draftIntegrityIssues.length === 0 &&
+              sheetData.unrosteredPlayers.length === 0 &&
+              missingDataPlayers.length === 0 ? (
+                <span className="px-2.5 py-1 rounded bg-[#143320]/90 border border-[#3a804d] text-[#7cd438] font-bold">
+                  ✓ All Datasets Aligned ({sheetData.matchCount} games &middot;
+                  100% draft coverage &middot; no duplicates)
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-[#f0c020] font-bold">
+                  Dataset Audit:{" "}
+                  {[
+                    sheetData.missingDraftGames.length > 0 &&
+                      `${sheetData.missingDraftGames.length} missing drafts`,
+                    sheetData.draftIntegrityIssues.length > 0 &&
+                      `${sheetData.draftIntegrityIssues.length} draft mismatches/duplicates`,
+                    sheetData.incompleteDataGames.length > 0 &&
+                      `${sheetData.incompleteDataGames.length} incomplete rows`,
+                    sheetData.unrosteredPlayers.length > 0 &&
+                      `${sheetData.unrosteredPlayers.length} unrostered`,
+                    missingDataPlayers.length > 0 &&
+                      `${missingDataPlayers.length} 0-game players`,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")}
+                </span>
+              )}
+            </div>
+          )}
+
+          {draftImportResult && (
+            <div className="p-2.5 bg-black/40 border border-[#c89b3c]/50 rounded text-[11px] text-[#e8e5d8] space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-[#f0c020]">
+                  Draft Import Summary: {draftImportResult.imported.length}{" "}
+                  imported, {draftImportResult.alreadyCompleteCount}/
+                  {draftImportResult.totalSheetGames} already complete
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDraftImportResult(null)}
+                  className="text-[#a6a89e] hover:text-white"
+                >
+                  Dismiss
+                </button>
+              </div>
+              {draftImportResult.warnings.length > 0 && (
+                <div className="text-[#ff857a] space-y-0.5">
+                  <div className="font-bold">
+                    Warnings / Validation Skips ({draftImportResult.warnings.length}):
+                  </div>
+                  {draftImportResult.warnings.map((w) => (
+                    <div key={w.gameId}>
+                      • {w.matchLabel} ({w.gameId}): {w.reason}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {draftImportResult.manualReview.length > 0 && (
+                <div className="text-[#f0c020] space-y-0.5">
+                  <div className="font-bold">
+                    Manual Entry Needed (drafter.lol / blocked:{" "}
+                    {draftImportResult.manualReview.length}):
+                  </div>
+                  {draftImportResult.manualReview.map((m) => (
+                    <div key={m.gameId} className="truncate">
+                      • {m.matchLabel} ({m.gameId}):{" "}
+                      <a
+                        href={m.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        {m.url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {draftImportResult.unmatched.length > 0 && (
+                <div className="text-[#a6a89e]">
+                  Unmatched on schedule tab ({draftImportResult.unmatched.length}):{" "}
+                  {draftImportResult.unmatched
+                    .map((u) => `${u.matchLabel} (${u.gameId})`)
+                    .join(", ")}
+                </div>
+              )}
+            </div>
+          )}
 
           {sheetError && (
             <div className="p-2 bg-[#451717] border border-[#9e3535] rounded text-xs text-[#ff857a] font-bold">
@@ -1139,6 +1306,27 @@ export function StatsDashboard({
               </div>
             );
           })()}
+
+          {sheetData && sheetData.draftIntegrityIssues.length > 0 && (
+            <div className="px-3 py-2 bg-[#451717]/90 border border-[#9e3535] rounded text-[11px] text-[#ff857a] space-y-1">
+              <div className="font-bold flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <strong>{sheetData.draftIntegrityIssues.length}</strong> draft
+                  dataset integrity{" "}
+                  {sheetData.draftIntegrityIssues.length === 1
+                    ? "issue"
+                    : "issues"}{" "}
+                  detected:
+                </span>
+              </div>
+              {sheetData.draftIntegrityIssues.map((d) => (
+                <div key={`${d.gameId}-${d.issue}`} className="pl-5">
+                  • <strong>{d.matchLabel}</strong> ({d.gameId}): {d.issue}
+                </div>
+              ))}
+            </div>
+          )}
 
           {sheetData && sheetData.incompleteDataGames.length > 0 && (() => {
             const incomplete = sheetData.incompleteDataGames;
@@ -1508,7 +1696,7 @@ export function StatsDashboard({
             <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
               Competition Stage
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setStageBucket("regular")}
@@ -1534,6 +1722,22 @@ export function StatsDashboard({
                   ({stageMatchCounts.playoffs})
                 </span>
               </button>
+              {activeSection === "players" && stagedSubCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIncludeSubs((v) => !v)}
+                  title="Include unrostered substitute players in leaderboards and player table (separated by role)"
+                  className={`xp-btn text-xs px-3 py-1 ${
+                    includeSubs ? "xp-btn-primary" : ""
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>{includeSubs ? "Subs Included" : "Include Subs"}</span>
+                  <span className="text-[10px] opacity-80 tabular-nums">
+                    ({stagedSubCount})
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1642,12 +1846,8 @@ export function StatsDashboard({
                     if (!signatureChamp) {
                       signatureChamp = player.topChampions[0]?.name;
                     }
-                    return (
-                      <Link
-                        key={roleMeta.key}
-                        href={playerHref(player.playerKey)}
-                        className="group relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 hover:border-[#f0c020]/80 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5 transition"
-                      >
+                    const cardContent = (
+                      <>
                         {signatureChamp && (
                           <img
                             src={getChampionCenteredSplashUrl(signatureChamp)}
@@ -1673,8 +1873,13 @@ export function StatsDashboard({
                         </div>
 
                         <div className="relative z-10 min-w-0">
-                          <div className="font-extrabold text-sm sm:text-base text-white group-hover:text-[#f0c020] transition-colors truncate drop-shadow">
-                            {player.displayName}
+                          <div className="font-extrabold text-sm sm:text-base text-white group-hover:text-[#f0c020] transition-colors truncate drop-shadow flex items-center gap-1.5">
+                            <span className="truncate">{player.displayName}</span>
+                            {player.isSub && (
+                              <span className="px-1 py-0.5 rounded bg-black/75 border border-white/25 text-[9px] font-bold uppercase text-[#c7c5b8] shrink-0">
+                                SUB
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                             {player.teamLogoUrl && (
@@ -1689,6 +1894,25 @@ export function StatsDashboard({
                             </span>
                           </div>
                         </div>
+                      </>
+                    );
+                    if (player.isSub) {
+                      return (
+                        <div
+                          key={roleMeta.key}
+                          className="relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5"
+                        >
+                          {cardContent}
+                        </div>
+                      );
+                    }
+                    return (
+                      <Link
+                        key={roleMeta.key}
+                        href={playerHref(player.playerKey)}
+                        className="group relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 hover:border-[#f0c020]/80 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5 transition"
+                      >
+                        {cardContent}
                       </Link>
                     );
                   })}
@@ -1979,33 +2203,52 @@ export function StatsDashboard({
                 )}
               </div>
               <div className="divide-y divide-white/10">
-                {card.rows.map((p, idx) => (
-                  <Link
-                    key={p.playerKey}
-                    href={playerHref(p.playerKey)}
-                    className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] tabular-nums text-[#a6a89e] w-3">
-                        {idx + 1}
+                {card.rows.map((p, idx) => {
+                  const rowInner = (
+                    <>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] tabular-nums text-[#a6a89e] w-3">
+                          {idx + 1}
+                        </span>
+                        {p.teamLogoUrl && (
+                          <img
+                            src={p.teamLogoUrl}
+                            alt={p.teamName}
+                            crossOrigin="anonymous"
+                            className="w-4 h-4 object-contain shrink-0"
+                          />
+                        )}
+                        <span className="font-bold text-[#f0ede0] truncate">
+                          {p.displayName}
+                        </span>
+                        {p.isSub && (
+                          <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
+                            SUB
+                          </span>
+                        )}
+                      </div>
+                      <span className="tabular-nums font-bold text-[#7cd438] shrink-0">
+                        {card.fmt(p)}
                       </span>
-                      {p.teamLogoUrl && (
-                        <img
-                          src={p.teamLogoUrl}
-                          alt={p.teamName}
-                          crossOrigin="anonymous"
-                          className="w-4 h-4 object-contain shrink-0"
-                        />
-                      )}
-                      <span className="font-bold text-[#f0ede0] truncate">
-                        {p.displayName}
-                      </span>
+                    </>
+                  );
+                  return p.isSub ? (
+                    <div
+                      key={p.playerKey}
+                      className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs"
+                    >
+                      {rowInner}
                     </div>
-                    <span className="tabular-nums font-bold text-[#7cd438] shrink-0">
-                      {card.fmt(p)}
-                    </span>
-                  </Link>
-                ))}
+                  ) : (
+                    <Link
+                      key={p.playerKey}
+                      href={playerHref(p.playerKey)}
+                      className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
+                    >
+                      {rowInner}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           );
@@ -2050,50 +2293,71 @@ export function StatsDashboard({
                 </span>
               </div>
               <div className="divide-y divide-[#f0c020]/15">
-                {ratingCard.rows.map((p, idx) => (
-                  <Link
-                    key={p.playerKey}
-                    href={playerHref(p.playerKey)}
-                    className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
-                      idx === 0 ? "bg-[#f0c020]/10" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <span
-                        className={`text-sm sm:text-base font-extrabold tabular-nums w-4 sm:w-5 text-center ${
-                          idx === 0 ? "text-[#f0c020]" : "text-[#c89b3c]"
-                        }`}
-                      >
-                        {idx + 1}
-                      </span>
-                      {p.teamLogoUrl && (
-                        <img
-                          src={p.teamLogoUrl}
-                          alt={p.teamName}
-                          crossOrigin="anonymous"
-                          className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
-                        />
-                      )}
-                      <span
-                        className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
-                          idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
-                        }`}
-                      >
-                        <span className="truncate">{p.displayName}</span>
-                        {idx === 0 && (
-                          <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                {ratingCard.rows.map((p, idx) => {
+                  const ratingInner = (
+                    <>
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <span
+                          className={`text-sm sm:text-base font-extrabold tabular-nums w-4 sm:w-5 text-center ${
+                            idx === 0 ? "text-[#f0c020]" : "text-[#c89b3c]"
+                          }`}
+                        >
+                          {idx + 1}
+                        </span>
+                        {p.teamLogoUrl && (
+                          <img
+                            src={p.teamLogoUrl}
+                            alt={p.teamName}
+                            crossOrigin="anonymous"
+                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                          />
                         )}
+                        <span
+                          className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
+                            idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
+                          }`}
+                        >
+                          <span className="truncate">{p.displayName}</span>
+                          {p.isSub && (
+                            <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
+                              SUB
+                            </span>
+                          )}
+                          {idx === 0 && (
+                            <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                          )}
+                        </span>
+                      </div>
+                      <span
+                        className={`font-black text-base sm:text-lg tabular-nums shrink-0 ${
+                          idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
+                        }`}
+                      >
+                        {ratingCard.fmt(p)}
                       </span>
-                    </div>
-                    <span
-                      className={`font-black text-base sm:text-lg tabular-nums shrink-0 ${
-                        idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
+                    </>
+                  );
+                  return p.isSub ? (
+                    <div
+                      key={p.playerKey}
+                      className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 ${
+                        idx === 0 ? "bg-[#f0c020]/10" : ""
                       }`}
                     >
-                      {ratingCard.fmt(p)}
-                    </span>
-                  </Link>
-                ))}
+                      {ratingInner}
+                    </div>
+                  ) : (
+                    <Link
+                      key={p.playerKey}
+                      href={playerHref(p.playerKey)}
+                      className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
+                        idx === 0 ? "bg-[#f0c020]/10" : ""
+                      }`}
+                    >
+                      {ratingInner}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           );
@@ -2641,8 +2905,16 @@ export function StatsDashboard({
                   return (
                     <tr
                       key={p.playerKey}
-                      onClick={() => router.push(playerHref(p.playerKey))}
-                      className="hover:bg-white/5 transition cursor-pointer"
+                      onClick={
+                        p.isSub
+                          ? undefined
+                          : () => router.push(playerHref(p.playerKey))
+                      }
+                      className={
+                        p.isSub
+                          ? "bg-black/20"
+                          : "hover:bg-white/5 transition cursor-pointer"
+                      }
                     >
                       <td className="px-3 py-2 font-bold text-[#f0ede0] whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -2652,19 +2924,28 @@ export function StatsDashboard({
                             className="w-4 h-4 object-contain shrink-0"
                           />
                           <span>{p.displayName}</span>
+                          {p.isSub && (
+                            <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
+                              SUB
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 py-2 text-[#c7c5b8] whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          {p.teamLogoUrl && (
-                            <img
-                              src={p.teamLogoUrl}
-                              alt={p.teamName}
-                              className="w-4 h-4 object-contain shrink-0"
-                            />
-                          )}
-                          <span>{p.teamName}</span>
-                        </div>
+                        {p.isSub || !p.teamName ? (
+                          <span className="text-[#a6a89e]">—</span>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            {p.teamLogoUrl && (
+                              <img
+                                src={p.teamLogoUrl}
+                                alt={p.teamName}
+                                className="w-4 h-4 object-contain shrink-0"
+                              />
+                            )}
+                            <span>{p.teamName}</span>
+                          </div>
+                        )}
                       </td>
                       <td
                         style={sortCellStyle("games")}
