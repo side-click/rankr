@@ -614,6 +614,16 @@ export function AdminDashboard({
         season.stats_sheet_gids && season.stats_sheet_gids.length > 0
           ? season.stats_sheet_gids.map((g) => g.trim()).filter(Boolean)
           : null,
+      stats_playoff_gids:
+        season.stats_playoff_gids && season.stats_playoff_gids.length > 0
+          ? season.stats_playoff_gids.map((g) => g.trim()).filter(Boolean)
+          : null,
+      regular_season_rounds:
+        typeof season.regular_season_rounds === "number" &&
+        Number.isFinite(season.regular_season_rounds) &&
+        season.regular_season_rounds > 0
+          ? Math.floor(season.regular_season_rounds)
+          : null,
       stats_credits_label: season.stats_credits_label?.trim() || null,
       stats_credits_url: season.stats_credits_url?.trim() || null,
       stats_credits_attribution:
@@ -2445,6 +2455,61 @@ export function AdminDashboard({
                                 )
                               }
                               placeholder="1733612942, 1849724071"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Playoff Tab GIDs (Optional, comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={(s.stats_playoff_gids ?? []).join(", ")}
+                              onChange={(e) =>
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          stats_playoff_gids: e.target.value
+                                            .split(",")
+                                            .map((g) => g.trim())
+                                            .filter(Boolean),
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="e.g., 987654321"
+                              className="w-full xp-inset px-2 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                              Regular Season Rounds (Optional cutoff)
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={s.regular_season_rounds ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value.trim();
+                                const num = val ? Number(val) : null;
+                                setSeasons((prev) =>
+                                  prev.map((item) =>
+                                    item.id === s.id
+                                      ? {
+                                          ...item,
+                                          regular_season_rounds:
+                                            num && Number.isFinite(num)
+                                              ? num
+                                              : null,
+                                        }
+                                      : item
+                                  )
+                                );
+                              }}
+                              placeholder="e.g., 7 (Round 8+ = Playoffs)"
                               className="w-full xp-inset px-2 py-1 text-xs"
                             />
                           </div>

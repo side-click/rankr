@@ -221,6 +221,7 @@ interface RoleLeaderboardExportCardProps {
   divisionName: string;
   divisionLogoUrl: string | null;
   currentEditionName: string;
+  subtitleSuffix?: string;
   bannerGradient: string;
 }
 
@@ -233,6 +234,7 @@ export function RoleLeaderboardExportCard({
   divisionName,
   divisionLogoUrl,
   currentEditionName,
+  subtitleSuffix,
   bannerGradient,
 }: RoleLeaderboardExportCardProps) {
   const roleMeta = getRoleMeta(role);
@@ -289,7 +291,7 @@ export function RoleLeaderboardExportCard({
               {roleMeta.label} Leaderboard
             </h2>
             <div className="text-xs font-bold text-[#c7c5b8] mt-0.5">
-              {divisionName} &middot; As of {currentEditionName}
+              {divisionName} &middot; {subtitleSuffix ?? `As of ${currentEditionName}`}
             </div>
           </div>
         </div>

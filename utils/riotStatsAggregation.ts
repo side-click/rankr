@@ -524,3 +524,86 @@ export function getPriorityPickClass(rank: 1 | 2 | 3 | undefined): string {
   if (rank === 3) return "border-[#ff5a52]/40 bg-[#ff5a52]/5";
   return "";
 }
+
+export type StatsStageBucket = "regular" | "playoffs";
+
+export function isPlayoffMatchLabel(
+  matchLabel?: string | null,
+  regularSeasonRounds?: number | null
+): boolean {
+  const raw = (matchLabel ?? "").trim();
+  if (!raw) return false;
+  const prefix = raw.split("_")[0].trim().toLowerCase();
+  if (
+    /(playoff|quarter|semi|final|bracket|upper|lower|losers|winners|elim|gauntlet|play-?in)/.test(
+      prefix
+    )
+  ) {
+    return true;
+  }
+  if (/^(po|qf|sf|gf|ub|lb|wb|wr|lr)\d*$/.test(prefix)) {
+    return true;
+  }
+  if (
+    typeof regularSeasonRounds === "number" &&
+    Number.isFinite(regularSeasonRounds) &&
+    regularSeasonRounds > 0
+  ) {
+    const roundNumMatch = prefix.match(/^(?:round|week|r|w)\s*(\d+)$/i);
+    if (roundNumMatch && Number(roundNumMatch[1]) > regularSeasonRounds) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isMatchPlayoff(match: {
+  matchLabel?: string | null;
+  isPlayoff?: boolean;
+}): boolean {
+  return typeof match.isPlayoff === "boolean"
+    ? match.isPlayoff
+    : isPlayoffMatchLabel(match.matchLabel);
+}
+
+export function filterPlayersByStage(
+  players: AggregatedPlayerStats[],
+  stage: StatsStageBucket
+): AggregatedPlayerStats[] {
+  const wantPlayoffs = stage === "playoffs";
+  return players.map((p) => {
+    const stageMatches = p.matches.filter(
+      (m) => isMatchPlayoff(m) === wantPlayoffs
+    );
+    const syntheticRow: RiotPlayerStatRow = {
+      player_key: p.playerKey,
+      riot_id: p.riotId,
+      puuid: null,
+      season_id: null,
+      division_id: p.divisionId,
+      team_id: p.teamId,
+      role: p.role,
+      solo_tier: p.soloTier,
+      solo_rank: p.soloRank,
+      solo_lp: p.soloLp,
+      solo_wins: null,
+      solo_losses: null,
+      matches: stageMatches,
+      mastery_top4: p.masteryTop4,
+      deep_synced_at: p.deepSyncedAt,
+      sync_error: p.syncError,
+      synced_at: p.syncedAt ?? "",
+    };
+    return aggregatePlayerStats(syntheticRow, {
+      playerKey: p.playerKey,
+      riotId: p.riotId,
+      teamId: p.teamId,
+      teamName: p.teamName,
+      teamLogoUrl: p.teamLogoUrl,
+      divisionId: p.divisionId,
+      divisionName: p.divisionName,
+      role: p.role,
+      altAccounts: p.altAccounts,
+    });
+  });
+}

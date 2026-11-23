@@ -57,6 +57,7 @@ export interface CompactRiotMatch {
   turretPlates?: number;
   objectivesStolen?: number;
   matchLabel?: string;
+  isPlayoff?: boolean;
   teamName?: string;
 }
 

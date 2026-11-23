@@ -62,6 +62,7 @@ export default async function AdminStatsPage({
       divisions={ctx.divisions}
       players={ctx.players}
       teams={ctx.teams}
+      initialStatsNotice={ctx.statsNotice}
       initialDivision={params.division}
       initialTab={initialTab}
       initialSheetData={sheetSummary}

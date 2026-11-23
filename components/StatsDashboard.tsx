@@ -20,6 +20,7 @@ import {
   Droplet,
   Eye,
   Flame,
+  Megaphone,
   RefreshCw,
   Shield,
   Skull,
@@ -44,14 +45,21 @@ import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import {
   computeRoleNormalizedRatings,
+  filterPlayersByStage,
   formatMinutesSeconds,
   getPriorityPickRanks,
   getRoleFilteredSoloChampions,
+  isMatchPlayoff,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
+  type StatsStageBucket,
 } from "@/utils/riotStatsAggregation";
 import type { SoloPrioEntry } from "@/utils/riotStatsServer";
-import type { UnrosteredSheetPlayer } from "@/utils/scdlSheetStats";
+import type {
+  IncompleteDataGame,
+  PlayoffSeriesMatchup,
+  UnrosteredSheetPlayer,
+} from "@/utils/scdlSheetStats";
 
 interface DivisionItem {
   id: string;
@@ -93,6 +101,7 @@ interface StatsDashboardProps {
   teams: AggregatedTeamStats[];
   soloPrioMap?: Record<string, SoloPrioEntry>;
   isAdminView?: boolean;
+  initialStatsNotice?: string | null;
   initialDivision?: string;
   initialTab?: "players" | "teams" | "division";
   initialSheetData?: {
@@ -100,6 +109,8 @@ interface StatsDashboardProps {
     teams: AggregatedTeamStats[];
     unrosteredPlayers?: UnrosteredSheetPlayer[];
     missingDraftGames?: { gameId: string; matchLabel: string }[];
+    incompleteDataGames?: IncompleteDataGame[];
+    playoffSeries?: PlayoffSeriesMatchup[];
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
@@ -163,6 +174,7 @@ export function StatsDashboard({
   teams,
   soloPrioMap,
   isAdminView = true,
+  initialStatsNotice = null,
   initialDivision,
   initialTab,
   initialSheetData = null,
@@ -225,6 +237,8 @@ export function StatsDashboard({
     teams: AggregatedTeamStats[];
     unrosteredPlayers: UnrosteredSheetPlayer[];
     missingDraftGames: { gameId: string; matchLabel: string }[];
+    incompleteDataGames: IncompleteDataGame[];
+    playoffSeries: PlayoffSeriesMatchup[];
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
@@ -234,11 +248,28 @@ export function StatsDashboard({
           ...initialSheetData,
           unrosteredPlayers: initialSheetData.unrosteredPlayers ?? [],
           missingDraftGames: initialSheetData.missingDraftGames ?? [],
+          incompleteDataGames: initialSheetData.incompleteDataGames ?? [],
+          playoffSeries: initialSheetData.playoffSeries ?? [],
         }
       : null
   );
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [statsNotice, setStatsNotice] = useState<string | null>(
+    initialStatsNotice ?? null
+  );
+  const [noticeDraft, setNoticeDraft] = useState<string>(
+    initialStatsNotice ?? ""
+  );
+  const [savingNotice, setSavingNotice] = useState(false);
+  const [noticeError, setNoticeError] = useState<string | null>(null);
+  const [showIncompleteDetails, setShowIncompleteDetails] = useState(false);
+  const [stageBucket, setStageBucket] = useState<StatsStageBucket>(() => {
+    const seedPlayers = initialSheetData?.players ?? players;
+    return seedPlayers.some((p) => p.matches.some((m) => isMatchPlayoff(m)))
+      ? "playoffs"
+      : "regular";
+  });
   const [showUnrosteredModal, setShowUnrosteredModal] = useState(false);
   const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
   const [exportingRoleLeaderboard, setExportingRoleLeaderboard] =
@@ -356,13 +387,14 @@ export function StatsDashboard({
       const dataUrl = await toPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        width: 680,
+        width: 800,
         height: exportHeight,
         style: { margin: "0" },
       });
       const link = document.createElement("a");
       const divPart = selectedDivision?.slug || "league";
-      link.download = `${divPart}-scdl-leaderboards.png`
+      const stagePart = stageBucket === "playoffs" ? "-playoffs" : "";
+      link.download = `${divPart}-scdl-leaderboards${stagePart}.png`
         .toLowerCase()
         .replace(/[^a-z0-9-_]+/g, "-");
       link.href = dataUrl;
@@ -389,7 +421,8 @@ export function StatsDashboard({
       });
       const link = document.createElement("a");
       const divPart = selectedDivision?.slug || "league";
-      link.download = `${divPart}-${roleFilter}-leaderboard.png`
+      const stagePart = stageBucket === "playoffs" ? "-playoffs" : "";
+      link.download = `${divPart}-${roleFilter}-leaderboard${stagePart}.png`
         .toLowerCase()
         .replace(/[^a-z0-9-_]+/g, "-");
       link.href = dataUrl;
@@ -413,6 +446,8 @@ export function StatsDashboard({
         teams?: AggregatedTeamStats[];
         unrosteredPlayers?: UnrosteredSheetPlayer[];
         missingDraftGames?: { gameId: string; matchLabel: string }[];
+        incompleteDataGames?: IncompleteDataGame[];
+        playoffSeries?: PlayoffSeriesMatchup[];
         fetchedAt?: string;
         rowCount?: number;
         matchCount?: number;
@@ -425,6 +460,8 @@ export function StatsDashboard({
         teams: json.teams,
         unrosteredPlayers: json.unrosteredPlayers ?? [],
         missingDraftGames: json.missingDraftGames ?? [],
+        incompleteDataGames: json.incompleteDataGames ?? [],
+        playoffSeries: json.playoffSeries ?? [],
         fetchedAt: json.fetchedAt ?? new Date().toISOString(),
         rowCount: json.rowCount ?? 0,
         matchCount: json.matchCount ?? 0,
@@ -454,12 +491,64 @@ export function StatsDashboard({
     [sheetData, teams]
   );
 
-  const filteredPlayers = useMemo(() => {
-    const scoped = activePlayers.filter((p) =>
+  const allDivisionPlayers = useMemo(() => {
+    return activePlayers.filter((p) =>
       divisionFilter === "all" ? true : p.divisionId === divisionFilter
     );
-    return computeRoleNormalizedRatings(scoped);
   }, [activePlayers, divisionFilter]);
+
+  const stageMatchCounts = useMemo(() => {
+    const regIds = new Set<string>();
+    const playoffIds = new Set<string>();
+    for (const p of allDivisionPlayers) {
+      for (const m of p.matches) {
+        if (isMatchPlayoff(m)) {
+          playoffIds.add(m.matchId);
+        } else {
+          regIds.add(m.matchId);
+        }
+      }
+    }
+    return { regular: regIds.size, playoffs: playoffIds.size };
+  }, [allDivisionPlayers]);
+
+  const hasPlayoffStats = stageMatchCounts.playoffs > 0;
+
+  useEffect(() => {
+    setStageBucket(hasPlayoffStats ? "playoffs" : "regular");
+  }, [divisionFilter, hasPlayoffStats]);
+
+  const filteredPlayers = useMemo(() => {
+    const staged = filterPlayersByStage(allDivisionPlayers, stageBucket);
+    return computeRoleNormalizedRatings(staged);
+  }, [allDivisionPlayers, stageBucket]);
+
+  async function saveStatsNotice(nextNotice: string | null) {
+    setSavingNotice(true);
+    setNoticeError(null);
+    try {
+      const res = await fetch("/api/admin/stats-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notice: nextNotice }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        statsNotice?: string | null;
+      };
+      if (!res.ok) {
+        throw new Error(json.error || `Failed (${res.status})`);
+      }
+      setStatsNotice(json.statsNotice ?? null);
+      setNoticeDraft(json.statsNotice ?? "");
+    } catch (err) {
+      setNoticeError(
+        err instanceof Error ? err.message : "Failed to save stats notice"
+      );
+    } finally {
+      setSavingNotice(false);
+    }
+  }
 
   const filteredTeams = useMemo(() => {
     return activeTeams
@@ -485,7 +574,7 @@ export function StatsDashboard({
   }, [activeTeams, divisionFilter]);
 
   const overview = useMemo(() => {
-    const allMatches = filteredPlayers.flatMap((p) => p.matches);
+    const allMatches = allDivisionPlayers.flatMap((p) => p.matches);
 
     const uniqueMatchMap = new Map<string, typeof allMatches[number]>();
     const uniqueSideMap = new Map<string, typeof allMatches[number]>();
@@ -651,41 +740,49 @@ export function StatsDashboard({
       count: number;
       teamName: string;
       teamLogoUrl?: string | null;
+      tiedCount: number;
+      tiedNames: string[];
     };
     let topPingPlayer: PlayerKpiLeader | null = null;
     let topPentaPlayer: PlayerKpiLeader | null = null;
     let topStealPlayer: PlayerKpiLeader | null = null;
-    for (const p of filteredPlayers) {
+    const updateLeader = (
+      current: PlayerKpiLeader | null,
+      val: number,
+      p: AggregatedPlayerStats
+    ): PlayerKpiLeader | null => {
+      if (val <= 0) return current;
+      if (!current || val > current.count) {
+        return {
+          name: p.displayName,
+          count: val,
+          teamName: p.teamName,
+          teamLogoUrl: p.teamLogoUrl,
+          tiedCount: 1,
+          tiedNames: [p.displayName],
+        };
+      }
+      if (val === current.count) {
+        return {
+          ...current,
+          tiedCount: current.tiedCount + 1,
+          tiedNames: [...current.tiedNames, p.displayName],
+        };
+      }
+      return current;
+    };
+    for (const p of allDivisionPlayers) {
       const pings = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
-      if (pings > 0 && (!topPingPlayer || pings > topPingPlayer.count)) {
-        topPingPlayer = {
-          name: p.displayName,
-          count: pings,
-          teamName: p.teamName,
-          teamLogoUrl: p.teamLogoUrl,
-        };
-      }
+      topPingPlayer = updateLeader(topPingPlayer, pings, p);
+
       const pentas = p.matches.reduce((s, m) => s + (m.pentaKills ?? 0), 0);
-      if (pentas > 0 && (!topPentaPlayer || pentas > topPentaPlayer.count)) {
-        topPentaPlayer = {
-          name: p.displayName,
-          count: pentas,
-          teamName: p.teamName,
-          teamLogoUrl: p.teamLogoUrl,
-        };
-      }
+      topPentaPlayer = updateLeader(topPentaPlayer, pentas, p);
+
       const steals = p.matches.reduce(
         (s, m) => s + (m.objectivesStolen ?? 0),
         0
       );
-      if (steals > 0 && (!topStealPlayer || steals > topStealPlayer.count)) {
-        topStealPlayer = {
-          name: p.displayName,
-          count: steals,
-          teamName: p.teamName,
-          teamLogoUrl: p.teamLogoUrl,
-        };
-      }
+      topStealPlayer = updateLeader(topStealPlayer, steals, p);
     }
 
     let totalControlWards = 0;
@@ -723,7 +820,7 @@ export function StatsDashboard({
       totalControlWards,
       controlWardsPerMin,
     };
-  }, [filteredPlayers]);
+  }, [allDivisionPlayers]);
 
   const leaderboardPlayers = useMemo(
     () => filteredPlayers.filter((p) => p.games > 0),
@@ -847,17 +944,21 @@ export function StatsDashboard({
   );
 
   const tablePlayers = useMemo(() => {
+    const stageScoped =
+      stageBucket === "playoffs"
+        ? filteredPlayers.filter((p) => p.games > 0)
+        : filteredPlayers;
     const roleFiltered =
       roleFilter === "all"
-        ? filteredPlayers
-        : filteredPlayers.filter((p) => p.role === roleFilter);
+        ? stageScoped
+        : stageScoped.filter((p) => p.role === roleFilter);
 
     return [...roleFiltered].sort((a, b) => {
       const av = (a[sortKey] as number | null) ?? -999999;
       const bv = (b[sortKey] as number | null) ?? -999999;
       return sortAsc ? av - bv : bv - av;
     });
-  }, [filteredPlayers, roleFilter, sortKey, sortAsc]);
+  }, [filteredPlayers, stageBucket, roleFilter, sortKey, sortAsc]);
 
   const roleLeaderboardPlayers = useMemo(() => {
     if (roleFilter === "all") return [];
@@ -923,8 +1024,8 @@ export function StatsDashboard({
 
   const missingDataPlayers = useMemo(() => {
     if (!sheetData) return [];
-    return filteredPlayers.filter((p) => p.games === 0);
-  }, [sheetData, filteredPlayers]);
+    return allDivisionPlayers.filter((p) => p.games === 0);
+  }, [sheetData, allDivisionPlayers]);
 
   return (
     <div className="space-y-4">
@@ -1038,6 +1139,99 @@ export function StatsDashboard({
               </div>
             );
           })()}
+
+          {sheetData && sheetData.incompleteDataGames.length > 0 && (() => {
+            const incomplete = sheetData.incompleteDataGames;
+            const preview = incomplete
+              .slice(0, 6)
+              .map((g) => g.matchLabel)
+              .join(", ");
+            const remainder = incomplete.length - 6;
+            return (
+              <div className="px-3 py-2 bg-[#2a2210]/80 border border-[#c89b3c]/50 rounded text-[11px] text-[#f0c020] space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      <strong>{incomplete.length}</strong>{" "}
+                      {incomplete.length === 1 ? "game has" : "games have"}{" "}
+                      incomplete data fields: {preview}
+                      {remainder > 0 ? ` +${remainder} more` : ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowIncompleteDetails((v) => !v)}
+                    className="xp-btn px-2 py-0.5 text-[10px] shrink-0"
+                  >
+                    {showIncompleteDetails ? "Hide Details" : "Review Fields"}
+                  </button>
+                </div>
+                {showIncompleteDetails && (
+                  <div className="max-h-40 overflow-y-auto space-y-1 border-t border-white/10 pt-1.5 text-[10px] text-[#e8e5d8]">
+                    {incomplete.map((g) => (
+                      <div key={g.gameId} className="flex flex-wrap gap-x-2">
+                        <span className="font-bold text-[#f0c020]">
+                          {g.matchLabel}
+                        </span>
+                        <span className="text-[#a6a89e]">({g.gameId}):</span>
+                        <span>{g.issues.join(", ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="p-2.5 bg-black/30 border border-white/10 rounded space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-bold uppercase text-[#f0c020] flex items-center gap-1.5">
+                <Megaphone className="w-3.5 h-3.5" />
+                <span>Stats Dashboard Broadcast Notice</span>
+              </div>
+              {statsNotice && (
+                <span className="text-[10px] text-[#7cd438] font-bold">
+                  ● Live on /stats
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={noticeDraft}
+                onChange={(e) => setNoticeDraft(e.target.value)}
+                maxLength={280}
+                placeholder="e.g., Playoff Week 1 stats are still being collected — recent matches may be incomplete."
+                className="flex-1 xp-inset px-2.5 py-1.5 text-xs"
+              />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  disabled={savingNotice}
+                  onClick={() => void saveStatsNotice(noticeDraft)}
+                  className="xp-btn xp-btn-primary text-xs"
+                >
+                  {savingNotice ? "Saving..." : "Publish Notice"}
+                </button>
+                {statsNotice && (
+                  <button
+                    type="button"
+                    disabled={savingNotice}
+                    onClick={() => void saveStatsNotice(null)}
+                    className="xp-btn xp-btn-danger text-xs"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+            {noticeError && (
+              <div className="text-[11px] text-[#ff857a] font-bold">
+                {noticeError}
+              </div>
+            )}
+          </div>
 
           <MatchDraftForm
             seasonId={seasonId}
@@ -1177,7 +1371,7 @@ export function StatsDashboard({
                   className="text-sm font-extrabold text-white truncate"
                 >
                   {selectedDivision
-                    ? `${selectedDivision.name} (${filteredPlayers.length})`
+                    ? `${selectedDivision.name} (${allDivisionPlayers.length})`
                     : `All Divisions (${activePlayers.length})`}
                 </div>
               </div>
@@ -1295,6 +1489,13 @@ export function StatsDashboard({
         ))}
       </div>
 
+      {statsNotice && (
+        <div className="xp-panel border border-[#c89b3c]/60 bg-[#2a2210]/85 px-3.5 py-2.5 text-xs text-[#f0ede0] flex items-start gap-2.5">
+          <Megaphone className="w-4 h-4 text-[#f0c020] shrink-0 mt-0.5" />
+          <span className="leading-relaxed">{statsNotice}</span>
+        </div>
+      )}
+
       {!sheetData ? (
         <div className="xp-panel p-8 text-center text-xs text-[#a6a89e] flex items-center justify-center gap-2">
           <RefreshCw className="w-4 h-4 animate-spin text-[#f0c020]" />
@@ -1302,6 +1503,53 @@ export function StatsDashboard({
         </div>
       ) : (
         <>
+        {(activeSection === "players" || activeSection === "teams") && (
+          <div className="flex flex-wrap items-center justify-between gap-2 xp-panel px-3 py-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
+              Competition Stage
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setStageBucket("regular")}
+                className={`xp-btn text-xs px-3 py-1 ${
+                  stageBucket === "regular" ? "xp-btn-primary" : ""
+                }`}
+              >
+                <span>Regular Season</span>
+                <span className="text-[10px] opacity-80 tabular-nums">
+                  ({stageMatchCounts.regular})
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStageBucket("playoffs")}
+                className={`xp-btn text-xs px-3 py-1 ${
+                  stageBucket === "playoffs" ? "xp-btn-primary" : ""
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>Playoffs</span>
+                <span className="text-[10px] opacity-80 tabular-nums">
+                  ({stageMatchCounts.playoffs})
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === "players" &&
+          showLeaderboards &&
+          stageBucket === "playoffs" &&
+          !hasPlayoffStats && (
+            <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-4">
+              No playoff player stats recorded for{" "}
+              <strong className="text-[#f0ede0]">
+                {selectedDivision?.name ?? "this division"}
+              </strong>{" "}
+              yet. Switch to Regular Season to view regular season leaderboards.
+            </div>
+          )}
         {/* Players Section: All Divisions prompt */}
         {activeSection === "players" && !showLeaderboards && (
           <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
@@ -2158,7 +2406,10 @@ export function StatsDashboard({
                                   {selectedDivision
                                     ? selectedDivision.name
                                     : "League"}{" "}
-                                  &middot; As of {currentEditionName}
+                                  &middot;{" "}
+                                  {stageBucket === "playoffs"
+                                    ? "Playoffs Only"
+                                    : `As of ${currentEditionName}`}
                                 </div>
                               </div>
                             </div>
@@ -2560,7 +2811,7 @@ export function StatsDashboard({
           )}
         </div>
         )}
-        {/* Teams Standings (Seeded, Larger Buttonized Rows) */}
+        {/* Teams Standings / Playoff Bracket */}
         {activeSection === "teams" && (
           <StatsTeamsTab
             selectedDivision={selectedDivision}
@@ -2568,6 +2819,9 @@ export function StatsDashboard({
             filteredTeams={filteredTeams}
             activeTeams={activeTeams}
             basePath={basePath}
+            seasonSlug={seasonSlug}
+            stageBucket={stageBucket}
+            playoffSeries={sheetData?.playoffSeries ?? []}
             onNavigateTeam={(href) => router.push(href)}
           />
         )}
@@ -2599,6 +2853,11 @@ export function StatsDashboard({
               divisionName={selectedDivision?.name ?? "League"}
               divisionLogoUrl={selectedDivision?.logo_url ?? null}
               currentEditionName={currentEditionName}
+              subtitleSuffix={
+                stageBucket === "playoffs"
+                  ? "Playoffs Only"
+                  : `As of ${currentEditionName}`
+              }
               bannerGradient={bannerGradient}
             />
           </div>

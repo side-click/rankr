@@ -39,6 +39,7 @@ export interface LoadedStatsContext {
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
+  statsNotice: string | null;
   sheetConfig?: SheetSourceConfig;
 }
 
@@ -66,6 +67,7 @@ export async function loadAdminStatsContext(
       divisions: [],
       players: [],
       teams: [],
+      statsNotice: null,
     };
   }
 
@@ -245,6 +247,7 @@ async function loadStatsContextInternal(
     { data: divisions },
     { data: teams },
     { data: editions },
+    settingsRes,
     statsRes,
   ] = await Promise.all([
     supabase
@@ -264,8 +267,17 @@ async function loadStatsContextInternal(
       .select("id, name, season_id, is_open, sort_order, created_at")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
+    supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
     statsPromise,
   ]);
+
+  const rawNotice = (
+    settingsRes.data as { stats_notice?: string | null } | null
+  )?.stats_notice;
+  const statsNotice =
+    typeof rawNotice === "string" && rawNotice.trim()
+      ? rawNotice.trim()
+      : null;
 
   const missingTable = Boolean(
     statsRes.error &&
@@ -412,6 +424,8 @@ async function loadStatsContextInternal(
     stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
     stats_sheet_id?: string | null;
     stats_sheet_gids?: string[] | null;
+    stats_playoff_gids?: string[] | null;
+    regular_season_rounds?: number | null;
     stats_credits_label?: string | null;
     stats_credits_url?: string | null;
     stats_credits_attribution?: string | null;
@@ -422,6 +436,8 @@ async function loadStatsContextInternal(
     provider: seasonSheetRow?.stats_provider ?? "google_sheet",
     sheetId: seasonSheetRow?.stats_sheet_id ?? null,
     gids: seasonSheetRow?.stats_sheet_gids ?? null,
+    playoffGids: seasonSheetRow?.stats_playoff_gids ?? null,
+    regularSeasonRounds: seasonSheetRow?.regular_season_rounds ?? null,
     creditsLabel: seasonSheetRow?.stats_credits_label ?? null,
     creditsUrl: seasonSheetRow?.stats_credits_url ?? null,
     creditsAttribution: seasonSheetRow?.stats_credits_attribution ?? null,
@@ -447,6 +463,7 @@ async function loadStatsContextInternal(
     })),
     players: aggregatedPlayers,
     teams: aggregatedTeams,
+    statsNotice,
     sheetConfig,
   };
 }

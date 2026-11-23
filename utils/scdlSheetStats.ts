@@ -5,6 +5,8 @@ import type { CompactRiotMatch } from "@/utils/riotApi";
 import draftsData from "@/data/scdl_drafts.json";
 import {
   aggregatePlayerStats,
+  isMatchPlayoff,
+  isPlayoffMatchLabel,
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
   type RiotPlayerStatRow,
@@ -36,11 +38,39 @@ export interface UnrosteredSheetPlayer {
   games: number;
 }
 
+export interface IncompleteDataGame {
+  gameId: string;
+  matchLabel: string;
+  issues: string[];
+}
+
+export interface PlayoffSeriesMatchup {
+  seriesKey: string;
+  matchLabel: string;
+  roundLabel: string;
+  roundOrder: number;
+  divisionId: string;
+  teamAId: string | null;
+  teamAName: string;
+  teamALogoUrl: string | null;
+  teamASeed: number | null;
+  teamAWins: number;
+  teamBId: string | null;
+  teamBName: string;
+  teamBLogoUrl: string | null;
+  teamBSeed: number | null;
+  teamBWins: number;
+  winnerTeamName: string | null;
+  gamesCount: number;
+}
+
 export interface SheetSyncSummary {
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   unrosteredPlayers: UnrosteredSheetPlayer[];
   missingDraftGames: { gameId: string; matchLabel: string }[];
+  incompleteDataGames: IncompleteDataGame[];
+  playoffSeries: PlayoffSeriesMatchup[];
   fetchedAt: string;
   rowCount: number;
   matchCount: number;
@@ -134,6 +164,8 @@ interface ParsedSheetRow {
   objectivesStolen: number;
   questionPings: number;
   flashKey?: "D" | "F";
+  missingFields?: string[];
+  isPlayoff?: boolean;
   rowOrder: number;
 }
 
@@ -163,23 +195,78 @@ function parseCsvRows(csvText: string, startOrder: number): ParsedSheetRow[] {
     const champion = get(cols, "Champion");
     if (!gameId || !playerName || !champion) continue;
 
+    const matchRaw = get(cols, "Match");
+    const teamRaw = get(cols, "Team Name");
+    const roleRaw = get(cols, "Role");
+    const sideRaw = get(cols, "Blue/Red");
+    const winRaw = get(cols, "Win");
+    const lengthRaw = get(cols, "Game Length");
+    const goldRaw = get(cols, "Gold");
+    const dmgRaw = get(cols, "Damage Dealt");
+    const killsRaw = get(cols, "Kills");
+    const deathsRaw = get(cols, "Deaths");
+    const assistsRaw = get(cols, "Assists");
+    const csRaw = get(cols, "CS");
+    const visionRaw = get(cols, "Vision Score");
+
+    const missingFields: string[] = [];
+    if (!matchRaw) missingFields.push("Match");
+    if (!teamRaw) missingFields.push("Team Name");
+    if (!roleRaw) missingFields.push("Role");
+    if (!/^(blue|red)$/i.test(sideRaw)) missingFields.push("Blue/Red");
+    if (!/^(true|false)$/i.test(winRaw)) missingFields.push("Win");
+    if (!lengthRaw || parseNum(lengthRaw) <= 0) missingFields.push("Game Length");
+    if (!goldRaw || parseNum(goldRaw) <= 0) missingFields.push("Gold");
+    if (!dmgRaw || parseNum(dmgRaw) <= 0) missingFields.push("Damage Dealt");
+    if (!killsRaw) missingFields.push("Kills");
+    if (!deathsRaw) missingFields.push("Deaths");
+    if (!assistsRaw) missingFields.push("Assists");
+    if (!csRaw) missingFields.push("CS");
+    if (!visionRaw) missingFields.push("Vision Score");
+
+    if (colIndex.has("GDiff@15") && !get(cols, "GDiff@15")) {
+      missingFields.push("GDiff@15");
+    }
+    if (
+      colIndex.has("Control Wards Bought") &&
+      !get(cols, "Control Wards Bought")
+    ) {
+      missingFields.push("Control Wards Bought");
+    }
+    if (colIndex.has("? Pings") && !get(cols, "? Pings")) {
+      missingFields.push("? Pings");
+    }
+    if (
+      colIndex.has("First Blood Participation") &&
+      !/^(true|false)$/i.test(get(cols, "First Blood Participation"))
+    ) {
+      missingFields.push("First Blood Participation");
+    }
+    if (
+      (colIndex.has("Summoner D") || colIndex.has("Summoner F")) &&
+      !get(cols, "Summoner D") &&
+      !get(cols, "Summoner F")
+    ) {
+      missingFields.push("Summoner D/F");
+    }
+
     rows.push({
-      matchLabel: get(cols, "Match"),
+      matchLabel: matchRaw,
       gameId,
-      teamName: get(cols, "Team Name"),
+      teamName: teamRaw,
       playerName,
       champion,
-      role: normalizeRoleKey(get(cols, "Role")),
-      kills: parseNum(get(cols, "Kills")),
-      deaths: parseNum(get(cols, "Deaths")),
-      assists: parseNum(get(cols, "Assists")),
-      gold: parseNum(get(cols, "Gold")),
-      cs: parseNum(get(cols, "CS")),
-      damageDealt: parseNum(get(cols, "Damage Dealt")),
-      gameLength: parseNum(get(cols, "Game Length")),
-      visionScore: parseNum(get(cols, "Vision Score")),
-      win: parseBool(get(cols, "Win")),
-      side: get(cols, "Blue/Red").toLowerCase() === "red" ? "Red" : "Blue",
+      role: normalizeRoleKey(roleRaw),
+      kills: parseNum(killsRaw),
+      deaths: parseNum(deathsRaw),
+      assists: parseNum(assistsRaw),
+      gold: parseNum(goldRaw),
+      cs: parseNum(csRaw),
+      damageDealt: parseNum(dmgRaw),
+      gameLength: parseNum(lengthRaw),
+      visionScore: parseNum(visionRaw),
+      win: parseBool(winRaw),
+      side: sideRaw.toLowerCase() === "red" ? "Red" : "Blue",
       doubleKills: parseNum(get(cols, "Double Kills")),
       tripleKills: parseNum(get(cols, "Triple Kills")),
       quadraKills: parseNum(get(cols, "Quadra Kills")),
@@ -208,6 +295,7 @@ function parseCsvRows(csvText: string, startOrder: number): ParsedSheetRow[] {
           : get(cols, "Summoner F").toLowerCase() === "flash"
           ? "F"
           : undefined,
+      missingFields: missingFields.length > 0 ? missingFields : undefined,
       rowOrder: startOrder + i,
     });
   }
@@ -220,6 +308,8 @@ export interface SheetSourceConfig {
   provider?: "google_sheet" | "supabase_native" | "none" | null;
   sheetId?: string | null;
   gids?: string[] | null;
+  playoffGids?: string[] | null;
+  regularSeasonRounds?: number | null;
   creditsLabel?: string | null;
   creditsUrl?: string | null;
   creditsAttribution?: string | null;
@@ -389,14 +479,16 @@ async function saveSheetSnapshot(
 }
 
 async function loadSheetSnapshotFallback(
-  sheetId: string
-): Promise<{ rows: ParsedSheetRow[]; fetchedAtMs: number } | null> {
+  sheetId: string,
+  playoffGidsSet?: Set<string>,
+  regularSeasonRounds?: number | null
+): Promise<{ rows: ParsedSheetRow[]; fetchedAtMs: number; gids: string[] } | null> {
   const sb = getSnapshotClient(false);
   if (!sb) return null;
   try {
     const { data, error } = await sb
       .from("sheet_snapshots")
-      .select("csv_tabs, fetched_at")
+      .select("gids, csv_tabs, fetched_at")
       .eq("sheet_id", sheetId)
       .maybeSingle();
     if (error || !Array.isArray(data?.csv_tabs)) return null;
@@ -404,12 +496,29 @@ async function loadSheetSnapshotFallback(
       (t): t is string => typeof t === "string" && t.length > 0
     );
     if (csvTexts.length === 0) return null;
-    const rows = dedupeParsedRows(csvTexts);
+    const snapGids = Array.isArray(data.gids)
+      ? (data.gids as unknown[]).map((g) => String(g))
+      : [];
+    const playoffIndices = new Set<number>();
+    if (playoffGidsSet && playoffGidsSet.size > 0) {
+      snapGids.forEach((gid, idx) => {
+        if (playoffGidsSet.has(gid)) playoffIndices.add(idx);
+      });
+    }
+    const rows = dedupeParsedRows(
+      csvTexts,
+      playoffIndices,
+      regularSeasonRounds
+    );
     if (rows.length === 0) return null;
     const fetchedAtMs = data.fetched_at
       ? new Date(String(data.fetched_at)).getTime()
       : 0;
-    return { rows, fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : 0 };
+    return {
+      rows,
+      fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : 0,
+      gids: snapGids,
+    };
   } catch {
     return null;
   }
@@ -438,12 +547,21 @@ async function fetchCsvTabsFromGoogle(
 const SNAPSHOT_STALE_MS = 120_000;
 const inFlightRefreshBySheet = new Set<string>();
 
-function refreshSheetFromGoogleInBackground(sheetId: string, gids: string[]) {
+function refreshSheetFromGoogleInBackground(
+  sheetId: string,
+  gids: string[],
+  playoffIndices: Set<number>,
+  regularSeasonRounds?: number | null
+) {
   if (inFlightRefreshBySheet.has(sheetId)) return;
   inFlightRefreshBySheet.add(sheetId);
   void fetchCsvTabsFromGoogle(sheetId, gids, true)
     .then(async (csvTexts) => {
-      const rows = dedupeParsedRows(csvTexts);
+      const rows = dedupeParsedRows(
+        csvTexts,
+        playoffIndices,
+        regularSeasonRounds
+      );
       if (rows.length > 0) {
         await saveSheetSnapshot(sheetId, gids, csvTexts, true);
       }
@@ -455,33 +573,70 @@ function refreshSheetFromGoogleInBackground(sheetId: string, gids: string[]) {
 }
 
 const fetchUniqueSheetRowsCached = cache(
-  async (sheetId: string, gidsKey: string): Promise<ParsedSheetRow[]> => {
+  async (
+    sheetId: string,
+    gidsKey: string,
+    playoffGidsKey: string,
+    regularRoundsKey: string
+  ): Promise<ParsedSheetRow[]> => {
     const gids = gidsKey.split(",").filter(Boolean);
+    const playoffSet = new Set(playoffGidsKey.split(",").filter(Boolean));
+    const regularSeasonRounds = regularRoundsKey ? Number(regularRoundsKey) : null;
+    const playoffIndices = new Set<number>();
+    gids.forEach((g, idx) => {
+      if (playoffSet.has(g)) playoffIndices.add(idx);
+    });
+
     // 1. Stale-while-revalidate: serve from fast Supabase snapshot (~15ms) first if available
-    const snap = await loadSheetSnapshotFallback(sheetId);
-    if (snap && snap.rows.length > 0) {
+    const snap = await loadSheetSnapshotFallback(
+      sheetId,
+      playoffSet,
+      regularSeasonRounds
+    );
+    const sameGids =
+      snap &&
+      snap.gids.length === gids.length &&
+      snap.gids.every((g, i) => g === gids[i]);
+    if (snap && snap.rows.length > 0 && sameGids) {
       if (Date.now() - snap.fetchedAtMs > SNAPSHOT_STALE_MS) {
-        refreshSheetFromGoogleInBackground(sheetId, gids);
+        refreshSheetFromGoogleInBackground(
+          sheetId,
+          gids,
+          playoffIndices,
+          regularSeasonRounds
+        );
       }
       return snap.rows;
     }
 
-    // 2. Cold start (no snapshot row exists yet): fetch from Google Sheets and seed snapshot
+    // 2. Cold start or newly configured GIDs: fetch from Google Sheets and seed snapshot
     const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, false);
-    const rows = dedupeParsedRows(csvTexts);
+    const rows = dedupeParsedRows(csvTexts, playoffIndices, regularSeasonRounds);
     if (rows.length > 0) {
       void saveSheetSnapshot(sheetId, gids, csvTexts, true);
       return rows;
     }
+    if (snap && snap.rows.length > 0) return snap.rows;
     throw new Error(`Failed to load SCDL sheet ${sheetId} and no backup snapshot exists`);
   }
 );
 
-function dedupeParsedRows(csvTexts: string[]): ParsedSheetRow[] {
+function dedupeParsedRows(
+  csvTexts: string[],
+  playoffIndices?: Set<number>,
+  regularSeasonRounds?: number | null
+): ParsedSheetRow[] {
   let allRows: ParsedSheetRow[] = [];
   for (let t = 0; t < csvTexts.length; t++) {
     if (csvTexts[t]) {
-      allRows = allRows.concat(parseCsvRows(csvTexts[t], t * 100_000));
+      const tabIsPlayoff = playoffIndices?.has(t) ?? false;
+      const parsed = parseCsvRows(csvTexts[t], t * 100_000).map((r) => ({
+        ...r,
+        isPlayoff:
+          tabIsPlayoff ||
+          isPlayoffMatchLabel(r.matchLabel, regularSeasonRounds),
+      }));
+      allRows = allRows.concat(parsed);
     }
   }
   const seenRowKeys = new Set<string>();
@@ -514,30 +669,51 @@ async function loadUniqueSheetRows(
     config?.sheetId?.trim() || (isLegacy45 ? SCDL_SHEET_ID : "");
   if (!sheetId) return [];
 
-  const gids =
+  const regGids =
     config?.gids && config.gids.length > 0
       ? config.gids
       : isLegacy45
       ? SCDL_SHEET_GIDS.map((g) => g.gid)
       : [];
+  const playoffGids = (config?.playoffGids ?? []).filter(Boolean);
+  const gids = [...new Set([...regGids, ...playoffGids])];
   if (gids.length === 0) return [];
+
+  const playoffSet = new Set(playoffGids);
+  const playoffIndices = new Set<number>();
+  gids.forEach((g, idx) => {
+    if (playoffSet.has(g)) playoffIndices.add(idx);
+  });
 
   if (config?.bypassCache) {
     try {
       const csvTexts = await fetchCsvTabsFromGoogle(sheetId, gids, true);
-      const rows = dedupeParsedRows(csvTexts);
+      const rows = dedupeParsedRows(
+        csvTexts,
+        playoffIndices,
+        config?.regularSeasonRounds
+      );
       if (rows.length > 0) {
         await saveSheetSnapshot(sheetId, gids, csvTexts, true);
         return rows;
       }
     } catch (err) {
-      const fallback = await loadSheetSnapshotFallback(sheetId);
+      const fallback = await loadSheetSnapshotFallback(
+        sheetId,
+        playoffSet,
+        config?.regularSeasonRounds
+      );
       if (fallback) return fallback.rows;
       throw err;
     }
   }
 
-  return fetchUniqueSheetRowsCached(sheetId, gids.join(","));
+  return fetchUniqueSheetRowsCached(
+    sheetId,
+    gids.join(","),
+    playoffGids.join(","),
+    config?.regularSeasonRounds ? String(config.regularSeasonRounds) : ""
+  );
 }
 
 export async function fetchScdlSheetStats(
@@ -713,6 +889,9 @@ export async function fetchScdlSheetStats(
       turretPlates: r.turretPlates,
       objectivesStolen: r.objectivesStolen,
       matchLabel: r.matchLabel,
+      isPlayoff:
+        r.isPlayoff ??
+        isPlayoffMatchLabel(r.matchLabel, config?.regularSeasonRounds),
       teamName: r.teamName,
     };
 
@@ -765,7 +944,9 @@ export async function fetchScdlSheetStats(
 
   const aggregatedTeams: AggregatedTeamStats[] = rosterTeams.map((t) => {
     const teamPlayers = playersByTeam.get(t.teamId) ?? [];
-    const teamMatches = teamPlayers.flatMap((p) => p.matches);
+    const teamMatches = teamPlayers
+      .flatMap((p) => p.matches)
+      .filter((m) => !isMatchPlayoff(m));
     const uniqueTeamMatches = new Map<string, CompactRiotMatch>();
     for (const m of teamMatches) {
       if (!uniqueTeamMatches.has(m.matchId)) {
@@ -866,12 +1047,18 @@ export async function fetchScdlSheetStats(
     };
   });
 
-  // Build head-to-head series records across unique sheet games
+  // Build head-to-head series records across unique regular season sheet games
   const h2hGamesBySeries = new Map<
     string,
     Map<string, { teamA: string; teamB: string; winner: string }>
   >();
   for (const r of uniqueRows) {
+    if (
+      r.isPlayoff ??
+      isPlayoffMatchLabel(r.matchLabel, config?.regularSeasonRounds)
+    ) {
+      continue;
+    }
     const sKey = r.matchLabel?.trim() || r.gameId;
     let gMap = h2hGamesBySeries.get(sKey);
     if (!gMap) {
@@ -1080,11 +1267,140 @@ export async function fetchScdlSheetStats(
     a.matchLabel.localeCompare(b.matchLabel)
   );
 
+  // Build incomplete data audit across unique games (ignoring Ban)
+  const incompleteDataGames: IncompleteDataGame[] = [];
+  for (const [gameId, gRows] of rowsByGame.entries()) {
+    const issues: string[] = [];
+    if (gRows.length !== 10) {
+      issues.push(`Expected 10 player rows (found ${gRows.length})`);
+    }
+    const fieldCounts = new Map<string, number>();
+    for (const r of gRows) {
+      for (const f of r.missingFields ?? []) {
+        fieldCounts.set(f, (fieldCounts.get(f) ?? 0) + 1);
+      }
+    }
+    for (const [field, cnt] of fieldCounts.entries()) {
+      issues.push(
+        `Missing ${field} (${cnt} ${cnt === 1 ? "row" : "rows"})`
+      );
+    }
+    if (issues.length > 0) {
+      incompleteDataGames.push({
+        gameId,
+        matchLabel: gRows[0]?.matchLabel || gameId,
+        issues,
+      });
+    }
+  }
+  incompleteDataGames.sort((a, b) =>
+    a.matchLabel.localeCompare(b.matchLabel)
+  );
+
+  // Build Playoff series bracket matchups (using frozen regular-season seeds)
+  const teamStatsByName = new Map<string, AggregatedTeamStats>();
+  for (const t of aggregatedTeams) {
+    teamStatsByName.set(t.teamName.trim().toLowerCase(), t);
+  }
+  const playoffSeriesMap = new Map<
+    string,
+    Map<string, { teamA: string; teamB: string; winner: string }>
+  >();
+  for (const r of uniqueRows) {
+    if (
+      !(
+        r.isPlayoff ??
+        isPlayoffMatchLabel(r.matchLabel, config?.regularSeasonRounds)
+      )
+    ) {
+      continue;
+    }
+    const sKey = r.matchLabel.trim() || r.gameId;
+    let gMap = playoffSeriesMap.get(sKey);
+    if (!gMap) {
+      gMap = new Map();
+      playoffSeriesMap.set(sKey, gMap);
+    }
+    const existing = gMap.get(r.gameId) ?? {
+      teamA: "",
+      teamB: "",
+      winner: "",
+    };
+    const tName = r.teamName.trim();
+    if (!existing.teamA) existing.teamA = tName;
+    else if (
+      existing.teamA.toLowerCase() !== tName.toLowerCase() &&
+      !existing.teamB
+    ) {
+      existing.teamB = tName;
+    }
+    if (r.win) existing.winner = tName;
+    gMap.set(r.gameId, existing);
+  }
+
+  const playoffSeries: PlayoffSeriesMatchup[] = [];
+  for (const [seriesKey, gMap] of playoffSeriesMap.entries()) {
+    const gamesList = [...gMap.values()];
+    if (gamesList.length === 0) continue;
+    const teamAName = gamesList[0].teamA;
+    const teamBName = gamesList[0].teamB || "TBD";
+    let teamAWins = 0;
+    let teamBWins = 0;
+    for (const g of gamesList) {
+      if (g.winner.toLowerCase() === teamAName.toLowerCase()) teamAWins++;
+      else if (teamBName && g.winner.toLowerCase() === teamBName.toLowerCase())
+        teamBWins++;
+    }
+    const teamAMeta = teamStatsByName.get(teamAName.toLowerCase());
+    const teamBMeta = teamStatsByName.get(teamBName.toLowerCase());
+    const divisionId = teamAMeta?.divisionId ?? teamBMeta?.divisionId ?? "";
+    const roundLabel = formatRoundLabel(seriesKey);
+    const lowerPrefix = seriesKey.split("_")[0].trim().toLowerCase();
+    let roundOrder = 3;
+    if (/play-?in/i.test(lowerPrefix)) roundOrder = 1;
+    else if (/quarter|^qf\d*$/i.test(lowerPrefix)) roundOrder = 2;
+    else if (/semi|^sf\d*$/i.test(lowerPrefix)) roundOrder = 4;
+    else if (/final|^gf\d*$/i.test(lowerPrefix)) roundOrder = 5;
+
+    const winnerTeamName =
+      teamAWins > teamBWins
+        ? teamAName
+        : teamBWins > teamAWins
+        ? teamBName
+        : null;
+
+    playoffSeries.push({
+      seriesKey,
+      matchLabel: seriesKey,
+      roundLabel,
+      roundOrder,
+      divisionId,
+      teamAId: teamAMeta?.teamId ?? null,
+      teamAName: teamAMeta?.teamName ?? teamAName,
+      teamALogoUrl: teamAMeta?.logoUrl ?? null,
+      teamASeed: teamAMeta?.seed ?? null,
+      teamAWins,
+      teamBId: teamBMeta?.teamId ?? null,
+      teamBName: teamBMeta?.teamName ?? teamBName,
+      teamBLogoUrl: teamBMeta?.logoUrl ?? null,
+      teamBSeed: teamBMeta?.seed ?? null,
+      teamBWins,
+      winnerTeamName,
+      gamesCount: gamesList.length,
+    });
+  }
+  playoffSeries.sort(
+    (a, b) =>
+      a.roundOrder - b.roundOrder || a.matchLabel.localeCompare(b.matchLabel)
+  );
+
   return {
     players: aggregatedPlayers,
     teams: aggregatedTeams,
     unrosteredPlayers,
     missingDraftGames,
+    incompleteDataGames,
+    playoffSeries,
     fetchedAt: nowIso,
     rowCount: uniqueRows.length,
     matchCount: uniqueGames.size,

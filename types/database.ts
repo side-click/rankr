@@ -17,6 +17,7 @@ export interface AppSettings {
   maintenance_mode: boolean;
   maintenance_message: string;
   require_allowlist: boolean;
+  stats_notice?: string | null;
   updated_at: string;
 }
 
@@ -46,6 +47,8 @@ export interface Season {
   stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
   stats_sheet_id?: string | null;
   stats_sheet_gids?: string[] | null;
+  stats_playoff_gids?: string[] | null;
+  regular_season_rounds?: number | null;
   stats_credits_label?: string | null;
   stats_credits_url?: string | null;
   stats_credits_attribution?: string | null;

@@ -6,7 +6,10 @@ import {
 } from "@/utils/riotStatsServer";
 import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
-import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
+import {
+  computeRoleNormalizedRatings,
+  filterPlayersByStage,
+} from "@/utils/riotStatsAggregation";
 import { LEAGUE_ROLES } from "@/utils/roles";
 
 export const dynamic = "force-dynamic";
@@ -74,18 +77,20 @@ export default async function PublicStatsPage({
       const scoped = sheetSummary.players.filter((p) =>
         scope === "all" ? true : p.divisionId === scope
       );
-      const rated = computeRoleNormalizedRatings(scoped).filter(
-        (p) => p.games > 0
-      );
-      for (const roleDef of LEAGUE_ROLES) {
-        const top = rated
-          .filter((p) => p.role === roleDef.key)
-          .sort((a, b) => b.leagueRating - a.leagueRating)[0];
-        if (top) {
-          allProCandidatesMap.set(top.playerKey, {
-            playerKey: top.playerKey,
-            role: top.role,
-          });
+      for (const stage of ["regular", "playoffs"] as const) {
+        const rated = computeRoleNormalizedRatings(
+          filterPlayersByStage(scoped, stage)
+        ).filter((p) => p.games > 0);
+        for (const roleDef of LEAGUE_ROLES) {
+          const top = rated
+            .filter((p) => p.role === roleDef.key)
+            .sort((a, b) => b.leagueRating - a.leagueRating)[0];
+          if (top) {
+            allProCandidatesMap.set(top.playerKey, {
+              playerKey: top.playerKey,
+              role: top.role,
+            });
+          }
         }
       }
     }
@@ -112,6 +117,7 @@ export default async function PublicStatsPage({
       teams={sheetSummary ? [] : ctx.teams}
       soloPrioMap={soloPrioMap}
       isAdminView={false}
+      initialStatsNotice={ctx.statsNotice}
       initialDivision={params.division}
       initialTab={initialTab}
       initialSheetData={
@@ -119,6 +125,7 @@ export default async function PublicStatsPage({
           ? {
               players: sheetSummary.players,
               teams: sheetSummary.teams,
+              playoffSeries: sheetSummary.playoffSeries,
               fetchedAt: sheetSummary.fetchedAt,
               rowCount: sheetSummary.rowCount,
               matchCount: sheetSummary.matchCount,
