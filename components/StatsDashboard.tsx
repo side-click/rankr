@@ -888,7 +888,7 @@ export function StatsDashboard({
   }, [allDivisionPlayers]);
 
   const leaderboardPlayers = useMemo(
-    () => filteredPlayers.filter((p) => p.games > 0),
+    () => filteredPlayers.filter((p) => p.games >= 2),
     [filteredPlayers]
   );
 

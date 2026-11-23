@@ -715,7 +715,7 @@ export async function PlayerStatsContent({
 
           {playerGames.length > 0 ? (
             <div className="divide-y divide-white/10">
-              {playerGames.map((g, idx) => {
+              {[...playerGames].reverse().map((g, idx) => {
                 const mins = Math.max(g.duration / 60, 1);
                 const dpm = Math.round(g.row.damageDealt / mins);
                 const kda =

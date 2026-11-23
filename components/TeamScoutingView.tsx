@@ -843,7 +843,7 @@ export function TeamScoutingView({
 
           {seriesHistory.length > 0 ? (
             <div className="space-y-2.5">
-              {seriesHistory.map((s) => {
+              {[...seriesHistory].reverse().map((s) => {
                 const isTeamA =
                   s.teamA.toLowerCase() === team.teamName.toLowerCase();
                 const oppName = isTeamA ? s.teamB : s.teamA;

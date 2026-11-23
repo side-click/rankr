@@ -592,7 +592,7 @@ export function ChampionStatsContent({
 
             {stats.recentGames.length > 0 ? (
               <div className="divide-y divide-white/10">
-                {stats.recentGames.map((g, idx) => {
+                {[...stats.recentGames].reverse().map((g, idx) => {
                   const mins = Math.max(g.gameDuration / 60, 1);
                   const kda =
                     g.deaths > 0
