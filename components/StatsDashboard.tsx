@@ -686,7 +686,14 @@ export function StatsDashboard({
       ) {
         seenBanMatches.add(m.matchId);
         for (const banned of m.bans) {
-          banMap.set(banned, (banMap.get(banned) ?? 0) + 1);
+          const trimmed = banned?.trim();
+          if (
+            !trimmed ||
+            /^(nothing|none|no\s*ban|-|—|n\/a)$/i.test(trimmed)
+          ) {
+            continue;
+          }
+          banMap.set(trimmed, (banMap.get(trimmed) ?? 0) + 1);
         }
       }
     }

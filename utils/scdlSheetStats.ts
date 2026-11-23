@@ -348,11 +348,15 @@ const fetchMergedDraftsFromDb = unstable_cache(
       for (const row of data) {
         const gameId = String(row.game_id ?? "").trim();
         if (!gameId) continue;
+        const isRealBan = (b: unknown): b is string =>
+          typeof b === "string" &&
+          b.trim().length > 0 &&
+          !/^(nothing|none|no\s*ban|-|—|n\/a)$/i.test(b.trim());
         const blueBans = Array.isArray(row.blue_bans)
-          ? (row.blue_bans as string[])
+          ? (row.blue_bans as unknown[]).filter(isRealBan)
           : [];
         const redBans = Array.isArray(row.red_bans)
-          ? (row.red_bans as string[])
+          ? (row.red_bans as unknown[]).filter(isRealBan)
           : [];
         const bluePicks = Array.isArray(row.blue_picks)
           ? (row.blue_picks as string[])
