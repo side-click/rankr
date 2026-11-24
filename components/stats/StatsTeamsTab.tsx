@@ -12,6 +12,7 @@ import type {
 import type { PlayoffSeriesMatchup } from "@/utils/scdlSheetStats";
 import type {
   DivisionPlayoffBracket,
+  DivisionTheme,
   PlayoffBracketMatchSlot,
 } from "@/types/database";
 
@@ -26,6 +27,7 @@ export interface StatsDivisionItem {
 interface StatsTeamsTabProps {
   selectedDivision: StatsDivisionItem | null;
   divisions: StatsDivisionItem[];
+  divisionThemes?: DivisionTheme[];
   filteredTeams: AggregatedTeamStats[];
   activeTeams: AggregatedTeamStats[];
   basePath: string;
@@ -38,6 +40,7 @@ interface StatsTeamsTabProps {
 
 export function StatsTeamsTab({
   selectedDivision,
+  divisionThemes,
   filteredTeams,
   activeTeams,
   basePath,
@@ -55,7 +58,10 @@ export function StatsTeamsTab({
     );
   }
 
-  const divTheme = resolveDivisionTheme(selectedDivision.theme_key);
+  const divTheme = resolveDivisionTheme(
+    selectedDivision.theme_key,
+    divisionThemes
+  );
   const divPlayoffSeries = playoffSeries.filter(
     (s) => s.divisionId === selectedDivision.id
   );
@@ -89,15 +95,22 @@ export function StatsTeamsTab({
       key: string;
       label?: string;
       seriesKey: string | null;
+      bracketSide?: "upper" | "lower" | "grand_finals";
       sideA: ResolvedBracketSide;
       sideB: ResolvedBracketSide;
     }
 
-    let rounds: {
+    type BracketRoundGroup = {
       roundLabel: string;
       roundOrder: number;
       cards: ResolvedBracketCard[];
-    }[] = [];
+    };
+
+    let upperRounds: BracketRoundGroup[] = [];
+    let lowerRounds: BracketRoundGroup[] = [];
+    const isDoubleElim = Boolean(
+      playoffBracket?.matches.some((m) => m.bracketSide === "lower")
+    );
 
     if (playoffBracket && playoffBracket.matches.length > 0) {
       const teamLookup = new Map<
@@ -128,23 +141,32 @@ export function StatsTeamsTab({
         matchById.set(m.id, m);
       }
 
-      const sortedSlots = [...playoffBracket.matches].sort(
-        (a, b) => a.roundOrder - b.roundOrder
-      );
-      const winnerByMatchId = new Map<
-        string,
-        { teamId: string | null; teamName: string; logoUrl: string | null; seed: number | null }
-      >();
+      const sidePriority = (s?: "upper" | "lower" | "grand_finals") =>
+        s === "lower" ? 1 : s === "grand_finals" ? 2 : 0;
 
-      const roundsMap = new Map<
-        string,
-        { roundLabel: string; roundOrder: number; cards: ResolvedBracketCard[] }
-      >();
+      const sortedSlots = [...playoffBracket.matches].sort(
+        (a, b) =>
+          sidePriority(a.bracketSide) - sidePriority(b.bracketSide) ||
+          a.roundOrder - b.roundOrder
+      );
+
+      type ResolvedEntry = {
+        teamId: string | null;
+        teamName: string;
+        logoUrl: string | null;
+        seed: number | null;
+      };
+      const winnerByMatchId = new Map<string, ResolvedEntry>();
+      const loserByMatchId = new Map<string, ResolvedEntry>();
+
+      const upperRoundsMap = new Map<string, BracketRoundGroup>();
+      const lowerRoundsMap = new Map<string, BracketRoundGroup>();
 
       const resolveSlotSide = (
         directTeamId: string | null | undefined,
         directSeed: number | null | undefined,
-        sourceMatchId: string | null | undefined
+        sourceMatchId: string | null | undefined,
+        loserSourceMatchId: string | null | undefined
       ) => {
         if (directTeamId) {
           const info = teamLookup.get(directTeamId);
@@ -176,6 +198,27 @@ export function StatsTeamsTab({
             isPlaceholder: true,
           };
         }
+        if (loserSourceMatchId) {
+          const prevLoser = loserByMatchId.get(loserSourceMatchId);
+          if (prevLoser) {
+            return {
+              teamId: prevLoser.teamId,
+              name: prevLoser.teamName,
+              logo: prevLoser.logoUrl,
+              seed: prevLoser.seed,
+              isPlaceholder: false,
+            };
+          }
+          const srcLabel =
+            matchById.get(loserSourceMatchId)?.label ?? "Previous Match";
+          return {
+            teamId: null,
+            name: `Loser of ${srcLabel}`,
+            logo: null,
+            seed: null,
+            isPlaceholder: true,
+          };
+        }
         return {
           teamId: null,
           name: "TBD",
@@ -199,8 +242,18 @@ export function StatsTeamsTab({
       };
 
       for (const slot of sortedSlots) {
-        const resA = resolveSlotSide(slot.teamAId, slot.teamASeed, slot.sourceMatchA);
-        const resB = resolveSlotSide(slot.teamBId, slot.teamBSeed, slot.sourceMatchB);
+        const resA = resolveSlotSide(
+          slot.teamAId,
+          slot.teamASeed,
+          slot.sourceMatchA,
+          slot.loserSourceMatchA
+        );
+        const resB = resolveSlotSide(
+          slot.teamBId,
+          slot.teamBSeed,
+          slot.sourceMatchB,
+          slot.loserSourceMatchB
+        );
 
         let matchedSeries: PlayoffSeriesMatchup | null = null;
         if (!resA.isPlaceholder && !resB.isPlaceholder) {
@@ -238,6 +291,12 @@ export function StatsTeamsTab({
                 logoUrl: resA.logo,
                 seed: resA.seed,
               });
+              loserByMatchId.set(slot.id, {
+                teamId: resB.teamId,
+                teamName: resB.name,
+                logoUrl: resB.logo,
+                seed: resB.seed,
+              });
             } else if (wonB) {
               winnerByMatchId.set(slot.id, {
                 teamId: resB.teamId,
@@ -245,11 +304,19 @@ export function StatsTeamsTab({
                 logoUrl: resB.logo,
                 seed: resB.seed,
               });
+              loserByMatchId.set(slot.id, {
+                teamId: resA.teamId,
+                teamName: resA.name,
+                logoUrl: resA.logo,
+                seed: resA.seed,
+              });
             }
           }
         }
 
-        const bucket = roundsMap.get(slot.roundLabel) ?? {
+        const targetMap =
+          slot.bracketSide === "lower" ? lowerRoundsMap : upperRoundsMap;
+        const bucket = targetMap.get(slot.roundLabel) ?? {
           roundLabel: slot.roundLabel,
           roundOrder: slot.roundOrder,
           cards: [],
@@ -258,6 +325,7 @@ export function StatsTeamsTab({
           key: slot.id,
           label: slot.label,
           seriesKey: matchedSeries?.seriesKey ?? null,
+          bracketSide: slot.bracketSide,
           sideA: {
             ...resA,
             wins: winsA,
@@ -269,21 +337,17 @@ export function StatsTeamsTab({
             won: wonB,
           },
         });
-        roundsMap.set(slot.roundLabel, bucket);
+        targetMap.set(slot.roundLabel, bucket);
       }
 
-      rounds = [...roundsMap.values()].sort(
+      upperRounds = [...upperRoundsMap.values()].sort(
+        (a, b) => a.roundOrder - b.roundOrder
+      );
+      lowerRounds = [...lowerRoundsMap.values()].sort(
         (a, b) => a.roundOrder - b.roundOrder
       );
     } else if (divPlayoffSeries.length > 0) {
-      const roundsMap = new Map<
-        string,
-        {
-          roundLabel: string;
-          roundOrder: number;
-          cards: ResolvedBracketCard[];
-        }
-      >();
+      const roundsMap = new Map<string, BracketRoundGroup>();
       for (const m of divPlayoffSeries) {
         const existing = roundsMap.get(m.roundLabel) ?? {
           roundLabel: m.roundLabel,
@@ -317,10 +381,145 @@ export function StatsTeamsTab({
         });
         roundsMap.set(m.roundLabel, existing);
       }
-      rounds = [...roundsMap.values()].sort(
+      upperRounds = [...roundsMap.values()].sort(
         (a, b) => a.roundOrder - b.roundOrder
       );
     }
+
+    const renderBracketTree = (treeRounds: BracketRoundGroup[]) => {
+      const colWidthClass =
+        treeRounds.length <= 2
+          ? "w-[225px] sm:w-[310px] lg:w-[370px]"
+          : treeRounds.length >= 4
+          ? "w-[205px] sm:w-[250px] lg:w-[275px]"
+          : "w-[215px] sm:w-[270px] lg:w-[310px]";
+
+      return (
+        <div className="overflow-x-auto pb-1">
+          <div className="mx-auto w-max flex flex-row items-stretch">
+            {treeRounds.map((r, rIdx) => {
+              const nextRound = treeRounds[rIdx + 1];
+              return (
+                <React.Fragment key={r.roundLabel}>
+                  <div
+                    className={`flex flex-col justify-around gap-3 sm:gap-5 lg:gap-6 shrink-0 ${colWidthClass}`}
+                  >
+                    {r.cards.map((card) => {
+                      const clickableSeries = Boolean(card.seriesKey);
+                      return (
+                        <div
+                          key={card.key}
+                          className="rounded-lg border border-white/15 bg-black/45 overflow-hidden"
+                        >
+                          {card.label && (
+                            <div className="px-2.5 sm:px-3.5 py-1.5 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                              <span className="truncate">{card.label}</span>
+                              {clickableSeries && card.seriesKey ? (
+                                <Link
+                                  href={seriesHref(card.seriesKey)}
+                                  className="text-[#c89b3c] hover:text-[#f0c020] hover:underline transition shrink-0"
+                                >
+                                  Draft &amp; Box Score &rarr;
+                                </Link>
+                              ) : (
+                                <span className="shrink-0">Upcoming</span>
+                              )}
+                            </div>
+                          )}
+                          {[card.sideA, card.sideB].map((side, idx) => (
+                            <div
+                              key={`${card.key}-${idx}`}
+                              className={`flex items-center justify-between gap-2 sm:gap-3 px-2.5 py-2 sm:px-4 sm:py-3 lg:py-3.5 ${
+                                idx === 0 ? "border-b border-white/10" : ""
+                              } ${side.won ? "bg-[#f0c020]/10" : ""}`}
+                            >
+                              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <span className="text-[11px] sm:text-sm lg:text-base font-black text-[#c89b3c] w-5 sm:w-7 text-center shrink-0 tabular-nums">
+                                  {side.seed != null ? `#${side.seed}` : "—"}
+                                </span>
+                                {side.logo && (
+                                  <img
+                                    src={side.logo}
+                                    alt={side.name}
+                                    className="w-5 h-5 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain shrink-0"
+                                  />
+                                )}
+                                {side.teamId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onNavigateTeam(teamHref(side.teamId!))
+                                    }
+                                    className={`text-xs sm:text-base lg:text-lg font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
+                                      side.won
+                                        ? "text-[#f0c020]"
+                                        : "text-[#f0ede0]"
+                                    }`}
+                                  >
+                                    {side.name}
+                                  </button>
+                                ) : (
+                                  <span
+                                    className={`text-xs sm:text-sm lg:text-base truncate pr-1 ${
+                                      side.isPlaceholder
+                                        ? "italic text-[#a6a89e]"
+                                        : side.won
+                                        ? "font-extrabold text-[#f0c020]"
+                                        : "font-extrabold text-[#f0ede0]"
+                                    }`}
+                                  >
+                                    {side.name}
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`text-sm sm:text-lg lg:text-2xl font-black tabular-nums shrink-0 ${
+                                  side.won
+                                    ? "text-[#7cd438]"
+                                    : "text-[#a6a89e]"
+                                }`}
+                              >
+                                {side.wins != null ? side.wins : "—"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {nextRound && (
+                    <div
+                      aria-hidden="true"
+                      className="flex flex-col justify-around shrink-0 w-6 sm:w-10 lg:w-14"
+                    >
+                      {nextRound.cards.map((nc) =>
+                        nextRound.cards.length === r.cards.length ? (
+                          <div
+                            key={`conn-${nc.key}`}
+                            className="flex items-center flex-1"
+                          >
+                            <div className="w-full border-t-2 border-white/20" />
+                          </div>
+                        ) : (
+                          <div
+                            key={`conn-${nc.key}`}
+                            className="flex items-center flex-1"
+                          >
+                            <div className="w-1/2 h-1/2 border-t-2 border-b-2 border-r-2 border-white/20 rounded-r-sm" />
+                            <div className="w-1/2 border-t-2 border-white/20" />
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
 
     return (
       <div className="space-y-5">
@@ -348,134 +547,25 @@ export function StatsTeamsTab({
           </div>
 
           <div className="p-3 sm:p-6">
-            {rounds.length > 0 ? (
-              <div className="overflow-x-auto pb-1">
-                <div className="mx-auto w-max flex flex-row items-stretch">
-                  {rounds.map((r, rIdx) => {
-                    const nextRound = rounds[rIdx + 1];
-                    const colWidthClass =
-                      rounds.length <= 2
-                        ? "w-[225px] sm:w-[310px] lg:w-[370px]"
-                        : "w-[215px] sm:w-[270px] lg:w-[310px]";
-                    return (
-                      <React.Fragment key={r.roundLabel}>
-                        <div
-                          className={`flex flex-col justify-around gap-3 sm:gap-5 lg:gap-6 shrink-0 ${colWidthClass}`}
-                        >
-                        {r.cards.map((card) => {
-                          const clickableSeries = Boolean(card.seriesKey);
-                          return (
-                            <div
-                              key={card.key}
-                              className="rounded-lg border border-white/15 bg-black/45 overflow-hidden"
-                            >
-                              {card.label && (
-                                <div className="px-2.5 sm:px-3.5 py-1.5 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                                  <span className="truncate">{card.label}</span>
-                                  {clickableSeries && card.seriesKey ? (
-                                    <Link
-                                      href={seriesHref(card.seriesKey)}
-                                      className="text-[#c89b3c] hover:text-[#f0c020] hover:underline transition shrink-0"
-                                    >
-                                      Draft &amp; Box Score &rarr;
-                                    </Link>
-                                  ) : (
-                                    <span className="shrink-0">Upcoming</span>
-                                  )}
-                                </div>
-                              )}
-                              {[card.sideA, card.sideB].map((side, idx) => (
-                                <div
-                                  key={`${card.key}-${idx}`}
-                                  className={`flex items-center justify-between gap-2 sm:gap-3 px-2.5 py-2 sm:px-4 sm:py-3 lg:py-3.5 ${
-                                    idx === 0 ? "border-b border-white/10" : ""
-                                  } ${side.won ? "bg-[#f0c020]/10" : ""}`}
-                                >
-                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                    <span className="text-[11px] sm:text-sm lg:text-base font-black text-[#c89b3c] w-5 sm:w-7 text-center shrink-0 tabular-nums">
-                                      {side.seed != null ? `#${side.seed}` : "—"}
-                                    </span>
-                                    {side.logo && (
-                                      <img
-                                        src={side.logo}
-                                        alt={side.name}
-                                        className="w-5 h-5 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain shrink-0"
-                                      />
-                                    )}
-                                    {side.teamId ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onNavigateTeam(teamHref(side.teamId!))
-                                        }
-                                        className={`text-xs sm:text-base lg:text-lg font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
-                                          side.won
-                                            ? "text-[#f0c020]"
-                                            : "text-[#f0ede0]"
-                                        }`}
-                                      >
-                                        {side.name}
-                                      </button>
-                                    ) : (
-                                      <span
-                                        className={`text-xs sm:text-sm lg:text-base truncate pr-1 ${
-                                          side.isPlaceholder
-                                            ? "italic text-[#a6a89e]"
-                                            : side.won
-                                            ? "font-extrabold text-[#f0c020]"
-                                            : "font-extrabold text-[#f0ede0]"
-                                        }`}
-                                      >
-                                        {side.name}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`text-sm sm:text-lg lg:text-2xl font-black tabular-nums shrink-0 ${
-                                      side.won
-                                        ? "text-[#7cd438]"
-                                        : "text-[#a6a89e]"
-                                    }`}
-                                  >
-                                    {side.wins != null ? side.wins : "—"}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {nextRound && (
-                        <div
-                          aria-hidden="true"
-                          className="flex flex-col justify-around shrink-0 w-6 sm:w-10 lg:w-14"
-                        >
-                          {nextRound.cards.map((nc) =>
-                            nextRound.cards.length === r.cards.length ? (
-                              <div
-                                key={`conn-${nc.key}`}
-                                className="flex items-center flex-1"
-                              >
-                                <div className="w-full border-t-2 border-white/20" />
-                              </div>
-                            ) : (
-                              <div
-                                key={`conn-${nc.key}`}
-                                className="flex items-center flex-1"
-                              >
-                                <div className="w-1/2 h-1/2 border-t-2 border-b-2 border-r-2 border-white/20 rounded-r-sm" />
-                                <div className="w-1/2 border-t-2 border-white/20" />
-                              </div>
-                            )
-                          )}
-                        </div>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+            {upperRounds.length > 0 ? (
+              isDoubleElim && lowerRounds.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="space-y-2.5">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#c89b3c]">
+                      Upper Bracket &amp; Grand Finals
+                    </div>
+                    {renderBracketTree(upperRounds)}
+                  </div>
+                  <div className="border-t border-white/10 pt-5 space-y-2.5">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#a6a89e]">
+                      Lower Bracket
+                    </div>
+                    {renderBracketTree(lowerRounds)}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                renderBracketTree(upperRounds)
+              )
             ) : (
               <div className="text-center text-xs text-[#a6a89e] py-3">
                 No playoff bracket configured for {selectedDivision.name} yet — confirm seeds in Admin or add playoff games to the stats sheet.
@@ -494,7 +584,7 @@ export function StatsTeamsTab({
   return (
     <div className="space-y-5">
       {divisionGroups.map(({ division, list }) => {
-        const theme = resolveDivisionTheme(division.theme_key);
+        const theme = resolveDivisionTheme(division.theme_key, divisionThemes);
         return (
           <div
             key={division.id}

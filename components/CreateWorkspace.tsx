@@ -39,6 +39,7 @@ interface CreateWorkspaceProps {
   initialEditionSlug?: string;
   initialBlog?: Blog | null;
   requireAllowlist?: boolean;
+  canCreateUntaggedBlog?: boolean;
   blockedUser?: {
     id: string;
     username: string;
@@ -64,6 +65,7 @@ export function CreateWorkspace({
   initialEditionSlug,
   initialBlog,
   requireAllowlist = false,
+  canCreateUntaggedBlog = true,
   blockedUser = null,
 }: CreateWorkspaceProps) {
   const [contentType, setContentType] = useState<CreateContentType>(initialType);
@@ -284,6 +286,7 @@ export function CreateWorkspace({
           seasons={seasons}
           initialSeasonSlug={initialSeasonSlug}
           initialBlog={initialBlog}
+          canCreateUntaggedBlog={canCreateUntaggedBlog}
         />
       )}
     </div>

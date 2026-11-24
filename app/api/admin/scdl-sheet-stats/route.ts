@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!auth.isAdmin) {
+  if (!auth.isAdmin && !auth.isOperator) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!auth.isAdmin) {
+  if (!auth.isAdmin && !auth.isOperator) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { RetroWindow } from "@/components/RetroWindow";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { ShieldAlert } from "lucide-react";
@@ -12,22 +13,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
+  const user = auth.user;
 
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-    isAdmin = Boolean(profile?.is_admin);
-  }
-
-  if (!user || !isAdmin) {
+  if (!user || (!auth.isAdmin && !auth.isOperator)) {
     return (
       <RetroWindow title="Admin Console — Access Denied" theme="xp">
         <div className="py-8 px-4 text-center space-y-3">
@@ -55,6 +47,11 @@ export default async function AdminPage() {
     { data: profiles },
     { data: recentBallots },
     { data: allowedUsers },
+    leagueOpsRes,
+    leagueAllowedRes,
+    teamCaptainsRes,
+    seasonMatchesRes,
+    backupsRes,
   ] = await Promise.all([
     supabase.from("leagues").select("*").order("created_at", { ascending: true }),
     supabase.from("seasons").select("*").order("created_at", { ascending: false }),
@@ -80,18 +77,70 @@ export default async function AdminPage() {
       .from("allowed_discord_users")
       .select("*")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("league_operators")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("league_allowed_users")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("team_captains")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("season_matches")
+      .select("*")
+      .order("round_number", { ascending: true }),
+    supabase
+      .from("season_config_backups")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(60),
   ]);
+
+  const opLeagueSet = new Set(auth.operatorLeagueIds);
+  const scopedLeagues = auth.isAdmin
+    ? leagues ?? []
+    : (leagues ?? []).filter((l) => opLeagueSet.has(l.id));
+  const allowedSeasonSet = new Set(
+    (auth.isAdmin
+      ? seasons ?? []
+      : (seasons ?? []).filter((s) => opLeagueSet.has(s.league_id))
+    ).map((s) => s.id)
+  );
+  const scopedSeasons = (seasons ?? []).filter((s) => allowedSeasonSet.has(s.id));
+  const scopedDivisions = (divisions ?? []).filter((d) =>
+    allowedSeasonSet.has(d.season_id)
+  );
+  const allowedDivSet = new Set(scopedDivisions.map((d) => d.id));
+  const scopedTeams = (teams ?? []).filter((t) => allowedDivSet.has(t.division_id));
+  const allowedTeamSet = new Set(scopedTeams.map((t) => t.id));
+
+  const rawLeagueOps = !leagueOpsRes.error ? leagueOpsRes.data ?? [] : [];
+  const rawLeagueAllowed = !leagueAllowedRes.error
+    ? leagueAllowedRes.data ?? []
+    : [];
+  const rawTeamCaptains = !teamCaptainsRes.error ? teamCaptainsRes.data ?? [] : [];
+  const rawMatches = !seasonMatchesRes.error ? seasonMatchesRes.data ?? [] : [];
+  const rawBackups = !backupsRes.error ? backupsRes.data ?? [] : [];
 
   return (
     <AdminDashboard
       currentUserId={user.id}
-      initialLeagues={leagues ?? []}
-      initialSeasons={seasons ?? []}
-      initialDivisions={divisions ?? []}
+      isSiteAdmin={auth.isAdmin}
+      initialLeagues={scopedLeagues}
+      initialSeasons={scopedSeasons}
+      initialDivisions={scopedDivisions}
       initialThemes={divisionThemes ?? []}
-      initialEditions={editions ?? []}
-      initialTeams={teams ?? []}
-      initialSeasonPlayers={seasonPlayers ?? []}
+      initialEditions={(editions ?? []).filter((e) =>
+        allowedSeasonSet.has(e.season_id)
+      )}
+      initialTeams={scopedTeams}
+      initialSeasonPlayers={(seasonPlayers ?? []).filter((sp) =>
+        allowedSeasonSet.has(sp.season_id)
+      )}
       initialAppSettings={
         appSettings ?? {
           id: 1,
@@ -103,8 +152,29 @@ export default async function AdminPage() {
         }
       }
       initialProfiles={profiles ?? []}
-      initialPublishedBallots={recentBallots ?? []}
+      initialPublishedBallots={(recentBallots ?? []).filter(
+        (b) => !b.season_id || allowedSeasonSet.has(b.season_id)
+      )}
       initialAllowedUsers={allowedUsers ?? []}
+      initialLeagueOperators={
+        auth.isAdmin
+          ? rawLeagueOps
+          : rawLeagueOps.filter((o) => opLeagueSet.has(o.league_id))
+      }
+      initialLeagueAllowedUsers={
+        auth.isAdmin
+          ? rawLeagueAllowed
+          : rawLeagueAllowed.filter((u) => opLeagueSet.has(u.league_id))
+      }
+      initialTeamCaptains={rawTeamCaptains.filter((c) =>
+        allowedTeamSet.has(c.team_id)
+      )}
+      initialSeasonMatches={rawMatches.filter((m) =>
+        allowedSeasonSet.has(m.season_id)
+      )}
+      initialSeasonBackups={rawBackups.filter((b) =>
+        allowedSeasonSet.has(b.season_id)
+      )}
     />
   );
 }

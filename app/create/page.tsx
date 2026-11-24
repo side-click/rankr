@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
-import { checkUserAllowlisted } from "@/utils/allowlist";
+import { getCreatorAccessSummary } from "@/utils/allowlist";
 import { CreateWorkspace } from "@/components/CreateWorkspace";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
@@ -69,7 +69,7 @@ export default async function RankPage({
   }
 
   const [
-    isAllowlisted,
+    { data: leagues },
     { data: profile },
     { data: seasons },
     { data: divisions },
@@ -78,7 +78,7 @@ export default async function RankPage({
     { data: teams },
     { data: seasonPlayers },
   ] = await Promise.all([
-    checkUserAllowlisted(supabase),
+    supabase.from("leagues").select("id, require_allowlist"),
     supabase
       .from("profiles")
       .select("username, avatar_url, discord_id, is_banned, ban_reason")
@@ -106,7 +106,27 @@ export default async function RankPage({
       .order("name", { ascending: true }),
   ]);
 
-  if (!isAllowlisted) {
+  const access = await getCreatorAccessSummary(
+    supabase,
+    auth.isAdmin,
+    auth.discordId,
+    auth.operatorLeagueIds,
+    (leagues ?? []) as { id: string; require_allowlist?: boolean | null }[]
+  );
+
+  const allowedSeasons =
+    access.allowedLeagueIds === null
+      ? seasons ?? []
+      : (seasons ?? []).filter((s) =>
+          access.allowedLeagueIds!.includes(s.league_id)
+        );
+
+  const isFullyBlocked =
+    !access.canCreateUntaggedBlog &&
+    access.allowedLeagueIds !== null &&
+    access.allowedLeagueIds.length === 0;
+
+  if (isFullyBlocked) {
     const blockedInitialType: CreateContentType =
       params.type === "blog" || params.edit
         ? "blog"
@@ -211,7 +231,8 @@ export default async function RankPage({
         null
       }
       discordDefaultName={discordDefaultName}
-      seasons={seasons ?? []}
+      canCreateUntaggedBlog={access.canCreateUntaggedBlog}
+      seasons={allowedSeasons}
       divisions={divisions ?? []}
       themes={divisionThemes ?? []}
       editions={editions ?? []}

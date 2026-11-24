@@ -35,10 +35,89 @@ export interface League {
   slug: string;
   logo_url: string | null;
   theme_key: string;
+  require_allowlist?: boolean;
   created_at: string;
 }
 
-export type PlayoffBracketFormat = "4-team" | "6-team" | "8-team";
+export interface LeagueOperator {
+  id: string;
+  league_id: string;
+  discord_id: string;
+  label: string | null;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface LeagueAllowedUser {
+  id: string;
+  league_id: string;
+  discord_id: string;
+  label: string | null;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface TeamCaptain {
+  id: string;
+  team_id: string;
+  discord_id: string;
+  label: string | null;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface SeasonMatch {
+  id: string;
+  season_id: string;
+  division_id: string;
+  stage: "regular" | "playoffs";
+  round_number: number;
+  round_label: string;
+  best_of: number;
+  team_a_id: string | null;
+  team_b_id: string | null;
+  scheduled_at: string | null;
+  status: "scheduled" | "live" | "completed";
+  bracket_slot_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TournamentCode {
+  id: string;
+  match_id: string;
+  game_number: number;
+  code: string;
+  provider: "placeholder" | "riot_tournament_v5";
+  riot_tournament_id: string | null;
+  status: "generated" | "used" | "completed";
+  riot_game_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SeasonConfigBackup {
+  id: string;
+  season_id: string;
+  division_id: string | null;
+  backup_type: "schedule" | "playoff_bracket";
+  label: string | null;
+  payload: unknown;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type SeasonRosterType = "draft" | "premade";
+export type SeasonStructure =
+  | "regular_playoffs"
+  | "regular_only"
+  | "bracket_only";
+export type PlayoffBracketFormat =
+  | "4-team"
+  | "6-team"
+  | "8-team"
+  | "4-team-double"
+  | "8-team-double";
 
 export interface PlayoffBracketSeedSlot {
   seed: number;
@@ -52,12 +131,15 @@ export interface PlayoffBracketMatchSlot {
   label: string;
   roundLabel: string;
   roundOrder: number;
+  bracketSide?: "upper" | "lower" | "grand_finals";
   teamASeed?: number | null;
   teamAId?: string | null;
   teamBSeed?: number | null;
   teamBId?: string | null;
   sourceMatchA?: string | null;
   sourceMatchB?: string | null;
+  loserSourceMatchA?: string | null;
+  loserSourceMatchB?: string | null;
 }
 
 export interface DivisionPlayoffBracket {
@@ -75,6 +157,9 @@ export interface Season {
   name: string;
   slug: string;
   is_active: boolean;
+  roster_type?: SeasonRosterType | null;
+  season_structure?: SeasonStructure | null;
+  default_best_of?: number | null;
   stats_provider?: "google_sheet" | "supabase_native" | "none" | null;
   stats_sheet_id?: string | null;
   stats_sheet_gids?: string[] | null;

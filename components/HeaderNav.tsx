@@ -2,14 +2,21 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Eye, History, ListOrdered, Menu, Shield, Trophy, X } from "lucide-react";
+import { BarChart3, Eye, History, ListOrdered, Menu, Shield, Swords, Trophy, X } from "lucide-react";
 
 interface HeaderNavProps {
   isLoggedIn: boolean;
   isAdmin: boolean;
+  isOperator?: boolean;
+  hasMatchHubAccess?: boolean;
 }
 
-export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
+export function HeaderNav({
+  isLoggedIn,
+  isAdmin,
+  isOperator = false,
+  hasMatchHubAccess = false,
+}: HeaderNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -88,13 +95,13 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
             <span>My History</span>
           </Link>
         )}
-        {isAdmin && (
+        {(isAdmin || isOperator) && (
           <Link
             href="/admin"
             className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-[#ffe57f] bg-black/25 hover:bg-black/40 border border-[#f0c020]/60 whitespace-nowrap"
           >
             <Shield className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
-            <span>Admin</span>
+            <span>{isAdmin ? "Admin" : "League Ops"}</span>
           </Link>
         )}
       </nav>
@@ -161,14 +168,14 @@ export function HeaderNav({ isLoggedIn, isAdmin }: HeaderNavProps) {
                 <span>My History</span>
               </Link>
             )}
-            {isAdmin && (
+            {(isAdmin || isOperator) && (
               <Link
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 rounded bg-black/35 hover:bg-black/50 text-[#ffe57f] border border-[#f0c020]/60"
               >
                 <Shield className="w-4 h-4 text-[#f0c020] shrink-0" />
-                <span>Admin</span>
+                <span>{isAdmin ? "Admin" : "League Ops"}</span>
               </Link>
             )}
         </div>

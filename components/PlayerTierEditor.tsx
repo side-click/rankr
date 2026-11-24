@@ -1260,7 +1260,10 @@ export function PlayerTierEditor({
       seasonEditions.length > 0 &&
       editionId !== seasonEditions[0].id
   );
-  const isDraftDayDisallowed = isSpecificDivision || isAfterFirstEdition;
+  const isDraftDayDisallowed =
+    isSpecificDivision ||
+    isAfterFirstEdition ||
+    currentSeason?.roster_type === "premade";
 
   useEffect(() => {
     if (isDraftDayDisallowed && selectedPreset === "draft_day") {

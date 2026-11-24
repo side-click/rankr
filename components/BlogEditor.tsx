@@ -39,6 +39,7 @@ interface BlogEditorProps {
   seasons: Season[];
   initialSeasonSlug?: string;
   initialBlog?: Blog | null;
+  canCreateUntaggedBlog?: boolean;
 }
 
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -64,6 +65,7 @@ export function BlogEditor({
   seasons,
   initialSeasonSlug,
   initialBlog,
+  canCreateUntaggedBlog = true,
 }: BlogEditorProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -76,8 +78,11 @@ export function BlogEditor({
       const matched = seasons.find((s) => s.slug === initialSeasonSlug);
       if (matched) return matched.id;
     }
+    if (!canCreateUntaggedBlog && seasons.length > 0) {
+      return seasons[0].id;
+    }
     return "";
-  }, [initialBlog, initialSeasonSlug, seasons]);
+  }, [initialBlog, initialSeasonSlug, seasons, canCreateUntaggedBlog]);
 
   const [blogId, setBlogId] = useState<string | null>(initialBlog?.id ?? null);
   const [seasonId, setSeasonId] = useState<string>(defaultSeasonId);
@@ -373,14 +378,16 @@ export function BlogEditor({
         {/* Top Metadata: Associated Season + Author in separate frames */}
         <div className="xp-panel p-3">
           <label className="block text-[11px] font-bold text-[#c7c5b8] mb-1">
-            Associated Season (optional)
+            Associated Season {canCreateUntaggedBlog ? "(optional)" : "*"}
           </label>
           <select
             value={seasonId}
             onChange={(e) => setSeasonId(e.target.value)}
             className="w-full sm:w-80 xp-inset px-2.5 py-1.5 text-xs"
           >
-            <option value="">General Post (No Associated Season)</option>
+            {canCreateUntaggedBlog && (
+              <option value="">General Post (No Associated Season)</option>
+            )}
             {seasons.map((s) => {
               const prefix = getLeaguePrefix(s);
               return (
@@ -391,6 +398,11 @@ export function BlogEditor({
               );
             })}
           </select>
+          {!canCreateUntaggedBlog && (
+            <p className="text-[10px] text-[#a6a89e] mt-1">
+              Tag your post to an approved league season.
+            </p>
+          )}
         </div>
 
         <div className="xp-panel p-3">

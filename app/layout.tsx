@@ -105,6 +105,8 @@ export default async function RootLayout({
         <Navbar
           requireAllowlist={requireAllowlist}
           isAdmin={isAdmin}
+          isOperator={auth.isOperator}
+          hasMatchHubAccess={auth.hasMatchHubAccess}
           user={
             authUser
               ? {

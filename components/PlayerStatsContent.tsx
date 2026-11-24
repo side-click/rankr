@@ -258,7 +258,7 @@ export async function PlayerStatsContent({
     `${basePath}/champion/${encodeURIComponent(name)}${
       divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
     }`;
-  const divTheme = resolveDivisionTheme(divThemeKey);
+  const divTheme = resolveDivisionTheme(divThemeKey, ctx.divisionThemes);
   const windowTheme =
     divThemeKey === "dragon"
       ? "dragon"

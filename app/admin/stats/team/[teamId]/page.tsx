@@ -51,6 +51,7 @@ export default async function AdminTeamStatsPage({
       leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}
       divisionThemeKey={scouting.divisionThemeKey}
+      divisionThemes={ctx.divisionThemes}
       team={scouting.team}
       leagueTeam={scouting.leagueTeam}
       seriesHistory={scouting.seriesHistory}

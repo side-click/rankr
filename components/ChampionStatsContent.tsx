@@ -81,8 +81,12 @@ export function ChampionStatsContent({
   );
 
   const divTheme = useMemo(
-    () => resolveDivisionTheme(selectedDiv?.theme_key ?? "scdl"),
-    [selectedDiv]
+    () =>
+      resolveDivisionTheme(
+        selectedDiv?.theme_key ?? "scdl",
+        ctx.divisionThemes
+      ),
+    [selectedDiv, ctx.divisionThemes]
   );
 
   const stats = useMemo(

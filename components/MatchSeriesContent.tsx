@@ -450,7 +450,7 @@ export async function MatchSeriesContent({
   const divId = teamAData?.divisionId ?? teamBData?.divisionId;
   const division = ctx.divisions.find((d) => d.id === divId);
   const divThemeKey = division?.theme_key ?? "scdl";
-  const divTheme = resolveDivisionTheme(divThemeKey);
+  const divTheme = resolveDivisionTheme(divThemeKey, ctx.divisionThemes);
   const windowTheme =
     divThemeKey === "dragon"
       ? "dragon"

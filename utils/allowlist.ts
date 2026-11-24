@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Checks whether the currently authenticated user is permitted to author/edit
- * rankings under the active Discord allowlist settings.
+ * untagged global content (e.g. untagged blogs) under global allowlist settings.
  */
 export async function checkUserAllowlisted(
   supabase: SupabaseClient
@@ -12,4 +12,50 @@ export async function checkUserAllowlisted(
     return true;
   }
   return data !== false;
+}
+
+export interface CreatorAccessSummary {
+  canCreateUntaggedBlog: boolean;
+  /** null means unrestricted across all leagues (e.g. Site Admin) */
+  allowedLeagueIds: string[] | null;
+}
+
+export async function getCreatorAccessSummary(
+  supabase: SupabaseClient,
+  isAdmin: boolean,
+  discordId: string | null,
+  operatorLeagueIds: string[],
+  leagues: { id: string; require_allowlist?: boolean | null }[]
+): Promise<CreatorAccessSummary> {
+  const canCreateUntaggedBlog = isAdmin
+    ? true
+    : await checkUserAllowlisted(supabase);
+
+  if (isAdmin) {
+    return { canCreateUntaggedBlog: true, allowedLeagueIds: null };
+  }
+
+  let leagueAllowedSet = new Set<string>();
+  if (discordId) {
+    const { data, error } = await supabase
+      .from("league_allowed_users")
+      .select("league_id")
+      .eq("discord_id", discordId);
+    if (!error && Array.isArray(data)) {
+      leagueAllowedSet = new Set(
+        data.map((r) => String(r.league_id ?? "")).filter(Boolean)
+      );
+    }
+  }
+
+  const operatorSet = new Set(operatorLeagueIds);
+  const allowedLeagueIds = leagues
+    .filter((l) => {
+      if (operatorSet.has(l.id)) return true;
+      if (!l.require_allowlist) return true;
+      return leagueAllowedSet.has(l.id);
+    })
+    .map((l) => l.id);
+
+  return { canCreateUntaggedBlog, allowedLeagueIds };
 }

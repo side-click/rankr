@@ -18,12 +18,14 @@ import {
 } from "@/utils/riotStatsAggregation";
 import type { ScdlSeriesDetail } from "@/utils/scdlSheetStats";
 import { resolveDivisionTheme } from "@/utils/themes";
+import type { DivisionTheme } from "@/types/database";
 
 interface TeamScoutingViewProps {
   ddVersion: string;
   leagueName?: string;
   seasonName: string;
   divisionThemeKey: string;
+  divisionThemes?: DivisionTheme[];
   team: AggregatedTeamStats;
   leagueTeam: AggregatedTeamStats | null;
   seriesHistory: ScdlSeriesDetail[];
@@ -120,6 +122,7 @@ export function TeamScoutingView({
   leagueName,
   seasonName,
   divisionThemeKey,
+  divisionThemes,
   team,
   leagueTeam,
   seriesHistory,
@@ -128,7 +131,7 @@ export function TeamScoutingView({
   basePath = "/admin/stats",
 }: TeamScoutingViewProps) {
   const leaguePrefix = deriveLeaguePrefix(leagueName);
-  const divTheme = resolveDivisionTheme(divisionThemeKey);
+  const divTheme = resolveDivisionTheme(divisionThemeKey, divisionThemes);
   const windowTheme =
     divisionThemeKey === "dragon"
       ? "dragon"

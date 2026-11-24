@@ -1,5 +1,10 @@
 import { unstable_cache } from "next/cache";
-import type { SeasonPlayoffBrackets } from "@/types/database";
+import type {
+  DivisionTheme,
+  SeasonPlayoffBrackets,
+  SeasonRosterType,
+  SeasonStructure,
+} from "@/types/database";
 import { createClient, createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { normalizeRoster } from "@/utils/roles";
@@ -38,11 +43,15 @@ export interface LoadedStatsContext {
   seasonSlug: string | null;
   currentEditionName: string;
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
+  divisionThemes: DivisionTheme[];
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   statsNotice: string | null;
   playoffBrackets?: SeasonPlayoffBrackets | null;
   statsRoundLabel?: string | null;
+  rosterType?: SeasonRosterType;
+  seasonStructure?: SeasonStructure;
+  defaultBestOf?: number;
   sheetConfig?: SheetSourceConfig;
 }
 
@@ -55,7 +64,7 @@ export async function loadAdminStatsContext(
   ]);
   const hasRiotKey = Boolean(process.env.RIOT_API_KEY?.trim());
 
-  if (!auth.user || !auth.isAdmin) {
+  if (!auth.user || (!auth.isAdmin && !auth.isOperator)) {
     return {
       authorized: false,
       missingTable: false,
@@ -68,6 +77,7 @@ export async function loadAdminStatsContext(
       seasonSlug: null,
       currentEditionName: "",
       divisions: [],
+      divisionThemes: [],
       players: [],
       teams: [],
       statsNotice: null,
@@ -248,6 +258,7 @@ async function loadStatsContextInternal(
   const [
     { data: seasons },
     { data: divisions },
+    { data: divisionThemes },
     { data: teams },
     { data: editions },
     settingsRes,
@@ -261,6 +272,7 @@ async function loadStatsContextInternal(
       .from("divisions")
       .select("id, name, slug, logo_url, theme_key, season_id")
       .order("name"),
+    supabase.from("division_themes").select("*").order("name"),
     supabase
       .from("teams")
       .select("id, name, logo_url, division_id, roster, captain, default_order")
@@ -466,6 +478,7 @@ async function loadStatsContextInternal(
       logo_url: d.logo_url ?? null,
       theme_key: d.theme_key,
     })),
+    divisionThemes: (divisionThemes ?? []) as DivisionTheme[],
     players: aggregatedPlayers,
     teams: aggregatedTeams,
     statsNotice,
@@ -481,6 +494,24 @@ async function loadStatsContextInternal(
           stats_round_label?: string | null;
         } | null
       )?.stats_round_label ?? null,
+    rosterType:
+      (
+        activeSeason as unknown as {
+          roster_type?: SeasonRosterType | null;
+        } | null
+      )?.roster_type ?? "draft",
+    seasonStructure:
+      (
+        activeSeason as unknown as {
+          season_structure?: SeasonStructure | null;
+        } | null
+      )?.season_structure ?? "regular_playoffs",
+    defaultBestOf:
+      (
+        activeSeason as unknown as {
+          default_best_of?: number | null;
+        } | null
+      )?.default_best_of ?? 1,
     sheetConfig,
   };
 }

@@ -12,15 +12,28 @@ import type {
   DivisionTheme,
   Edition,
   League,
+  LeagueAllowedUser,
+  LeagueOperator,
   PlayoffBracketFormat,
   PlayoffBracketSeedSlot,
   Profile,
   RankingType,
   Season,
+  SeasonConfigBackup,
+  SeasonMatch,
   SeasonPlayoffBrackets,
   SeasonPlayer,
+  SeasonRosterType,
+  SeasonStructure,
   Team,
+  TeamCaptain,
 } from "@/types/database";
+import { AdminLeagueAccessPanel } from "@/components/admin/AdminLeagueAccessPanel";
+import { AdminSchedulePlayoffsTab } from "@/components/admin/AdminSchedulePlayoffsTab";
+import {
+  BulkTeamRosterImporter,
+  MatchStatsUploader,
+} from "@/components/admin/AdminDataImportPanel";
 import {
   buildStandardPlayoffBracket,
   getSeedCountForFormat,
@@ -85,6 +98,7 @@ interface ConflictingBallotInfo {
 
 interface AdminDashboardProps {
   currentUserId: string;
+  isSiteAdmin: boolean;
   initialLeagues: League[];
   initialSeasons: Season[];
   initialDivisions: Division[];
@@ -96,6 +110,11 @@ interface AdminDashboardProps {
   initialProfiles: Profile[];
   initialPublishedBallots: AdminPublishedBallot[];
   initialAllowedUsers: AllowedDiscordUser[];
+  initialLeagueOperators: LeagueOperator[];
+  initialLeagueAllowedUsers: LeagueAllowedUser[];
+  initialTeamCaptains: TeamCaptain[];
+  initialSeasonMatches: SeasonMatch[];
+  initialSeasonBackups: SeasonConfigBackup[];
 }
 
 function slugify(value: string) {
@@ -108,6 +127,7 @@ function slugify(value: string) {
 
 export function AdminDashboard({
   currentUserId,
+  isSiteAdmin,
   initialLeagues,
   initialSeasons,
   initialDivisions,
@@ -119,13 +139,25 @@ export function AdminDashboard({
   initialProfiles,
   initialPublishedBallots,
   initialAllowedUsers,
+  initialLeagueOperators,
+  initialLeagueAllowedUsers,
+  initialTeamCaptains,
+  initialSeasonMatches,
+  initialSeasonBackups,
 }: AdminDashboardProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const validTabs = ["seasons", "editions", "teams", "players", "moderation"] as const;
+  const validTabs = [
+    "seasons",
+    "editions",
+    "teams",
+    "schedule",
+    "players",
+    "moderation",
+  ] as const;
   type AdminTab = (typeof validTabs)[number];
   const initialTabParam = searchParams.get("tab");
   const [tab, setTab] = useState<AdminTab>(
@@ -178,6 +210,20 @@ export function AdminDashboard({
   >(initialPublishedBallots);
   const [allowedUsers, setAllowedUsers] =
     useState<AllowedDiscordUser[]>(initialAllowedUsers);
+  const [leagueOperators, setLeagueOperators] =
+    useState<LeagueOperator[]>(initialLeagueOperators);
+  const [leagueAllowedUsers, setLeagueAllowedUsers] = useState<
+    LeagueAllowedUser[]
+  >(initialLeagueAllowedUsers);
+  const [teamCaptains, setTeamCaptains] =
+    useState<TeamCaptain[]>(initialTeamCaptains);
+  const [seasonMatches, setSeasonMatches] =
+    useState<SeasonMatch[]>(initialSeasonMatches);
+  const [seasonBackups, setSeasonBackups] =
+    useState<SeasonConfigBackup[]>(initialSeasonBackups);
+  const [newCaptainDiscordByTeam, setNewCaptainDiscordByTeam] = useState<
+    Record<string, string>
+  >({});
   const [moderationEvents, setModerationEvents] = useState<
     {
       id: string;
@@ -417,7 +463,24 @@ export function AdminDashboard({
   }
 
   async function refreshAll() {
-    const [l, s, d, th, e, t, sp, cfg, prof, bal, allow] = await Promise.all([
+    const [
+      l,
+      s,
+      d,
+      th,
+      e,
+      t,
+      sp,
+      cfg,
+      prof,
+      bal,
+      allow,
+      lOps,
+      lAllow,
+      tCaps,
+      sMatches,
+      sBackups,
+    ] = await Promise.all([
       supabase.from("leagues").select("*").order("created_at", { ascending: true }),
       supabase.from("seasons").select("*").order("created_at", { ascending: false }),
       supabase.from("divisions").select("*").order("name"),
@@ -442,6 +505,27 @@ export function AdminDashboard({
         .from("allowed_discord_users")
         .select("*")
         .order("created_at", { ascending: false }),
+      supabase
+        .from("league_operators")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("league_allowed_users")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("team_captains")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("season_matches")
+        .select("*")
+        .order("round_number", { ascending: true }),
+      supabase
+        .from("season_config_backups")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(60),
     ]);
     if (l.data) setLeagues(l.data);
     if (s.data) setSeasons(s.data);
@@ -454,7 +538,55 @@ export function AdminDashboard({
     if (prof.data) setProfiles(prof.data);
     if (bal.data) setPublishedBallots(bal.data);
     if (allow.data) setAllowedUsers(allow.data);
+    if (!lOps.error && lOps.data) setLeagueOperators(lOps.data);
+    if (!lAllow.error && lAllow.data) setLeagueAllowedUsers(lAllow.data);
+    if (!tCaps.error && tCaps.data) setTeamCaptains(tCaps.data);
+    if (!sMatches.error && sMatches.data) setSeasonMatches(sMatches.data);
+    if (!sBackups.error && sBackups.data) setSeasonBackups(sBackups.data);
     router.refresh();
+  }
+
+  async function handleAddTeamCaptain(teamId: string, discordId: string) {
+    const trimmed = discordId.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    const matchedProfile = profiles.find((p) => p.discord_id === trimmed);
+    const { error } = await supabase.from("team_captains").upsert(
+      {
+        team_id: teamId,
+        discord_id: trimmed,
+        label: matchedProfile?.username || null,
+        added_by: currentUserId,
+      },
+      { onConflict: "team_id,discord_id" }
+    );
+    if (error) {
+      setStatusMsg(
+        error.message.includes("relation")
+          ? "Error: Run migration 038_schedule_captains_tournaments.sql first."
+          : `Error: ${error.message}`
+      );
+    } else {
+      setNewCaptainDiscordByTeam((prev) => ({ ...prev, [teamId]: "" }));
+      setStatusMsg(`Added team captain ${trimmed}.`);
+      await refreshAll();
+    }
+    setBusy(false);
+  }
+
+  async function handleRemoveTeamCaptain(captainId: string) {
+    setBusy(true);
+    const { error } = await supabase
+      .from("team_captains")
+      .delete()
+      .eq("id", captainId);
+    if (error) {
+      setStatusMsg(`Error: ${error.message}`);
+    } else {
+      setStatusMsg("Removed team captain.");
+      await refreshAll();
+    }
+    setBusy(false);
   }
 
   async function handleAddLeague(e: React.FormEvent) {
@@ -520,6 +652,10 @@ export function AdminDashboard({
     setBusy(false);
   }
 
+  function revalidateStatsCache() {
+    fetch("/api/admin/revalidate-stats", { method: "POST" }).catch(() => {});
+  }
+
   async function handleSaveTeam(team: Team) {
     setBusy(true);
     setStatusMsg(null);
@@ -543,6 +679,7 @@ export function AdminDashboard({
       .eq("id", team.id);
 
     setStatusMsg(error ? `Error: ${error.message}` : `Saved ${team.name}.`);
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -591,6 +728,7 @@ export function AdminDashboard({
     if (!error) {
       setNewTeamName("");
       setStatusMsg("Team added.");
+      revalidateStatsCache();
       await refreshAll();
     } else {
       setStatusMsg(`Error: ${error.message}`);
@@ -622,7 +760,7 @@ export function AdminDashboard({
   async function handleSaveSeason(season: Season) {
     if (!season.name.trim()) return;
     setBusy(true);
-    const fullPayload: Record<string, unknown> = {
+    const basePayload: Record<string, unknown> = {
       name: season.name.trim(),
       slug: slugify(season.name),
       is_active: season.is_active,
@@ -649,22 +787,40 @@ export function AdminDashboard({
       stats_credits_attribution:
         season.stats_credits_attribution?.trim() || null,
     };
+    const fullPayload: Record<string, unknown> = {
+      ...basePayload,
+      roster_type: season.roster_type ?? "draft",
+      season_structure: season.season_structure ?? "regular_playoffs",
+      default_best_of:
+        typeof season.default_best_of === "number" &&
+        [1, 3, 5].includes(season.default_best_of)
+          ? season.default_best_of
+          : 1,
+    };
     let { error } = await supabase
       .from("seasons")
       .update(fullPayload)
       .eq("id", season.id);
     if (error && error.message.includes("column")) {
-      const fallback = await supabase
+      const midFallback = await supabase
         .from("seasons")
-        .update({
-          name: season.name.trim(),
-          slug: slugify(season.name),
-          is_active: season.is_active,
-        })
+        .update(basePayload)
         .eq("id", season.id);
-      error = fallback.error;
+      error = midFallback.error;
+      if (error && error.message.includes("column")) {
+        const fallback = await supabase
+          .from("seasons")
+          .update({
+            name: season.name.trim(),
+            slug: slugify(season.name),
+            is_active: season.is_active,
+          })
+          .eq("id", season.id);
+        error = fallback.error;
+      }
     }
     setStatusMsg(error ? `Error: ${error.message}` : `Saved ${season.name}.`);
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -717,6 +873,7 @@ export function AdminDashboard({
         ? `Saved ${bracket.format} playoff bracket for ${divisionName} (${season.name}).`
         : `Cleared playoff bracket for ${divisionName} (${season.name}).`
     );
+    revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -728,6 +885,7 @@ export function AdminDashboard({
       .from("seasons")
       .update({ is_active: !season.is_active })
       .eq("id", season.id);
+    revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -749,6 +907,7 @@ export function AdminDashboard({
     if (!error) {
       setNewDivName("");
       setStatusMsg("Division created.");
+      revalidateStatsCache();
       await refreshAll();
     } else {
       setStatusMsg(`Error: ${error.message}`);
@@ -771,6 +930,7 @@ export function AdminDashboard({
     setStatusMsg(
       error ? `Error: ${error.message}` : `Saved ${division.name}.`
     );
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -816,6 +976,7 @@ export function AdminDashboard({
     setStatusMsg(
       error ? `Error: ${error.message}` : `Saved ${theme.name}.`
     );
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -864,6 +1025,7 @@ export function AdminDashboard({
     if (!error) {
       setNewThemeName("");
       setStatusMsg("Theme created.");
+      revalidateStatsCache();
       await refreshAll();
     } else {
       setStatusMsg(`Error: ${error.message}`);
@@ -880,6 +1042,7 @@ export function AdminDashboard({
       .delete()
       .eq("key", theme.key);
     setStatusMsg(error ? `Error: ${error.message}` : "Theme deleted.");
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -1598,6 +1761,7 @@ export function AdminDashboard({
     setBusy(true);
     const { error } = await supabase.from("teams").delete().eq("id", team.id);
     setStatusMsg(error ? `Error: ${error.message}` : `Deleted ${team.name}.`);
+    if (!error) revalidateStatsCache();
     await refreshAll();
     setBusy(false);
   }
@@ -1652,6 +1816,8 @@ export function AdminDashboard({
   }
 
 
+  const selectedSeason =
+    seasons.find((s) => s.id === selectedSeasonId) ?? null;
   const filteredTeams = selectedDivisionId
     ? teams.filter((t) => t.division_id === selectedDivisionId)
     : [];
@@ -1671,11 +1837,12 @@ export function AdminDashboard({
       <div className="flex flex-wrap gap-1.5 mb-4 pb-2 border-b border-white/10">
         {(
           [
-            ["seasons", "Setup Seasons"],
-            ["editions", "Setup Divisions and Editions"],
-            ["teams", "Setup Teams"],
-            ["players", "Setup Players"],
-            ["moderation", "Moderation & Safety"],
+            ["seasons", "Seasons"],
+            ["editions", "Divisions and Content Editions"],
+            ["players", "Players"],
+            ["teams", "Teams"],
+            ["schedule", "Schedule & Playoffs"],
+            ["moderation", isSiteAdmin ? "Moderation & Safety" : "League Access & Safety"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -1687,15 +1854,26 @@ export function AdminDashboard({
             {label}
           </button>
         ))}
-        <Link
-          href="/admin/stats"
-          className="xp-btn text-xs sm:ml-auto border-[#c89b3c]/70 text-[#f0c020]"
-        >
-          <span>Stats Dashboard</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+          <Link
+            href="/matches"
+            className="xp-btn text-xs border-[#7cd438]/60 text-[#7cd438]"
+          >
+            <span>Match Hub (preview)</span>
+          </Link>
+          <Link
+            href="/admin/stats"
+            className="xp-btn text-xs border-[#c89b3c]/70 text-[#f0c020]"
+          >
+            <span>Stats Controls</span>
+          </Link>
+        </div>
       </div>
 
-      {(tab === "editions" || tab === "teams" || tab === "players") && (
+      {(tab === "editions" ||
+        tab === "teams" ||
+        tab === "schedule" ||
+        tab === "players") && (
         <div className="xp-panel p-3 mb-4 flex flex-wrap items-center gap-3">
           <div>
             <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
@@ -1730,25 +1908,39 @@ export function AdminDashboard({
 
           {tab === "teams" && (
             <div>
-              <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
+              <label className="block text-[10px] font-bold uppercase text-[#a6a89e] mb-1">
                 Division
               </label>
-              <select
-                value={selectedDivisionId}
-                onChange={(e) => setSelectedDivisionId(e.target.value)}
-                disabled={seasonDivisions.length === 0}
-                className="xp-inset px-2 py-1 text-xs font-bold mt-0.5"
-              >
-                {seasonDivisions.length === 0 ? (
-                  <option value="">No divisions in this season</option>
-                ) : (
-                  seasonDivisions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              {seasonDivisions.length === 0 ? (
+                <span className="text-xs text-[#a6a89e]">
+                  No divisions in this season
+                </span>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {seasonDivisions.map((d) => {
+                    const isSel = d.id === selectedDivisionId;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => setSelectedDivisionId(d.id)}
+                        className={`xp-btn text-xs px-3 py-1 ${
+                          isSel ? "xp-btn-primary" : ""
+                        }`}
+                      >
+                        {d.logo_url && (
+                          <img
+                            src={d.logo_url}
+                            alt={d.name}
+                            className="w-4 h-4 object-contain shrink-0"
+                          />
+                        )}
+                        <span>{d.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1968,6 +2160,72 @@ export function AdminDashboard({
                       </div>
                     </div>
 
+                    {/* Discord-linked Match Hub Captains */}
+                    <div className="pt-2 border-t border-white/10 space-y-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                        Match Hub Captains (Discord ID)
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {teamCaptains
+                          .filter((c) => c.team_id === team.id)
+                          .map((c) => {
+                            const prof = profiles.find(
+                              (p) => p.discord_id === c.discord_id
+                            );
+                            return (
+                              <span
+                                key={c.id}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-black/50 border border-white/15 text-[10px] text-[#f0ede0]"
+                              >
+                                <span>
+                                  {c.label || prof?.username || c.discord_id}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => handleRemoveTeamCaptain(c.id)}
+                                  className="text-[#ff857a] hover:text-white cursor-pointer"
+                                  title="Remove captain"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            );
+                          })}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={newCaptainDiscordByTeam[team.id] ?? ""}
+                          onChange={(e) =>
+                            setNewCaptainDiscordByTeam((prev) => ({
+                              ...prev,
+                              [team.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Discord User ID for tourney codes..."
+                          className="flex-1 xp-inset px-2 py-1 text-[11px]"
+                        />
+                        <button
+                          type="button"
+                          disabled={
+                            busy ||
+                            !(newCaptainDiscordByTeam[team.id] ?? "").trim()
+                          }
+                          onClick={() =>
+                            handleAddTeamCaptain(
+                              team.id,
+                              newCaptainDiscordByTeam[team.id] ?? ""
+                            )
+                          }
+                          className="xp-btn text-[11px] px-2 py-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -2014,8 +2272,43 @@ export function AdminDashboard({
                   <span>Add Team</span>
                 </button>
               </form>
+
+              <BulkTeamRosterImporter
+                divisionId={selectedDivisionId}
+                existingTeamCount={filteredTeams.length}
+                busy={busy}
+                onRevalidate={revalidateStatsCache}
+                onRefresh={refreshAll}
+                onStatusMsg={(msg) => setStatusMsg(msg)}
+              />
             </>
           )}
+        </div>
+      )}
+
+      {/* TAB: SCHEDULE & PLAYOFFS */}
+      {tab === "schedule" && selectedSeason && (
+        <div className="space-y-4">
+          <AdminSchedulePlayoffsTab
+            season={selectedSeason}
+            divisions={seasonDivisions}
+            teams={teams}
+            matches={seasonMatches}
+            backups={seasonBackups}
+            currentUserId={currentUserId}
+            busy={busy}
+            onSavePlayoffBracket={handleSavePlayoffBracket}
+            onRevalidate={revalidateStatsCache}
+            onRefresh={refreshAll}
+            onStatusMsg={(msg) => setStatusMsg(msg)}
+          />
+          <MatchStatsUploader
+            season={selectedSeason}
+            teams={teams}
+            busy={busy}
+            onRefresh={refreshAll}
+            onStatusMsg={(msg) => setStatusMsg(msg)}
+          />
         </div>
       )}
 
@@ -2324,26 +2617,28 @@ export function AdminDashboard({
                 </div>
               ))}
             </div>
-            <form onSubmit={handleAddLeague} className="flex flex-wrap gap-2 pt-2">
-              <input
-                type="text"
-                value={newLeagueName}
-                onChange={(e) => setNewLeagueName(e.target.value)}
-                placeholder="e.g. LCS Amateur"
-                className="flex-1 min-w-[140px] xp-inset px-2 py-1 text-xs"
-              />
-              <input
-                type="text"
-                value={newLeagueShortName}
-                onChange={(e) => setNewLeagueShortName(e.target.value)}
-                placeholder="Abbr. (e.g. LCSA)"
-                className="w-28 xp-inset px-2 py-1 text-xs uppercase"
-              />
-              <button type="submit" disabled={busy} className="xp-btn text-xs">
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add League</span>
-              </button>
-            </form>
+            {isSiteAdmin && (
+              <form onSubmit={handleAddLeague} className="flex flex-wrap gap-2 pt-2">
+                <input
+                  type="text"
+                  value={newLeagueName}
+                  onChange={(e) => setNewLeagueName(e.target.value)}
+                  placeholder="e.g. LCS Amateur"
+                  className="flex-1 min-w-[140px] xp-inset px-2 py-1 text-xs"
+                />
+                <input
+                  type="text"
+                  value={newLeagueShortName}
+                  onChange={(e) => setNewLeagueShortName(e.target.value)}
+                  placeholder="Abbr. (e.g. LCSA)"
+                  className="w-28 xp-inset px-2 py-1 text-xs uppercase"
+                />
+                <button type="submit" disabled={busy} className="xp-btn text-xs">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add League</span>
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Seasons */}
@@ -2528,7 +2823,9 @@ export function AdminDashboard({
                         const round1Matches = buildStandardPlayoffBracket(
                           activeFormat,
                           previewSlots
-                        ).matches.filter((m) => m.roundOrder === 1);
+                        ).matches.filter(
+                          (m) => m.roundOrder === 1 && m.bracketSide !== "lower"
+                        );
 
                         return (
                           <>
@@ -2537,6 +2834,94 @@ export function AdminDashboard({
                                 Data Sources &amp; Credits
                               </summary>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Roster Type
+                                  </label>
+                                  <select
+                                    value={s.roster_type ?? "draft"}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                roster_type: e.target
+                                                  .value as SeasonRosterType,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full xp-inset px-2 py-1 text-xs"
+                                  >
+                                    <option value="draft">Draft League</option>
+                                    <option value="premade">
+                                      Premade Teams
+                                    </option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Season Structure
+                                  </label>
+                                  <select
+                                    value={
+                                      s.season_structure ?? "regular_playoffs"
+                                    }
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                season_structure: e.target
+                                                  .value as SeasonStructure,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full xp-inset px-2 py-1 text-xs"
+                                  >
+                                    <option value="regular_playoffs">
+                                      Regular Season + Playoffs
+                                    </option>
+                                    <option value="regular_only">
+                                      Regular Season Only
+                                    </option>
+                                    <option value="bracket_only">
+                                      Bracket / Playoffs Only
+                                    </option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Default Series
+                                  </label>
+                                  <select
+                                    value={s.default_best_of ?? 1}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                default_best_of: Number(
+                                                  e.target.value
+                                                ),
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full xp-inset px-2 py-1 text-xs"
+                                  >
+                                    <option value={1}>Best of 1</option>
+                                    <option value={3}>Best of 3</option>
+                                    <option value={5}>Best of 5</option>
+                                  </select>
+                                </div>
                                 <div>
                                   <label className="block text-[10px] font-bold text-[#c7c5b8]">
                                     Stats Provider
@@ -2885,249 +3270,6 @@ export function AdminDashboard({
                                     <span>Save Config</span>
                                   </button>
                                 </div>
-                              </div>
-                            </details>
-
-                            <details className="pt-1 border-t border-white/10 text-[11px]">
-                              <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
-                                Playoff Brackets
-                                {hasAnyBracket && (
-                                  <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
-                                )}
-                              </summary>
-                              <div className="pt-2 space-y-2.5">
-                                {seasonDivs.length === 0 ? (
-                                  <div className="text-[11px] text-[#a6a89e]">
-                                    Add divisions first to configure playoff brackets.
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {seasonDivs.map((d) => {
-                                          const isSel = d.id === activeDivId;
-                                          const divHasBracket = Boolean(
-                                            s.playoff_brackets?.[d.id]
-                                          );
-                                          return (
-                                            <button
-                                              key={d.id}
-                                              type="button"
-                                              onClick={() => {
-                                                const saved =
-                                                  s.playoff_brackets?.[d.id];
-                                                const fmt =
-                                                  saved?.format ?? "4-team";
-                                                const cnt =
-                                                  getSeedCountForFormat(fmt);
-                                                setBracketDrafts((prev) => ({
-                                                  ...prev,
-                                                  [s.id]: {
-                                                    divisionId: d.id,
-                                                    format: fmt,
-                                                    seedTeamIds: Array.from(
-                                                      { length: cnt },
-                                                      (_, idx) =>
-                                                        saved?.seeds.find(
-                                                          (sd) =>
-                                                            sd.seed === idx + 1
-                                                        )?.teamId ?? ""
-                                                    ),
-                                                  },
-                                                }));
-                                              }}
-                                              className={`xp-btn text-[11px] px-2.5 py-1 ${
-                                                isSel ? "xp-btn-primary" : ""
-                                              }`}
-                                            >
-                                              <span>{d.name}</span>
-                                              {divHasBracket && (
-                                                <Check className="w-3 h-3 text-[#7cd438]" />
-                                              )}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-
-                                      <select
-                                        value={activeFormat}
-                                        onChange={(e) => {
-                                          const nextFmt = e.target
-                                            .value as PlayoffBracketFormat;
-                                          const nextCnt =
-                                            getSeedCountForFormat(nextFmt);
-                                          setBracketDrafts((prev) => ({
-                                            ...prev,
-                                            [s.id]: {
-                                              divisionId: activeDivId,
-                                              format: nextFmt,
-                                              seedTeamIds: Array.from(
-                                                { length: nextCnt },
-                                                (_, idx) =>
-                                                  draftSeedTeamIds[idx] ?? ""
-                                              ),
-                                            },
-                                          }));
-                                        }}
-                                        className="xp-inset px-2 py-1 text-xs"
-                                      >
-                                        <option value="4-team">
-                                          4-Team Single Elim (Semifinals → Finals)
-                                        </option>
-                                        <option value="6-team">
-                                          6-Team Single Elim (Top 2 Bye)
-                                        </option>
-                                        <option value="8-team">
-                                          8-Team Single Elim (QF → SF → Finals)
-                                        </option>
-                                      </select>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                      {draftSeedTeamIds.map((tid, idx) => (
-                                        <div
-                                          key={`seed-${idx + 1}`}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <span className="text-[11px] font-black text-[#f0c020] w-6 shrink-0 tabular-nums">
-                                            #{idx + 1}
-                                          </span>
-                                          <select
-                                            value={tid}
-                                            onChange={(e) => {
-                                              const nextIds = [
-                                                ...draftSeedTeamIds,
-                                              ];
-                                              nextIds[idx] = e.target.value;
-                                              setBracketDrafts((prev) => ({
-                                                ...prev,
-                                                [s.id]: {
-                                                  divisionId: activeDivId,
-                                                  format: activeFormat,
-                                                  seedTeamIds: nextIds,
-                                                },
-                                              }));
-                                            }}
-                                            className={`w-full xp-inset px-2 py-1 text-xs ${
-                                              tid ? "!border-[#7cd438]/60" : ""
-                                            }`}
-                                          >
-                                            <option value="">
-                                              — Select Seed #{idx + 1} Team —
-                                            </option>
-                                            {divTeams.map((tm) => (
-                                              <option key={tm.id} value={tm.id}>
-                                                {tm.name}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-                                      ))}
-                                    </div>
-
-                                    <div className="rounded border border-white/10 bg-black/35 px-2.5 py-2 space-y-1">
-                                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                                        Round 1 Matchup Preview
-                                      </div>
-                                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#e5e2d0]">
-                                        {round1Matches.map((m) => {
-                                          const nameA =
-                                            (m.teamAId &&
-                                              teamById.get(m.teamAId)?.name) ||
-                                            "TBD";
-                                          const nameB =
-                                            (m.teamBId &&
-                                              teamById.get(m.teamBId)?.name) ||
-                                            "TBD";
-                                          return (
-                                            <span key={m.id}>
-                                              <span className="text-[#f0c020] font-bold">
-                                                #{m.teamASeed}
-                                              </span>{" "}
-                                              {nameA}{" "}
-                                              <span className="text-[#a6a89e]">
-                                                vs
-                                              </span>{" "}
-                                              <span className="text-[#f0c020] font-bold">
-                                                #{m.teamBSeed}
-                                              </span>{" "}
-                                              {nameB}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-2">
-                                      {savedDivBracket && (
-                                        <button
-                                          type="button"
-                                          disabled={busy}
-                                          onClick={() =>
-                                            handleSavePlayoffBracket(
-                                              s,
-                                              activeDivId,
-                                              activeDiv?.name ?? "Division",
-                                              null
-                                            )
-                                          }
-                                          className="xp-btn text-xs text-[#ff857a]"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                          <span>Clear Bracket</span>
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        disabled={busy}
-                                        onClick={() => {
-                                          if (
-                                            draftSeedTeamIds.some((id) => !id)
-                                          ) {
-                                            setStatusMsg(
-                                              `Error: Please select all ${seedCount} seed teams before saving.`
-                                            );
-                                            return;
-                                          }
-                                          if (
-                                            new Set(draftSeedTeamIds).size !==
-                                            seedCount
-                                          ) {
-                                            setStatusMsg(
-                                              "Error: Each seed slot must be assigned to a different team."
-                                            );
-                                            return;
-                                          }
-                                          const confirmedSeeds: PlayoffBracketSeedSlot[] =
-                                            draftSeedTeamIds.map((tid, idx) => {
-                                              const tm = teamById.get(tid);
-                                              return {
-                                                seed: idx + 1,
-                                                teamId: tid,
-                                                teamName: tm?.name ?? tid,
-                                                logoUrl: tm?.logo_url ?? null,
-                                              };
-                                            });
-                                          const bracket =
-                                            buildStandardPlayoffBracket(
-                                              activeFormat,
-                                              confirmedSeeds
-                                            );
-                                          handleSavePlayoffBracket(
-                                            s,
-                                            activeDivId,
-                                            activeDiv?.name ?? "Division",
-                                            bracket
-                                          );
-                                        }}
-                                        className="xp-btn xp-btn-primary text-xs"
-                                      >
-                                        <Save className="w-3.5 h-3.5" />
-                                        <span>Save Bracket</span>
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
                               </div>
                             </details>
                           </>
@@ -3697,6 +3839,8 @@ export function AdminDashboard({
       {/* TAB 4: MODERATION & SAFETY */}
       {tab === "moderation" && (
         <div className="space-y-4">
+          {isSiteAdmin && (
+            <>
           {/* Global Kill Switch */}
           <div className="xp-panel p-3 space-y-3 border border-white/10">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -3775,12 +3919,12 @@ export function AdminDashboard({
                 />
                 <div>
                   <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                    Discord Allowlist (Invite-Only Authoring)
+                    Global Blog Allowlist (Untagged Blogs)
                   </h2>
                   <p className="text-[11px] text-[#a6a89e]">
-                    Everyone can still browse and view ballot links, but only
-                    allowlisted Discord IDs (and admins) can sign in to rank or
-                    edit.
+                    Controls who can create untagged general blog posts.
+                    League-specific TPRs, Tier Lists, and league-tagged Blogs are
+                    governed by each league&apos;s creator access settings above.
                   </p>
                 </div>
               </div>
@@ -4148,6 +4292,23 @@ export function AdminDashboard({
             </div>
           </div>
 
+            </>
+          )}
+
+          <AdminLeagueAccessPanel
+            isSiteAdmin={isSiteAdmin}
+            leagues={leagues}
+            profiles={profiles}
+            leagueOperators={leagueOperators}
+            leagueAllowedUsers={leagueAllowedUsers}
+            currentUserId={currentUserId}
+            busy={busy}
+            onRefresh={refreshAll}
+            onStatusMsg={(msg) => setStatusMsg(msg)}
+          />
+
+          {isSiteAdmin && (
+            <>
           {/* Custom Moderation Rules (Allowlist / Block / Flag) */}
           <div className="xp-panel p-3 space-y-2.5">
             <h2 className="font-bold text-xs uppercase text-[#f0c020]">
@@ -4485,6 +4646,8 @@ export function AdminDashboard({
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
       )}
 

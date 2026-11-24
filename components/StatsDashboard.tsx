@@ -62,7 +62,11 @@ import type {
   UnrosteredSheetPlayer,
 } from "@/utils/scdlSheetStats";
 import type { DraftImportSummary } from "@/utils/draftImporter";
-import type { SeasonPlayoffBrackets } from "@/types/database";
+import type {
+  DivisionTheme,
+  SeasonPlayoffBrackets,
+  SeasonStructure,
+} from "@/types/database";
 
 interface DivisionItem {
   id: string;
@@ -105,6 +109,8 @@ interface StatsDashboardProps {
   soloPrioMap?: Record<string, SoloPrioEntry>;
   isAdminView?: boolean;
   initialStatsNotice?: string | null;
+  divisionThemes?: DivisionTheme[];
+  seasonStructure?: SeasonStructure;
   playoffBrackets?: SeasonPlayoffBrackets | null;
   statsRoundLabel?: string | null;
   initialDivision?: string;
@@ -182,6 +188,8 @@ export function StatsDashboard({
   soloPrioMap,
   isAdminView = true,
   initialStatsNotice = null,
+  divisionThemes = [],
+  seasonStructure = "regular_playoffs",
   playoffBrackets = null,
   statsRoundLabel = null,
   initialDivision,
@@ -365,9 +373,9 @@ export function StatsDashboard({
   const selectedDivisionTheme = useMemo(
     () =>
       selectedDivision
-        ? resolveDivisionTheme(selectedDivision.theme_key)
+        ? resolveDivisionTheme(selectedDivision.theme_key, divisionThemes)
         : null,
-    [selectedDivision]
+    [selectedDivision, divisionThemes]
   );
 
   const kpiCardStyle = useMemo<React.CSSProperties>(() => {
@@ -525,11 +533,14 @@ export function StatsDashboard({
   }, [sheetData, divisionFilter]);
 
   const stagedSubCount = useMemo(() => {
+    if (seasonStructure === "bracket_only") {
+      return divisionSubPlayers.filter((p) => p.games > 0).length;
+    }
     const wantPlayoffs = stageBucket === "playoffs";
     return divisionSubPlayers.filter((p) =>
       p.matches.some((m) => isMatchPlayoff(m) === wantPlayoffs)
     ).length;
-  }, [divisionSubPlayers, stageBucket]);
+  }, [divisionSubPlayers, stageBucket, seasonStructure]);
 
   const stageMatchCounts = useMemo(() => {
     const regIds = new Set<string>();
@@ -567,6 +578,7 @@ export function StatsDashboard({
   }, [allDivisionPlayers]);
 
   const exportSubtitle = useMemo(() => {
+    if (seasonStructure === "bracket_only") return "Tournament Stats";
     if (stageBucket === "playoffs") return "Playoffs Only";
     if (hasPlayoffStats) return "End of Regular Season";
     if (latestRegularRound != null) {
@@ -575,6 +587,7 @@ export function StatsDashboard({
     }
     return `As of ${currentEditionName}`;
   }, [
+    seasonStructure,
     stageBucket,
     hasPlayoffStats,
     latestRegularRound,
@@ -583,18 +596,32 @@ export function StatsDashboard({
   ]);
 
   useEffect(() => {
-    setStageBucket(hasPlayoffStats ? "playoffs" : "regular");
-  }, [divisionFilter, hasPlayoffStats]);
+    if (seasonStructure === "regular_only") {
+      setStageBucket("regular");
+    } else if (seasonStructure === "bracket_only") {
+      setStageBucket("playoffs");
+    } else {
+      setStageBucket(hasPlayoffStats ? "playoffs" : "regular");
+    }
+  }, [divisionFilter, hasPlayoffStats, seasonStructure]);
 
   const filteredPlayers = useMemo(() => {
     const base = includeSubs
       ? [...allDivisionPlayers, ...divisionSubPlayers]
       : allDivisionPlayers;
-    const staged = filterPlayersByStage(base, stageBucket).filter(
-      (p) => !p.isSub || p.games > 0
-    );
+    const staged = (
+      seasonStructure === "bracket_only"
+        ? base
+        : filterPlayersByStage(base, stageBucket)
+    ).filter((p) => !p.isSub || p.games > 0);
     return computeRoleNormalizedRatings(staged);
-  }, [allDivisionPlayers, divisionSubPlayers, includeSubs, stageBucket]);
+  }, [
+    allDivisionPlayers,
+    divisionSubPlayers,
+    includeSubs,
+    stageBucket,
+    seasonStructure,
+  ]);
 
   async function handleImportMissingDrafts() {
     setImportingDrafts(true);
@@ -1616,7 +1643,10 @@ export function StatsDashboard({
           {openDropdown === "division" && (
             <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-[#c89b3c]/60 bg-[#121816] shadow-2xl p-1.5 max-h-72 overflow-y-auto space-y-1">
               {divisions.map((div) => {
-                const divTheme = resolveDivisionTheme(div.theme_key);
+                const divTheme = resolveDivisionTheme(
+                  div.theme_key,
+                  divisionThemes
+                );
                 const count = activePlayers.filter(
                   (p) => p.divisionId === div.id
                 ).length;
@@ -1737,37 +1767,45 @@ export function StatsDashboard({
         </div>
       ) : (
         <>
-        {(activeSection === "players" || activeSection === "teams") && (
+        {(activeSection === "players" || activeSection === "teams") &&
+          (seasonStructure === "regular_playoffs" ||
+            (activeSection === "players" && stagedSubCount > 0)) && (
           <div className="flex flex-wrap items-center justify-between gap-2 xp-panel px-3 py-2">
             <div className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
-              Competition Stage
+              {seasonStructure === "regular_playoffs"
+                ? "Competition Stage"
+                : "Player Filter"}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setStageBucket("regular")}
-                className={`xp-btn text-xs px-3 py-1 ${
-                  stageBucket === "regular" ? "xp-btn-primary" : ""
-                }`}
-              >
-                <span>Regular Season</span>
-                <span className="text-[10px] opacity-80 tabular-nums">
-                  ({stageMatchCounts.regular})
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStageBucket("playoffs")}
-                className={`xp-btn text-xs px-3 py-1 ${
-                  stageBucket === "playoffs" ? "xp-btn-primary" : ""
-                }`}
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                <span>Playoffs</span>
-                <span className="text-[10px] opacity-80 tabular-nums">
-                  ({stageMatchCounts.playoffs})
-                </span>
-              </button>
+              {seasonStructure === "regular_playoffs" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStageBucket("regular")}
+                    className={`xp-btn text-xs px-3 py-1 ${
+                      stageBucket === "regular" ? "xp-btn-primary" : ""
+                    }`}
+                  >
+                    <span>Regular Season</span>
+                    <span className="text-[10px] opacity-80 tabular-nums">
+                      ({stageMatchCounts.regular})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStageBucket("playoffs")}
+                    className={`xp-btn text-xs px-3 py-1 ${
+                      stageBucket === "playoffs" ? "xp-btn-primary" : ""
+                    }`}
+                  >
+                    <Trophy className="w-3.5 h-3.5" />
+                    <span>Playoffs</span>
+                    <span className="text-[10px] opacity-80 tabular-nums">
+                      ({stageMatchCounts.playoffs})
+                    </span>
+                  </button>
+                </>
+              )}
               {activeSection === "players" && stagedSubCount > 0 && (
                 <button
                   type="button"
@@ -3155,6 +3193,7 @@ export function StatsDashboard({
           <StatsTeamsTab
             selectedDivision={selectedDivision}
             divisions={divisions}
+            divisionThemes={divisionThemes}
             filteredTeams={filteredTeams}
             activeTeams={activeTeams}
             basePath={basePath}
