@@ -363,19 +363,26 @@ export function HomeView({ data }: { data: HomeData }) {
                 </div>
 
                 <div className="divide-y divide-white/10">
-                  {snap.topTeams.map((t, idx) => {
-                    const rankColor = getRankColor(idx, 8);
-                    return (
-                      <div
-                        key={`${snap.divisionSlug}-${t.rank}-${t.teamName}`}
-                        style={{ backgroundColor: rankColor.rowBg }}
-                        className="flex items-center justify-between gap-3 px-4 py-2.5"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative flex flex-col items-center shrink-0">
-                            {idx === 0 && (
-                              <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5" />
-                            )}
+                  {(() => {
+                    const topAvgDisplay = snap.topTeams[0]
+                      ? snap.topTeams[0].averageRank.toFixed(2)
+                      : null;
+                    return snap.topTeams.map((t, idx) => {
+                      const rankColor = getRankColor(idx, 8);
+                      const isLeader =
+                        topAvgDisplay !== null &&
+                        t.averageRank.toFixed(2) === topAvgDisplay;
+                      return (
+                        <div
+                          key={`${snap.divisionSlug}-${t.rank}-${t.teamName}`}
+                          style={{ backgroundColor: rankColor.rowBg }}
+                          className="flex items-center justify-between gap-3 px-4 py-2.5"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="relative flex flex-col items-center shrink-0">
+                              {isLeader && (
+                                <Crown className="w-3 h-3 text-[#f0c020] -mb-0.5" />
+                              )}
                             <span
                               style={{ backgroundColor: rankColor.badgeBg }}
                               className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-sm font-black text-white tabular-nums"
@@ -430,7 +437,8 @@ export function HomeView({ data }: { data: HomeData }) {
                         </span>
                       </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               </div>
             ))}

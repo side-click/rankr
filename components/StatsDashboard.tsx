@@ -1744,78 +1744,86 @@ export function StatsDashboard({
                 </span>
               </div>
               <div className="divide-y divide-[#f0c020]/15">
-                {ratingCard.rows.map((p, idx) => {
-                  const ratingInner = (
-                    <>
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                {(() => {
+                  const topRatingDisplay = ratingCard.rows[0]
+                    ? ratingCard.fmt(ratingCard.rows[0])
+                    : null;
+                  return ratingCard.rows.map((p) => {
+                    const isLeader =
+                      topRatingDisplay !== null &&
+                      ratingCard.fmt(p) === topRatingDisplay;
+                    const ratingInner = (
+                      <>
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <span
+                            className={`text-sm sm:text-base font-extrabold tabular-nums w-4 sm:w-5 text-center ${
+                              isLeader ? "text-[#f0c020]" : "text-[#c89b3c]"
+                            }`}
+                          >
+                            {ratingCard.rows.indexOf(p) + 1}
+                          </span>
+                          {p.isSub ? (
+                            <img
+                              src={getRoleMeta(p.role as LeagueRole).icon}
+                              alt={getRoleMeta(p.role as LeagueRole).label}
+                              crossOrigin="anonymous"
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                            />
+                          ) : p.teamLogoUrl ? (
+                            <img
+                              src={p.teamLogoUrl}
+                              alt={p.teamName}
+                              crossOrigin="anonymous"
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
+                            />
+                          ) : null}
+                          <span
+                            className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
+                              isLeader ? "text-[#fff4cc]" : "text-[#f0ede0]"
+                            }`}
+                          >
+                            <span className="truncate">{p.displayName}</span>
+                            {p.isSub && (
+                              <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
+                                SUB
+                              </span>
+                            )}
+                            {isLeader && (
+                              <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
+                            )}
+                          </span>
+                        </div>
                         <span
-                          className={`text-sm sm:text-base font-extrabold tabular-nums w-4 sm:w-5 text-center ${
-                            idx === 0 ? "text-[#f0c020]" : "text-[#c89b3c]"
+                          className={`font-black text-base sm:text-lg tabular-nums shrink-0 ${
+                            isLeader ? "text-[#f0c020]" : "text-[#7cd438]"
                           }`}
                         >
-                          {idx + 1}
+                          {ratingCard.fmt(p)}
                         </span>
-                        {p.isSub ? (
-                          <img
-                            src={getRoleMeta(p.role as LeagueRole).icon}
-                            alt={getRoleMeta(p.role as LeagueRole).label}
-                            crossOrigin="anonymous"
-                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
-                          />
-                        ) : p.teamLogoUrl ? (
-                          <img
-                            src={p.teamLogoUrl}
-                            alt={p.teamName}
-                            crossOrigin="anonymous"
-                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
-                          />
-                        ) : null}
-                        <span
-                          className={`text-sm sm:text-base font-extrabold truncate flex items-center gap-1.5 ${
-                            idx === 0 ? "text-[#fff4cc]" : "text-[#f0ede0]"
-                          }`}
-                        >
-                          <span className="truncate">{p.displayName}</span>
-                          {p.isSub && (
-                            <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
-                              SUB
-                            </span>
-                          )}
-                          {idx === 0 && (
-                            <Crown className="w-4 h-4 text-[#f0c020] shrink-0 drop-shadow-[0_0_6px_rgba(240,192,32,0.75)]" />
-                          )}
-                        </span>
-                      </div>
-                      <span
-                        className={`font-black text-base sm:text-lg tabular-nums shrink-0 ${
-                          idx === 0 ? "text-[#f0c020]" : "text-[#7cd438]"
+                      </>
+                    );
+                    return p.isSub ? (
+                      <div
+                        key={p.playerKey}
+                        className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 ${
+                          isLeader ? "bg-[#f0c020]/10" : ""
                         }`}
                       >
-                        {ratingCard.fmt(p)}
-                      </span>
-                    </>
-                  );
-                  return p.isSub ? (
-                    <div
-                      key={p.playerKey}
-                      className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 ${
-                        idx === 0 ? "bg-[#f0c020]/10" : ""
-                      }`}
-                    >
-                      {ratingInner}
-                    </div>
-                  ) : (
-                    <Link
-                      key={p.playerKey}
-                      prefetch={false} href={playerHref(p.playerKey)}
-                      className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
-                        idx === 0 ? "bg-[#f0c020]/10" : ""
-                      }`}
-                    >
-                      {ratingInner}
-                    </Link>
-                  );
-                })}
+                        {ratingInner}
+                      </div>
+                    ) : (
+                      <Link
+                        key={p.playerKey}
+                        prefetch={false} href={playerHref(p.playerKey)}
+                        className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
+                          isLeader ? "bg-[#f0c020]/10" : ""
+                        }`}
+                      >
+                        {ratingInner}
+                      </Link>
+                    );
+                  });
+                })()}
               </div>
             </div>
           );

@@ -671,26 +671,32 @@ export function ConsensusRankingsView({
 
                 {/* Consensus Rows */}
                 <div className="divide-y divide-white/10">
-                  {rows.map((row, idx) => {
-                    const rankColor = getRankColor(idx, rows.length);
-                    const isLast = idx === rows.length - 1;
-                    return (
-                      <div
-                        key={row.teamKey}
-                        style={{ background: rankColor.cardBg }}
-                        className={`px-7 ${isLast ? "pt-2.5 pb-5" : "py-2.5"}`}
-                      >
+                  {(() => {
+                    const topAvgDisplay =
+                      rows[0]?.averageRank.toFixed(2) ?? null;
+                    return rows.map((row, idx) => {
+                      const rankColor = getRankColor(idx, rows.length);
+                      const isLast = idx === rows.length - 1;
+                      const isLeader =
+                        topAvgDisplay !== null &&
+                        row.averageRank.toFixed(2) === topAvgDisplay;
+                      return (
                         <div
-                          className={`grid ${
-                            showChange
-                              ? "grid-cols-[76px_76px_1fr_116px_112px] gap-x-4"
-                              : "grid-cols-[76px_1fr_116px_112px] gap-x-4"
-                          } items-center`}
+                          key={row.teamKey}
+                          style={{ background: rankColor.cardBg }}
+                          className={`px-7 ${isLast ? "pt-2.5 pb-5" : "py-2.5"}`}
                         >
-                          <div className="relative flex items-center justify-center">
-                            {row.consensusRank === 1 && (
-                              <Crown className="w-4 h-4 text-[#f0c020] absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none" />
-                            )}
+                          <div
+                            className={`grid ${
+                              showChange
+                                ? "grid-cols-[76px_76px_1fr_116px_112px] gap-x-4"
+                                : "grid-cols-[76px_1fr_116px_112px] gap-x-4"
+                            } items-center`}
+                          >
+                            <div className="relative flex items-center justify-center">
+                              {isLeader && (
+                                <Crown className="w-4 h-4 text-[#f0c020] absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none" />
+                              )}
                             <span
                               style={{
                                 backgroundColor: rankColor.badgeBg,
@@ -797,7 +803,8 @@ export function ConsensusRankingsView({
                         </div>
                       </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               </div>
               </div>
