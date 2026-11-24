@@ -553,9 +553,10 @@ export function StatsDashboard({
     for (const p of allDivisionPlayers) {
       for (const m of p.matches) {
         if (isMatchPlayoff(m)) continue;
-        const match = m.matchLabel?.match(
-          /\b(?:round|week|wk|r|game|match)\s*(\d+)\b/i
-        );
+        const match =
+          m.matchLabel?.match(
+            /\b(?:round|week|wk|r|w|game|match)\s*(\d+)/i
+          ) ?? m.matchLabel?.match(/^\s*(\d+)\s*$/);
         if (match) {
           const n = Number(match[1]);
           if (Number.isFinite(n) && n > maxNum) maxNum = n;

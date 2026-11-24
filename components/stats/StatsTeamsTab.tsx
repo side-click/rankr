@@ -349,12 +349,13 @@ export function StatsTeamsTab({
 
           <div className="p-4">
             {rounds.length > 0 ? (
-              <div className="flex flex-col md:flex-row items-stretch gap-4 md:gap-0 overflow-x-auto pb-1">
-                {rounds.map((r, rIdx) => {
-                  const nextRound = rounds[rIdx + 1];
-                  return (
-                    <React.Fragment key={r.roundLabel}>
-                      <div className="flex flex-col justify-around gap-4 shrink-0 w-full md:w-[270px]">
+              <div className="overflow-x-auto pb-1">
+                <div className="mx-auto w-max flex flex-row items-stretch">
+                  {rounds.map((r, rIdx) => {
+                    const nextRound = rounds[rIdx + 1];
+                    return (
+                      <React.Fragment key={r.roundLabel}>
+                        <div className="flex flex-col justify-around gap-4 shrink-0 w-[270px]">
                         {r.cards.map((card) => {
                           const clickableSeries = Boolean(card.seriesKey);
                           return (
@@ -442,7 +443,7 @@ export function StatsTeamsTab({
                       {nextRound && (
                         <div
                           aria-hidden="true"
-                          className="hidden md:flex flex-col justify-around shrink-0 w-10"
+                          className="flex flex-col justify-around shrink-0 w-10"
                         >
                           {nextRound.cards.map((nc) =>
                             nextRound.cards.length === r.cards.length ? (
@@ -467,6 +468,7 @@ export function StatsTeamsTab({
                     </React.Fragment>
                   );
                 })}
+                </div>
               </div>
             ) : (
               <div className="text-center text-xs text-[#a6a89e] py-3">
