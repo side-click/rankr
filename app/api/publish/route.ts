@@ -19,6 +19,7 @@ import {
 import { normalizeRoster } from "@/utils/roles";
 import { sanitizeExternalUrl } from "@/utils/sanitizeUrl";
 import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import type {
   PlayerTierListPayload,
   RankingOverlay,
@@ -1069,4 +1070,66 @@ export async function POST(request: Request) {
     id: savedId,
     status: tierRes.data.status,
   });
+}
+
+export async function DELETE(request: Request) {
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
+
+  if (!auth.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (auth.isBanned) {
+    return NextResponse.json({ error: "Account banned." }, { status: 403 });
+  }
+
+  const body = (await request.json().catch(() => null)) as {
+    kind?: string;
+    id?: string;
+  } | null;
+
+  const kind = body?.kind;
+  const cleanId = typeof body?.id === "string" ? body.id.trim() : "";
+  if ((kind !== "ranking" && kind !== "blog") || !cleanId) {
+    return NextResponse.json(
+      { error: "Valid kind and id are required." },
+      { status: 400 }
+    );
+  }
+
+  const table = kind === "blog" ? "blogs" : "rankings";
+  const { data: row, error: fetchErr } = await supabase
+    .from(table)
+    .select("id, user_id")
+    .eq("id", cleanId)
+    .maybeSingle();
+
+  if (fetchErr) {
+    return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  }
+  if (!row) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  if (row.user_id !== auth.user.id && !auth.isAdmin) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const { error: delErr } = await supabase
+    .from(table)
+    .delete()
+    .eq("id", cleanId);
+
+  if (delErr) {
+    return NextResponse.json({ error: delErr.message }, { status: 400 });
+  }
+
+  revalidateTag("home-stats");
+  revalidateTag("browse-content");
+  if (kind === "ranking") {
+    revalidateTag("consensus-data");
+  }
+
+  return NextResponse.json({ ok: true });
 }

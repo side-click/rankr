@@ -16,7 +16,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   `img-src 'self' data: blob: https://ddragon.leagueoflegends.com https://raw.communitydragon.org https://cdn.discordapp.com ${supabaseOrigin} https:`,
-  `connect-src 'self' ${supabaseOrigin} wss://*.supabase.co https://ddragon.leagueoflegends.com https://raw.communitydragon.org https://cdn.merakianalytics.com https://discord.com`,
+  `connect-src 'self' ${supabaseOrigin} wss://*.supabase.co https://ddragon.leagueoflegends.com https://raw.communitydragon.org https://cdn.merakianalytics.com https://discord.com https://cdn.discordapp.com https://fonts.googleapis.com https://fonts.gstatic.com`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

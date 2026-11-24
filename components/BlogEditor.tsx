@@ -792,12 +792,18 @@ export function BlogEditor({
                   }
                   const supabase = createClient();
                   await cleanupBlogMedia(supabase, bannerUrl, content);
-                  const { error } = await supabase
-                    .from("blogs")
-                    .delete()
-                    .eq("id", blogId);
-                  if (error) {
-                    setErrorMsg(`Delete failed: ${error.message}`);
+                  const res = await fetch("/api/publish", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ kind: "blog", id: blogId }),
+                  }).catch(() => null);
+                  if (!res?.ok) {
+                    const json = (await res?.json().catch(() => null)) as {
+                      error?: string;
+                    } | null;
+                    setErrorMsg(
+                      `Delete failed: ${json?.error ?? "Request failed"}`
+                    );
                     return;
                   }
                   router.push("/my-history");

@@ -270,12 +270,18 @@ export function TeamRankingShareView({
     setDeleteError(null);
     const supabase = createClient();
     await cleanupRankingOverlays(supabase, ballot.overlays);
-    const { error } = await supabase
-      .from("rankings")
-      .delete()
-      .eq("id", ballot.id);
-    if (error) {
-      setDeleteError(`Failed to delete ranking: ${error.message}`);
+    const res = await fetch("/api/publish", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "ranking", id: ballot.id }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const json = (await res?.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setDeleteError(
+        `Failed to delete ranking: ${json?.error ?? "Request failed"}`
+      );
       setDeleting(false);
       return;
     }

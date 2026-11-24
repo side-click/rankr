@@ -72,9 +72,16 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
     setErrorMsg(null);
     const supabase = createClient();
     await cleanupBlogMedia(supabase, blog.banner_url, blog.content);
-    const { error } = await supabase.from("blogs").delete().eq("id", blog.id);
-    if (error) {
-      setErrorMsg(`Failed to delete: ${error.message}`);
+    const res = await fetch("/api/publish", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "blog", id: blog.id }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const json = (await res?.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setErrorMsg(`Failed to delete: ${json?.error ?? "Request failed"}`);
       setDeleting(false);
       return;
     }
