@@ -1539,8 +1539,8 @@ export function ChampionPoolEditor({
 
   if (loadingRecord) {
     return (
-      <RetroWindow title="Champion Pool Editor" theme="scdl">
-        <div className="py-12 text-center text-xs text-[#a6a89e]">
+      <RetroWindow key="pool-loading" title="Champion Pool Editor" theme="scdl">
+        <div className="py-12 min-h-[420px] flex items-center justify-center text-center text-xs text-[#a6a89e]">
           Loading encrypted champion pool...
         </div>
       </RetroWindow>
@@ -1559,8 +1559,8 @@ export function ChampionPoolEditor({
 
   if (!unlocked) {
     return (
-      <RetroWindow title="Champion Pool Editor" theme="scdl">
-        <div className="max-w-md mx-auto py-6 px-3 space-y-5">
+      <RetroWindow key="pool-locked" title="Champion Pool Editor" theme="scdl">
+        <div className="max-w-md mx-auto py-6 px-3 min-h-[420px] space-y-5">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-[#221d12] border border-[#f0c020]/50">
             <Lock className="w-5 h-5 text-[#f0c020] shrink-0 mt-0.5" />
             <div className="text-xs text-[#d6d3c4] space-y-1">

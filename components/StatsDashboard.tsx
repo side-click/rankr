@@ -47,6 +47,7 @@ import {
   computeSortColors,
   sortTeamsForStandings,
   type PlayerSortKey,
+  type PrecomputedSheetDashboardMeta,
 } from "@/utils/statsOverview";
 import {
   computeRoleNormalizedRatings,
@@ -132,6 +133,7 @@ interface StatsDashboardProps {
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
+    precomputed?: PrecomputedSheetDashboardMeta;
   } | null;
 }
 
@@ -233,6 +235,7 @@ export function StatsDashboard({
     fetchedAt: string;
     rowCount: number;
     matchCount: number;
+    precomputed?: PrecomputedSheetDashboardMeta;
   } | null>(
     initialSheetData
       ? {
@@ -262,6 +265,11 @@ export function StatsDashboard({
   const [noticeError, setNoticeError] = useState<string | null>(null);
   const [showIncompleteDetails, setShowIncompleteDetails] = useState(false);
   const [stageBucket, setStageBucket] = useState<StatsStageBucket>(() => {
+    if (initialSheetData?.precomputed) {
+      return initialSheetData.precomputed.hasPlayoffStats
+        ? "playoffs"
+        : "regular";
+    }
     const seedPlayers = initialSheetData?.players ?? players;
     return seedPlayers.some((p) => p.matches.some((m) => isMatchPlayoff(m)))
       ? "playoffs"
@@ -511,13 +519,37 @@ export function StatsDashboard({
     if (seasonStructure === "bracket_only") {
       return divisionSubPlayers.filter((p) => p.games > 0).length;
     }
+    const pre = sheetData?.precomputed;
+    if (pre) {
+      const list =
+        stageBucket === "playoffs"
+          ? pre.hasPlayoffStats
+            ? pre.playoffSubPlayers ?? []
+            : []
+          : pre.hasPlayoffStats
+          ? pre.regularSubPlayers ?? []
+          : divisionSubPlayers;
+      return list.filter(
+        (p) =>
+          (divisionFilter === "all" || p.divisionId === divisionFilter) &&
+          p.games > 0
+      ).length;
+    }
     const wantPlayoffs = stageBucket === "playoffs";
     return divisionSubPlayers.filter((p) =>
       p.matches.some((m) => isMatchPlayoff(m) === wantPlayoffs)
     ).length;
-  }, [divisionSubPlayers, stageBucket, seasonStructure]);
+  }, [
+    sheetData,
+    divisionSubPlayers,
+    divisionFilter,
+    stageBucket,
+    seasonStructure,
+  ]);
 
   const stageMatchCounts = useMemo(() => {
+    const pre = sheetData?.precomputed?.stageMatchCountsByDiv[divisionFilter];
+    if (pre) return pre;
     const regIds = new Set<string>();
     const playoffIds = new Set<string>();
     for (const p of allDivisionPlayers) {
@@ -530,11 +562,15 @@ export function StatsDashboard({
       }
     }
     return { regular: regIds.size, playoffs: playoffIds.size };
-  }, [allDivisionPlayers]);
+  }, [sheetData, divisionFilter, allDivisionPlayers]);
 
   const hasPlayoffStats = stageMatchCounts.playoffs > 0;
 
   const latestRegularRound = useMemo(() => {
+    const preMap = sheetData?.precomputed?.latestRegularRoundByDiv;
+    if (preMap && divisionFilter in preMap) {
+      return preMap[divisionFilter] ?? null;
+    }
     let maxNum = 0;
     for (const p of allDivisionPlayers) {
       for (const m of p.matches) {
@@ -550,7 +586,7 @@ export function StatsDashboard({
       }
     }
     return maxNum > 0 ? maxNum : null;
-  }, [allDivisionPlayers]);
+  }, [sheetData, divisionFilter, allDivisionPlayers]);
 
   const exportSubtitle = useMemo(() => {
     if (seasonStructure === "bracket_only") return "Tournament Stats";
@@ -581,6 +617,35 @@ export function StatsDashboard({
   }, [divisionFilter, hasPlayoffStats, seasonStructure]);
 
   const filteredPlayers = useMemo(() => {
+    const pre = sheetData?.precomputed;
+    if (pre && seasonStructure !== "bracket_only") {
+      const stageRoster =
+        stageBucket === "playoffs"
+          ? pre.hasPlayoffStats
+            ? pre.playoffPlayers ?? []
+            : []
+          : pre.hasPlayoffStats
+          ? pre.regularPlayers ?? []
+          : sheetData.players;
+      const stageSubs =
+        stageBucket === "playoffs"
+          ? pre.hasPlayoffStats
+            ? pre.playoffSubPlayers ?? []
+            : []
+          : pre.hasPlayoffStats
+          ? pre.regularSubPlayers ?? []
+          : sheetData.subPlayers;
+      const rawStage = includeSubs
+        ? [...stageRoster, ...stageSubs]
+        : stageRoster;
+      const scopedStage = rawStage.filter(
+        (p) =>
+          (divisionFilter === "all" || p.divisionId === divisionFilter) &&
+          (!p.isSub || p.games > 0)
+      );
+      return computeRoleNormalizedRatings(scopedStage);
+    }
+
     const base = includeSubs
       ? [...allDivisionPlayers, ...divisionSubPlayers]
       : allDivisionPlayers;
@@ -591,6 +656,8 @@ export function StatsDashboard({
     ).filter((p) => !p.isSub || p.games > 0);
     return computeRoleNormalizedRatings(staged);
   }, [
+    sheetData,
+    divisionFilter,
     allDivisionPlayers,
     divisionSubPlayers,
     includeSubs,
@@ -659,8 +726,10 @@ export function StatsDashboard({
   );
 
   const overview = useMemo(
-    () => computeDivisionOverview(allDivisionPlayers),
-    [allDivisionPlayers]
+    () =>
+      sheetData?.precomputed?.overviewByDiv[divisionFilter] ??
+      computeDivisionOverview(allDivisionPlayers),
+    [sheetData, divisionFilter, allDivisionPlayers]
   );
 
   const leaderboardPlayers = useMemo(

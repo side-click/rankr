@@ -1,9 +1,34 @@
 import type { DivisionOverviewStats } from "@/components/stats/StatsDivisionTab";
+import type { PlayoffSeriesMatchup, SheetSyncSummary } from "@/utils/leagueStats";
 import { LEAGUE_ROLES } from "@/utils/roles";
-import type {
-  AggregatedPlayerStats,
-  AggregatedTeamStats,
+import {
+  filterPlayersByStage,
+  isMatchPlayoff,
+  type AggregatedPlayerStats,
+  type AggregatedTeamStats,
 } from "@/utils/riotStatsAggregation";
+
+export interface PrecomputedSheetDashboardMeta {
+  hasPlayoffStats: boolean;
+  stageMatchCountsByDiv: Record<string, { regular: number; playoffs: number }>;
+  latestRegularRoundByDiv: Record<string, number | null>;
+  overviewByDiv: Record<string, DivisionOverviewStats>;
+  regularPlayers?: AggregatedPlayerStats[];
+  regularSubPlayers?: AggregatedPlayerStats[];
+  playoffPlayers?: AggregatedPlayerStats[];
+  playoffSubPlayers?: AggregatedPlayerStats[];
+}
+
+export interface CompactSheetDashboardData {
+  players: AggregatedPlayerStats[];
+  subPlayers: AggregatedPlayerStats[];
+  teams: AggregatedTeamStats[];
+  playoffSeries: PlayoffSeriesMatchup[];
+  fetchedAt: string;
+  rowCount: number;
+  matchCount: number;
+  precomputed: PrecomputedSheetDashboardMeta;
+}
 
 export type PlayerSortKey =
   | "leagueRating"
@@ -372,4 +397,101 @@ export function computeSortColors(
     map.set(valid[i].key, `rgb(${r}, ${g}, ${b})`);
   }
   return map;
+}
+
+const stripPlayerMatches = (
+  list: AggregatedPlayerStats[]
+): AggregatedPlayerStats[] =>
+  list.map((p) => (p.matches.length > 0 ? { ...p, matches: [] } : p));
+
+/**
+ * Pre-computes per-division overviews and stage match counts on the server so
+ * `/stats` and `/admin/stats` do not serialize large raw `player.matches[]`
+ * arrays into initial SSR HTML.
+ */
+export function compactSheetSummaryForDashboard(
+  sheetSummary: SheetSyncSummary,
+  divisions: { id: string }[]
+): CompactSheetDashboardData {
+  const scopes = ["all", ...divisions.map((d) => d.id)];
+  const stageMatchCountsByDiv: Record<
+    string,
+    { regular: number; playoffs: number }
+  > = {};
+  const latestRegularRoundByDiv: Record<string, number | null> = {};
+  const overviewByDiv: Record<string, DivisionOverviewStats> = {};
+
+  for (const scope of scopes) {
+    const scopedPlayers =
+      scope === "all"
+        ? sheetSummary.players
+        : sheetSummary.players.filter((p) => p.divisionId === scope);
+
+    const regIds = new Set<string>();
+    const playoffIds = new Set<string>();
+    let maxRound = 0;
+
+    for (const p of scopedPlayers) {
+      for (const m of p.matches) {
+        if (isMatchPlayoff(m)) {
+          playoffIds.add(m.matchId);
+          continue;
+        }
+        regIds.add(m.matchId);
+        const match =
+          m.matchLabel?.match(
+            /\b(?:round|week|wk|r|w|game|match)\s*(\d+)/i
+          ) ?? m.matchLabel?.match(/^\s*(\d+)\s*$/);
+        if (match) {
+          const n = Number(match[1]);
+          if (Number.isFinite(n) && n > maxRound) maxRound = n;
+        }
+      }
+    }
+
+    stageMatchCountsByDiv[scope] = {
+      regular: regIds.size,
+      playoffs: playoffIds.size,
+    };
+    latestRegularRoundByDiv[scope] = maxRound > 0 ? maxRound : null;
+    overviewByDiv[scope] = computeDivisionOverview(scopedPlayers);
+  }
+
+  const hasPlayoffStats = (stageMatchCountsByDiv["all"]?.playoffs ?? 0) > 0;
+  const precomputed: PrecomputedSheetDashboardMeta = {
+    hasPlayoffStats,
+    stageMatchCountsByDiv,
+    latestRegularRoundByDiv,
+    overviewByDiv,
+  };
+
+  if (hasPlayoffStats) {
+    precomputed.regularPlayers = stripPlayerMatches(
+      filterPlayersByStage(sheetSummary.players, "regular")
+    );
+    precomputed.regularSubPlayers = stripPlayerMatches(
+      filterPlayersByStage(sheetSummary.subPlayers, "regular").filter(
+        (p) => p.games > 0
+      )
+    );
+    precomputed.playoffPlayers = stripPlayerMatches(
+      filterPlayersByStage(sheetSummary.players, "playoffs")
+    );
+    precomputed.playoffSubPlayers = stripPlayerMatches(
+      filterPlayersByStage(sheetSummary.subPlayers, "playoffs").filter(
+        (p) => p.games > 0
+      )
+    );
+  }
+
+  return {
+    players: stripPlayerMatches(sheetSummary.players),
+    subPlayers: stripPlayerMatches(sheetSummary.subPlayers),
+    teams: sheetSummary.teams.map((t) => ({ ...t, players: [] })),
+    playoffSeries: sheetSummary.playoffSeries,
+    fetchedAt: sheetSummary.fetchedAt,
+    rowCount: sheetSummary.rowCount,
+    matchCount: sheetSummary.matchCount,
+    precomputed,
+  };
 }

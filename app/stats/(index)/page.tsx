@@ -10,6 +10,7 @@ import {
   computeRoleNormalizedRatings,
   filterPlayersByStage,
 } from "@/utils/riotStatsAggregation";
+import { compactSheetSummaryForDashboard } from "@/utils/statsOverview";
 import { LEAGUE_ROLES } from "@/utils/roles";
 
 export const dynamic = "force-dynamic";
@@ -101,10 +102,6 @@ export default async function PublicStatsPage({
       : ctx.players
   ).catch(() => undefined);
 
-  const strippedTeams = sheetSummary
-    ? sheetSummary.teams.map((t) => ({ ...t, players: [] }))
-    : [];
-
   return (
     <StatsDashboard
       missingTable={false}
@@ -131,15 +128,7 @@ export default async function PublicStatsPage({
       initialTab={initialTab}
       initialSheetData={
         sheetSummary
-          ? {
-              players: sheetSummary.players,
-              subPlayers: sheetSummary.subPlayers,
-              teams: strippedTeams,
-              playoffSeries: sheetSummary.playoffSeries,
-              fetchedAt: sheetSummary.fetchedAt,
-              rowCount: sheetSummary.rowCount,
-              matchCount: sheetSummary.matchCount,
-            }
+          ? compactSheetSummaryForDashboard(sheetSummary, ctx.divisions)
           : null
       }
     />

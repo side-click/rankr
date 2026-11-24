@@ -20,7 +20,7 @@ import type {
 } from "@/types/database";
 
 const EditorLoadingFallback = () => (
-  <div className="xp-window xp-window-scdl p-6 text-center text-xs text-[#a6a89e] animate-pulse">
+  <div className="xp-window xp-window-scdl p-6 min-h-[460px] flex items-center justify-center text-center text-xs text-[#a6a89e] animate-pulse">
     Loading editor...
   </div>
 );

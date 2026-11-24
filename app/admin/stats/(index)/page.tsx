@@ -3,6 +3,7 @@ import { AdminAccessDenied } from "@/components/AdminAccessDenied";
 import { StatsDashboard } from "@/components/StatsDashboard";
 import { fetchScdlSheetStats } from "@/utils/leagueStats";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
+import { compactSheetSummaryForDashboard } from "@/utils/statsOverview";
 
 export const metadata: Metadata = {
   title: "Admin Stats | Rankr",
@@ -42,10 +43,6 @@ export default async function AdminStatsPage({
     ctx.sheetConfig
   ).catch(() => null);
 
-  const strippedTeams = sheetSummary
-    ? sheetSummary.teams.map((t) => ({ ...t, players: [] }))
-    : [];
-
   return (
     <StatsDashboard
       missingTable={ctx.missingTable}
@@ -70,15 +67,7 @@ export default async function AdminStatsPage({
       initialTab={initialTab}
       initialSheetData={
         sheetSummary
-          ? {
-              players: sheetSummary.players,
-              subPlayers: sheetSummary.subPlayers,
-              teams: strippedTeams,
-              playoffSeries: sheetSummary.playoffSeries,
-              fetchedAt: sheetSummary.fetchedAt,
-              rowCount: sheetSummary.rowCount,
-              matchCount: sheetSummary.matchCount,
-            }
+          ? compactSheetSummaryForDashboard(sheetSummary, ctx.divisions)
           : null
       }
     />

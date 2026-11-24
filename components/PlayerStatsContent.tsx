@@ -84,10 +84,10 @@ function getRoleRankColor(rank: number, total: number): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-function computeStatRank(
-  sameRolePlayers: { playerKey: string }[],
+function computeStatRank<T extends { playerKey: string }>(
+  sameRolePlayers: T[],
   playerKey: string,
-  getter: (p: any) => number | null | undefined
+  getter: (p: T) => number | null | undefined
 ): { color: string; rank: number; total: number } | null {
   const valid = sameRolePlayers
     .map((p) => ({ key: p.playerKey, val: getter(p) }))
