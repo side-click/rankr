@@ -1,23 +1,51 @@
-import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
-import { getServerAuthContext } from "@/utils/supabase/serverAuth";
+import { NextResponse } from "next/server";
 import { loadAdminStatsContext } from "@/utils/riotStatsServer";
-import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
+import { fetchScdlSheetStats } from "@/utils/leagueStats";
+import { createClient } from "@/utils/supabase/server";
+import {
+  assertSeasonOperatorAccess,
+  getServerAuthContext,
+} from "@/utils/supabase/serverAuth";
 
-export async function GET() {
-  const auth = await getServerAuthContext();
+export async function GET(req: Request) {
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
 
   if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
   if (!auth.isAdmin && !auth.isOperator) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const ctx = await loadAdminStatsContext({ includeRiotStats: false });
+    const { searchParams } = new URL(req.url);
+    const requestedSeasonId = searchParams.get("seasonId")?.trim() || null;
+    let seasonSlug: string | undefined;
+
+    if (requestedSeasonId) {
+      const scope = await assertSeasonOperatorAccess(
+        auth,
+        supabase,
+        requestedSeasonId
+      );
+      if (!scope.ok) {
+        return NextResponse.json({ error: scope.error }, { status: scope.status });
+      }
+      seasonSlug = scope.season.slug;
+    }
+
+    const ctx = await loadAdminStatsContext({
+      includeRiotStats: false,
+      seasonSlug,
+    });
+    if (!ctx.authorized) {
+      return NextResponse.json({ error: "Forbidden for this league." }, { status: 403 });
+    }
+
     const summary = await fetchScdlSheetStats(ctx.players, ctx.teams, {
       ...ctx.sheetConfig,
       bypassCache: true,
@@ -31,7 +59,7 @@ export async function GET() {
         error:
           err instanceof Error
             ? err.message
-            : "Failed to load SCDL sheet stats",
+            : "Failed to load league sheet stats",
       },
       { status: 500 }
     );
@@ -39,7 +67,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await getServerAuthContext();
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
   if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -63,6 +94,7 @@ export async function POST(req: Request) {
     const gameId = String(body.gameId ?? "").trim();
     const blueTeam = String(body.blueTeam ?? "").trim();
     const redTeam = String(body.redTeam ?? "").trim();
+    const seasonId = body.seasonId ? String(body.seasonId).trim() : null;
 
     if (!gameId || !blueTeam || !redTeam) {
       return NextResponse.json(
@@ -71,11 +103,24 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = await createClient();
+    if (!seasonId) {
+      if (!auth.isAdmin) {
+        return NextResponse.json(
+          { error: "seasonId is required for league operators." },
+          { status: 400 }
+        );
+      }
+    } else {
+      const scope = await assertSeasonOperatorAccess(auth, supabase, seasonId);
+      if (!scope.ok) {
+        return NextResponse.json({ error: scope.error }, { status: scope.status });
+      }
+    }
+
     const { error } = await supabase.from("match_drafts").upsert(
       {
         game_id: gameId,
-        season_id: body.seasonId ?? null,
+        season_id: seasonId,
         blue_team: blueTeam,
         red_team: redTeam,
         blue_bans: Array.isArray(body.blueBans) ? body.blueBans : [],

@@ -70,7 +70,6 @@ export default async function RankPage({
 
   const [
     { data: leagues },
-    { data: profile },
     { data: seasons },
     { data: divisions },
     { data: divisionThemes },
@@ -79,11 +78,6 @@ export default async function RankPage({
     { data: seasonPlayers },
   ] = await Promise.all([
     supabase.from("leagues").select("id, require_allowlist"),
-    supabase
-      .from("profiles")
-      .select("username, avatar_url, discord_id, is_banned, ban_reason")
-      .eq("id", user.id)
-      .maybeSingle(),
     supabase
       .from("seasons")
       .select("*, leagues ( * )")
@@ -105,6 +99,8 @@ export default async function RankPage({
       .select("*")
       .order("name", { ascending: true }),
   ]);
+
+  const profile = auth.profile;
 
   const access = await getCreatorAccessSummary(
     supabase,
@@ -159,7 +155,13 @@ export default async function RankPage({
     );
   }
 
-  if (profile?.is_banned) {
+  if (auth.isBanned) {
+    const { data: banRow } = await supabase
+      .from("profiles")
+      .select("ban_reason")
+      .eq("id", user.id)
+      .maybeSingle();
+
     return (
       <RetroWindow title="Account Suspended" theme="scdl">
         <div className="py-8 px-4 text-center space-y-3">
@@ -170,8 +172,8 @@ export default async function RankPage({
             Your account has been suspended
           </h1>
           <p className="text-xs text-[#c7c5b8] max-w-md mx-auto">
-            {profile.ban_reason
-              ? `Reason: ${profile.ban_reason}`
+            {banRow?.ban_reason
+              ? `Reason: ${banRow.ban_reason}`
               : "You are no longer permitted to create or publish rankings on Rankr."}
           </p>
         </div>

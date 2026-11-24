@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
-import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
+import { fetchScdlSheetStats } from "@/utils/leagueStats";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";

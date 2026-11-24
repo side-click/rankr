@@ -10,8 +10,16 @@ import {
   fetchAllScdlSeries,
   type ScdlGameDetail,
   type ScdlGamePlayerRow,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 import { resolveDivisionTheme } from "@/utils/themes";
+import { sanitizeExternalUrl } from "@/utils/sanitizeUrl";
+import { formatSigned } from "@/utils/formatters";
+import {
+  championStatsHref,
+  playerStatsHref,
+  statsHref,
+  teamStatsHref,
+} from "@/utils/statsLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +37,6 @@ function sortByRole(rows: ScdlGamePlayerRow[]): ScdlGamePlayerRow[] {
   );
 }
 
-function formatSigned(val: number | null): string {
-  if (val === null) return "—";
-  return val >= 0 ? `+${val.toLocaleString()}` : val.toLocaleString();
-}
-
 function SideBoxScore({
   side,
   teamName,
@@ -44,6 +47,7 @@ function SideBoxScore({
   durationSec,
   ddVersion,
   basePath,
+  seasonSlug,
   divisionSlug,
   playerKeyByName,
 }: {
@@ -56,13 +60,12 @@ function SideBoxScore({
   durationSec: number;
   ddVersion: string;
   basePath: string;
+  seasonSlug?: string | null;
   divisionSlug?: string | null;
   playerKeyByName: Map<string, string>;
 }) {
   const champHref = (name: string) =>
-    `${basePath}/champion/${encodeURIComponent(name)}${
-      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
-    }`;
+    championStatsHref(name, basePath, seasonSlug, divisionSlug);
   const mins = Math.max(durationSec / 60, 1);
   const sideColor =
     side === "Blue"
@@ -168,6 +171,7 @@ function SideBoxScore({
                       )}
                       <Link
                         href={champHref(p.champion)}
+                        prefetch={false}
                         className="contents"
                       >
                         <img
@@ -179,9 +183,8 @@ function SideBoxScore({
                       <div className="min-w-0">
                         {matchedKey ? (
                           <Link
-                            href={`${basePath}/player/${encodeURIComponent(
-                              matchedKey
-                            )}`}
+                            href={playerStatsHref(matchedKey, basePath, seasonSlug)}
+                            prefetch={false}
                             className="text-sm font-bold text-[#e6e8dd] hover:text-[#f0c020] transition-colors truncate block"
                           >
                             {p.displayName}
@@ -193,6 +196,7 @@ function SideBoxScore({
                         )}
                         <Link
                           href={champHref(p.champion)}
+                          prefetch={false}
                           className="text-xs text-[#9aa092] hover:text-[#f0c020] transition-colors block truncate"
                         >
                           {p.champion}
@@ -248,19 +252,19 @@ function DraftStrip({
   game,
   ddVersion,
   basePath = "/stats",
+  seasonSlug,
   divisionSlug,
 }: {
   game: ScdlGameDetail;
   ddVersion: string;
   basePath?: string;
+  seasonSlug?: string | null;
   divisionSlug?: string | null;
 }) {
   const draft = game.draft;
   if (!draft) return null;
   const champHref = (name: string) =>
-    `${basePath}/champion/${encodeURIComponent(name)}${
-      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
-    }`;
+    championStatsHref(name, basePath, seasonSlug, divisionSlug);
 
   const hasPicks = draft.bluePicks.length > 0 || draft.redPicks.length > 0;
   const hasBans = draft.blueBans.length > 0 || draft.redBans.length > 0;
@@ -272,9 +276,9 @@ function DraftStrip({
         <span className="text-xs font-bold uppercase tracking-wider text-[#b7baae]">
           Draft Order & Bans
         </span>
-        {draft.sourceUrl && (
+        {sanitizeExternalUrl(draft.sourceUrl) && (
           <a
-            href={draft.sourceUrl}
+            href={sanitizeExternalUrl(draft.sourceUrl)!}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-[#78b7ff] hover:underline"
@@ -303,6 +307,7 @@ function DraftStrip({
                   >
                     <Link
                       href={champHref(champ)}
+                      prefetch={false}
                       className="contents"
                     >
                       <img
@@ -330,6 +335,7 @@ function DraftStrip({
                   >
                     <Link
                       href={champHref(champ)}
+                      prefetch={false}
                       className="contents"
                     >
                       <img
@@ -366,6 +372,7 @@ function DraftStrip({
                   >
                     <Link
                       href={champHref(champ)}
+                      prefetch={false}
                       className="contents"
                     >
                       <img
@@ -393,6 +400,7 @@ function DraftStrip({
                   >
                     <Link
                       href={champHref(champ)}
+                      prefetch={false}
                       className="contents"
                     >
                       <img
@@ -434,7 +442,11 @@ export async function MatchSeriesContent({
           <p className="text-xs text-[#a6a89e]">
             Series not found ({decodedKey}).
           </p>
-          <Link href={basePath} className="xp-btn text-xs">
+          <Link
+            href={statsHref(basePath, ctx.seasonSlug)}
+            prefetch={false}
+            className="xp-btn text-xs"
+          >
             ← Back to Stats Dashboard
           </Link>
         </div>
@@ -470,9 +482,11 @@ export async function MatchSeriesContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href={`${basePath}?division=${encodeURIComponent(
-            divId ?? "all"
-          )}&tab=division`}
+          href={statsHref(basePath, ctx.seasonSlug, {
+            division: divId ?? "all",
+            tab: "division",
+          })}
+          prefetch={false}
           className="xp-btn inline-flex items-center gap-1.5 text-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -494,7 +508,8 @@ export async function MatchSeriesContent({
               )}
               {teamAData ? (
                 <Link
-                  href={`${basePath}/team/${encodeURIComponent(teamAData.teamId)}`}
+                  href={teamStatsHref(teamAData.teamId, basePath, ctx.seasonSlug)}
+                  prefetch={false}
                   className="text-xl sm:text-2xl font-extrabold text-[#eaeade] hover:text-[#f0c020] transition-colors"
                 >
                   {series.teamA}
@@ -539,7 +554,8 @@ export async function MatchSeriesContent({
               )}
               {teamBData ? (
                 <Link
-                  href={`${basePath}/team/${encodeURIComponent(teamBData.teamId)}`}
+                  href={teamStatsHref(teamBData.teamId, basePath, ctx.seasonSlug)}
+                  prefetch={false}
                   className="text-xl sm:text-2xl font-extrabold text-[#eaeade] hover:text-[#f0c020] transition-colors sm:order-1"
                 >
                   {series.teamB}
@@ -578,6 +594,7 @@ export async function MatchSeriesContent({
                   game={g}
                   ddVersion={ctx.ddVersion}
                   basePath={basePath}
+                  seasonSlug={ctx.seasonSlug}
                   divisionSlug={division?.slug}
                 />
 
@@ -587,9 +604,7 @@ export async function MatchSeriesContent({
                     teamName={g.blueTeam}
                     teamHref={
                       blueTeamData
-                        ? `${basePath}/team/${encodeURIComponent(
-                            blueTeamData.teamId
-                          )}`
+                        ? teamStatsHref(blueTeamData.teamId, basePath, ctx.seasonSlug)
                         : undefined
                     }
                     isWinner={
@@ -600,6 +615,7 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    seasonSlug={ctx.seasonSlug}
                     divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />
@@ -608,9 +624,7 @@ export async function MatchSeriesContent({
                     teamName={g.redTeam}
                     teamHref={
                       redTeamData
-                        ? `${basePath}/team/${encodeURIComponent(
-                            redTeamData.teamId
-                          )}`
+                        ? teamStatsHref(redTeamData.teamId, basePath, ctx.seasonSlug)
                         : undefined
                     }
                     isWinner={
@@ -621,6 +635,7 @@ export async function MatchSeriesContent({
                     durationSec={g.gameDuration}
                     ddVersion={ctx.ddVersion}
                     basePath={basePath}
+                    seasonSlug={ctx.seasonSlug}
                     divisionSlug={division?.slug}
                     playerKeyByName={playerKeyByName}
                   />

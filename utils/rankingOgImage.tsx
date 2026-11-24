@@ -1,9 +1,16 @@
 import { ImageResponse } from "next/og";
-import { createClient } from "@/utils/supabase/server";
+import { createPublicClient } from "@/utils/supabase/server";
+import { fetchPublicProfilesMap } from "@/utils/publicProfiles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
-import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
+import {
+  loadOgFonts,
+  OG_CACHE_HEADERS,
+  resolveOgImageSrc,
+} from "@/utils/ogFonts";
 import type { LeagueRole } from "@/utils/roles";
 import type { DivisionTheme, PlayerTierListPayload } from "@/types/database";
+
+import { getTierContrastText } from "@/utils/formatters";
 
 export const BALLOT_OG_SIZE = { width: 1200, height: 630 };
 
@@ -16,27 +23,17 @@ const SCDL_GREEN_THEME: DivisionTheme = {
   default_logo_url: null,
 };
 
-function getTierContrastText(hex: string): string {
-  const clean = hex.replace("#", "").trim();
-  if (clean.length !== 6) return "#ffffff";
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some(Number.isNaN)) return "#ffffff";
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.65 ? "#111318" : "#ffffff";
-}
-
 const RANK_COLORS = ["#7c3aed", "#3b82f6", "#06b6d4"];
 
 export async function renderBallotOpenGraphImage(id: string) {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const [{ data: ballot }, { data: themesData }, fonts] = await Promise.all([
     supabase
       .from("rankings")
       .select(
         `
+        user_id,
         title,
         ranking_type,
         tier_data,
@@ -46,7 +43,6 @@ export async function renderBallotOpenGraphImage(id: string) {
         author_notes,
         division_name_snapshot,
         edition_name_snapshot,
-        profiles ( username, avatar_url ),
         seasons ( name, leagues ( name, logo_url ) ),
         divisions ( name, theme_key, logo_url ),
         editions ( name ),
@@ -80,13 +76,16 @@ export async function renderBallotOpenGraphImage(id: string) {
           Rankr — Rankings
         </div>
       ),
-      { ...BALLOT_OG_SIZE, ...(fonts.length > 0 ? { fonts } : {}) }
+      {
+        ...BALLOT_OG_SIZE,
+        headers: OG_CACHE_HEADERS,
+        ...(fonts.length > 0 ? { fonts } : {}),
+      }
     );
   }
 
-  const profile = Array.isArray(ballot.profiles)
-    ? ballot.profiles[0]
-    : ballot.profiles;
+  const profileMap = await fetchPublicProfilesMap(supabase, [ballot.user_id]);
+  const profile = ballot.user_id ? profileMap.get(ballot.user_id) ?? null : null;
   const season = Array.isArray(ballot.seasons)
     ? ballot.seasons[0]
     : ballot.seasons;
@@ -872,6 +871,10 @@ export async function renderBallotOpenGraphImage(id: string) {
         </div>
       </div>
     ),
-    { ...BALLOT_OG_SIZE, ...(fonts.length > 0 ? { fonts } : {}) }
+    {
+      ...BALLOT_OG_SIZE,
+      headers: OG_CACHE_HEADERS,
+      ...(fonts.length > 0 ? { fonts } : {}),
+    }
   );
 }

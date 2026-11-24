@@ -9,7 +9,6 @@ interface NavbarProps {
   } | null;
   isAdmin: boolean;
   isOperator?: boolean;
-  hasMatchHubAccess?: boolean;
   requireAllowlist: boolean;
 }
 
@@ -17,7 +16,6 @@ export function Navbar({
   user,
   isAdmin,
   isOperator = false,
-  hasMatchHubAccess = false,
   requireAllowlist,
 }: NavbarProps) {
   return (
@@ -27,7 +25,6 @@ export function Navbar({
           isLoggedIn={Boolean(user)}
           isAdmin={isAdmin}
           isOperator={isOperator}
-          hasMatchHubAccess={hasMatchHubAccess}
         />
 
         <AuthButton requireAllowlist={requireAllowlist} user={user} />

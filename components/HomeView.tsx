@@ -17,6 +17,12 @@ import { RecentContentPanel } from "@/components/RecentContentPanel";
 import { getRankColor } from "@/utils/rankColors";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import type { HomeData } from "@/utils/homeData";
+import {
+  matchStatsHref,
+  playerStatsHref,
+  statsHref as buildStatsHref,
+  teamStatsHref,
+} from "@/utils/statsLinks";
 
 const FOCUS_STORAGE_KEY = "rankr_focused_season";
 const FOCUS_COOKIE_NAME = "rankr_focused_season";
@@ -51,7 +57,7 @@ export function HomeView({ data }: { data: HomeData }) {
     });
   }
 
-  const statsHref = "/stats";
+  const statsHref = buildStatsHref("/stats", focusedSlug || undefined);
   const consensusHref = "/consensus";
   const rankHref = "/create";
   const browseHref = "/browse";
@@ -148,6 +154,8 @@ export function HomeView({ data }: { data: HomeData }) {
                             <img
                               src={season.leagueLogoUrl}
                               alt={season.leagueName}
+                              width={36}
+                              height={36}
                               className="w-9 h-9 object-contain shrink-0"
                             />
                           )}
@@ -190,6 +198,7 @@ export function HomeView({ data }: { data: HomeData }) {
                               href={`/browse?season=${encodeURIComponent(
                                 season.slug
                               )}&division=${encodeURIComponent(div.slug)}`}
+                              prefetch={false}
                               style={{ borderLeftColor: div.primaryColor }}
                               className="xp-inset p-2.5 border-l-4 flex items-center gap-2.5 hover:!border-[#f0c020]/70 hover:!bg-[#f0c020]/10 hover:shadow-[0_0_12px_rgba(240,192,32,0.2)] transition-all"
                             >
@@ -197,6 +206,8 @@ export function HomeView({ data }: { data: HomeData }) {
                                 <img
                                   src={div.logoUrl}
                                   alt={div.name}
+                                  width={32}
+                                  height={32}
                                   className="w-8 h-8 object-contain shrink-0"
                                 />
                               )}
@@ -272,17 +283,24 @@ export function HomeView({ data }: { data: HomeData }) {
 
       {/* 2. Recently Published Content */}
       <RetroWindow title="Recently Published Content" theme="scdl">
-        {data.recentContent.length === 0 ? (
-          <div className="xp-inset p-4 text-xs text-[#a6a89e]">
-            No published content yet for this scope.
-          </div>
-        ) : (
-          <RecentContentPanel
-            initialItems={data.recentContent}
-            browseHref={browseHref}
-            seasonIds={data.recentSeasonIds}
-          />
-        )}
+        <div
+          className={`transition-opacity duration-150 ${
+            isFocusPending ? "opacity-60 pointer-events-none" : "opacity-100"
+          }`}
+        >
+          {data.recentContent.length === 0 ? (
+            <div className="xp-inset p-4 text-xs text-[#a6a89e]">
+              No published content yet for this scope.
+            </div>
+          ) : (
+            <RecentContentPanel
+              key={focusedSlug || "all"}
+              initialItems={data.recentContent}
+              browseHref={browseHref}
+              seasonIds={data.recentSeasonIds}
+            />
+          )}
+        </div>
       </RetroWindow>
 
       {/* 3. Consensus Power Rankings Snapshot */}
@@ -305,6 +323,9 @@ export function HomeView({ data }: { data: HomeData }) {
                       <img
                         src={snap.divisionLogoUrl}
                         alt={snap.divisionName}
+                        width={28}
+                        height={28}
+                        loading="lazy"
                         className="w-7 h-7 object-contain shrink-0"
                       />
                     )}
@@ -333,6 +354,7 @@ export function HomeView({ data }: { data: HomeData }) {
                     href={`/consensus?season=${encodeURIComponent(
                       snap.seasonSlug
                     )}&division=${encodeURIComponent(snap.divisionSlug)}`}
+                    prefetch={false}
                     className="xp-btn text-xs shrink-0"
                   >
                     <Trophy className="w-3.5 h-3.5 text-[#f0c020] shrink-0" />
@@ -363,7 +385,8 @@ export function HomeView({ data }: { data: HomeData }) {
                           </div>
                           {t.teamId ? (
                             <Link
-                              href={`/stats/team/${encodeURIComponent(t.teamId)}`}
+                              href={teamStatsHref(t.teamId, "/stats", snap.seasonSlug)}
+                              prefetch={false}
                               className="flex items-center gap-3 min-w-0 group"
                               title={`View ${t.teamName} stats`}
                             >
@@ -371,6 +394,9 @@ export function HomeView({ data }: { data: HomeData }) {
                                 <img
                                   src={t.teamLogoUrl}
                                   alt={t.teamName}
+                                  width={36}
+                                  height={36}
+                                  loading="lazy"
                                   className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                                 />
                               )}
@@ -384,6 +410,9 @@ export function HomeView({ data }: { data: HomeData }) {
                                 <img
                                   src={t.teamLogoUrl}
                                   alt={t.teamName}
+                                  width={36}
+                                  height={36}
+                                  loading="lazy"
                                   className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                                 />
                               )}
@@ -443,6 +472,9 @@ export function HomeView({ data }: { data: HomeData }) {
                               <img
                                 src={div.logoUrl}
                                 alt={div.divisionName}
+                                width={20}
+                                height={20}
+                                loading="lazy"
                                 className="w-5 h-5 object-contain shrink-0"
                               />
                             )}
@@ -469,9 +501,12 @@ export function HomeView({ data }: { data: HomeData }) {
                             return (
                               <Link
                                 key={p.playerKey}
-                                href={`/stats/player/${encodeURIComponent(
-                                  p.playerKey
-                                )}`}
+                                href={playerStatsHref(
+                                  p.playerKey,
+                                  "/stats",
+                                  focusedSlug || undefined
+                                )}
+                                prefetch={false}
                                 className={`px-3 py-2 flex items-center justify-between gap-2 transition hover:bg-[#f0c020]/10 text-xs ${
                                   isLeader ? "bg-[#f0c020]/10" : ""
                                 }`}
@@ -489,12 +524,18 @@ export function HomeView({ data }: { data: HomeData }) {
                                   <img
                                     src={roleMeta.icon}
                                     alt={roleMeta.label}
+                                    width={14}
+                                    height={14}
+                                    loading="lazy"
                                     className="w-3.5 h-3.5 object-contain shrink-0"
                                   />
                                   {p.teamLogoUrl && (
                                     <img
                                       src={p.teamLogoUrl}
                                       alt={p.teamName}
+                                      width={16}
+                                      height={16}
+                                      loading="lazy"
                                       className="w-4 h-4 object-contain shrink-0"
                                     />
                                   )}
@@ -553,6 +594,9 @@ export function HomeView({ data }: { data: HomeData }) {
                             <img
                               src={div.logoUrl}
                               alt={div.divisionName}
+                              width={20}
+                              height={20}
+                              loading="lazy"
                               className="w-5 h-5 object-contain shrink-0"
                             />
                           )}
@@ -567,7 +611,12 @@ export function HomeView({ data }: { data: HomeData }) {
                           {div.teams.map((t, idx) => (
                             <Link
                               key={t.teamId}
-                              href={`/stats/team/${encodeURIComponent(t.teamId)}`}
+                              href={teamStatsHref(
+                                t.teamId,
+                                "/stats",
+                                focusedSlug || undefined
+                              )}
+                              prefetch={false}
                               className="group flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border border-white/15 bg-black/40 hover:!bg-[#f0c020]/10 hover:!border-[#f0c020]/80 transition text-xs"
                             >
                               <div className="flex items-center gap-2 min-w-0">
@@ -578,6 +627,9 @@ export function HomeView({ data }: { data: HomeData }) {
                                   <img
                                     src={t.logoUrl}
                                     alt={t.teamName}
+                                    width={20}
+                                    height={20}
+                                    loading="lazy"
                                     className="w-5 h-5 object-contain shrink-0 group-hover:scale-105 transition-transform"
                                   />
                                 )}
@@ -617,7 +669,12 @@ export function HomeView({ data }: { data: HomeData }) {
                   {data.recentMatches.map((m) => (
                     <Link
                       key={m.seriesKey}
-                      href={`/stats/match/${encodeURIComponent(m.seriesKey)}`}
+                      href={matchStatsHref(
+                        m.seriesKey,
+                        "/stats",
+                        focusedSlug || undefined
+                      )}
+                      prefetch={false}
                       style={{
                         borderLeftColor: m.divisionColor,
                         background: `linear-gradient(90deg, ${m.divisionColor}24 0%, #121615 55%)`,
@@ -629,6 +686,9 @@ export function HomeView({ data }: { data: HomeData }) {
                           <img
                             src={m.teamALogoUrl}
                             alt={m.teamA}
+                            width={36}
+                            height={36}
+                            loading="lazy"
                             className="w-9 h-9 object-contain"
                           />
                         )}
@@ -665,6 +725,9 @@ export function HomeView({ data }: { data: HomeData }) {
                           <img
                             src={m.teamBLogoUrl}
                             alt={m.teamB}
+                            width={36}
+                            height={36}
+                            loading="lazy"
                             className="w-9 h-9 object-contain"
                           />
                         )}

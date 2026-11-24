@@ -4,7 +4,7 @@ import {
   loadPublicSoloPrioMap,
   loadPublicStatsContext,
 } from "@/utils/riotStatsServer";
-import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
+import { fetchScdlSheetStats } from "@/utils/leagueStats";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 import {
   computeRoleNormalizedRatings,
@@ -101,6 +101,10 @@ export default async function PublicStatsPage({
       : ctx.players
   ).catch(() => undefined);
 
+  const strippedTeams = sheetSummary
+    ? sheetSummary.teams.map((t) => ({ ...t, players: [] }))
+    : [];
+
   return (
     <StatsDashboard
       missingTable={false}
@@ -111,6 +115,7 @@ export default async function PublicStatsPage({
       seasonName={ctx.seasonName}
       seasonId={ctx.seasonId}
       seasonSlug={ctx.seasonSlug}
+      allSeasons={ctx.allSeasons}
       currentEditionName={ctx.currentEditionName}
       divisions={ctx.divisions}
       players={sheetSummary ? [] : ctx.players}
@@ -129,7 +134,7 @@ export default async function PublicStatsPage({
           ? {
               players: sheetSummary.players,
               subPlayers: sheetSummary.subPlayers,
-              teams: sheetSummary.teams,
+              teams: strippedTeams,
               playoffSeries: sheetSummary.playoffSeries,
               fetchedAt: sheetSummary.fetchedAt,
               rowCount: sheetSummary.rowCount,

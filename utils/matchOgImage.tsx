@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
-import { fetchAllScdlSeries } from "@/utils/scdlSheetStats";
+import { fetchAllScdlSeries } from "@/utils/leagueStats";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
 import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
 

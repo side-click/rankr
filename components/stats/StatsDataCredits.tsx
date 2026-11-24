@@ -1,4 +1,5 @@
-import type { SheetSourceConfig } from "@/utils/scdlSheetStats";
+import type { SheetSourceConfig } from "@/utils/leagueStats";
+import { sanitizeExternalUrl } from "@/utils/sanitizeUrl";
 
 const SCDL_45_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1tdi8ftaQ50sYS92H39YybU29SIPGVSyRNeT_HdOHP8A";
@@ -22,13 +23,19 @@ export function StatsDataCredits({
     (seasonName ?? "").includes("4.5") ||
     sheetConfig?.seasonSlug === "season-4-5";
 
-  const resolvedUrl =
+  const rawSheetId = sheetConfig?.sheetId?.trim() ?? "";
+  const validSheetId = /^[a-zA-Z0-9_-]{10,120}$/.test(rawSheetId)
+    ? rawSheetId
+    : "";
+
+  const resolvedUrl = sanitizeExternalUrl(
     sheetConfig?.creditsUrl?.trim() ||
-    (sheetConfig?.sheetId?.trim()
-      ? `https://docs.google.com/spreadsheets/d/${sheetConfig.sheetId.trim()}`
-      : isSeason45 || (isScdl && !seasonName)
-      ? SCDL_45_SHEET_URL
-      : null);
+      (validSheetId
+        ? `https://docs.google.com/spreadsheets/d/${validSheetId}`
+        : isSeason45 || (isScdl && !seasonName)
+        ? SCDL_45_SHEET_URL
+        : null)
+  );
 
   const resolvedLabel =
     sheetConfig?.creditsLabel?.trim() ||

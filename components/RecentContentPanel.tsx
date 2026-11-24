@@ -4,17 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Eye, Loader2 } from "lucide-react";
 import type { ContentCardData } from "@/components/ContentCard";
-import type { BlogCardData } from "@/components/BlogCard";
 import {
   ContentListGrid,
   type ContentItem,
 } from "@/components/ContentListGrid";
-import { createClient } from "@/utils/supabase/client";
-import {
-  RECENT_BLOG_SELECT,
-  RECENT_CONTENT_PAGE_SIZE,
-  RECENT_CONTENT_SELECT,
-} from "@/utils/recentContentQuery";
+import { RECENT_CONTENT_PAGE_SIZE } from "@/utils/recentContentQuery";
 
 interface RecentContentPanelProps {
   ballots?: ContentCardData[];
@@ -51,69 +45,18 @@ export function RecentContentPanel({
     if (loading) return;
     setLoading(true);
     try {
-      const supabase = createClient();
       const oldestPublishedAt = items[items.length - 1]?.publishedAt;
+      const params = new URLSearchParams();
+      if (oldestPublishedAt) params.set("before", oldestPublishedAt);
+      if (seasonIds.length > 0) params.set("seasonIds", seasonIds.join(","));
 
-      let rankingsQuery = supabase
-        .from("rankings")
-        .select(RECENT_CONTENT_SELECT)
-        .eq("status", "published")
-        .order("published_at", { ascending: false })
-        .limit(RECENT_CONTENT_PAGE_SIZE);
-      if (seasonIds.length > 0) {
-        rankingsQuery = rankingsQuery.in("season_id", seasonIds);
-      }
-      if (oldestPublishedAt) {
-        rankingsQuery = rankingsQuery.lt("published_at", oldestPublishedAt);
-      }
-
-      let blogsQuery = supabase
-        .from("blogs")
-        .select(RECENT_BLOG_SELECT)
-        .eq("status", "published")
-        .order("published_at", { ascending: false })
-        .limit(RECENT_CONTENT_PAGE_SIZE);
-      if (seasonIds.length > 0) {
-        blogsQuery = blogsQuery.or(
-          `season_id.in.(${seasonIds.join(",")}),season_id.is.null`
-        );
-      }
-      if (oldestPublishedAt) {
-        blogsQuery = blogsQuery.lt("published_at", oldestPublishedAt);
-      }
-
-      const [
-        { data: rankingsData, error: rankingsErr },
-        { data: blogsData, error: blogsErr },
-      ] = await Promise.all([rankingsQuery, blogsQuery]);
-
-      if (rankingsErr) throw rankingsErr;
-      if (blogsErr) throw blogsErr;
-
-      const nextRankings = (
-        (rankingsData ?? []) as unknown as ContentCardData[]
-      ).map((b) => ({
-        kind: "ballot" as const,
-        id: b.id,
-        publishedAt: b.published_at,
-        data: b,
-      }));
-      const nextBlogs = ((blogsData ?? []) as unknown as BlogCardData[]).map(
-        (b) => ({
-          kind: "blog" as const,
-          id: b.id,
-          publishedAt: b.published_at,
-          data: b,
-        })
-      );
-
-      const combined = [...nextRankings, ...nextBlogs]
-        .sort((a, b) => {
-          const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-          const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-          return tb - ta;
-        })
-        .slice(0, RECENT_CONTENT_PAGE_SIZE);
+      const res = await fetch(`/api/recent-content?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load more content");
+      const json = (await res.json()) as {
+        items?: ContentItem[];
+        hasMore?: boolean;
+      };
+      const combined = json.items ?? [];
 
       setItems((prev) => {
         const seen = new Set(prev.map((x) => `${x.kind}:${x.id}`));
@@ -122,7 +65,9 @@ export function RecentContentPanel({
           ...combined.filter((x) => !seen.has(`${x.kind}:${x.id}`)),
         ];
       });
-      if (combined.length < RECENT_CONTENT_PAGE_SIZE) setHasMore(false);
+      if (!json.hasMore || combined.length < RECENT_CONTENT_PAGE_SIZE) {
+        setHasMore(false);
+      }
     } catch (err) {
       console.error("Failed to load more content", err);
     } finally {

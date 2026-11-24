@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import {
   RiotRateLimitError,
   syncPlayerFromRiot,
   type SyncedPlayerInput,
 } from "@/utils/riotApi";
+import { createClient } from "@/utils/supabase/server";
+import {
+  assertSeasonOperatorAccess,
+  getServerAuthContext,
+} from "@/utils/supabase/serverAuth";
 
 export async function POST(request: Request) {
   const apiKey = process.env.RIOT_API_KEY?.trim();
@@ -30,9 +33,24 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as {
+    seasonId?: string;
     players?: SyncedPlayerInput[];
     matchCount?: number;
   } | null;
+
+  const seasonId = body?.seasonId?.trim() || null;
+  if (!auth.isAdmin) {
+    if (!seasonId) {
+      return NextResponse.json(
+        { error: "seasonId is required for league operators." },
+        { status: 400 }
+      );
+    }
+    const scope = await assertSeasonOperatorAccess(auth, supabase, seasonId);
+    if (!scope.ok) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
+    }
+  }
 
   const players = Array.isArray(body?.players) ? body.players.slice(0, 5) : [];
   const matchCount = Math.min(Math.max(Number(body?.matchCount ?? 5), 1), 10);

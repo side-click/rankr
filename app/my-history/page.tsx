@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
-import { checkUserAllowlisted } from "@/utils/allowlist";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
+import { getCreatorAccessSummary } from "@/utils/allowlist";
 import { RetroWindow } from "@/components/RetroWindow";
-import { AuthButton } from "@/components/AuthButton";
+import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import { AllowlistBlockedWindow } from "@/components/AllowlistBlockedWindow";
 import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 import { DeleteChampionPoolButton } from "@/components/DeleteChampionPoolButton";
@@ -25,10 +26,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function MyRankingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
+  const user = auth.user;
 
   if (!user) {
     const { data: appSettings } = await supabase
@@ -38,33 +40,33 @@ export default async function MyRankingsPage() {
       .maybeSingle();
 
     return (
-      <RetroWindow title="My History" theme="scdl">
-        <div className="py-8 text-center space-y-3">
-          <Lock className="w-8 h-8 mx-auto text-[#f0c020]" />
-          <p className="text-sm font-bold text-[#f0ede0]">
-            Sign in with Discord to view your ranking history.
-          </p>
-          <div className="flex justify-center">
-            <AuthButton
-              user={null}
-              requireAllowlist={Boolean(appSettings?.require_allowlist)}
-            />
-          </div>
-        </div>
-      </RetroWindow>
+      <SignInRequiredWindow
+        title="My History"
+        message="Sign in with Discord to view your ranking history."
+        requireAllowlist={Boolean(appSettings?.require_allowlist)}
+      />
     );
   }
 
-  const [isAllowlisted, { data: profile }] = await Promise.all([
-    checkUserAllowlisted(supabase),
-    supabase
-      .from("profiles")
-      .select("username, avatar_url, discord_id")
-      .eq("id", user.id)
-      .maybeSingle(),
-  ]);
+  const profile = auth.profile;
+  const { data: leagues } = await supabase
+    .from("leagues")
+    .select("id, require_allowlist");
 
-  if (!isAllowlisted) {
+  const access = await getCreatorAccessSummary(
+    supabase,
+    auth.isAdmin,
+    auth.discordId,
+    auth.operatorLeagueIds,
+    (leagues ?? []) as { id: string; require_allowlist?: boolean | null }[]
+  );
+
+  const canAccessCreator =
+    access.canCreateUntaggedBlog ||
+    access.allowedLeagueIds === null ||
+    access.allowedLeagueIds.length > 0;
+
+  if (!canAccessCreator) {
     return (
       <AllowlistBlockedWindow
         title="My History — Invite Only"

@@ -7,6 +7,14 @@ import { createClient } from "@/utils/supabase/client";
 import type { Division, Edition, League, Season } from "@/types/database";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import {
+  buildMovedRankingTitle,
+  deleteAdminRanking,
+  executeMoveRankingEdition,
+  findTargetEditionConflict,
+  getEligibleTargetEditions as computeEligibleTargetEditions,
+  type ConflictingRankingInfo,
+} from "@/utils/adminRankingActions";
+import {
   ArrowLeft,
   ArrowRightLeft,
   ExternalLink,
@@ -50,13 +58,7 @@ export interface AdminLogBallot {
   editions?: { id: string; name: string } | null;
 }
 
-interface ConflictingBallotInfo {
-  id: string;
-  title: string | null;
-  status: string;
-  updated_at: string;
-  published_at: string | null;
-}
+type ConflictingBallotInfo = ConflictingRankingInfo;
 
 interface RankingRevisionSummary {
   id: string;
@@ -275,15 +277,10 @@ export function AdminPublishingsLog({
       return;
     }
     setBusy(true);
-    const { error } = await supabase
-      .from("rankings")
-      .delete()
-      .eq("id", ballot.id);
-    if (error) {
-      setStatusMsg(`Error: ${error.message}`);
-    } else {
+    const res = await deleteAdminRanking(supabase, ballot);
+    setStatusMsg(res.statusMessage);
+    if (res.ok) {
       setBallots((prev) => prev.filter((item) => item.id !== ballot.id));
-      setStatusMsg("Published ranking deleted.");
       router.refresh();
     }
     setBusy(false);
@@ -297,60 +294,18 @@ export function AdminPublishingsLog({
       setConflictBallot(null);
       return;
     }
-    const rankingType = ballot.ranking_type ?? "team";
     setCheckingConflict(true);
-    let query = supabase
-      .from("rankings")
-      .select("id, title, status, updated_at, published_at")
-      .eq("user_id", ballot.user_id)
-      .eq("edition_id", nextEditionId)
-      .eq("ranking_type", rankingType)
-      .neq("id", ballot.id);
-
-    if (ballot.division_id) {
-      query = query.eq("division_id", ballot.division_id);
-    } else {
-      query = query.is("division_id", null);
-    }
-    if (rankingType === "player" && ballot.tier_variant) {
-      query = query.eq("tier_variant", ballot.tier_variant);
-    }
-
-    const { data } = await query.maybeSingle();
-    setConflictBallot((data as ConflictingBallotInfo | null) ?? null);
+    const conflict = await findTargetEditionConflict(
+      supabase,
+      ballot,
+      nextEditionId
+    );
+    setConflictBallot(conflict);
     setCheckingConflict(false);
   }
 
-  function buildMovedTitle(
-    ballot: AdminLogBallot,
-    nextEdition: Edition | undefined
-  ) {
-    if (!nextEdition) return ballot.title ?? "";
-    const oldEd = ballot.edition_name_snapshot;
-    if (ballot.title && oldEd && ballot.title.includes(oldEd)) {
-      return ballot.title.replace(oldEd, nextEdition.name);
-    }
-    if (ballot.ranking_type === "player") {
-      return `${
-        ballot.division_name_snapshot || "All Divisions"
-      } Player Tier List — ${nextEdition.name}`;
-    }
-    if (ballot.division_name_snapshot) {
-      return `${ballot.division_name_snapshot} Team Power Rankings — ${nextEdition.name}`;
-    }
-    return ballot.title ?? nextEdition.name;
-  }
-
   function getEligibleTargetEditions(ballot: AdminLogBallot) {
-    const rankingType = ballot.ranking_type ?? "team";
-    return editions
-      .filter(
-        (e) =>
-          e.season_id === ballot.season_id &&
-          e.id !== ballot.edition_id &&
-          (rankingType === "player" || !e.is_players_only)
-      )
-      .sort((a, b) => a.sort_order - b.sort_order);
+    return computeEligibleTargetEditions(ballot, editions);
   }
 
   async function openMoveEditionModal(ballot: AdminLogBallot) {
@@ -358,7 +313,7 @@ export function AdminPublishingsLog({
     const firstTarget = seasonEds[0];
     setMovingBallot(ballot);
     setTargetEditionId(firstTarget?.id ?? "");
-    setMoveTitle(buildMovedTitle(ballot, firstTarget));
+    setMoveTitle(buildMovedRankingTitle(ballot, firstTarget));
     setConflictBallot(null);
     setConfirmOverwriteChecked(false);
     if (firstTarget) {
@@ -371,7 +326,7 @@ export function AdminPublishingsLog({
     setConfirmOverwriteChecked(false);
     if (!movingBallot) return;
     const nextEd = editions.find((e) => e.id === nextEditionId);
-    setMoveTitle(buildMovedTitle(movingBallot, nextEd));
+    setMoveTitle(buildMovedRankingTitle(movingBallot, nextEd));
     await checkTargetEditionConflict(movingBallot, nextEditionId);
   }
 
@@ -379,59 +334,19 @@ export function AdminPublishingsLog({
     if (!movingBallot || !targetEditionId) return;
     const targetEd = editions.find((e) => e.id === targetEditionId);
     if (!targetEd) return;
-    if (
-      (movingBallot.ranking_type ?? "team") === "team" &&
-      targetEd.is_players_only
-    ) {
-      setStatusMsg(
-        `Cannot move a Team Power Ranking into Players-Only edition "${targetEd.name}".`
-      );
-      return;
-    }
-
-    if (conflictBallot) {
-      if (!confirmOverwriteChecked) return;
-      const author = Array.isArray(movingBallot.profiles)
-        ? movingBallot.profiles[0]
-        : movingBallot.profiles;
-      const confirmedSecond = confirm(
-        `FINAL WARNING: Permanently DELETE ${
-          author?.username ?? "this user"
-        }'s existing ${conflictBallot.status.toUpperCase()} ranking "${
-          conflictBallot.title || targetEd.name
-        }" in ${targetEd.name} and replace it with this ranking? This cannot be undone.`
-      );
-      if (!confirmedSecond) return;
-    }
 
     setBusy(true);
     try {
-      if (conflictBallot) {
-        const { error: delErr } = await supabase
-          .from("rankings")
-          .delete()
-          .eq("id", conflictBallot.id);
-        if (delErr) {
-          setStatusMsg(`Error removing conflicting ranking: ${delErr.message}`);
-          setBusy(false);
-          return;
-        }
-      }
-
-      const nextTitle = moveTitle.trim() || movingBallot.title;
-      const { error: updErr } = await supabase
-        .from("rankings")
-        .update({
-          edition_id: targetEd.id,
-          edition_name_snapshot: targetEd.name,
-          title: nextTitle,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", movingBallot.id);
-
-      if (updErr) {
-        setStatusMsg(`Error moving ranking: ${updErr.message}`);
-      } else {
+      const res = await executeMoveRankingEdition(supabase, {
+        movingRanking: movingBallot,
+        targetEdition: targetEd,
+        moveTitle,
+        conflictRanking: conflictBallot,
+        confirmOverwrite: confirmOverwriteChecked,
+      });
+      if (res.statusMessage) setStatusMsg(res.statusMessage);
+      if (res.ok && res.nextTitle) {
+        const nextTitle = res.nextTitle;
         setBallots((prev) =>
           prev
             .filter((b) => !conflictBallot || b.id !== conflictBallot.id)
@@ -446,11 +361,6 @@ export function AdminPublishingsLog({
                   }
                 : b
             )
-        );
-        setStatusMsg(
-          conflictBallot
-            ? `Moved ranking to "${targetEd.name}" and overwrote the conflicting ranking.`
-            : `Moved ranking to "${targetEd.name}".`
         );
         setMovingBallot(null);
         setConflictBallot(null);

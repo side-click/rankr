@@ -1,9 +1,6 @@
 import type { LoadedStatsContext } from "@/utils/riotStatsServer";
-import type { ScdlGameDetail, ScdlSeriesDetail } from "@/utils/scdlSheetStats";
-
-function normChamp(name: string): string {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
+import type { ScdlGameDetail, ScdlSeriesDetail } from "@/utils/leagueStats";
+import { normalizeChampionKey } from "@/utils/formatters";
 
 export interface ChampionRoleStat {
   role: string;
@@ -102,7 +99,7 @@ export function computeChampionStats(
   championName: string,
   divisionFilter?: string
 ): ChampionStatsPayload {
-  const target = normChamp(championName);
+  const target = normalizeChampionKey(championName);
   const divObj =
     divisionFilter && divisionFilter !== "all"
       ? ctx.divisions.find((d) => d.slug.toLowerCase() === divisionFilter.toLowerCase())
@@ -169,10 +166,10 @@ export function computeChampionStats(
     const draft = g.draft;
 
     if (draft) {
-      if ([...(draft.blueBans ?? []), ...(draft.redBans ?? [])].some((b) => normChamp(b) === target)) {
+      if ([...(draft.blueBans ?? []), ...(draft.redBans ?? [])].some((b) => normalizeChampionKey(b) === target)) {
         bans += 1;
       }
-      if (draft.bluePicks?.[0] && normChamp(draft.bluePicks[0]) === target) {
+      if (draft.bluePicks?.[0] && normalizeChampionKey(draft.bluePicks[0]) === target) {
         firstPickCount += 1;
       }
       for (const [teamName, teamBans] of [
@@ -189,7 +186,7 @@ export function computeChampionStats(
           totalTeamGames: 0,
         };
         entry.totalTeamGames += 1;
-        if ((teamBans ?? []).some((b) => normChamp(b) === target)) entry.bans += 1;
+        if ((teamBans ?? []).some((b) => normalizeChampionKey(b) === target)) entry.bans += 1;
         bannedByMap.set(key, entry);
       }
     }
@@ -201,7 +198,7 @@ export function computeChampionStats(
     }
 
     for (const p of g.players) {
-      if (normChamp(p.champion) !== target) continue;
+      if (normalizeChampionKey(p.champion) !== target) continue;
 
       games += 1;
       if (p.win) wins += 1;
@@ -256,7 +253,7 @@ export function computeChampionStats(
       let pickSlot: string | null = null;
       if (draft) {
         const sidePicks = p.side === "Blue" ? draft.bluePicks : draft.redPicks;
-        const idx = (sidePicks ?? []).findIndex((c) => normChamp(c) === target);
+        const idx = (sidePicks ?? []).findIndex((c) => normalizeChampionKey(c) === target);
         if (idx >= 0) {
           pickSlot = `${p.side === "Blue" ? "B" : "R"}${idx + 1}`;
         }

@@ -3,6 +3,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { sanitizeExternalUrl } from "@/utils/sanitizeUrl";
 
 interface BlogMarkdownProps {
   content: string;
@@ -44,15 +45,30 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
             <p className="text-[15px] leading-7 text-[#e4e1d4]">{children}</p>
           ),
           a: ({ href, children }) => {
-            const rawHref = href ?? "";
-            const normalizedHref =
-              rawHref &&
-              !/^(https?:\/\/|mailto:|\/|#)/i.test(rawHref)
-                ? `https://${rawHref}`
-                : rawHref;
+            const rawHref = (href ?? "").trim();
+            let safeHref: string | null = null;
+            if (rawHref.startsWith("#")) {
+              safeHref = rawHref;
+            } else if (rawHref) {
+              const direct = sanitizeExternalUrl(rawHref, {
+                allowRelative: true,
+              });
+              if (direct) {
+                safeHref = direct;
+              } else if (
+                !/^[a-z][a-z0-9+.-]*:/i.test(rawHref) &&
+                !rawHref.startsWith("//") &&
+                rawHref.includes(".")
+              ) {
+                safeHref = sanitizeExternalUrl(`https://${rawHref}`);
+              }
+            }
+            if (!safeHref) {
+              return <span className="text-[#f0c020]">{children}</span>;
+            }
             return (
               <a
-                href={normalizedHref}
+                href={safeHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#f0c020] underline decoration-[#f0c020]/50 hover:decoration-[#f0c020] hover:text-[#ffe57f] transition-colors"
@@ -130,12 +146,16 @@ export function BlogMarkdown({ content }: BlogMarkdownProps) {
                 ? "my-3 sm:my-1 sm:float-right sm:ml-5 sm:mb-3 flex flex-col items-center"
                 : "my-4 flex flex-col items-center";
 
+            const safeImgSrc = sanitizeExternalUrl(src, { allowRelative: true });
+            if (!safeImgSrc) return null;
             return (
               <figure className={figureClass}>
                 <img
-                  src={src}
+                  src={safeImgSrc}
                   alt={alt ?? "Blog image"}
                   title={!isPresetTitle && title ? title : undefined}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
                   className={`${sizeClass} rounded-lg border border-white/15 bg-black/30 object-contain shadow-lg`}
                 />
                 {alt && alt !== "image" && alt !== "Blog image" && (

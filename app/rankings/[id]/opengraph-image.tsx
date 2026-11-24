@@ -1,7 +1,7 @@
 import {
   BALLOT_OG_SIZE,
   renderBallotOpenGraphImage,
-} from "@/utils/ballotOgImage";
+} from "@/utils/rankingOgImage";
 
 export const alt = "Rankr — Published Ranking";
 export const size = BALLOT_OG_SIZE;

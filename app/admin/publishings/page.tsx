@@ -1,13 +1,13 @@
-import React from "react";
-import { createClient } from "@/utils/supabase/server";
-import { RetroWindow } from "@/components/RetroWindow";
+import type { Metadata } from "next";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
 import {
   AdminPublishingsLog,
   type AdminLogBallot,
 } from "@/components/AdminPublishingsLog";
+import { RetroWindow } from "@/components/RetroWindow";
 import type { Division, Edition, League, Season } from "@/types/database";
-import type { Metadata } from "next";
-import { ShieldAlert } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 
 export const metadata: Metadata = {
   title: "Admin Publishings | Rankr",
@@ -16,35 +16,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminPublishingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
 
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-    isAdmin = Boolean(profile?.is_admin);
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <RetroWindow title="Admin Console — Access Denied" theme="xp">
-        <div className="py-8 px-4 text-center space-y-3">
-          <ShieldAlert className="w-10 h-10 mx-auto text-[#ff857a]" />
-          <h1 className="text-base font-bold text-[#f0ede0]">
-            Admin Access Required
-          </h1>
-          <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
-            You do not have permission to access this page.
-          </p>
-        </div>
-      </RetroWindow>
-    );
+  if (!auth.user || !auth.isAdmin) {
+    return <AdminAccessDenied />;
   }
 
   const [

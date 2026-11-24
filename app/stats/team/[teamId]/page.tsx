@@ -72,6 +72,7 @@ export default async function PublicTeamStatsPage({
       ddVersion={ctx.ddVersion}
       leagueName={ctx.leagueName}
       seasonName={ctx.seasonName}
+      seasonSlug={ctx.seasonSlug}
       divisionThemeKey={scouting.divisionThemeKey}
       divisionThemes={ctx.divisionThemes}
       team={scouting.team}

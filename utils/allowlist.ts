@@ -3,15 +3,37 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * Checks whether the currently authenticated user is permitted to author/edit
  * untagged global content (e.g. untagged blogs) under global allowlist settings.
+ * Fails closed on database/RPC errors.
  */
 export async function checkUserAllowlisted(
   supabase: SupabaseClient
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc("is_allowlisted");
   if (error) {
-    return true;
+    return false;
   }
-  return data !== false;
+  return data === true;
+}
+
+/**
+ * Checks whether the currently authenticated user can author/edit content
+ * for a specific league (or global untagged content when `leagueId` is null).
+ * Fails closed on database/RPC errors.
+ */
+export async function checkUserAllowlistedForLeague(
+  supabase: SupabaseClient,
+  leagueId: string | null | undefined
+): Promise<boolean> {
+  if (!leagueId) {
+    return checkUserAllowlisted(supabase);
+  }
+  const { data, error } = await supabase.rpc("is_allowlisted_for_league", {
+    target_league_id: leagueId,
+  });
+  if (error) {
+    return false;
+  }
+  return data === true;
 }
 
 export interface CreatorAccessSummary {

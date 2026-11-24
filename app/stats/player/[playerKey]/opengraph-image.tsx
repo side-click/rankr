@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { safeDecodeParam } from "@/utils/ogFonts";
 import {
   PLAYER_OG_SIZE,
   renderPlayerOpenGraphImage,
@@ -13,7 +15,9 @@ export default async function PlayerOpenGraphImage({
   params: Promise<{ playerKey: string }>;
 }) {
   const { playerKey } = await params;
-  return renderPlayerOpenGraphImage(
-    decodeURIComponent(playerKey).toLowerCase()
-  );
+  const decoded = safeDecodeParam(playerKey);
+  if (!decoded) {
+    return NextResponse.json({ error: "Invalid playerKey" }, { status: 400 });
+  }
+  return renderPlayerOpenGraphImage(decoded.toLowerCase());
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Calendar, ExternalLink } from "lucide-react";
+import { championStatsHref, matchStatsHref, statsHref, teamStatsHref } from "@/utils/statsLinks";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -18,8 +19,9 @@ import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
   type ScdlGamePlayerRow,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 import { resolveDivisionTheme } from "@/utils/themes";
+import { deriveLeaguePrefix, formatSigned as formatSignedBase } from "@/utils/formatters";
 
 export const dynamic = "force-dynamic";
 
@@ -55,17 +57,6 @@ function formatStyledSoloRank(
     label: rank ? `${titleTier} ${rank}` : titleTier,
     className: color,
   };
-}
-
-function deriveLeaguePrefix(leagueName?: string): string {
-  const raw = (leagueName ?? "").trim();
-  if (!raw) return "League";
-  if (raw.length <= 6 && !raw.includes(" ")) return raw.toUpperCase();
-  const initials = raw
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  return initials || raw;
 }
 
 function formatMasteryPoints(pts: number): string {
@@ -126,9 +117,7 @@ const DUAL_PRIORITY_FLEX_STYLE = {
 } as const;
 
 function formatSigned(val: number | null | undefined): string {
-  if (val === null || val === undefined) return "—";
-  const rounded = Math.round(val);
-  return rounded >= 0 ? `+${rounded}` : `${rounded}`;
+  return formatSignedBase(val, { round: true });
 }
 
 export async function PlayerStatsContent({
@@ -255,9 +244,7 @@ export async function PlayerStatsContent({
   const divThemeKey = playerDiv?.theme_key ?? "scdl";
   const divisionSlug = playerDiv?.slug ?? null;
   const champHref = (name: string) =>
-    `${basePath}/champion/${encodeURIComponent(name)}${
-      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
-    }`;
+    championStatsHref(name, basePath, ctx.seasonSlug, divisionSlug);
   const divTheme = resolveDivisionTheme(divThemeKey, ctx.divisionThemes);
   const windowTheme =
     divThemeKey === "dragon"
@@ -290,9 +277,11 @@ export async function PlayerStatsContent({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={`${basePath}?division=${encodeURIComponent(
-              soloPlayer.divisionId ?? "all"
-            )}&tab=players`}
+            href={statsHref(basePath, ctx.seasonSlug, {
+              division: soloPlayer.divisionId ?? "all",
+              tab: "players",
+            })}
+            prefetch={false}
             className="xp-btn text-xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -332,9 +321,8 @@ export async function PlayerStatsContent({
               <div className="mt-1 space-y-0.5 text-sm">
                 {soloPlayer.teamId ? (
                   <Link
-                    href={`${basePath}/team/${encodeURIComponent(
-                      soloPlayer.teamId
-                    )}`}
+                    href={teamStatsHref(soloPlayer.teamId, basePath, ctx.seasonSlug)}
+                    prefetch={false}
                     className="group inline-flex items-center gap-2 text-base sm:text-lg font-extrabold text-[#f0ede0] hover:text-[#f0c020] transition-colors"
                   >
                     {soloPlayer.teamLogoUrl && (
@@ -579,6 +567,7 @@ export async function PlayerStatsContent({
                     <Link
                       key={c.name}
                       href={champHref(c.name)}
+                      prefetch={false}
                       className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
@@ -627,6 +616,7 @@ export async function PlayerStatsContent({
                     <Link
                       key={c.name}
                       href={champHref(c.name)}
+                      prefetch={false}
                       className={`group flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border text-xs sm:text-[13px] hover:border-[#f0c020]/70 transition ${
                         prioRank !== undefined
                           ? getPriorityPickClass(prioRank)
@@ -680,6 +670,7 @@ export async function PlayerStatsContent({
                   <Link
                     key={m.championName}
                     href={champHref(m.championName)}
+                    prefetch={false}
                     title={`${m.championName} • ${m.championPoints.toLocaleString()} pts`}
                     className="bg-black/40 border border-white/10 hover:border-[#f0c020]/70 transition rounded overflow-hidden text-center block"
                   >
@@ -731,7 +722,8 @@ export async function PlayerStatsContent({
                 return (
                   <Link
                     key={`${g.seriesKey}-${idx}`}
-                    href={`${basePath}/match/${encodeURIComponent(g.seriesKey)}`}
+                    href={matchStatsHref(g.seriesKey, basePath, ctx.seasonSlug)}
+                    prefetch={false}
                     className="py-3 px-2.5 flex flex-wrap items-center justify-between gap-3 hover:bg-white/5 transition rounded text-sm"
                   >
                     <div className="flex items-center gap-3 min-w-[240px]">

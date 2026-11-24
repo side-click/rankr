@@ -1,7 +1,9 @@
+import { NextResponse } from "next/server";
 import {
   MATCH_OG_SIZE,
   renderMatchOpenGraphImage,
 } from "@/utils/matchOgImage";
+import { safeDecodeParam } from "@/utils/ogFonts";
 
 export const alt = "Rankr — Match Series";
 export const size = MATCH_OG_SIZE;
@@ -13,5 +15,9 @@ export default async function MatchSeriesOpenGraphImage({
   params: Promise<{ seriesKey: string }>;
 }) {
   const { seriesKey } = await params;
-  return renderMatchOpenGraphImage(decodeURIComponent(seriesKey));
+  const decoded = safeDecodeParam(seriesKey);
+  if (!decoded) {
+    return NextResponse.json({ error: "Invalid seriesKey" }, { status: 400 });
+  }
+  return renderMatchOpenGraphImage(decoded);
 }

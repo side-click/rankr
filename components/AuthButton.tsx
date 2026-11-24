@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Lock, LogOut, MessageSquare, X } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
 
 interface AuthButtonProps {
   user: {
@@ -16,7 +15,6 @@ interface AuthButtonProps {
 export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const supabase = createClient();
 
   async function startDiscordOAuth() {
     setLoading(true);
@@ -34,7 +32,7 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
 
   async function handleSignOut() {
     setLoading(true);
-    await supabase.auth.signOut();
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
     window.location.reload();
   }
 
@@ -121,6 +119,8 @@ export function AuthButton({ user, requireAllowlist = false }: AuthButtonProps) 
           <img
             src={user.avatarUrl}
             alt={user.username}
+            width={20}
+            height={20}
             className="w-5 h-5 rounded-sm border border-white/60 object-cover"
           />
         ) : (

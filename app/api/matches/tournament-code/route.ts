@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { getServerAuthContext } from "@/utils/supabase/serverAuth";
+import { getServiceRoleClient } from "@/utils/moderationServer";
 import { generateTournamentCodeForMatch } from "@/utils/riotTournamentApi";
+import { createClient } from "@/utils/supabase/server";
+import {
+  getCaptainTeamIds,
+  getServerAuthContext,
+} from "@/utils/supabase/serverAuth";
 
 export async function POST(req: Request) {
   const [auth, supabase] = await Promise.all([
@@ -12,6 +16,17 @@ export async function POST(req: Request) {
   if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (auth.isBanned) {
+    return NextResponse.json({ error: "Account suspended." }, { status: 403 });
+  }
+
+  const adminDb = getServiceRoleClient();
+  if (!adminDb) {
+    return NextResponse.json(
+      { error: "Server configuration missing service role." },
+      { status: 500 }
+    );
+  }
 
   try {
     const body = (await req.json()) as {
@@ -21,7 +36,10 @@ export async function POST(req: Request) {
     };
 
     const matchId = String(body.matchId ?? "").trim();
-    const gameNumber = Math.max(1, Math.min(7, Number(body.gameNumber ?? 1)));
+    const rawGameNum = Number(body.gameNumber ?? 1);
+    const gameNumber = Number.isFinite(rawGameNum)
+      ? Math.max(1, Math.min(7, Math.trunc(rawGameNum)))
+      : 1;
     const regenerate = Boolean(body.regenerate);
 
     if (!matchId) {
@@ -31,13 +49,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: match, error: matchErr } = await supabase
-      .from("season_matches")
-      .select(
-        "id, season_id, round_label, team_a_id, team_b_id, seasons ( id, league_id )"
-      )
-      .eq("id", matchId)
-      .maybeSingle();
+    const [{ data: match, error: matchErr }, captainTeamIds] = await Promise.all([
+      supabase
+        .from("season_matches")
+        .select(
+          "id, season_id, round_label, team_a_id, team_b_id, seasons ( id, league_id )"
+        )
+        .eq("id", matchId)
+        .maybeSingle(),
+      getCaptainTeamIds(supabase, auth.discordId),
+    ]);
 
     if (matchErr || !match) {
       return NextResponse.json(
@@ -57,18 +78,21 @@ export async function POST(req: Request) {
       auth.isAdmin ||
       (Boolean(leagueId) && auth.operatorLeagueIds.includes(leagueId));
     const isMatchCaptain =
-      (match.team_a_id && auth.captainTeamIds.includes(match.team_a_id)) ||
-      (match.team_b_id && auth.captainTeamIds.includes(match.team_b_id));
+      (match.team_a_id && captainTeamIds.includes(match.team_a_id)) ||
+      (match.team_b_id && captainTeamIds.includes(match.team_b_id));
 
     if (!isLeagueOperator && !isMatchCaptain) {
       return NextResponse.json(
-        { error: "Only site admins, league operators, or assigned team captains can generate tournament codes." },
+        {
+          error:
+            "Only site admins, league operators, or assigned team captains can generate tournament codes.",
+        },
         { status: 403 }
       );
     }
 
     if (!regenerate) {
-      const { data: existing } = await supabase
+      const { data: existing } = await adminDb
         .from("tournament_codes")
         .select("*")
         .eq("match_id", matchId)
@@ -107,14 +131,17 @@ export async function POST(req: Request) {
     });
 
     if (regenerate) {
-      await supabase
+      const { error: delErr } = await adminDb
         .from("tournament_codes")
         .delete()
         .eq("match_id", matchId)
         .eq("game_number", gameNumber);
+      if (delErr) {
+        return NextResponse.json({ error: delErr.message }, { status: 500 });
+      }
     }
 
-    const { data: inserted, error: insErr } = await supabase
+    const { data: inserted, error: insErr } = await adminDb
       .from("tournament_codes")
       .insert({
         match_id: matchId,

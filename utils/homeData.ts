@@ -1,7 +1,9 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { createPublicClient } from "@/utils/supabase/server";
 import type { ContentCardData } from "@/components/ContentCard";
 import {
+  compactRankingCardRow,
   RECENT_BLOG_SELECT,
   RECENT_CONTENT_PAGE_SIZE,
   RECENT_CONTENT_SELECT,
@@ -12,12 +14,13 @@ import {
   computeAverageTeamRankings,
   type ConsensusRankingInput,
 } from "@/utils/averageRankings";
+import { attachPublicProfiles } from "@/utils/publicProfiles";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
 import {
   fetchAllScdlSeries,
   fetchScdlSheetStats,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 import { resolveDivisionTheme } from "@/utils/themes";
 
 export interface HomeSeasonSummary {
@@ -117,7 +120,6 @@ export interface HomeData {
   liveSeasons: HomeSeasonSummary[];
   archivedSeasons: HomeSeasonSummary[];
   focusedSeason: HomeSeasonSummary | null;
-  recentBallots: ContentCardData[];
   recentContent: ContentItem[];
   recentSeasonIds: string[];
   divisionStandings: HomeDivisionStandings[];
@@ -278,10 +280,10 @@ const loadCachedHomeStatsBlock = unstable_cache(
   { revalidate: 3600, tags: ["public-stats", "home-stats"] }
 );
 
-export async function loadHomeData(
-  focusedSeasonSlug?: string
-): Promise<HomeData> {
-  const supabase = await createClient();
+const fetchHomeDataStable = unstable_cache(
+  async (focusedSlugKey: string): Promise<HomeData> => {
+    const focusedSeasonSlug = focusedSlugKey || undefined;
+    const supabase = createPublicClient();
 
   const [
     { data: seasonsRaw },
@@ -397,8 +399,7 @@ export async function loadHomeData(
     );
   }
 
-  // Fetch all published team rankings for targetSeasons in ONE single live query
-  // (instead of calling loadConsensusPageData per division, which re-queried seasons/divisions/themes/editions 2x)
+  // Fetch all published team rankings for targetSeasons in ONE single query
   let consensusRankingsQuery = supabase
     .from("rankings")
     .select(
@@ -407,7 +408,6 @@ export async function loadHomeData(
       season_id,
       division_id,
       edition_id,
-      profiles ( username, avatar_url ),
       ranking_entries (
         rank,
         team_id,
@@ -452,8 +452,10 @@ export async function loadHomeData(
     division_id: string | null;
     edition_id: string | null;
   };
-  const allConsensusRankings = (consensusRankingsRaw ??
-    []) as unknown as ConsensusRowWithScope[];
+  const allConsensusRankings = (consensusRankingsRaw ?? []).map((r) => ({
+    ...(r as unknown as Omit<ConsensusRowWithScope, "profiles">),
+    profiles: null,
+  })) as ConsensusRowWithScope[];
 
   const consensusSnapshots: HomeConsensusSnapshot[] = [];
   for (const s of targetSeasons) {
@@ -517,20 +519,33 @@ export async function loadHomeData(
     }
   }
 
-  const recentBallots = (recentBallotsRaw ?? []) as unknown as ContentCardData[];
-  const recentBlogs = (recentBlogsRaw ?? []) as unknown as BlogCardData[];
+  const [recentBallots, recentBlogs] = await Promise.all([
+    attachPublicProfiles(
+      supabase,
+      ((recentBallotsRaw ?? []) as unknown as (ContentCardData & {
+        user_id?: string | null;
+      })[]).map(compactRankingCardRow)
+    ),
+    attachPublicProfiles(
+      supabase,
+      (recentBlogsRaw ?? []) as unknown as (BlogCardData & {
+        user_id?: string | null;
+      })[]
+    ),
+  ]);
+
   const recentContent: ContentItem[] = [
     ...recentBallots.map((b) => ({
       kind: "ballot" as const,
       id: b.id,
       publishedAt: b.published_at,
-      data: b,
+      data: b as ContentCardData,
     })),
     ...recentBlogs.map((b) => ({
       kind: "blog" as const,
       id: b.id,
       publishedAt: b.published_at,
-      data: b,
+      data: b as BlogCardData,
     })),
   ]
     .sort((a, b) => {
@@ -545,7 +560,6 @@ export async function loadHomeData(
     liveSeasons,
     archivedSeasons,
     focusedSeason,
-    recentBallots,
     recentContent,
     recentSeasonIds: targetSeasonIds,
     divisionStandings,
@@ -554,4 +568,11 @@ export async function loadHomeData(
     recentMatches,
     consensusSnapshots,
   };
-}
+  },
+  ["home-data-v1"],
+  { revalidate: 300, tags: ["home-stats", "public-stats"] }
+);
+
+export const loadHomeData = cache((focusedSeasonSlug?: string) =>
+  fetchHomeDataStable(focusedSeasonSlug ?? "")
+);

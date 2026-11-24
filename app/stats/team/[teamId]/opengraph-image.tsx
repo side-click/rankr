@@ -1,14 +1,19 @@
+import { NextResponse } from "next/server";
 import { ImageResponse } from "next/og";
 import {
   loadPublicStatsContext,
   loadTeamScoutingData,
 } from "@/utils/riotStatsServer";
 import { computeRoleNormalizedRatings } from "@/utils/riotStatsAggregation";
-import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
+import { fetchScdlSheetStats } from "@/utils/leagueStats";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
-import { loadOgFonts, resolveOgImageSrc } from "@/utils/ogFonts";
+import {
+  loadOgFonts,
+  resolveOgImageSrc,
+  safeDecodeParam,
+} from "@/utils/ogFonts";
 
 export const alt = "Rankr — Team Stats";
 export const size = { width: 1200, height: 630 };
@@ -47,7 +52,10 @@ export default async function TeamOpenGraphImage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
-  const decodedId = decodeURIComponent(teamId);
+  const decodedId = safeDecodeParam(teamId);
+  if (!decodedId) {
+    return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
+  }
 
   const [ctx, fonts] = await Promise.all([
     loadPublicStatsContext(undefined, { teamIdFilter: decodedId }),

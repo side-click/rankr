@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getRoleMeta, normalizeRoster, type LeagueRole } from "@/utils/roles";
 import type {
@@ -225,12 +226,7 @@ export function TeamMatchHub({
                   </span>
                   {nextMatch.scheduled_at && (
                     <span className="text-[#a6a89e]">
-                      {new Date(nextMatch.scheduled_at).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      <LocalTimestamp iso={nextMatch.scheduled_at} />
                     </span>
                   )}
                 </div>
@@ -275,6 +271,7 @@ export function TeamMatchHub({
                       href={`/stats/team/${encodeURIComponent(
                         nextOpponent.id
                       )}${seasonQuery}`}
+                      prefetch={false}
                       className="xp-btn xp-btn-primary text-xs"
                     >
                       <span>Scout Opponent</span>
@@ -307,6 +304,7 @@ export function TeamMatchHub({
                             {pHref ? (
                               <Link
                                 href={pHref}
+                                prefetch={false}
                                 className="text-xs font-bold text-[#f0ede0] hover:text-[#f0c020] hover:underline truncate"
                               >
                                 {displayName}
@@ -425,6 +423,7 @@ export function TeamMatchHub({
               href={`/stats/team/${encodeURIComponent(
                 myTeam.id
               )}${seasonQuery}`}
+              prefetch={false}
               className="xp-inset p-3 flex items-center justify-between gap-3 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition group"
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -473,6 +472,7 @@ export function TeamMatchHub({
                     {pHref ? (
                       <Link
                         href={pHref}
+                        prefetch={false}
                         className="font-bold text-[#f0ede0] hover:text-[#f0c020] hover:underline truncate"
                       >
                         {displayName}
@@ -532,12 +532,7 @@ export function TeamMatchHub({
                       </span>
                       {m.scheduled_at && (
                         <span className="text-[11px] text-[#a6a89e] hidden sm:inline">
-                          {new Date(m.scheduled_at).toLocaleString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
+                          <LocalTimestamp iso={m.scheduled_at} />
                         </span>
                       )}
                     </div>
@@ -564,6 +559,7 @@ export function TeamMatchHub({
                           href={`/stats/team/${encodeURIComponent(
                             opp.id
                           )}${seasonQuery}`}
+                          prefetch={false}
                           className="xp-btn text-[11px] px-2.5 py-0.5"
                         >
                           Scout &rarr;

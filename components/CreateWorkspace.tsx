@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { FileText, Lock, User } from "lucide-react";
 import { ChampionHelmetIcon } from "@/components/ChampionHelmetIcon";
@@ -17,10 +18,31 @@ import type {
   SeasonPlayer,
   Team,
 } from "@/types/database";
-import { TeamRankingEditor } from "@/components/TeamRankingEditor";
-import { ChampionPoolEditor } from "@/components/ChampionPoolEditor";
-import { PlayerTierEditor } from "@/components/PlayerTierEditor";
-import { BlogEditor } from "@/components/BlogEditor";
+
+const EditorLoadingFallback = () => (
+  <div className="xp-window xp-window-scdl p-6 text-center text-xs text-[#a6a89e] animate-pulse">
+    Loading editor...
+  </div>
+);
+
+const TeamRankingEditor = dynamic(
+  () =>
+    import("@/components/TeamRankingEditor").then((m) => m.TeamRankingEditor),
+  { loading: EditorLoadingFallback }
+);
+const ChampionPoolEditor = dynamic(
+  () =>
+    import("@/components/ChampionPoolEditor").then((m) => m.ChampionPoolEditor),
+  { loading: EditorLoadingFallback }
+);
+const PlayerTierEditor = dynamic(
+  () => import("@/components/PlayerTierEditor").then((m) => m.PlayerTierEditor),
+  { loading: EditorLoadingFallback }
+);
+const BlogEditor = dynamic(
+  () => import("@/components/BlogEditor").then((m) => m.BlogEditor),
+  { loading: EditorLoadingFallback }
+);
 
 interface CreateWorkspaceProps {
   userId: string | null;

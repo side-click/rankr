@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { getChampionIconUrl } from "@/utils/riotApi";
 import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
+import { championStatsHref } from "@/utils/statsLinks";
+import { normalizeChampionKey } from "@/utils/formatters";
 
 export interface DivisionPlayerKpiLeader {
   name: string;
@@ -68,10 +70,7 @@ interface StatsDivisionTabProps {
   selectedDivisionPrimaryColor?: string | null;
   selectedDivisionSlug?: string | null;
   seasonSlug?: string | null;
-}
-
-function normChampKey(name: string): string {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+  basePath?: string;
 }
 
 const ddChampionCache = new Map<string, { id: string; name: string }[]>();
@@ -112,23 +111,19 @@ export function StatsDivisionTab({
   selectedDivisionPrimaryColor,
   selectedDivisionSlug,
   seasonSlug,
+  basePath = "/stats",
 }: StatsDivisionTabProps) {
-  const champHref = (name: string) => {
-    const qp = new URLSearchParams();
-    if (selectedDivisionSlug) qp.set("division", selectedDivisionSlug);
-    if (seasonSlug) qp.set("season", seasonSlug);
-    const qs = qp.toString();
-    return `/stats/champion/${encodeURIComponent(name)}${qs ? `?${qs}` : ""}`;
-  };
+  const champHref = (name: string) =>
+    championStatsHref(name, basePath, seasonSlug, selectedDivisionSlug);
   const allChampions = useAllChampions(ddVersion);
   const untouched = useMemo(() => {
     if (allChampions.length === 0) return [];
     const touched = new Set<string>();
-    for (const c of overview.champs) touched.add(normChampKey(c.name));
-    for (const b of overview.bannedChamps) touched.add(normChampKey(b.name));
+    for (const c of overview.champs) touched.add(normalizeChampionKey(c.name));
+    for (const b of overview.bannedChamps) touched.add(normalizeChampionKey(b.name));
     return allChampions.filter(
       (c) =>
-        !touched.has(normChampKey(c.id)) && !touched.has(normChampKey(c.name))
+        !touched.has(normalizeChampionKey(c.id)) && !touched.has(normalizeChampionKey(c.name))
     );
   }, [allChampions, overview.champs, overview.bannedChamps]);
 
@@ -467,6 +462,7 @@ export function StatsDivisionTab({
                 <Link
                   key={c.name}
                   href={champHref(c.name)}
+                  prefetch={false}
                   title={`${c.name}: ${c.games} games (${c.winRate.toFixed(
                     0
                   )}% WR)`}
@@ -505,6 +501,7 @@ export function StatsDivisionTab({
                     <Link
                       key={b.name}
                       href={champHref(b.name)}
+                      prefetch={false}
                       title={`${b.name} — ${b.bans} bans (${b.banRate.toFixed(
                         0
                       )}% ban rate)`}

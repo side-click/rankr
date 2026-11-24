@@ -1,5 +1,5 @@
 {
-  "name": "scdl-rankr",
+  "name": "rankr",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "audit:visual": "node scripts/visual-audit.mjs"
+    "audit:visual": "node scripts/visual-audit.mjs",
+    "audit:perf": "node scripts/perf-audit.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -19,7 +20,6 @@
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.511.0",
     "next": "^15.3.2",
-    "nextjs-toploader": "^3.9.17",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",

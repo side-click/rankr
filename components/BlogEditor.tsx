@@ -28,6 +28,7 @@ import {
   optimizeBlogImageForUpload,
 } from "@/utils/blogMedia";
 import { formatBlockedMessage } from "@/utils/contentModeration";
+import { getLeaguePrefix as formatLeaguePrefix } from "@/utils/formatters";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BlogMarkdown } from "@/components/BlogMarkdown";
 import type { Blog, Season } from "@/types/database";
@@ -51,11 +52,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function getLeaguePrefix(season: Season | undefined): string {
-  if (!season?.leagues) return "";
-  return (
-    season.leagues.short_name ||
-    (season.leagues.slug === "scdl" ? "SCDL" : season.leagues.name)
-  );
+  return formatLeaguePrefix(season?.leagues);
 }
 
 export function BlogEditor({
@@ -163,7 +160,7 @@ export function BlogEditor({
 
     const { error: uploadErr } = await supabase.storage
       .from("blog-media")
-      .upload(path, optimized, { upsert: true });
+      .upload(path, optimized, { upsert: true, cacheControl: "31536000" });
 
     if (uploadErr) {
       setErrorMsg(`Upload failed: ${uploadErr.message}`);
@@ -262,42 +259,68 @@ export function BlogEditor({
       return;
     }
 
-    if (targetStatus === "published") {
-      setPublishing(true);
-      const modRes = await fetch("/api/moderation/check", {
+    const useServerPublish =
+      targetStatus === "published" || initialBlog?.status === "published";
+
+    if (useServerPublish) {
+      if (targetStatus === "published") {
+        setPublishing(true);
+      } else {
+        setSaving(true);
+      }
+      const res = await fetch("/api/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contentType: "blog",
-          contentId: blogId,
+          kind: "blog",
+          targetStatus,
+          existingId: blogId,
+          seasonId: seasonId || null,
+          authorName: displayAuthor,
           title: trimmedTitle,
-          markdownContent: content,
-          fields: [
-            { field: "Title", value: trimmedTitle },
-            { field: "Subtitle", value: subtitle },
-            { field: "Author Name", value: displayAuthor },
-            { field: "Blog Body", value: content },
-          ],
+          subtitle: subtitle.trim() || null,
+          bannerUrl: bannerUrl.trim() || null,
+          content,
         }),
       }).catch(() => null);
-      if (modRes?.ok) {
-        const modJson = (await modRes.json().catch(() => null)) as {
-          action?: string;
-          blockedFields?: string[];
-          message?: string;
-        } | null;
-        if (modJson?.action === "block") {
-          setErrorMsg(
-            modJson.message || formatBlockedMessage(modJson.blockedFields ?? [])
-          );
-          setPublishing(false);
-          return;
-        }
+
+      const json = (await res?.json().catch(() => null)) as {
+        id?: string;
+        message?: string;
+        error?: string;
+        blockedFields?: string[];
+      } | null;
+
+      if (!res?.ok) {
+        setErrorMsg(
+          json?.message ||
+            json?.error ||
+            (json?.blockedFields
+              ? formatBlockedMessage(json.blockedFields)
+              : "Failed to publish blog.")
+        );
+        setSaving(false);
+        setPublishing(false);
+        return;
       }
-    } else {
-      setSaving(true);
+
+      const savedId = json?.id ?? blogId;
+      if (savedId) setBlogId(savedId);
+
+      if (targetStatus === "published" && savedId) {
+        router.push(`/blog/${savedId}`);
+        router.refresh();
+        return;
+      }
+
+      setSaving(false);
+      setPublishing(false);
+      setStatusMsg("Reverted to draft.");
+      router.refresh();
+      return;
     }
 
+    setSaving(true);
     const supabase = createClient();
     const nowIso = new Date().toISOString();
     const seasonObj = seasons.find((s) => s.id === seasonId) ?? null;
@@ -314,11 +337,8 @@ export function BlogEditor({
       season_id: seasonId || null,
       season_name_snapshot: seasonNameSnapshot,
       league_name_snapshot: leagueNameSnapshot,
-      status: targetStatus,
-      published_at:
-        targetStatus === "published"
-          ? initialBlog?.published_at ?? nowIso
-          : null,
+      status: "draft" as const,
+      published_at: null,
       updated_at: nowIso,
     };
 
@@ -333,7 +353,6 @@ export function BlogEditor({
       if (error) {
         setErrorMsg(`Failed to save blog: ${error.message}`);
         setSaving(false);
-        setPublishing(false);
         return;
       }
     } else {
@@ -346,22 +365,10 @@ export function BlogEditor({
       if (error || !inserted) {
         setErrorMsg(`Failed to create blog: ${error?.message ?? "Unknown error"}`);
         setSaving(false);
-        setPublishing(false);
         return;
       }
       savedId = inserted.id;
       setBlogId(savedId);
-    }
-
-    if (targetStatus === "published" && savedId) {
-      fetch("/api/notify-publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blogId: savedId }),
-      }).catch(() => {});
-      router.push(`/blog/${savedId}`);
-      router.refresh();
-      return;
     }
 
     setSaving(false);

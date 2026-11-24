@@ -8,9 +8,10 @@ const inter = Inter({
 });
 import "./globals.css";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { Navbar } from "@/components/Navbar";
 import { AuthNoticeBanner } from "@/components/AuthNoticeBanner";
-import { createClient } from "@/utils/supabase/server";
+import { createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { RetroWindow } from "@/components/RetroWindow";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
@@ -57,14 +58,27 @@ export const metadata: Metadata = {
   },
 };
 
+const loadCachedAppSettings = unstable_cache(
+  async () => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("app_settings")
+      .select("maintenance_mode, maintenance_message, require_allowlist")
+      .eq("id", 1)
+      .maybeSingle();
+    return data ?? null;
+  },
+  ["app-settings-v1"],
+  { revalidate: 300, tags: ["app-settings"] }
+);
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const [{ data: settings }, auth] = await Promise.all([
-    supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+  const [settings, auth] = await Promise.all([
+    loadCachedAppSettings(),
     getServerAuthContext(),
   ]);
 
@@ -77,15 +91,6 @@ export default async function RootLayout({
   const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
   const shortSha = commitSha?.slice(0, 7) ?? "local";
   const buildTimeIso = process.env.NEXT_PUBLIC_BUILD_TIME;
-  const buildTimeLabel = buildTimeIso
-    ? new Date(buildTimeIso).toLocaleString("en-US", {
-        timeZone: "America/New_York",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : null;
 
   return (
     <html lang="en" className={inter.variable}>
@@ -106,7 +111,6 @@ export default async function RootLayout({
           requireAllowlist={requireAllowlist}
           isAdmin={isAdmin}
           isOperator={auth.isOperator}
-          hasMatchHubAccess={auth.hasMatchHubAccess}
           user={
             authUser
               ? {

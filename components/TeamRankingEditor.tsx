@@ -726,6 +726,67 @@ export function TeamRankingEditor({
     try {
       const now = new Date().toISOString();
       const resolvedAuthor = authorName.trim() || discordDefaultName;
+
+      if (targetStatus === "published" || ballotStatus === "published") {
+        const res = await fetch("/api/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "team_ranking",
+            targetStatus,
+            existingId: existingBallotId,
+            seasonId,
+            divisionId,
+            editionId,
+            authorName: resolvedAuthor,
+            authorNotes,
+            entries: rankedItems.map((item) => ({
+              teamId: item.team.id,
+              previousRank: item.previousRank,
+              commentary: item.commentary,
+            })),
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as {
+          id?: string;
+          status?: string;
+          message?: string;
+          error?: string;
+          blockedFields?: string[];
+        } | null;
+
+        if (!res.ok || !json?.id) {
+          throw new Error(
+            json?.message ||
+              json?.error ||
+              (json?.blockedFields
+                ? formatBlockedMessage(json.blockedFields)
+                : "Failed to save ranking.")
+          );
+        }
+
+        if (resolvedAuthor !== savedAuthorName) {
+          setAuthorName(resolvedAuthor);
+          setSavedAuthorName(resolvedAuthor);
+        }
+        setExistingBallotId(json.id);
+        setBallotStatus((json.status as "draft" | "published") ?? targetStatus);
+        loadedSnapshotRef.current = JSON.stringify({
+          order: rankedItems.map((i) => i.team.id),
+          comments: rankedItems.map((i) => i.commentary),
+          authorNotes,
+        });
+        setMessage({
+          type: "success",
+          text:
+            targetStatus === "published"
+              ? "Ranking published!"
+              : "Reverted to draft.",
+        });
+        router.refresh();
+        return;
+      }
+
       if (resolvedAuthor !== savedAuthorName) {
         const { error: profileErr } = await supabase
           .from("profiles")
@@ -742,44 +803,6 @@ export function TeamRankingEditor({
         currentEdition?.name ?? "Edition"
       }`;
 
-      if (targetStatus === "published") {
-        const modRes = await fetch("/api/moderation/check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contentType: "ranking",
-            contentId: existingBallotId,
-            title: defaultTitle,
-            fields: [
-              { field: "Author Name", value: resolvedAuthor },
-              { field: "Title", value: defaultTitle },
-              { field: "General Notes", value: authorNotes },
-              ...rankedItems.map((item) => ({
-                field: `${item.team.name} Commentary`,
-                value: item.commentary,
-              })),
-            ],
-          }),
-        }).catch(() => null);
-        if (modRes?.ok) {
-          const modJson = (await modRes.json().catch(() => null)) as {
-            action?: string;
-            blockedFields?: string[];
-            message?: string;
-          } | null;
-          if (modJson?.action === "block") {
-            setMessage({
-              type: "error",
-              text:
-                modJson.message ||
-                formatBlockedMessage(modJson.blockedFields ?? []),
-            });
-            setSaving(false);
-            return;
-          }
-        }
-      }
-
       const currentLeague = Array.isArray(currentSeason?.leagues)
         ? currentSeason?.leagues[0]
         : currentSeason?.leagues;
@@ -792,8 +815,8 @@ export function TeamRankingEditor({
         ranking_type: "team" as const,
         title: defaultTitle,
         author_notes: authorNotes.trim(),
-        status: targetStatus,
-        published_at: targetStatus === "published" ? now : null,
+        status: "draft" as const,
+        published_at: null,
         league_name_snapshot: currentLeague?.name ?? null,
         season_name_snapshot: currentSeason?.name ?? null,
         division_name_snapshot: currentDivision?.name ?? null,
@@ -879,22 +902,12 @@ export function TeamRankingEditor({
         comments: rankedItems.map((i) => i.commentary),
         authorNotes,
       });
-      if (targetStatus === "published") {
-        fetch("/api/notify-publish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ballotId: savedBallot.id }),
-        }).catch(() => {});
-      }
       setMessage({
         type: "success",
-        text:
-          targetStatus === "published"
-            ? "Ranking published!"
-            : `Draft saved at ${new Date().toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}.`,
+        text: `Draft saved at ${new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}.`,
       });
       router.refresh();
     } catch (err) {

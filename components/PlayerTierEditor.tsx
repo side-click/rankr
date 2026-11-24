@@ -58,6 +58,7 @@ import {
   type LeagueRole,
 } from "@/utils/roles";
 import { resolveDivisionTheme } from "@/utils/themes";
+import { getTierContrastText } from "@/utils/formatters";
 import {
   createEmptyTierRow,
   createInitialTierPayload,
@@ -88,17 +89,6 @@ interface DragPlayerMeta {
   sectionRole: LeagueRole | "all";
   source: "pool" | string; // "pool" or tier.id
   player: PlayerTierItem;
-}
-
-function getTierContrastText(hex: string): string {
-  const clean = hex.replace("#", "").trim();
-  if (clean.length !== 6) return "#ffffff";
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some(Number.isNaN)) return "#ffffff";
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.65 ? "#111318" : "#ffffff";
 }
 
 function PlayerTileVisual({
@@ -1586,6 +1576,58 @@ export function PlayerTierEditor({
       const now = new Date().toISOString();
       const resolvedAuthor = authorName.trim() || discordDefaultName;
 
+      if (targetStatus === "published" || ballotStatus === "published") {
+        const res = await fetch("/api/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "player_tier",
+            targetStatus,
+            existingId: existingBallotId,
+            seasonId,
+            divisionScope,
+            editionId,
+            tierVariant: activeTierVariant,
+            tierData: tierPayload,
+            authorName: resolvedAuthor,
+            authorNotes,
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as {
+          id?: string;
+          status?: string;
+          message?: string;
+          error?: string;
+          blockedFields?: string[];
+        } | null;
+
+        if (!res.ok || !json?.id) {
+          throw new Error(
+            json?.message ||
+              json?.error ||
+              (json?.blockedFields
+                ? formatBlockedMessage(json.blockedFields)
+                : "Failed to save tier list.")
+          );
+        }
+
+        if (resolvedAuthor !== savedAuthorName) {
+          setAuthorName(resolvedAuthor);
+          setSavedAuthorName(resolvedAuthor);
+        }
+        setExistingBallotId(json.id);
+        setBallotStatus((json.status as "draft" | "published") ?? targetStatus);
+        setMessage({
+          type: "success",
+          text:
+            targetStatus === "published"
+              ? "Player Tier List published!"
+              : "Reverted to draft.",
+        });
+        router.refresh();
+        return;
+      }
+
       if (resolvedAuthor !== savedAuthorName) {
         const { error: profileErr } = await supabase
           .from("profiles")
@@ -1614,52 +1656,6 @@ export function PlayerTierEditor({
         currentEdition?.name ?? "Edition"
       }`;
 
-      if (targetStatus === "published") {
-        const modRes = await fetch("/api/moderation/check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contentType: "tierlist",
-            contentId: existingBallotId,
-            title: defaultTitle,
-            fields: [
-              { field: "Author Name", value: resolvedAuthor },
-              { field: "Title", value: defaultTitle },
-              { field: "General Notes", value: authorNotes },
-              ...(tierPayload?.sections ?? []).flatMap((sec) =>
-                sec.tiers.flatMap((t) => [
-                  {
-                    field: `Tier "${t.label || "Untitled"}" Name`,
-                    value: t.label,
-                  },
-                  {
-                    field: `Tier "${t.label || "Untitled"}" Notes`,
-                    value: t.commentary,
-                  },
-                ])
-              ),
-            ],
-          }),
-        }).catch(() => null);
-        if (modRes?.ok) {
-          const modJson = (await modRes.json().catch(() => null)) as {
-            action?: string;
-            blockedFields?: string[];
-            message?: string;
-          } | null;
-          if (modJson?.action === "block") {
-            setMessage({
-              type: "error",
-              text:
-                modJson.message ||
-                formatBlockedMessage(modJson.blockedFields ?? []),
-            });
-            setSaving(false);
-            return;
-          }
-        }
-      }
-
       const payload = {
         user_id: userId,
         season_id: seasonId,
@@ -1670,8 +1666,8 @@ export function PlayerTierEditor({
         tier_data: tierPayload,
         title: defaultTitle,
         author_notes: authorNotes.trim(),
-        status: targetStatus,
-        published_at: targetStatus === "published" ? now : null,
+        status: "draft" as const,
+        published_at: null,
         league_name_snapshot: currentLeague?.name ?? null,
         season_name_snapshot: currentSeason?.name ?? null,
         division_name_snapshot:
@@ -1727,41 +1723,12 @@ export function PlayerTierEditor({
       setExistingBallotId(savedBallot.id);
       setBallotStatus(savedBallot.status as "draft" | "published");
 
-      if (targetStatus === "published") {
-        // Keep only one published player tier list per user/season/division/edition;
-        // revert any other published variant for this scope back to a saved draft.
-        let unpubQuery = supabase
-          .from("rankings")
-          .update({ status: "draft", published_at: null })
-          .eq("user_id", userId)
-          .eq("season_id", seasonId)
-          .eq("edition_id", editionId)
-          .eq("ranking_type", "player")
-          .eq("status", "published")
-          .neq("id", savedBallot.id);
-        if (dbDivisionId) {
-          unpubQuery = unpubQuery.eq("division_id", dbDivisionId);
-        } else {
-          unpubQuery = unpubQuery.is("division_id", null);
-        }
-        await unpubQuery;
-
-        fetch("/api/notify-publish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ballotId: savedBallot.id }),
-        }).catch(() => {});
-      }
-
       setMessage({
         type: "success",
-        text:
-          targetStatus === "published"
-            ? "Player Tier List published!"
-            : `Draft saved at ${new Date().toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}.`,
+        text: `Draft saved at ${new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}.`,
       });
       router.refresh();
     } catch (err) {

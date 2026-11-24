@@ -1,12 +1,18 @@
-import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
-import { getServerAuthContext } from "@/utils/supabase/serverAuth";
-import { loadAdminStatsContext } from "@/utils/riotStatsServer";
+import { NextResponse } from "next/server";
 import { importMissingDraftsForSeason } from "@/utils/draftImporter";
+import { loadAdminStatsContext } from "@/utils/riotStatsServer";
+import { createClient } from "@/utils/supabase/server";
+import {
+  assertSeasonOperatorAccess,
+  getServerAuthContext,
+} from "@/utils/supabase/serverAuth";
 
-export async function POST() {
-  const auth = await getServerAuthContext();
+export async function POST(req: Request) {
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
   if (!auth.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -15,10 +21,32 @@ export async function POST() {
   }
 
   try {
-    const [ctx, supabase] = await Promise.all([
-      loadAdminStatsContext({ includeRiotStats: false }),
-      createClient(),
-    ]);
+    const body = (await req.json().catch(() => null)) as {
+      seasonId?: string;
+    } | null;
+    const requestedSeasonId = body?.seasonId?.trim() || null;
+    let seasonSlug: string | undefined;
+
+    if (requestedSeasonId) {
+      const scope = await assertSeasonOperatorAccess(
+        auth,
+        supabase,
+        requestedSeasonId
+      );
+      if (!scope.ok) {
+        return NextResponse.json({ error: scope.error }, { status: scope.status });
+      }
+      seasonSlug = scope.season.slug;
+    }
+
+    const ctx = await loadAdminStatsContext({
+      includeRiotStats: false,
+      seasonSlug,
+    });
+    if (!ctx.authorized) {
+      return NextResponse.json({ error: "Forbidden for this league." }, { status: 403 });
+    }
+
     const summary = await importMissingDraftsForSeason(
       ctx.sheetConfig,
       supabase

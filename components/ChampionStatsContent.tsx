@@ -16,9 +16,17 @@ import { getChampionIconUrl } from "@/utils/riotApi";
 import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { resolveDivisionTheme } from "@/utils/themes";
+import { formatSigned as formatSignedBase } from "@/utils/formatters";
 import { computeChampionStats } from "@/utils/championStats";
+import {
+  championStatsHref,
+  matchStatsHref,
+  playerStatsHref,
+  statsHref,
+  teamStatsHref,
+} from "@/utils/statsLinks";
 import type { LoadedStatsContext } from "@/utils/riotStatsServer";
-import type { ScdlSeriesDetail } from "@/utils/scdlSheetStats";
+import type { ScdlSeriesDetail } from "@/utils/leagueStats";
 
 interface ChampionStatsContentProps {
   ctx: LoadedStatsContext;
@@ -37,8 +45,7 @@ type PlayerSortKey =
   | "csPerMin";
 
 function formatSigned(val: number): string {
-  const rounded = Math.round(val);
-  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+  return formatSignedBase(val, { round: true });
 }
 
 export function ChampionStatsContent({
@@ -122,16 +129,18 @@ export function ChampionStatsContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          href={`${basePath}?division=${encodeURIComponent(
-            selectedDiv ? selectedDiv.id : "all"
-          )}&tab=division`}
+          href={statsHref(basePath, ctx.seasonSlug, {
+            division: selectedDiv ? selectedDiv.id : "all",
+            tab: "division",
+          })}
+          prefetch={false}
           className="xp-btn text-xs inline-flex items-center gap-1.5"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Stats Dashboard
         </Link>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => selectDivision("all")}
@@ -154,6 +163,8 @@ export function ChampionStatsContent({
                 <img
                   src={div.logo_url}
                   alt={div.name}
+                  width={16}
+                  height={16}
                   className="w-4 h-4 object-contain shrink-0"
                 />
               )}
@@ -174,13 +185,15 @@ export function ChampionStatsContent({
         }
         customTheme={selectedDiv ? divTheme : undefined}
       >
-        <div className="p-4 space-y-6">
+        <div className="space-y-6">
           {/* Header (matches PlayerStatsContent & TeamScoutingView) */}
           <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
             <div className="flex items-center gap-4">
               <img
                 src={getChampionIconUrl(championName, ctx.ddVersion)}
                 alt={championName}
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-lg border border-white/20 object-cover shrink-0"
               />
               <div>
@@ -381,9 +394,10 @@ export function ChampionStatsContent({
                         key={t.teamId || t.teamName}
                         href={
                           t.teamId
-                            ? `/stats/team/${encodeURIComponent(t.teamId)}`
-                            : basePath
+                            ? teamStatsHref(t.teamId, basePath, ctx.seasonSlug)
+                            : statsHref(basePath, ctx.seasonSlug)
                         }
+                        prefetch={false}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/40 border border-white/10 hover:border-[#f0c020]/60 text-xs transition"
                       >
                         {t.logoUrl && (
@@ -509,9 +523,12 @@ export function ChampionStatsContent({
                         <td className="px-2 sm:px-3 py-2 font-bold">
                           <div className="flex items-center gap-1.5">
                             <Link
-                              href={`${basePath}/player/${encodeURIComponent(
-                                p.playerKey
-                              )}`}
+                              href={playerStatsHref(
+                                p.playerKey,
+                                basePath,
+                                ctx.seasonSlug
+                              )}
+                              prefetch={false}
                               className="text-[#f7f5eb] hover:text-[#f0c020] transition-colors truncate max-w-[115px] sm:max-w-none"
                             >
                               {p.playerName}
@@ -530,9 +547,12 @@ export function ChampionStatsContent({
                         <td className="px-2 sm:px-3 py-2 text-[#a6a89e]">
                           {p.teamId ? (
                             <Link
-                              href={`${basePath}/team/${encodeURIComponent(
-                                p.teamId
-                              )}`}
+                              href={teamStatsHref(
+                                p.teamId,
+                                basePath,
+                                ctx.seasonSlug
+                              )}
+                              prefetch={false}
                               className="inline-flex items-center gap-1.5 hover:text-[#f0c020]"
                             >
                               {p.logoUrl && (
@@ -606,9 +626,8 @@ export function ChampionStatsContent({
                   return (
                     <Link
                       key={`${g.gameId}-${g.playerKey}-${idx}`}
-                      href={`${basePath}/match/${encodeURIComponent(
-                        g.seriesKey
-                      )}`}
+                      href={matchStatsHref(g.seriesKey, basePath, ctx.seasonSlug)}
+                      prefetch={false}
                       className="py-3 px-2.5 flex flex-wrap items-center justify-between gap-3 hover:bg-white/5 transition rounded text-sm"
                     >
                       <div className="flex items-center gap-3 min-w-[240px]">

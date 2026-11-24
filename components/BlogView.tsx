@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, Edit3, FileText, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { cleanupBlogMedia } from "@/utils/blogMedia";
+import { unwrap } from "@/utils/formatters";
 import { RetroWindow } from "@/components/RetroWindow";
 import { BlogMarkdown } from "@/components/BlogMarkdown";
 import type { Blog } from "@/types/database";
@@ -14,11 +15,6 @@ interface BlogViewProps {
   blog: Blog;
   isOwner: boolean;
   isAdmin?: boolean;
-}
-
-function unwrap<T>(val: T | T[] | null | undefined): T | null {
-  if (!val) return null;
-  return Array.isArray(val) ? val[0] ?? null : val;
 }
 
 export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
@@ -190,7 +186,7 @@ export function BlogView({ blog, isOwner, isAdmin = false }: BlogViewProps) {
             </h1>
 
             {blog.subtitle && (
-              <p className="text-base sm:text-lg text-[#c7c5b8] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
+              <p className="text-base sm:text-lg text-[#c7c5b8] leading-snug break-words [overflow-wrap:anywhere]">
                 {blog.subtitle}
               </p>
             )}

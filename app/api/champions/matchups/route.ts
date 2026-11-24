@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getChampionCatalog } from "@/utils/championData";
 import { getChampionMatchups } from "@/utils/lolalyticsMatchups";
 import type { LeagueRole } from "@/utils/roles";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 const VALID_ROLES = new Set<LeagueRole>([
   "top",
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
   const championId = searchParams.get("championId")?.trim() ?? "";
   const role = (searchParams.get("role")?.trim() ?? "") as LeagueRole;
 
-  if (!championId || !VALID_ROLES.has(role)) {
+  if (!championId || !/^[A-Za-z]{2,32}$/.test(championId) || !VALID_ROLES.has(role)) {
     return NextResponse.json(
       { error: "Missing or invalid championId or role" },
       { status: 400 }
@@ -25,10 +26,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getChampionMatchups(championId, role);
+    const catalog = await getChampionCatalog();
+    const matched = catalog.champions.find(
+      (c) => c.id.toLowerCase() === championId.toLowerCase()
+    );
+    if (!matched) {
+      return NextResponse.json(
+        { error: "Unknown championId" },
+        { status: 400 }
+      );
+    }
+
+    const data = await getChampionMatchups(matched.id, role);
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
       },
     });
   } catch (err) {

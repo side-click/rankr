@@ -16,7 +16,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { toPng } from "html-to-image";
+import { exportElementToPng } from "@/utils/exportImage";
 import {
   ArrowDown,
   ArrowUp,
@@ -61,6 +61,7 @@ import {
   storePassphrase,
 } from "@/utils/cryptoPool";
 import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
+import { getTierContrastText } from "@/utils/formatters";
 import {
   DEFAULT_TIER_COLORS,
   TIER_PRESETS,
@@ -108,17 +109,6 @@ function createRoleSection(
       champions: [],
     })),
   };
-}
-
-function getTierContrastText(hex: string): string {
-  const clean = hex.replace("#", "").trim();
-  if (clean.length !== 6) return "#ffffff";
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some(Number.isNaN)) return "#ffffff";
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.65 ? "#111318" : "#ffffff";
 }
 
 function ChampionTileVisual({
@@ -1505,7 +1495,7 @@ export function ChampionPoolEditor({
     if (!exportCardRef.current) return;
     setExportingPng(true);
     try {
-      const dataUrl = await toPng(exportCardRef.current, {
+      const dataUrl = await exportElementToPng(exportCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
       });

@@ -1,11 +1,10 @@
-import React from "react";
-import { createClient } from "@/utils/supabase/server";
-import { RetroWindow } from "@/components/RetroWindow";
-import { AdminUsersLog } from "@/components/AdminUsersLog";
-import type { AllowedDiscordUser, Profile } from "@/types/database";
-import { ShieldAlert } from "lucide-react";
-
 import type { Metadata } from "next";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
+import { AdminUsersLog } from "@/components/AdminUsersLog";
+import { RetroWindow } from "@/components/RetroWindow";
+import type { AllowedDiscordUser, Profile } from "@/types/database";
+import { createClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 
 export const metadata: Metadata = {
   title: "Admin Users | Rankr",
@@ -14,35 +13,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [auth, supabase] = await Promise.all([
+    getServerAuthContext(),
+    createClient(),
+  ]);
 
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-    isAdmin = Boolean(profile?.is_admin);
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <RetroWindow title="Admin Console — Access Denied" theme="xp">
-        <div className="py-8 px-4 text-center space-y-3">
-          <ShieldAlert className="w-10 h-10 mx-auto text-[#ff857a]" />
-          <h1 className="text-base font-bold text-[#f0ede0]">
-            Admin Access Required
-          </h1>
-          <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
-            You do not have permission to access this page.
-          </p>
-        </div>
-      </RetroWindow>
-    );
+  if (!auth.user || !auth.isAdmin) {
+    return <AdminAccessDenied />;
   }
 
   const [{ data: profiles }, { data: allowedUsers }] = await Promise.all([
@@ -59,7 +36,7 @@ export default async function AdminUsersPage() {
   return (
     <RetroWindow title="Admin Console — Discord Users Log" theme="xp">
       <AdminUsersLog
-        currentUserId={user.id}
+        currentUserId={auth.user.id}
         initialProfiles={(profiles ?? []) as Profile[]}
         initialAllowedUsers={(allowedUsers ?? []) as AllowedDiscordUser[]}
       />

@@ -4,12 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { ChevronRight, Flame, Trophy } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import { teamStatsHref } from "@/utils/statsLinks";
 import { resolveDivisionTheme } from "@/utils/themes";
 import type {
   AggregatedTeamStats,
   StatsStageBucket,
 } from "@/utils/riotStatsAggregation";
-import type { PlayoffSeriesMatchup } from "@/utils/scdlSheetStats";
+import type { PlayoffSeriesMatchup } from "@/utils/leagueStats";
 import type {
   DivisionPlayoffBracket,
   DivisionTheme,
@@ -417,6 +418,7 @@ export function StatsTeamsTab({
                               {clickableSeries && card.seriesKey ? (
                                 <Link
                                   href={seriesHref(card.seriesKey)}
+                                  prefetch={false}
                                   className="text-[#c89b3c] hover:text-[#f0c020] hover:underline transition shrink-0"
                                 >
                                   Draft &amp; Box Score &rarr;
@@ -626,7 +628,7 @@ export function StatsTeamsTab({
                     type="button"
                     onClick={() =>
                       onNavigateTeam(
-                        `${basePath}/team/${encodeURIComponent(t.teamId)}`
+                        teamStatsHref(t.teamId, basePath, seasonSlug)
                       )
                     }
                     className="group w-full text-left rounded-lg border border-white/15 bg-black/40 hover:!bg-[#f0c020]/10 hover:!border-[#f0c020]/80 hover:shadow-[0_0_18px_rgba(240,192,32,0.18)] transition-all duration-150 px-2.5 py-2.5 sm:px-8 sm:py-6 flex items-center justify-between gap-2 sm:gap-6 cursor-pointer"

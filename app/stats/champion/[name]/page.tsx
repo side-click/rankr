@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ChampionStatsContent } from "@/components/ChampionStatsContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
-import { fetchAllScdlSeries } from "@/utils/scdlSheetStats";
+import { fetchAllScdlSeries } from "@/utils/leagueStats";
+import { safeDecodeParam } from "@/utils/ogFonts";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export async function generateMetadata({
     params,
     searchParams,
   ]);
-  const championName = decodeURIComponent(name);
+  const championName = safeDecodeParam(name) ?? name;
   const encodedName = encodeURIComponent(championName);
   const title = `${championName} Stats | Rankr`;
 
@@ -58,7 +59,7 @@ export default async function PublicChampionStatsPage({
     params,
     searchParams,
   ]);
-  const championName = decodeURIComponent(name);
+  const championName = safeDecodeParam(name) ?? name;
   const effectiveSeason = await getFocusedSeasonSlug(season);
   const ctx = await loadPublicStatsContext(effectiveSeason, {
     includeRiotStats: false,

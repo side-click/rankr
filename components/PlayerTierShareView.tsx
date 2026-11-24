@@ -3,7 +3,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { toPng } from "html-to-image";
+import { exportElementToPng } from "@/utils/exportImage";
 import {
   Check,
   Copy,
@@ -11,16 +11,18 @@ import {
   Edit3,
   Eye,
   EyeOff,
-  ImagePlus,
-  Save,
   Trash2,
-  X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { cleanupRankingOverlays } from "@/utils/blogMedia";
+import { useOverlayEditor } from "@/hooks/useOverlayEditor";
+import {
+  OverlayCanvasLayer,
+  OverlayEditorBanner,
+  OverlayTriggerButton,
+} from "@/components/RankingOverlayControls";
 import type {
   Ranking,
-  RankingOverlay,
   DivisionTheme,
   PlayerTierListPayload,
 } from "@/types/database";
@@ -107,16 +109,7 @@ const SCDL_GREEN_THEME: DivisionTheme = {
   default_logo_url: null,
 };
 
-function getTierContrastText(hex: string): string {
-  const clean = hex.replace("#", "").trim();
-  if (clean.length !== 6) return "#ffffff";
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some(Number.isNaN)) return "#ffffff";
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.65 ? "#111318" : "#ffffff";
-}
+import { getTierContrastText } from "@/utils/formatters";
 
 type PillSize = "lg" | "md" | "sm";
 
@@ -320,17 +313,6 @@ export function PlayerTierShareView({
     }
   }, [roleFilter, pathname, searchParams]);
 
-  const initialOverlays: RankingOverlay[] = Array.isArray(ballot.overlays)
-    ? ballot.overlays
-    : [];
-  const [overlays, setOverlays] = useState<RankingOverlay[]>(initialOverlays);
-  const [savedOverlays, setSavedOverlays] =
-    useState<RankingOverlay[]>(initialOverlays);
-  const [editingOverlays, setEditingOverlays] = useState(false);
-  const [uploadingOverlay, setUploadingOverlay] = useState(false);
-  const [savingOverlays, setSavingOverlays] = useState(false);
-  const [overlayError, setOverlayError] = useState<string | null>(null);
-
   const profile = Array.isArray(ballot.profiles)
     ? ballot.profiles[0]
     : ballot.profiles;
@@ -343,6 +325,32 @@ export function PlayerTierShareView({
   const edition = Array.isArray(ballot.editions)
     ? ballot.editions[0]
     : ballot.editions;
+
+  const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
+  const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
+
+  const {
+    overlays,
+    editingOverlays,
+    uploadingOverlay,
+    savingOverlays,
+    overlayError,
+    setOverlayError,
+    openOverlayEditor,
+    cancelEditingOverlays,
+    removeOverlay,
+    clearOverlays,
+    handleUploadOverlay,
+    handleSaveOverlays,
+    startDragOverlay,
+    startResizeOverlay,
+  } = useOverlayEditor({
+    rankingId: ballot.id,
+    userId: ballot.user_id,
+    canEditOverlays,
+    initialOverlays: ballot.overlays,
+    cardRef,
+  });
 
   const seasonLeague = (
     season as {
@@ -473,12 +481,12 @@ export function PlayerTierShareView({
       };
       let dataUrl: string;
       try {
-        dataUrl = await toPng(cardRef.current, {
+        dataUrl = await exportElementToPng(cardRef.current, {
           ...exportOpts,
           cacheBust: true,
         });
       } catch {
-        dataUrl = await toPng(cardRef.current, {
+        dataUrl = await exportElementToPng(cardRef.current, {
           ...exportOpts,
           cacheBust: false,
           skipFonts: true,
@@ -538,159 +546,6 @@ export function PlayerTierShareView({
     router.refresh();
   }
 
-  async function handleUploadOverlay(file: File) {
-    setOverlayError(null);
-    if (!file.type.startsWith("image/")) {
-      setOverlayError("Only image or GIF files are supported.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setOverlayError("File size must be 5 MB or smaller.");
-      return;
-    }
-
-    setUploadingOverlay(true);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-    const path = `${ballot.user_id}/${ballot.id}-${Date.now()}.${ext}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("ranking-overlays")
-      .upload(path, file, { upsert: true });
-
-    if (uploadErr) {
-      setOverlayError(`Upload failed: ${uploadErr.message}`);
-      setUploadingOverlay(false);
-      return;
-    }
-
-    const { data: pub } = supabase.storage
-      .from("ranking-overlays")
-      .getPublicUrl(path);
-
-    const newItem: RankingOverlay = {
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      url: pub.publicUrl,
-      x: 38,
-      y: 25,
-      width: 18,
-    };
-    setOverlays((prev) => [...prev, newItem]);
-    setEditingOverlays(true);
-    setUploadingOverlay(false);
-  }
-
-  async function handleSaveOverlays() {
-    setOverlayError(null);
-    setSavingOverlays(true);
-    const supabase = createClient();
-    await cleanupRankingOverlays(supabase, ballot.overlays);
-    const { error } = await supabase
-      .from("rankings")
-      .update({
-        overlays,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", ballot.id);
-
-    if (error) {
-      setOverlayError(`Failed to save overlays: ${error.message}`);
-      setSavingOverlays(false);
-      return;
-    }
-
-    if (overlays.length > 0 && isOwner) {
-      fetch("/api/notify-publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ballotId: ballot.id }),
-      }).catch(() => {});
-    }
-
-    setSavedOverlays(overlays);
-    setEditingOverlays(false);
-    setSavingOverlays(false);
-    router.refresh();
-  }
-
-  function startDragOverlay(
-    e: React.PointerEvent<HTMLDivElement>,
-    overlayId: string
-  ) {
-    if (!editingOverlays || !cardRef.current) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const rect = cardRef.current.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const current = overlays.find((o) => o.id === overlayId);
-    if (!current) return;
-    const originX = current.x;
-    const originY = current.y;
-
-    function onMove(ev: PointerEvent) {
-      const dxPct = ((ev.clientX - startX) / rect.width) * 100;
-      const dyPct = ((ev.clientY - startY) / rect.height) * 100;
-      const nextX = Math.min(95, Math.max(-5, originX + dxPct));
-      const nextY = Math.min(95, Math.max(-5, originY + dyPct));
-      setOverlays((prev) =>
-        prev.map((o) =>
-          o.id === overlayId
-            ? { ...o, x: Number(nextX.toFixed(2)), y: Number(nextY.toFixed(2)) }
-            : o
-        )
-      );
-    }
-
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    }
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }
-
-  function startResizeOverlay(
-    e: React.PointerEvent<HTMLButtonElement>,
-    overlayId: string
-  ) {
-    if (!editingOverlays || !cardRef.current) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const rect = cardRef.current.getBoundingClientRect();
-    const startX = e.clientX;
-    const current = overlays.find((o) => o.id === overlayId);
-    if (!current) return;
-    const originWidth = current.width;
-
-    function onMove(ev: PointerEvent) {
-      const dwPct = ((ev.clientX - startX) / rect.width) * 100;
-      const nextW = Math.min(80, Math.max(5, originWidth + dwPct));
-      setOverlays((prev) =>
-        prev.map((o) =>
-          o.id === overlayId ? { ...o, width: Number(nextW.toFixed(2)) } : o
-        )
-      );
-    }
-
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    }
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }
-
-  const isEditionEditable = Boolean(edition?.is_open && !edition?.is_archived);
-  const canEditOverlays = (isOwner && isEditionEditable) || isAdmin;
-
   const editParams = new URLSearchParams();
   editParams.set("type", "player");
   if (season?.slug) editParams.set("season", season.slug);
@@ -745,42 +600,17 @@ export function PlayerTierShareView({
                 </button>
               )}
               {canEditOverlays && !editingOverlays && (
-                overlays.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOverlayError(null);
-                      setEditingOverlays(true);
-                    }}
-                    className="xp-btn text-xs"
-                  >
-                    <ImagePlus className="w-3.5 h-3.5" />
-                    <span>Edit Overlays</span>
-                  </button>
-                ) : (
-                  <label className="xp-btn text-xs cursor-pointer">
-                    <ImagePlus className="w-3.5 h-3.5" />
-                    <span>
-                      {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                      disabled={uploadingOverlay}
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleUploadOverlay(f);
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                )
+                <OverlayTriggerButton
+                  overlayCount={overlays.length}
+                  uploadingOverlay={uploadingOverlay}
+                  onOpenEditor={openOverlayEditor}
+                  onUploadFile={handleUploadOverlay}
+                />
               )}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {isOwner && isEditionEditable && (
-                <Link href={`/create?${editParams.toString()}`} className="xp-btn text-xs">
+                <Link href={`/create?${editParams.toString()}`} prefetch={false} className="xp-btn text-xs">
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Edit Tier List</span>
                 </Link>
@@ -863,77 +693,17 @@ export function PlayerTierShareView({
           </div>
         )}
 
-        {overlayError && !editingOverlays && (
-          <div className="mb-4 xp-panel p-2.5 text-xs text-[#ff857a] font-bold border border-[#9e3535]">
-            {overlayError}
-          </div>
-        )}
-
-        {editingOverlays && (
-          <div className="mb-4 xp-panel p-3 flex flex-wrap items-center justify-between gap-2 border border-[#c89b3c]/50">
-            <div className="text-xs text-[#e8e6b8]">
-              <span className="font-bold text-[#f0c020]">Overlay Mode:</span>{" "}
-              Upload PNG/JPG/WebP/GIF (max 5 MB), drag to position, and use the
-              bottom-right corner to resize.
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="xp-btn text-xs cursor-pointer">
-                <ImagePlus className="w-3.5 h-3.5" />
-                <span>
-                  {uploadingOverlay ? "Uploading..." : "Add Image / GIF"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  disabled={uploadingOverlay}
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUploadOverlay(f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              {overlays.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setOverlays([])}
-                  className="xp-btn xp-btn-danger text-xs"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Clear All</span>
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={savingOverlays}
-                onClick={() => {
-                  setOverlays(savedOverlays);
-                  setEditingOverlays(false);
-                  setOverlayError(null);
-                }}
-                className="xp-btn text-xs"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Cancel</span>
-              </button>
-              <button
-                type="button"
-                disabled={savingOverlays}
-                onClick={handleSaveOverlays}
-                className="xp-btn xp-btn-primary text-xs"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{savingOverlays ? "Saving..." : "Save Overlays"}</span>
-              </button>
-            </div>
-            {overlayError && (
-              <div className="w-full text-xs text-[#ff857a] font-bold">
-                {overlayError}
-              </div>
-            )}
-          </div>
-        )}
+        <OverlayEditorBanner
+          editingOverlays={editingOverlays}
+          overlayCount={overlays.length}
+          uploadingOverlay={uploadingOverlay}
+          savingOverlays={savingOverlays}
+          overlayError={overlayError}
+          onUploadFile={handleUploadOverlay}
+          onClearAll={clearOverlays}
+          onCancel={cancelEditingOverlays}
+          onSave={handleSaveOverlays}
+        />
 
         <ScaledGraphicFrame designWidth={cardWidth}>
           <div
@@ -982,7 +752,33 @@ export function PlayerTierShareView({
                     {leagueName} ({seasonName})
                   </div>
                   <h1 className="wow-heading text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-                    {editionName}
+                    {season?.slug && division?.slug && edition?.slug ? (
+                      <Link
+                        href={`/consensus?season=${encodeURIComponent(
+                          season.slug
+                        )}&division=${encodeURIComponent(
+                          division.slug
+                        )}&edition=${encodeURIComponent(edition.slug)}`}
+                        prefetch={false}
+                        className="hover:text-[#f0c020] transition-colors"
+                        title="View consensus rankings for this edition"
+                      >
+                        {editionName}
+                      </Link>
+                    ) : season?.slug ? (
+                      <Link
+                        href={`/browse?season=${encodeURIComponent(
+                          season.slug
+                        )}&type=player`}
+                        prefetch={false}
+                        className="hover:text-[#f0c020] transition-colors"
+                        title="Browse player tier lists for this season"
+                      >
+                        {editionName}
+                      </Link>
+                    ) : (
+                      editionName
+                    )}
                   </h1>
                   <div className="text-sm font-bold text-white/90 leading-snug">
                     {divisionName
@@ -1000,6 +796,7 @@ export function PlayerTierShareView({
               {profile?.username ? (
                 <Link
                   href={`/browse?author=${encodeURIComponent(profile.username)}`}
+                  prefetch={false}
                   title={`View all published rankings by ${profile.username}`}
                   className="flex items-center gap-2.5 bg-black/45 hover:bg-black/65 px-3.5 py-2 rounded-lg border border-white/20 hover:border-[#f0c020]/70 transition-colors shrink-0"
                 >
@@ -1209,58 +1006,13 @@ export function PlayerTierShareView({
               })}
             </div>
 
-            {/* Saved Overlays */}
-            {overlays.length > 0 && (
-              <div className="absolute inset-0 z-20 pointer-events-none select-none">
-                {overlays.map((ov) => (
-                  <div
-                    key={ov.id}
-                    onPointerDown={(e) => startDragOverlay(e, ov.id)}
-                    style={{
-                      left: `${ov.x}%`,
-                      top: `${ov.y}%`,
-                      width: `${ov.width}%`,
-                    }}
-                    className={`absolute ${
-                      editingOverlays
-                        ? "pointer-events-auto cursor-grab active:cursor-grabbing ring-2 ring-[#f0c020] bg-black/15 rounded-sm"
-                        : "pointer-events-none"
-                    }`}
-                  >
-                    <img
-                      src={ov.url}
-                      alt="Overlay"
-                      crossOrigin="anonymous"
-                      draggable={false}
-                      className="w-full h-auto block"
-                    />
-                    {editingOverlays && (
-                      <>
-                        <button
-                          type="button"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={() =>
-                            setOverlays((prev) =>
-                              prev.filter((item) => item.id !== ov.id)
-                            )
-                          }
-                          className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-[#b82525] hover:bg-[#d93636] text-white border border-white/60 flex items-center justify-center shadow cursor-pointer"
-                          title="Remove overlay"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onPointerDown={(e) => startResizeOverlay(e, ov.id)}
-                          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-xs bg-[#f0c020] border border-black/70 cursor-nwse-resize shadow"
-                          title="Drag to resize"
-                        />
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <OverlayCanvasLayer
+              overlays={overlays}
+              editingOverlays={editingOverlays}
+              onStartDrag={startDragOverlay}
+              onStartResize={startResizeOverlay}
+              onRemove={removeOverlay}
+            />
           </div>
           </div>
         </ScaledGraphicFrame>

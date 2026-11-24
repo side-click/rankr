@@ -1,10 +1,8 @@
-import { ShieldAlert } from "lucide-react";
-import { RetroWindow } from "@/components/RetroWindow";
-import { StatsDashboard } from "@/components/StatsDashboard";
-import { loadAdminStatsContext } from "@/utils/riotStatsServer";
-import { fetchScdlSheetStats } from "@/utils/scdlSheetStats";
-
 import type { Metadata } from "next";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
+import { StatsDashboard } from "@/components/StatsDashboard";
+import { fetchScdlSheetStats } from "@/utils/leagueStats";
+import { loadAdminStatsContext } from "@/utils/riotStatsServer";
 
 export const metadata: Metadata = {
   title: "Admin Stats | Rankr",
@@ -15,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminStatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ division?: string; tab?: string }>;
+  searchParams: Promise<{ season?: string; division?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const initialTab =
@@ -24,22 +22,17 @@ export default async function AdminStatsPage({
     params.tab === "division"
       ? params.tab
       : undefined;
-  const ctx = await loadAdminStatsContext();
+  const ctx = await loadAdminStatsContext({
+    seasonSlug: params.season?.trim() || undefined,
+  });
 
   if (!ctx.authorized) {
     return (
-      <RetroWindow title="Stats Lab — Access Denied" theme="xp">
-        <div className="py-8 px-4 text-center space-y-3">
-          <ShieldAlert className="w-10 h-10 mx-auto text-[#ff857a]" />
-          <h1 className="text-base font-bold text-[#f0ede0]">
-            Admin Access Required
-          </h1>
-          <p className="text-xs text-[#a6a89e]">
-            This Riot API Stats prototype is currently restricted to
-            administrators.
-          </p>
-        </div>
-      </RetroWindow>
+      <AdminAccessDenied
+        title="Stats Controls — Access Denied"
+        heading="Operator or Admin Access Required"
+        message="Stats administration is restricted to site admins and assigned league operators for that league."
+      />
     );
   }
 
@@ -48,6 +41,10 @@ export default async function AdminStatsPage({
     ctx.teams,
     ctx.sheetConfig
   ).catch(() => null);
+
+  const strippedTeams = sheetSummary
+    ? sheetSummary.teams.map((t) => ({ ...t, players: [] }))
+    : [];
 
   return (
     <StatsDashboard
@@ -58,10 +55,12 @@ export default async function AdminStatsPage({
       leagueLogoUrl={ctx.leagueLogoUrl}
       seasonName={ctx.seasonName}
       seasonId={ctx.seasonId}
+      seasonSlug={ctx.seasonSlug}
+      allSeasons={ctx.allSeasons}
       currentEditionName={ctx.currentEditionName}
       divisions={ctx.divisions}
-      players={ctx.players}
-      teams={ctx.teams}
+      players={sheetSummary ? [] : ctx.players}
+      teams={sheetSummary ? [] : ctx.teams}
       initialStatsNotice={ctx.statsNotice}
       divisionThemes={ctx.divisionThemes}
       seasonStructure={ctx.seasonStructure}
@@ -69,7 +68,19 @@ export default async function AdminStatsPage({
       statsRoundLabel={ctx.statsRoundLabel}
       initialDivision={params.division}
       initialTab={initialTab}
-      initialSheetData={sheetSummary}
+      initialSheetData={
+        sheetSummary
+          ? {
+              players: sheetSummary.players,
+              subPlayers: sheetSummary.subPlayers,
+              teams: strippedTeams,
+              playoffSeries: sheetSummary.playoffSeries,
+              fetchedAt: sheetSummary.fetchedAt,
+              rowCount: sheetSummary.rowCount,
+              matchCount: sheetSummary.matchCount,
+            }
+          : null
+      }
     />
   );
 }

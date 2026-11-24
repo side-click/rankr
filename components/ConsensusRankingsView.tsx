@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toPng } from "html-to-image";
+import { exportElementToPng } from "@/utils/exportImage";
 import {
   AlertTriangle,
   Award,
@@ -21,6 +21,7 @@ import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { getRankColor } from "@/utils/rankColors";
 import { getThemeGradients } from "@/utils/themes";
 import type { AverageTeamRow } from "@/utils/averageRankings";
+import { teamStatsHref } from "@/utils/statsLinks";
 import type { DivisionTheme } from "@/types/database";
 
 interface SeasonOption {
@@ -194,7 +195,7 @@ export function ConsensusRankingsView({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       const exportHeight = Math.ceil(cardRef.current.offsetHeight);
-      const dataUrl = await toPng(cardRef.current, {
+      const dataUrl = await exportElementToPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         width: cardWidth,
@@ -493,6 +494,7 @@ export function ConsensusRankingsView({
                 <Link
                   key={c.rankingId}
                   href={`/rankings/${c.rankingId}`}
+                  prefetch={false}
                   title={`Open ${c.username}'s ranking`}
                   className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c89b3c]/60 text-[11px] font-bold text-[#e8e6dc] transition"
                 >
@@ -500,6 +502,8 @@ export function ConsensusRankingsView({
                     <img
                       src={c.avatarUrl}
                       alt={c.username}
+                      width={16}
+                      height={16}
                       className="w-4 h-4 rounded-full object-cover"
                     />
                   ) : (
@@ -711,9 +715,12 @@ export function ConsensusRankingsView({
                           <div className={`min-w-0 ${!showChange ? "pl-3" : ""}`}>
                             {!row.teamKey.startsWith("name:") ? (
                               <Link
-                                href={`/stats/team/${encodeURIComponent(
-                                  row.teamKey
-                                )}`}
+                                href={teamStatsHref(
+                                  row.teamKey,
+                                  "/stats",
+                                  selectedSeasonSlug
+                                )}
+                                prefetch={false}
                                 className="group flex items-center gap-4 min-w-0"
                                 title={`View ${row.teamName} stats`}
                               >
@@ -721,6 +728,8 @@ export function ConsensusRankingsView({
                                   <img
                                     src={row.logoUrl}
                                     alt={row.teamName}
+                                    width={64}
+                                    height={64}
                                     crossOrigin="anonymous"
                                     className="w-16 h-16 object-contain drop-shadow shrink-0"
                                   />
@@ -747,6 +756,8 @@ export function ConsensusRankingsView({
                                   <img
                                     src={row.logoUrl}
                                     alt={row.teamName}
+                                    width={64}
+                                    height={64}
                                     crossOrigin="anonymous"
                                     className="w-16 h-16 object-contain drop-shadow shrink-0"
                                   />

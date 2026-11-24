@@ -112,7 +112,7 @@ export async function getChampionIdToNameMap(
   try {
     const res = await fetch(
       `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 86400 } }
     );
     if (res.ok) {
       const json = (await res.json()) as {
@@ -140,7 +140,7 @@ export async function getLatestDdragonVersion(): Promise<string> {
   try {
     const res = await fetch(
       "https://ddragon.leagueoflegends.com/api/versions.json",
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 86400 } }
     );
     if (res.ok) {
       const versions = (await res.json()) as string[];

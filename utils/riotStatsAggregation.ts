@@ -129,19 +129,6 @@ export function computeRankScore(
   return base + div + (lp ?? 0);
 }
 
-export function formatSoloRank(
-  tier: string | null,
-  rank: string | null,
-  lp: number | null
-): string {
-  if (!tier) return "Unranked";
-  const t = tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
-  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier.toUpperCase())) {
-    return `${t} ${lp ?? 0} LP`;
-  }
-  return `${t} ${rank ?? ""} • ${lp ?? 0} LP`.trim();
-}
-
 export function aggregatePlayerStats(
   row: RiotPlayerStatRow | undefined,
   meta: {

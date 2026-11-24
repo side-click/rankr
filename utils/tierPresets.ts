@@ -2,7 +2,6 @@ import type {
   PlayerTierListPayload,
   TierPresetKey,
   TierRowData,
-  TierSectionData,
   TierVariant,
 } from "@/types/database";
 import { LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
@@ -71,23 +70,6 @@ export function getTierVariantKey(
   return splitByRole ? "standard_split" : "standard_overall";
 }
 
-export function formatTierVariantLabel(
-  variant?: TierVariant | string | null
-): string | null {
-  switch (variant) {
-    case "standard_overall":
-      return "Standard • Overall";
-    case "standard_split":
-      return "Standard • Split Roles";
-    case "draft_day_overall":
-      return "Draft Day • Overall";
-    case "draft_day_split":
-      return "Draft Day • Split Roles";
-    default:
-      return null;
-  }
-}
-
 export function createPresetTierRows(
   presetKey: Exclude<TierPresetKey, "custom">
 ): TierRowData[] {
@@ -139,72 +121,6 @@ export function createInitialTierPayload(
       role: r.key,
       tiers: createPresetTierRows(presetKey),
     })),
-  };
-}
-
-export function convertTierPayloadMode(
-  current: PlayerTierListPayload,
-  splitByRole: boolean,
-  fallbackPreset: Exclude<TierPresetKey, "custom"> = "standard"
-): PlayerTierListPayload {
-  const effectivePreset: Exclude<TierPresetKey, "custom"> =
-    current.preset === "draft_day" ? "draft_day" : fallbackPreset === "draft_day" ? "draft_day" : "standard";
-
-  if (current.splitByRole === splitByRole) return current;
-
-  if (splitByRole) {
-    // Switching from Unified -> 5 Role Sections: route any placed players into matching role's tier index if possible
-    const unifiedSection = current.sections[0];
-    const templateTiers =
-      unifiedSection && unifiedSection.tiers.length > 0
-        ? unifiedSection.tiers
-        : createPresetTierRows(effectivePreset);
-
-    const sections: TierSectionData[] = LEAGUE_ROLES.map((roleDef) => ({
-      role: roleDef.key,
-      tiers: templateTiers.map((t) => ({
-        id: makeId("tier"),
-        label: t.label,
-        color: t.color,
-        commentary: "",
-        players: t.players.filter((p) => p.role === roleDef.key),
-      })),
-    }));
-
-    return {
-      preset: current.preset,
-      splitByRole: true,
-      sections,
-    };
-  }
-
-  // Switching from 5 Role Sections -> Unified: combine players by tier label/index
-  const baseSection = current.sections[0];
-  const baseTiers =
-    baseSection && baseSection.tiers.length > 0
-      ? baseSection.tiers
-      : createPresetTierRows(effectivePreset);
-
-  const mergedTiers: TierRowData[] = baseTiers.map((t, idx) => {
-    const collected = current.sections.flatMap(
-      (sec) => sec.tiers[idx]?.players ?? []
-    );
-    return {
-      id: makeId("tier"),
-      label: t.label,
-      color: t.color,
-      commentary: current.sections
-        .map((sec) => sec.tiers[idx]?.commentary?.trim())
-        .filter(Boolean)
-        .join(" / "),
-      players: collected,
-    };
-  });
-
-  return {
-    preset: current.preset,
-    splitByRole: false,
-    sections: [{ role: "all", tiers: mergedTiers }],
   };
 }
 

@@ -50,6 +50,12 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    if (rows.length > 500) {
+      return NextResponse.json(
+        { error: "Batch limit exceeded (max 500 participant rows per upload)." },
+        { status: 400 }
+      );
+    }
 
     const { data: season } = await supabase
       .from("seasons")
@@ -73,11 +79,14 @@ export async function POST(req: Request) {
     );
 
     if (gameIds.length > 0) {
-      await supabase
+      const { error: delError } = await supabase
         .from("league_game_participants")
         .delete()
         .eq("season_id", seasonId)
         .in("game_id", gameIds);
+      if (delError) {
+        return NextResponse.json({ error: delError.message }, { status: 500 });
+      }
     }
 
     const insertRows = rows.map((r, idx) => ({

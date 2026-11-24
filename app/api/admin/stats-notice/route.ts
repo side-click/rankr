@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     }
 
     revalidateTag("public-stats");
+    revalidateTag("app-settings");
     return NextResponse.json({ ok: true, statsNotice: notice });
   } catch (err) {
     return NextResponse.json(

@@ -10,6 +10,40 @@ type OgFont = {
 
 let cachedFonts: OgFont[] | null = null;
 
+export const OG_CACHE_HEADERS: Record<string, string> = {
+  "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+};
+
+export function safeDecodeParam(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
+function getAllowedImageHosts(): Set<string> {
+  const hosts = new Set<string>([
+    "ddragon.leagueoflegends.com",
+    "raw.communitydragon.org",
+    "cdn.discordapp.com",
+    "leaguerankr.com",
+    "league-rankr.vercel.app",
+  ]);
+  for (const envUrl of [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+  ]) {
+    if (!envUrl) continue;
+    try {
+      hosts.add(new URL(envUrl).hostname.toLowerCase());
+    } catch {
+      // Ignore malformed env URL
+    }
+  }
+  return hosts;
+}
+
 async function readLocalOrRemoteFont(
   filename: string,
   name: string,
@@ -27,7 +61,9 @@ async function readLocalOrRemoteFont(
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
-      const res = await fetch(`${baseUrl}/fonts/${filename}`);
+      const res = await fetch(`${baseUrl}/fonts/${filename}`, {
+        signal: AbortSignal.timeout(4000),
+      });
       if (!res.ok) return null;
       const data = await res.arrayBuffer();
       return { name, data, weight, style: "normal" };
@@ -60,15 +96,37 @@ const SUPPORTED_OG_MIMES = new Set([
   "image/jpg",
   "image/gif",
 ]);
+const MAX_OG_IMAGE_BYTES = 4 * 1024 * 1024;
 
 async function fetchImageAsDataUri(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url);
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return null;
+    }
+    const allowedHosts = getAllowedImageHosts();
+    if (!allowedHosts.has(parsed.hostname.toLowerCase())) {
+      return null;
+    }
+
+    const res = await fetch(parsed.toString(), {
+      signal: AbortSignal.timeout(4000),
+    });
     if (!res.ok) return null;
+
+    const declaredLen = Number(res.headers.get("content-length") ?? "0");
+    if (Number.isFinite(declaredLen) && declaredLen > MAX_OG_IMAGE_BYTES) {
+      return null;
+    }
+
     const contentTypeHeader = res.headers.get("content-type") || "";
     const mime = contentTypeHeader.split(";")[0].trim().toLowerCase();
     if (!SUPPORTED_OG_MIMES.has(mime)) return null;
-    const buffer = Buffer.from(await res.arrayBuffer());
+
+    const arrayBuf = await res.arrayBuffer();
+    if (arrayBuf.byteLength > MAX_OG_IMAGE_BYTES) return null;
+
+    const buffer = Buffer.from(arrayBuf);
     return `data:${mime};base64,${buffer.toString("base64")}`;
   } catch {
     return null;
@@ -80,17 +138,25 @@ export async function resolveOgImageSrc(
 ): Promise<string | null> {
   if (!logoUrl) return null;
   if (logoUrl.startsWith("data:image/")) {
-    return logoUrl;
+    return logoUrl.length <= MAX_OG_IMAGE_BYTES ? logoUrl : null;
   }
   if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
     return fetchImageAsDataUri(logoUrl);
   }
-  if (logoUrl.startsWith("/")) {
+  if (logoUrl.startsWith("/") && !logoUrl.startsWith("//")) {
     try {
+      const publicDir = path.resolve(process.cwd(), "public");
       const relative = decodeURIComponent(logoUrl).replace(/^\/+/, "");
-      const filePath = path.join(process.cwd(), "public", relative);
-      const buffer = await readFile(filePath);
-      const ext = path.extname(filePath).toLowerCase();
+      const resolvedPath = path.resolve(publicDir, relative);
+      if (
+        !resolvedPath.startsWith(publicDir + path.sep) &&
+        resolvedPath !== publicDir
+      ) {
+        return null;
+      }
+      const buffer = await readFile(resolvedPath);
+      if (buffer.byteLength > MAX_OG_IMAGE_BYTES) return null;
+      const ext = path.extname(resolvedPath).toLowerCase();
       const mime =
         ext === ".jpg" || ext === ".jpeg"
           ? "image/jpeg"
@@ -104,11 +170,15 @@ export async function resolveOgImageSrc(
     } catch {
       const baseUrl =
         process.env.NEXT_PUBLIC_SITE_URL ?? "https://league-rankr.vercel.app";
-      const absoluteUrl = new URL(
-        encodeURI(decodeURI(logoUrl)),
-        baseUrl
-      ).toString();
-      return fetchImageAsDataUri(absoluteUrl);
+      try {
+        const absoluteUrl = new URL(
+          encodeURI(decodeURI(logoUrl)),
+          baseUrl
+        ).toString();
+        return fetchImageAsDataUri(absoluteUrl);
+      } catch {
+        return null;
+      }
     }
   }
   return null;

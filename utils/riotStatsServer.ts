@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import type {
   DivisionTheme,
@@ -7,7 +8,7 @@ import type {
 } from "@/types/database";
 import { createClient, createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
-import { normalizeRoster } from "@/utils/roles";
+import { LEAGUE_ROLES, normalizeRoster } from "@/utils/roles";
 import { getLatestDdragonVersion } from "@/utils/riotApi";
 import {
   aggregatePlayerStats,
@@ -23,12 +24,23 @@ import {
   fetchScdlSheetStats,
   type ScdlSeriesDetail,
   type SheetSourceConfig,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 
 export interface StatsContextQueryOptions {
   includeRiotStats?: boolean;
   teamIdFilter?: string;
   playerKeyFilter?: string;
+  seasonSlug?: string;
+}
+
+export interface StatsSeasonOption {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  leagueName: string;
+  leagueShortName: string;
+  leagueLogoUrl: string | null;
 }
 
 export interface LoadedStatsContext {
@@ -42,6 +54,7 @@ export interface LoadedStatsContext {
   seasonId: string | null;
   seasonSlug: string | null;
   currentEditionName: string;
+  allSeasons?: StatsSeasonOption[];
   divisions: { id: string; name: string; slug: string; logo_url: string | null; theme_key: string }[];
   divisionThemes: DivisionTheme[];
   players: AggregatedPlayerStats[];
@@ -55,6 +68,28 @@ export interface LoadedStatsContext {
   sheetConfig?: SheetSourceConfig;
 }
 
+const UNAUTHORIZED_CONTEXT = (
+  hasRiotKey: boolean,
+  ddVersion: string
+): LoadedStatsContext => ({
+  authorized: false,
+  missingTable: false,
+  hasRiotKey,
+  ddVersion,
+  leagueName: "",
+  leagueLogoUrl: null,
+  seasonName: "",
+  seasonId: null,
+  seasonSlug: null,
+  currentEditionName: "",
+  allSeasons: [],
+  divisions: [],
+  divisionThemes: [],
+  players: [],
+  teams: [],
+  statsNotice: null,
+});
+
 export async function loadAdminStatsContext(
   queryOpts?: StatsContextQueryOptions
 ): Promise<LoadedStatsContext> {
@@ -65,23 +100,7 @@ export async function loadAdminStatsContext(
   const hasRiotKey = Boolean(process.env.RIOT_API_KEY?.trim());
 
   if (!auth.user || (!auth.isAdmin && !auth.isOperator)) {
-    return {
-      authorized: false,
-      missingTable: false,
-      hasRiotKey,
-      ddVersion,
-      leagueName: "",
-      leagueLogoUrl: null,
-      seasonName: "",
-      seasonId: null,
-      seasonSlug: null,
-      currentEditionName: "",
-      divisions: [],
-      divisionThemes: [],
-      players: [],
-      teams: [],
-      statsNotice: null,
-    };
+    return UNAUTHORIZED_CONTEXT(hasRiotKey, ddVersion);
   }
 
   const supabase = await createClient();
@@ -90,16 +109,44 @@ export async function loadAdminStatsContext(
     hasRiotKey,
     ddVersion,
     stripAdminFields: false,
+    allowedLeagueIds: auth.isAdmin ? null : auth.operatorLeagueIds,
     ...queryOpts,
   });
 }
 
+const loadCachedTeamSeasonSlugMap = unstable_cache(
+  async (): Promise<Record<string, string>> => {
+    const supabase = createPublicClient();
+    const [{ data: teams }, { data: divisions }, { data: seasons }] =
+      await Promise.all([
+        supabase.from("teams").select("id, division_id"),
+        supabase.from("divisions").select("id, season_id"),
+        supabase.from("seasons").select("id, slug"),
+      ]);
+    const seasonSlugById = new Map(
+      (seasons ?? []).map((s) => [String(s.id), String(s.slug)])
+    );
+    const seasonSlugByDivId = new Map(
+      (divisions ?? []).map((d) => [
+        String(d.id),
+        seasonSlugById.get(String(d.season_id)) ?? "",
+      ])
+    );
+    const out: Record<string, string> = {};
+    for (const t of teams ?? []) {
+      const slug = seasonSlugByDivId.get(String(t.division_id));
+      if (slug) out[String(t.id)] = slug;
+    }
+    return out;
+  },
+  ["team-season-slug-map-v1"],
+  { revalidate: 3600, tags: ["public-stats"] }
+);
+
 const loadCachedPublicStatsContext = unstable_cache(
   async (
-    seasonSlug: string | undefined,
-    includeRiotStats: boolean,
-    teamIdFilter: string | undefined,
-    playerKeyFilter: string | undefined
+    seasonSlugKey: string,
+    includeRiotStats: boolean
   ): Promise<LoadedStatsContext> => {
     const supabase = createPublicClient();
     const ddVersion = await getLatestDdragonVersion();
@@ -110,14 +157,13 @@ const loadCachedPublicStatsContext = unstable_cache(
         hasRiotKey: false,
         ddVersion,
         stripAdminFields: true,
-        seasonSlug,
+        allowedLeagueIds: null,
+        seasonSlug: seasonSlugKey || undefined,
         includeRiotStats,
-        teamIdFilter,
-        playerKeyFilter,
       }
     );
   },
-  ["public-stats-context"],
+  ["public-stats-context-v2"],
   { revalidate: 3600, tags: ["public-stats"] }
 );
 
@@ -126,94 +172,96 @@ export interface SoloPrioEntry {
   masteryTop4?: { championName: string; championPoints: number }[];
 }
 
-const loadCachedSoloPrioMap = unstable_cache(
-  async (
-    rosterKeyRoles: string[]
-  ): Promise<Record<string, SoloPrioEntry>> => {
-    if (rosterKeyRoles.length === 0) return {};
-    const playerKeys = rosterKeyRoles.map((entry) => {
-      const sep = entry.lastIndexOf(":");
-      return (sep >= 0 ? entry.slice(0, sep) : entry).toLowerCase();
-    });
+interface CachedSoloPrioPlayerRecord {
+  masteryTop4?: { championName: string; championPoints: number }[];
+  byRole: Record<string, string | null>;
+}
 
+const loadCachedSoloPrioIndex = unstable_cache(
+  async (): Promise<Record<string, CachedSoloPrioPlayerRecord>> => {
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("riot_player_stats")
-      .select("player_key, role, matches, mastery_top4")
-      .in("player_key", playerKeys);
+      .select("player_key, role, matches, mastery_top4");
 
     if (error) {
-      throw new Error(`loadCachedSoloPrioMap failed: ${error.message}`);
+      throw new Error(`loadCachedSoloPrioIndex failed: ${error.message}`);
     }
 
-    const rowByKey = new Map(
-      (data ?? []).map((r) => [
-        String(r.player_key ?? "").toLowerCase(),
-        {
-          role: (r.role as string | null) ?? null,
-          matches: Array.isArray(r.matches)
-            ? (r.matches as RiotPlayerStatRow["matches"])
-            : [],
-          masteryTop4: Array.isArray(r.mastery_top4)
-            ? (r.mastery_top4 as {
-                championName: string;
-                championPoints: number;
-              }[])
-            : undefined,
-        },
-      ])
-    );
+    const index: Record<string, CachedSoloPrioPlayerRecord> = {};
+    for (const r of data ?? []) {
+      const key = String(r.player_key ?? "").toLowerCase();
+      if (!key) continue;
+      const matches = Array.isArray(r.matches)
+        ? (r.matches as RiotPlayerStatRow["matches"])
+        : [];
+      const masteryTop4 = Array.isArray(r.mastery_top4)
+        ? (r.mastery_top4 as { championName: string; championPoints: number }[])
+        : undefined;
 
-    const result: Record<string, SoloPrioEntry> = {};
-    for (const entry of rosterKeyRoles) {
-      const sep = entry.lastIndexOf(":");
-      const playerKey = sep >= 0 ? entry.slice(0, sep) : entry;
-      const role = sep >= 0 ? entry.slice(sep + 1) : "";
-      const row = rowByKey.get(playerKey.toLowerCase());
-      if (!row) continue;
-
-      const soloChamps = getRoleFilteredSoloChampions(
-        row.matches,
-        role || row.role || "mid",
-        7
-      );
-      const soloPrio = getPriorityPickRanks(soloChamps, row.masteryTop4, "solo");
-      let soloTopPrioChamp: string | null = null;
-      for (const [champ, rank] of soloPrio.entries()) {
-        if (rank === 1) {
-          soloTopPrioChamp = champ;
-          break;
+      const byRole: Record<string, string | null> = {};
+      for (const roleDef of LEAGUE_ROLES) {
+        const soloChamps = getRoleFilteredSoloChampions(
+          matches,
+          roleDef.key,
+          7
+        );
+        const soloPrio = getPriorityPickRanks(soloChamps, masteryTop4, "solo");
+        let topChamp: string | null = null;
+        for (const [champ, rank] of soloPrio.entries()) {
+          if (rank === 1) {
+            topChamp = champ;
+            break;
+          }
         }
+        byRole[roleDef.key] = topChamp;
       }
-      result[playerKey] = {
-        soloTopPrioChamp,
-        masteryTop4: row.masteryTop4,
-      };
+
+      index[key] = { masteryTop4, byRole };
     }
-    return result;
+    return index;
   },
-  ["public-solo-prio-map-v2"],
+  ["public-solo-prio-index-v3"],
   { revalidate: 3600, tags: ["public-stats"] }
 );
 
 export async function loadPublicSoloPrioMap(
   players: { playerKey: string; role: string }[]
 ): Promise<Record<string, SoloPrioEntry>> {
-  const rosterKeyRoles = players
-    .map((p) => `${p.playerKey}:${p.role}`)
-    .sort();
-  return loadCachedSoloPrioMap(rosterKeyRoles);
+  const index = await loadCachedSoloPrioIndex();
+  const result: Record<string, SoloPrioEntry> = {};
+  for (const p of players) {
+    const rec = index[p.playerKey.toLowerCase()];
+    if (!rec) continue;
+    const roleKey = p.role?.toLowerCase() || "mid";
+    result[p.playerKey] = {
+      soloTopPrioChamp: rec.byRole[roleKey] ?? null,
+      masteryTop4: rec.masteryTop4,
+    };
+  }
+  return result;
 }
+
+const loadPublicStatsContextDeduped = cache(
+  async (
+    seasonSlugKey: string,
+    includeRiotStats: boolean
+  ): Promise<LoadedStatsContext> =>
+    loadCachedPublicStatsContext(seasonSlugKey, includeRiotStats)
+);
 
 export async function loadPublicStatsContext(
   seasonSlug?: string,
   queryOpts?: StatsContextQueryOptions
 ): Promise<LoadedStatsContext> {
-  return loadCachedPublicStatsContext(
-    seasonSlug,
-    queryOpts?.includeRiotStats ?? true,
-    queryOpts?.teamIdFilter,
-    queryOpts?.playerKeyFilter
+  let targetSlug = seasonSlug?.trim() || undefined;
+  if (!targetSlug && queryOpts?.teamIdFilter) {
+    const teamSeasonMap = await loadCachedTeamSeasonSlugMap();
+    targetSlug = teamSeasonMap[queryOpts.teamIdFilter] || undefined;
+  }
+  return loadPublicStatsContextDeduped(
+    targetSlug ?? "",
+    queryOpts?.includeRiotStats ?? true
   );
 }
 
@@ -224,6 +272,7 @@ async function loadStatsContextInternal(
     hasRiotKey: boolean;
     ddVersion: string;
     stripAdminFields: boolean;
+    allowedLeagueIds: string[] | null;
     seasonSlug?: string;
     includeRiotStats?: boolean;
     teamIdFilter?: string;
@@ -235,24 +284,14 @@ async function loadStatsContextInternal(
     hasRiotKey,
     ddVersion,
     stripAdminFields,
+    allowedLeagueIds,
     seasonSlug,
     includeRiotStats = true,
     teamIdFilter,
-    playerKeyFilter,
   } = opts;
 
   const statsPromise = includeRiotStats
-    ? (() => {
-        let q = supabase.from("riot_player_stats").select("*");
-        if (playerKeyFilter) {
-          q = playerKeyFilter.includes("#")
-            ? q.eq("player_key", playerKeyFilter)
-            : q.ilike("player_key", `${playerKeyFilter}#%`);
-        } else if (teamIdFilter) {
-          q = q.eq("team_id", teamIdFilter);
-        }
-        return q;
-      })()
+    ? supabase.from("riot_player_stats").select("*")
     : Promise.resolve({ data: [] as RiotPlayerStatRow[], error: null });
 
   const [
@@ -266,7 +305,8 @@ async function loadStatsContextInternal(
   ] = await Promise.all([
     supabase
       .from("seasons")
-      .select("*, leagues ( name, logo_url )")
+      .select("*, leagues ( id, name, short_name, logo_url )")
+      .order("is_active", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
       .from("divisions")
@@ -282,7 +322,7 @@ async function loadStatsContextInternal(
       .select("id, name, season_id, is_open, sort_order, created_at")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
-    supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+    supabase.from("app_settings").select("stats_notice").eq("id", 1).maybeSingle(),
     statsPromise,
   ]);
 
@@ -300,6 +340,12 @@ async function loadStatsContextInternal(
         statsRes.error.message.includes("riot_player_stats"))
   );
 
+  const allRawSeasons = seasons ?? [];
+  const allowedSet = allowedLeagueIds ? new Set(allowedLeagueIds) : null;
+  const visibleSeasons = allowedSet
+    ? allRawSeasons.filter((s) => allowedSet.has(String(s.league_id ?? "")))
+    : allRawSeasons;
+
   const teamOwnerSeason = teamIdFilter
     ? (() => {
         const tr = (teams ?? []).find((t) => t.id === teamIdFilter);
@@ -307,27 +353,58 @@ async function loadStatsContextInternal(
           ? (divisions ?? []).find((d) => d.id === tr.division_id)
           : null;
         return dr
-          ? (seasons ?? []).find((s) => s.id === dr.season_id) ?? null
+          ? allRawSeasons.find((s) => s.id === dr.season_id) ?? null
           : null;
       })()
     : null;
 
+  if (
+    allowedSet &&
+    ((teamOwnerSeason && !allowedSet.has(String(teamOwnerSeason.league_id ?? ""))) ||
+      (seasonSlug &&
+        !visibleSeasons.some((s) => s.slug === seasonSlug)) ||
+      visibleSeasons.length === 0)
+  ) {
+    return UNAUTHORIZED_CONTEXT(hasRiotKey, ddVersion);
+  }
+
   const activeSeason =
     teamOwnerSeason ??
     (seasonSlug
-      ? (seasons ?? []).find((s) => s.slug === seasonSlug)
+      ? visibleSeasons.find((s) => s.slug === seasonSlug)
       : null) ??
-    (seasons ?? []).find((s) => s.is_active) ??
-    (seasons ?? [])[0] ??
+    visibleSeasons.find((s) => s.is_active) ??
+    visibleSeasons[0] ??
     null;
 
   const leagueInfo = (
     activeSeason as unknown as {
-      leagues?: { name?: string; logo_url?: string | null } | null;
+      leagues?: {
+        name?: string;
+        short_name?: string | null;
+        logo_url?: string | null;
+      } | null;
     } | null
   )?.leagues;
   const leagueName = leagueInfo?.name ?? "SCDL";
   const leagueLogoUrl = leagueInfo?.logo_url ?? null;
+
+  const allSeasons: StatsSeasonOption[] = visibleSeasons.map((s) => {
+    const lg = Array.isArray(s.leagues) ? s.leagues[0] : s.leagues;
+    const lgObj = lg as
+      | { name?: string; short_name?: string | null; logo_url?: string | null }
+      | null
+      | undefined;
+    return {
+      id: String(s.id),
+      name: String(s.name),
+      slug: String(s.slug),
+      isActive: Boolean(s.is_active),
+      leagueName: lgObj?.name ?? "League",
+      leagueShortName: lgObj?.short_name || lgObj?.name || "League",
+      leagueLogoUrl: lgObj?.logo_url ?? null,
+    };
+  });
 
   const seasonEditions = (editions ?? []).filter(
     (e) => !activeSeason || e.season_id === activeSeason.id
@@ -471,6 +548,7 @@ async function loadStatsContextInternal(
     seasonId: activeSeason?.id ?? null,
     seasonSlug: activeSeason?.slug ?? null,
     currentEditionName,
+    allSeasons,
     divisions: seasonDivisions.map((d) => ({
       id: d.id,
       name: d.name,

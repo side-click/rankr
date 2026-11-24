@@ -1,21 +1,44 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+
 export function getRequestOrigin(request: Request): string {
   const url = new URL(request.url);
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`;
+  if (LOCAL_HOSTNAMES.has(url.hostname)) {
+    return url.origin;
+  }
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredSiteUrl) {
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      // Fall back to request.url origin if env URL is malformed
+    }
   }
   return url.origin;
 }
 
 export function sanitizeNextPath(rawNext: string | null): string {
-  if (!rawNext || !rawNext.startsWith("/") || rawNext.startsWith("//")) {
+  if (!rawNext) return "/";
+  const trimmed = rawNext.trim();
+  if (
+    !trimmed.startsWith("/") ||
+    trimmed.startsWith("//") ||
+    trimmed.includes("\\") ||
+    /[\u0000-\u001F\u007F]/.test(trimmed)
+  ) {
     return "/";
   }
-  return rawNext;
+  try {
+    const parsed = new URL(trimmed, "https://rankr.local");
+    if (parsed.origin !== "https://rankr.local") {
+      return "/";
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return "/";
+  }
 }
 
 /**
@@ -28,8 +51,8 @@ export async function enforceAllowlistAfterLogin(
   user: User | null | undefined,
   origin: string
 ): Promise<NextResponse | null> {
-  const { data: allowed } = await supabase.rpc("is_allowlisted");
-  if (allowed !== false) {
+  const { data: allowed, error } = await supabase.rpc("is_allowlisted");
+  if (!error && allowed === true) {
     return null;
   }
 

@@ -3,17 +3,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toPng } from "html-to-image";
+import { exportElementToPng } from "@/utils/exportImage";
 import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import {
-  AlertTriangle,
-  ArrowLeft,
   Award,
   BarChart3,
   ChevronDown,
   Clock,
   Coins,
-  Copy,
   Crown,
   Diff,
   Download,
@@ -31,22 +28,29 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { RetroWindow } from "@/components/RetroWindow";
 import { RankrLogoIcon } from "@/components/RankrLogoIcon";
 import { ScaledGraphicFrame } from "@/components/ScaledGraphicFrame";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
+import { StatsAdminControls } from "@/components/stats/StatsAdminControls";
 import { StatsDivisionTab } from "@/components/stats/StatsDivisionTab";
+import { StatsPlayersTab } from "@/components/stats/StatsPlayersTab";
 import { StatsTeamsTab } from "@/components/stats/StatsTeamsTab";
 import { StatsUnrosteredModal } from "@/components/stats/StatsUnrosteredModal";
 import { RoleLeaderboardExportCard } from "@/components/stats/RoleLeaderboardExportCard";
-import { MatchDraftForm } from "@/components/stats/MatchDraftForm";
-import { getChampionCenteredSplashUrl, getChampionIconUrl } from "@/utils/riotApi";
-import { getRoleMeta, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
+import { getChampionCenteredSplashUrl } from "@/utils/riotApi";
+import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
+import { playerStatsHref, statsHref } from "@/utils/statsLinks";
+import {
+  computeDivisionOverview,
+  computePlayerLeaderboards,
+  computeSortColors,
+  sortTeamsForStandings,
+  type PlayerSortKey,
+} from "@/utils/statsOverview";
 import {
   computeRoleNormalizedRatings,
   filterPlayersByStage,
-  formatMinutesSeconds,
   getPriorityPickRanks,
   getRoleFilteredSoloChampions,
   isMatchPlayoff,
@@ -54,13 +58,13 @@ import {
   type AggregatedTeamStats,
   type StatsStageBucket,
 } from "@/utils/riotStatsAggregation";
-import type { SoloPrioEntry } from "@/utils/riotStatsServer";
+import type { SoloPrioEntry, StatsSeasonOption } from "@/utils/riotStatsServer";
 import type {
   DraftIntegrityIssue,
   IncompleteDataGame,
   PlayoffSeriesMatchup,
   UnrosteredSheetPlayer,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 import type { DraftImportSummary } from "@/utils/draftImporter";
 import type {
   DivisionTheme,
@@ -102,6 +106,7 @@ interface StatsDashboardProps {
   seasonName: string;
   seasonId: string | null;
   seasonSlug?: string | null;
+  allSeasons?: StatsSeasonOption[];
   currentEditionName: string;
   divisions: DivisionItem[];
   players: AggregatedPlayerStats[];
@@ -130,39 +135,7 @@ interface StatsDashboardProps {
   } | null;
 }
 
-type SortKey =
-  | "leagueRating"
-  | "avgGoldDiff15"
-  | "kda"
-  | "dpm"
-  | "gpm"
-  | "csPerMin"
-  | "kpPct"
-  | "visionPerMin"
-  | "damageSharePct"
-  | "games";
-
-const MIGRATION_SQL = `create table if not exists public.riot_player_stats (
-  player_key text primary key,
-  riot_id text not null,
-  puuid text,
-  season_id uuid references public.seasons(id) on delete set null,
-  division_id uuid references public.divisions(id) on delete set null,
-  team_id uuid references public.teams(id) on delete set null,
-  role text,
-  solo_tier text,
-  solo_rank text,
-  solo_lp integer,
-  solo_wins integer,
-  solo_losses integer,
-  matches jsonb not null default '[]'::jsonb,
-  sync_error text,
-  synced_at timestamptz not null default now()
-);
-alter table public.riot_player_stats enable row level security;
-create policy "Admins can manage riot_player_stats" on public.riot_player_stats for all
-  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true))
-  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));`;
+type SortKey = PlayerSortKey;
 
 const DEFAULT_SHAREABLE_CARD_KEYS: string[] = [
   "KDA",
@@ -181,6 +154,7 @@ export function StatsDashboard({
   seasonName,
   seasonId,
   seasonSlug,
+  allSeasons = [],
   currentEditionName,
   divisions,
   players,
@@ -199,9 +173,7 @@ export function StatsDashboard({
   const router = useRouter();
   const basePath = isAdminView ? "/admin/stats" : "/stats";
   const playerHref = (playerKey: string) =>
-    `${basePath}/player/${encodeURIComponent(playerKey)}${
-      seasonSlug ? `?season=${encodeURIComponent(seasonSlug)}` : ""
-    }`;
+    playerStatsHref(playerKey, basePath, seasonSlug);
   const resolveDivId = (raw: string | null | undefined): string | null => {
     if (!raw) return null;
     if (raw === "all") return "all";
@@ -409,7 +381,7 @@ export function StatsDashboard({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       const exportHeight = Math.ceil(leaderboardCardRef.current.offsetHeight);
-      const dataUrl = await toPng(leaderboardCardRef.current, {
+      const dataUrl = await exportElementToPng(leaderboardCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -437,7 +409,7 @@ export function StatsDashboard({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       const exportHeight = Math.ceil(roleExportCardRef.current.offsetHeight);
-      const dataUrl = await toPng(roleExportCardRef.current, {
+      const dataUrl = await exportElementToPng(roleExportCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         width: 680,
@@ -462,7 +434,10 @@ export function StatsDashboard({
     setSheetLoading(true);
     setSheetError(null);
     try {
-      const res = await fetch("/api/admin/scdl-sheet-stats", {
+      const sheetQs = seasonId
+        ? `?seasonId=${encodeURIComponent(seasonId)}`
+        : "";
+      const res = await fetch(`/api/admin/scdl-sheet-stats${sheetQs}`, {
         cache: "no-store",
       });
       const json = (await res.json().catch(() => ({}))) as {
@@ -627,7 +602,11 @@ export function StatsDashboard({
     setImportingDrafts(true);
     setSheetError(null);
     try {
-      const res = await fetch("/api/admin/import-drafts", { method: "POST" });
+      const res = await fetch("/api/admin/import-drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seasonId }),
+      });
       const json = (await res.json().catch(() => ({}))) as DraftImportSummary & {
         error?: string;
       };
@@ -674,403 +653,39 @@ export function StatsDashboard({
     }
   }
 
-  const filteredTeams = useMemo(() => {
-    return activeTeams
-      .filter((t) =>
-        divisionFilter === "all" ? true : t.divisionId === divisionFilter
-      )
-      .sort((a, b) => {
-        if (a.seed != null && b.seed != null && a.seed !== b.seed) {
-          return a.seed - b.seed;
-        }
-        const aSeriesDiff =
-          (a.seriesWins ?? a.wins) -
-          (a.seriesLosses ?? Math.max(0, a.games - a.wins));
-        const bSeriesDiff =
-          (b.seriesWins ?? b.wins) -
-          (b.seriesLosses ?? Math.max(0, b.games - b.wins));
-        return (
-          bSeriesDiff - aSeriesDiff ||
-          b.winRate - a.winRate ||
-          b.avgKda - a.avgKda
-        );
-      });
-  }, [activeTeams, divisionFilter]);
+  const filteredTeams = useMemo(
+    () => sortTeamsForStandings(activeTeams, divisionFilter),
+    [activeTeams, divisionFilter]
+  );
 
-  const overview = useMemo(() => {
-    const allMatches = allDivisionPlayers.flatMap((p) => p.matches);
-
-    const uniqueMatchMap = new Map<string, typeof allMatches[number]>();
-    const uniqueSideMap = new Map<string, typeof allMatches[number]>();
-    for (const m of allMatches) {
-      if (!uniqueMatchMap.has(m.matchId)) uniqueMatchMap.set(m.matchId, m);
-      const sideKey = `${m.matchId}::${m.teamId}`;
-      if (!uniqueSideMap.has(sideKey)) uniqueSideMap.set(sideKey, m);
-    }
-
-    const totalGames = uniqueMatchMap.size;
-
-    const durationSource = [...uniqueMatchMap.values()];
-    const avgDurationMin =
-      durationSource.length > 0
-        ? durationSource.reduce((s, m) => s + m.gameDuration, 0) /
-          60 /
-          durationSource.length
-        : 0;
-
-    const sideSource = [...uniqueSideMap.values()];
-    const avgKillsPerGame =
-      sideSource.length > 0
-        ? sideSource.reduce((s, m) => s + (m.teamKills || m.kills), 0) /
-          sideSource.length
-        : 0;
-
-    const blueGames = sideSource.filter((m) => m.teamId === 100);
-    const redGames = sideSource.filter((m) => m.teamId === 200);
-    const blueWr =
-      blueGames.length > 0
-        ? (blueGames.filter((m) => m.win).length / blueGames.length) * 100
-        : 50;
-    const redWr =
-      redGames.length > 0
-        ? (redGames.filter((m) => m.win).length / redGames.length) * 100
-        : 50;
-
-    const champMap = new Map<string, { games: number; wins: number }>();
-    const banMap = new Map<string, number>();
-    const seenBanMatches = new Set<string>();
-    for (const m of allMatches) {
-      const c = champMap.get(m.championName) ?? { games: 0, wins: 0 };
-      c.games += 1;
-      if (m.win) c.wins += 1;
-      champMap.set(m.championName, c);
-
-      if (
-        Array.isArray(m.bans) &&
-        m.bans.length > 0 &&
-        !seenBanMatches.has(m.matchId)
-      ) {
-        seenBanMatches.add(m.matchId);
-        for (const banned of m.bans) {
-          const trimmed = banned?.trim();
-          if (
-            !trimmed ||
-            /^(nothing|none|no\s*ban|-|—|n\/a)$/i.test(trimmed)
-          ) {
-            continue;
-          }
-          banMap.set(trimmed, (banMap.get(trimmed) ?? 0) + 1);
-        }
-      }
-    }
-
-    const champs = [...champMap.entries()]
-      .map(([name, val]) => ({
-        name,
-        games: val.games,
-        wins: val.wins,
-        winRate: (val.wins / val.games) * 100,
-      }))
-      .sort((a, b) => b.games - a.games || b.winRate - a.winRate);
-
-    const banMatchCount = seenBanMatches.size;
-    const bannedChamps = [...banMap.entries()]
-      .map(([name, bans]) => ({
-        name,
-        bans,
-        banRate:
-          banMatchCount > 0 ? Math.min(100, (bans / banMatchCount) * 100) : 0,
-      }))
-      .sort((a, b) => b.bans - a.bans || a.name.localeCompare(b.name));
-
-    // Flash on D vs F
-    let flashDPicks = 0;
-    let flashDWins = 0;
-    let flashFPicks = 0;
-    let flashFWins = 0;
-    for (const m of allMatches) {
-      if (m.flashKey === "D") {
-        flashDPicks += 1;
-        if (m.win) flashDWins += 1;
-      } else if (m.flashKey === "F") {
-        flashFPicks += 1;
-        if (m.win) flashFWins += 1;
-      }
-    }
-
-    // First Blood team win rate & @15 gold lead team win rate
-    const teamMatchMeta = new Map<
-      string,
-      { win: boolean; hasFb: boolean; gd15Sum: number; hasGd15: boolean }
-    >();
-    for (const m of allMatches) {
-      const key = `${m.matchId}::${m.teamId}`;
-      const cur = teamMatchMeta.get(key) ?? {
-        win: m.win,
-        hasFb: false,
-        gd15Sum: 0,
-        hasGd15: false,
-      };
-      if (m.firstBlood) cur.hasFb = true;
-      if (typeof m.goldDiff15 === "number" && Number.isFinite(m.goldDiff15)) {
-        cur.gd15Sum += m.goldDiff15;
-        cur.hasGd15 = true;
-      }
-      teamMatchMeta.set(key, cur);
-    }
-    const fbTeams = [...teamMatchMeta.values()].filter((t) => t.hasFb);
-    const fbWr =
-      fbTeams.length > 0
-        ? (fbTeams.filter((t) => t.win).length / fbTeams.length) * 100
-        : null;
-
-    const gd15AheadTeams = [...teamMatchMeta.values()].filter(
-      (t) => t.hasGd15 && t.gd15Sum > 0
-    );
-    const gd15Wr =
-      gd15AheadTeams.length > 0
-        ? (gd15AheadTeams.filter((t) => t.win).length / gd15AheadTeams.length) *
-          100
-        : null;
-
-    // Longest game with teams / result / week
-    let longestGame: {
-      durationMin: number;
-      winner: string;
-      loser: string;
-      roundLabel: string;
-    } | null = null;
-    for (const m of durationSource) {
-      if (
-        m.gameDuration > 0 &&
-        (!longestGame || m.gameDuration / 60 > longestGame.durationMin)
-      ) {
-        const gameRows = allMatches.filter((x) => x.matchId === m.matchId);
-        const winTeam =
-          gameRows.find((x) => x.win)?.teamName ??
-          (m.matchLabel ? m.matchLabel.split("_")[1] : "");
-        const loseTeam =
-          gameRows.find((x) => !x.win)?.teamName ??
-          (m.matchLabel ? m.matchLabel.split("_")[2] : "");
-        const rawRound = m.matchLabel ? m.matchLabel.split("_")[0] : "";
-        const roundLabel = rawRound
-          ? rawRound.replace(/([a-zA-Z]+)(\d+)/, "$1 $2")
-          : "";
-        longestGame = {
-          durationMin: m.gameDuration / 60,
-          winner: winTeam || "Winner",
-          loser: loseTeam || "Opponent",
-          roundLabel,
-        };
-      }
-    }
-
-    // Most Toxic?, Most Pentakills, Most Objective Steals, Control Wards / Min
-    type PlayerKpiLeader = {
-      name: string;
-      count: number;
-      teamName: string;
-      teamLogoUrl?: string | null;
-      tiedCount: number;
-      tiedNames: string[];
-    };
-    let topPingPlayer: PlayerKpiLeader | null = null;
-    let topPentaPlayer: PlayerKpiLeader | null = null;
-    let topStealPlayer: PlayerKpiLeader | null = null;
-    const updateLeader = (
-      current: PlayerKpiLeader | null,
-      val: number,
-      p: AggregatedPlayerStats
-    ): PlayerKpiLeader | null => {
-      if (val <= 0) return current;
-      if (!current || val > current.count) {
-        return {
-          name: p.displayName,
-          count: val,
-          teamName: p.teamName,
-          teamLogoUrl: p.teamLogoUrl,
-          tiedCount: 1,
-          tiedNames: [p.displayName],
-        };
-      }
-      if (val === current.count) {
-        return {
-          ...current,
-          tiedCount: current.tiedCount + 1,
-          tiedNames: [...current.tiedNames, p.displayName],
-        };
-      }
-      return current;
-    };
-    for (const p of allDivisionPlayers) {
-      const pings = p.matches.reduce((s, m) => s + (m.questionPings ?? 0), 0);
-      topPingPlayer = updateLeader(topPingPlayer, pings, p);
-
-      const pentas = p.matches.reduce((s, m) => s + (m.pentaKills ?? 0), 0);
-      topPentaPlayer = updateLeader(topPentaPlayer, pentas, p);
-
-      const steals = p.matches.reduce(
-        (s, m) => s + (m.objectivesStolen ?? 0),
-        0
-      );
-      topStealPlayer = updateLeader(topStealPlayer, steals, p);
-    }
-
-    let totalControlWards = 0;
-    for (const m of allMatches) {
-      totalControlWards += m.controlWardsBought ?? 0;
-    }
-    const totalGameMinutes = durationSource.reduce(
-      (s, m) => s + m.gameDuration / 60,
-      0
-    );
-    const controlWardsPerMin =
-      totalGameMinutes > 0 ? totalControlWards / totalGameMinutes : 0;
-
-    return {
-      totalGames,
-      avgDurationMin,
-      avgKillsPerGame,
-      uniqueChamps: champs.length,
-      blueWr,
-      redWr,
-      champs,
-      bannedChamps,
-      flashDPicks,
-      flashDWr: flashDPicks > 0 ? (flashDWins / flashDPicks) * 100 : 0,
-      flashFPicks,
-      flashFWr: flashFPicks > 0 ? (flashFWins / flashFPicks) * 100 : 0,
-      fbWr,
-      fbGames: fbTeams.length,
-      gd15Wr,
-      gd15Games: gd15AheadTeams.length,
-      longestGame,
-      topPingPlayer,
-      topPentaPlayer,
-      topStealPlayer,
-      totalControlWards,
-      controlWardsPerMin,
-    };
-  }, [allDivisionPlayers]);
+  const overview = useMemo(
+    () => computeDivisionOverview(allDivisionPlayers),
+    [allDivisionPlayers]
+  );
 
   const leaderboardPlayers = useMemo(
     () => filteredPlayers.filter((p) => p.games >= 2),
     [filteredPlayers]
   );
 
-  const firstTeamAllPro = useMemo(
-    () =>
-      LEAGUE_ROLES.map((roleDef) => {
-        const candidates = leaderboardPlayers
-          .filter((p) => p.role === roleDef.key)
-          .sort((a, b) => b.leagueRating - a.leagueRating);
-        return candidates[0]
-          ? { roleMeta: roleDef, player: candidates[0] }
-          : null;
-      }).filter(
-        (
-          x
-        ): x is {
-          roleMeta: (typeof LEAGUE_ROLES)[number];
-          player: AggregatedPlayerStats;
-        } => Boolean(x)
-      ),
-    [leaderboardPlayers]
-  );
-
-  const topRating = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.leagueRating - a.leagueRating)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topKda = useMemo(
-    () =>
-      [...leaderboardPlayers].sort((a, b) => b.kda - a.kda).slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topKills = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.killsPerGame - a.killsPerGame)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topAssists = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.assistsPerGame - a.assistsPerGame)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const lowestDeaths = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => a.deathsPerGame - b.deathsPerGame)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topCs = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.csPerMin - a.csPerMin)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topDpm = useMemo(
-    () =>
-      [...leaderboardPlayers].sort((a, b) => b.dpm - a.dpm).slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topGpm = useMemo(
-    () =>
-      [...leaderboardPlayers].sort((a, b) => b.gpm - a.gpm).slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topVision = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.visionPerMin - a.visionPerMin)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topKp = useMemo(
-    () =>
-      [...leaderboardPlayers].sort((a, b) => b.kpPct - a.kpPct).slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topDmgShare = useMemo(
-    () =>
-      [...leaderboardPlayers]
-        .sort((a, b) => b.damageSharePct - a.damageSharePct)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topGoldDiff15 = useMemo(
-    () =>
-      leaderboardPlayers
-        .filter(
-          (p) => p.avgGoldDiff15 !== null && p.avgGoldDiff15 !== undefined
-        )
-        .sort((a, b) => (b.avgGoldDiff15 ?? 0) - (a.avgGoldDiff15 ?? 0))
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topSoloKills = useMemo(
-    () =>
-      leaderboardPlayers
-        .filter((p) => p.hasSoloKillsData)
-        .sort((a, b) => b.soloKills - a.soloKills)
-        .slice(0, 5),
-    [leaderboardPlayers]
-  );
-  const topFirstBlood = useMemo(
-    () =>
-      leaderboardPlayers
-        .filter((p) => p.firstBloodPct !== null)
-        .sort((a, b) => (b.firstBloodPct ?? 0) - (a.firstBloodPct ?? 0))
-        .slice(0, 5),
+  const {
+    firstTeamAllPro,
+    topRating,
+    topKda,
+    topKills,
+    topAssists,
+    lowestDeaths,
+    topCs,
+    topDpm,
+    topGpm,
+    topVision,
+    topKp,
+    topDmgShare,
+    topGoldDiff15,
+    topSoloKills,
+    topFirstBlood,
+  } = useMemo(
+    () => computePlayerLeaderboards(leaderboardPlayers),
     [leaderboardPlayers]
   );
 
@@ -1104,45 +719,10 @@ export function StatsDashboard({
       );
   }, [filteredPlayers, roleFilter]);
 
-  const sortColorByPlayerKey = useMemo(() => {
-    const map = new Map<string, string>();
-    const valid = tablePlayers
-      .filter((p) => p.games > 0)
-      .map((p) => ({
-        key: p.playerKey,
-        val: p[sortKey] as number | null | undefined,
-      }))
-      .filter(
-        (x): x is { key: string; val: number } =>
-          typeof x.val === "number" && Number.isFinite(x.val)
-      );
-    if (valid.length === 0) return map;
-    valid.sort((a, b) => b.val - a.val);
-    const total = valid.length;
-    for (let i = 0; i < total; i++) {
-      let rank = i + 1;
-      while (rank > 1 && valid[rank - 2].val === valid[i].val) {
-        rank--;
-      }
-      const t = total <= 1 ? 0 : Math.min(1, Math.max(0, (rank - 1) / (total - 1)));
-      let r: number;
-      let g: number;
-      let b: number;
-      if (t <= 0.5) {
-        const u = t / 0.5;
-        r = Math.round(74 + (166 - 74) * u);
-        g = Math.round(222 + (168 - 222) * u);
-        b = Math.round(128 + (158 - 128) * u);
-      } else {
-        const u = (t - 0.5) / 0.5;
-        r = Math.round(166 + (248 - 166) * u);
-        g = Math.round(168 + (113 - 168) * u);
-        b = Math.round(158 + (113 - 158) * u);
-      }
-      map.set(valid[i].key, `rgb(${r}, ${g}, ${b})`);
-    }
-    return map;
-  }, [tablePlayers, sortKey]);
+  const sortColorByPlayerKey = useMemo(
+    () => computeSortColors(tablePlayers, sortKey),
+    [tablePlayers, sortKey]
+  );
 
   function handleSort(nextKey: SortKey) {
     if (sortKey === nextKey) {
@@ -1162,364 +742,30 @@ export function StatsDashboard({
     <div className="space-y-4">
       {/* Admin Controls WinXP Window (Admin View Only) */}
       {isAdminView && (
-      <RetroWindow title="Admin Controls" theme="xp">
-        <div className="space-y-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center">
-              <Link
-                href="/admin"
-                className="xp-btn text-xs justify-center sm:justify-start"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Admin Console</span>
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {sheetData && (
-                <span className="text-[11px] text-[#a6a89e]">
-                  Loaded{" "}
-                  <strong className="text-[#f0ede0]">
-                    {sheetData.matchCount}
-                  </strong>{" "}
-                  league games ({sheetData.rowCount} rows)
-                </span>
-              )}
-              {sheetData && sheetData.unrosteredPlayers.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowUnrosteredModal(true)}
-                  title="View unrostered sub / alt summoner names found in the sheet"
-                  className="xp-btn text-xs justify-center"
-                >
-                  <Users className="w-3.5 h-3.5 text-[#f0c020]" />
-                  <span>
-                    Unrostered ({sheetData.unrosteredPlayers.length})
-                  </span>
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={importingDrafts || sheetLoading}
-                onClick={() => void handleImportMissingDrafts()}
-                title="Auto-import missing drafts from configured Schedule / Draft Links Google Sheet tab"
-                className="xp-btn text-xs justify-center disabled:opacity-50"
-              >
-                <Download
-                  className={`w-3.5 h-3.5 text-[#f0c020] ${
-                    importingDrafts ? "animate-pulse" : ""
-                  }`}
-                />
-                <span>
-                  {importingDrafts ? "Importing Drafts..." : "Import Drafts"}
-                </span>
-              </button>
-              <button
-                type="button"
-                disabled={sheetLoading}
-                onClick={() => void loadSheetStats(true)}
-                title="Fetch latest SCDL League stats from the public Google Sheet"
-                className="xp-btn xp-btn-primary text-xs justify-center disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${sheetLoading ? "animate-spin" : ""}`}
-                />
-                <span>
-                  {sheetLoading ? "Loading Sheet..." : "Refresh Sheet"}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {sheetData && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px]">
-              {sheetData.missingDraftGames.length === 0 &&
-              sheetData.incompleteDataGames.length === 0 &&
-              sheetData.draftIntegrityIssues.length === 0 &&
-              sheetData.unrosteredPlayers.length === 0 &&
-              missingDataPlayers.length === 0 ? (
-                <span className="px-2.5 py-1 rounded bg-[#143320]/90 border border-[#3a804d] text-[#7cd438] font-bold">
-                  ✓ All Datasets Aligned ({sheetData.matchCount} games &middot;
-                  100% draft coverage &middot; no duplicates)
-                </span>
-              ) : (
-                <span className="px-2.5 py-1 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-[#f0c020] font-bold">
-                  Dataset Audit:{" "}
-                  {[
-                    sheetData.missingDraftGames.length > 0 &&
-                      `${sheetData.missingDraftGames.length} missing drafts`,
-                    sheetData.draftIntegrityIssues.length > 0 &&
-                      `${sheetData.draftIntegrityIssues.length} draft mismatches/duplicates`,
-                    sheetData.incompleteDataGames.length > 0 &&
-                      `${sheetData.incompleteDataGames.length} incomplete rows`,
-                    sheetData.unrosteredPlayers.length > 0 &&
-                      `${sheetData.unrosteredPlayers.length} unrostered`,
-                    missingDataPlayers.length > 0 &&
-                      `${missingDataPlayers.length} 0-game players`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")}
-                </span>
-              )}
-            </div>
-          )}
-
-          {draftImportResult && (
-            <div className="p-2.5 bg-black/40 border border-[#c89b3c]/50 rounded text-[11px] text-[#e8e5d8] space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-[#f0c020]">
-                  Draft Import Summary: {draftImportResult.imported.length}{" "}
-                  imported, {draftImportResult.alreadyCompleteCount}/
-                  {draftImportResult.totalSheetGames} already complete
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setDraftImportResult(null)}
-                  className="text-[#a6a89e] hover:text-white"
-                >
-                  Dismiss
-                </button>
-              </div>
-              {draftImportResult.warnings.length > 0 && (
-                <div className="text-[#ff857a] space-y-0.5">
-                  <div className="font-bold">
-                    Warnings / Validation Skips ({draftImportResult.warnings.length}):
-                  </div>
-                  {draftImportResult.warnings.map((w) => (
-                    <div key={w.gameId}>
-                      • {w.matchLabel} ({w.gameId}): {w.reason}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {draftImportResult.manualReview.length > 0 && (
-                <div className="text-[#f0c020] space-y-0.5">
-                  <div className="font-bold">
-                    Manual Entry Needed (drafter.lol / blocked:{" "}
-                    {draftImportResult.manualReview.length}):
-                  </div>
-                  {draftImportResult.manualReview.map((m) => (
-                    <div key={m.gameId} className="truncate">
-                      • {m.matchLabel} ({m.gameId}):{" "}
-                      <a
-                        href={m.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      >
-                        {m.url}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {draftImportResult.unmatched.length > 0 && (
-                <div className="text-[#a6a89e]">
-                  Unmatched on schedule tab ({draftImportResult.unmatched.length}):{" "}
-                  {draftImportResult.unmatched
-                    .map((u) => `${u.matchLabel} (${u.gameId})`)
-                    .join(", ")}
-                </div>
-              )}
-            </div>
-          )}
-
-          {sheetError && (
-            <div className="p-2 bg-[#451717] border border-[#9e3535] rounded text-xs text-[#ff857a] font-bold">
-              {sheetError}
-            </div>
-          )}
-
-          {missingDataPlayers.length > 0 && (() => {
-            const preview = missingDataPlayers
-              .slice(0, 6)
-              .map((p) => `${p.displayName} (${p.teamName})`)
-              .join(", ");
-            const remainder = missingDataPlayers.length - 6;
-            return (
-              <div
-                title={missingDataPlayers
-                  .map((p) => `${p.displayName} (${p.teamName})`)
-                  .join(", ")}
-                className="px-3 py-1.5 bg-[#2a2210]/80 border border-[#c89b3c]/40 rounded text-[11px] text-[#f0c020] flex items-center gap-2"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  <strong>{missingDataPlayers.length}</strong> rostered{" "}
-                  {missingDataPlayers.length === 1 ? "player has" : "players have"}{" "}
-                  no match data yet: {preview}
-                  {remainder > 0 ? ` +${remainder} more` : ""}
-                </span>
-              </div>
-            );
-          })()}
-
-          {sheetData && sheetData.missingDraftGames.length > 0 && (() => {
-            const missing = sheetData.missingDraftGames;
-            const preview = missing
-              .slice(0, 6)
-              .map((g) => g.matchLabel)
-              .join(", ");
-            const remainder = missing.length - 6;
-            return (
-              <div
-                title={missing
-                  .map((g) => `${g.matchLabel} (${g.gameId})`)
-                  .join("\n")}
-                className="px-3 py-1.5 bg-[#451717]/90 border border-[#9e3535] rounded text-[11px] text-[#ff857a] flex items-center gap-2"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  <strong>{missing.length}</strong>{" "}
-                  {missing.length === 1 ? "game is" : "games are"} missing draft
-                  info (picks/bans in <code>match_drafts</code> /{" "}
-                  <code>data/scdl_drafts.json</code>): {preview}
-                  {remainder > 0 ? ` +${remainder} more` : ""}
-                </span>
-              </div>
-            );
-          })()}
-
-          {sheetData && sheetData.draftIntegrityIssues.length > 0 && (
-            <div className="px-3 py-2 bg-[#451717]/90 border border-[#9e3535] rounded text-[11px] text-[#ff857a] space-y-1">
-              <div className="font-bold flex items-center gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  <strong>{sheetData.draftIntegrityIssues.length}</strong> draft
-                  dataset integrity{" "}
-                  {sheetData.draftIntegrityIssues.length === 1
-                    ? "issue"
-                    : "issues"}{" "}
-                  detected:
-                </span>
-              </div>
-              {sheetData.draftIntegrityIssues.map((d) => (
-                <div key={`${d.gameId}-${d.issue}`} className="pl-5">
-                  • <strong>{d.matchLabel}</strong> ({d.gameId}): {d.issue}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {sheetData && sheetData.incompleteDataGames.length > 0 && (() => {
-            const incomplete = sheetData.incompleteDataGames;
-            const preview = incomplete
-              .slice(0, 6)
-              .map((g) => g.matchLabel)
-              .join(", ");
-            const remainder = incomplete.length - 6;
-            return (
-              <div className="px-3 py-2 bg-[#2a2210]/80 border border-[#c89b3c]/50 rounded text-[11px] text-[#f0c020] space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span>
-                      <strong>{incomplete.length}</strong>{" "}
-                      {incomplete.length === 1 ? "game has" : "games have"}{" "}
-                      incomplete data fields: {preview}
-                      {remainder > 0 ? ` +${remainder} more` : ""}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowIncompleteDetails((v) => !v)}
-                    className="xp-btn px-2 py-0.5 text-[10px] shrink-0"
-                  >
-                    {showIncompleteDetails ? "Hide Details" : "Review Fields"}
-                  </button>
-                </div>
-                {showIncompleteDetails && (
-                  <div className="max-h-40 overflow-y-auto space-y-1 border-t border-white/10 pt-1.5 text-[10px] text-[#e8e5d8]">
-                    {incomplete.map((g) => (
-                      <div key={g.gameId} className="flex flex-wrap gap-x-2">
-                        <span className="font-bold text-[#f0c020]">
-                          {g.matchLabel}
-                        </span>
-                        <span className="text-[#a6a89e]">({g.gameId}):</span>
-                        <span>{g.issues.join(", ")}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          <div className="p-2.5 bg-black/30 border border-white/10 rounded space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[11px] font-bold uppercase text-[#f0c020] flex items-center gap-1.5">
-                <Megaphone className="w-3.5 h-3.5" />
-                <span>Stats Dashboard Broadcast Notice</span>
-              </div>
-              {statsNotice && (
-                <span className="text-[10px] text-[#7cd438] font-bold">
-                  ● Live on /stats
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={noticeDraft}
-                onChange={(e) => setNoticeDraft(e.target.value)}
-                maxLength={280}
-                placeholder="e.g., Playoff Week 1 stats are still being collected — recent matches may be incomplete."
-                className="flex-1 xp-inset px-2.5 py-1.5 text-xs"
-              />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  disabled={savingNotice}
-                  onClick={() => void saveStatsNotice(noticeDraft)}
-                  className="xp-btn xp-btn-primary text-xs"
-                >
-                  {savingNotice ? "Saving..." : "Publish Notice"}
-                </button>
-                {statsNotice && (
-                  <button
-                    type="button"
-                    disabled={savingNotice}
-                    onClick={() => void saveStatsNotice(null)}
-                    className="xp-btn xp-btn-danger text-xs"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-            {noticeError && (
-              <div className="text-[11px] text-[#ff857a] font-bold">
-                {noticeError}
-              </div>
-            )}
-          </div>
-
-          <MatchDraftForm
-            seasonId={seasonId}
-            ddVersion={ddVersion}
-            onSaved={() => void loadSheetStats(true)}
-            onError={(msg) => setSheetError(msg)}
-          />
-        </div>
-      </RetroWindow>
-      )}
-
-      {isAdminView && missingTable && (
-        <RetroWindow title="Setup Required — Create Stats Cache Table" theme="xp">
-          <div className="space-y-3 text-xs text-[#e8e5d8]">
-            <div className="flex items-start gap-2 text-[#f0c020] font-bold">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                Run migration{" "}
-                <code>supabase/migrations/017_riot_stats_cache.sql</code> in
-                your Supabase SQL Editor to cache Riot API stats:
-              </span>
-            </div>
-            <pre className="xp-inset p-3 text-[11px] overflow-x-auto text-[#7cd438] tabular-nums">
-              {MIGRATION_SQL}
-            </pre>
-          </div>
-        </RetroWindow>
+        <StatsAdminControls
+          seasonId={seasonId}
+          ddVersion={ddVersion}
+          missingTable={missingTable}
+          sheetData={sheetData}
+          sheetLoading={sheetLoading}
+          sheetError={sheetError}
+          setSheetError={setSheetError}
+          importingDrafts={importingDrafts}
+          draftImportResult={draftImportResult}
+          setDraftImportResult={setDraftImportResult}
+          showIncompleteDetails={showIncompleteDetails}
+          setShowIncompleteDetails={setShowIncompleteDetails}
+          missingDataPlayers={missingDataPlayers}
+          statsNotice={statsNotice}
+          noticeDraft={noticeDraft}
+          setNoticeDraft={setNoticeDraft}
+          savingNotice={savingNotice}
+          noticeError={noticeError}
+          onOpenUnrosteredModal={() => setShowUnrosteredModal(true)}
+          onImportMissingDrafts={() => void handleImportMissingDrafts()}
+          onRefreshSheet={() => void loadSheetStats(true)}
+          onSaveNotice={(next) => void saveStatsNotice(next)}
+        />
       )}
 
       {/* Modern Consensus-Style League & Division Selectors */}
@@ -1529,60 +775,105 @@ export function StatsDashboard({
       >
         {/* League Selector Card */}
         <div className="relative">
-          <button
-            type="button"
-            onClick={() =>
-              setOpenDropdown((prev) => (prev === "league" ? null : "league"))
-            }
-            className="w-full text-left rounded-xl border border-white/15 bg-[#151d1a]/95 hover:border-[#c89b3c]/70 px-3.5 py-3 flex items-center justify-between gap-3 transition shadow-md cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              {leagueLogoUrl ? (
-                <img
-                  src={leagueLogoUrl}
-                  alt={leagueName}
-                  className="w-10 h-10 object-contain shrink-0"
-                />
-              ) : (
-                <Award className="w-9 h-9 text-[#f0c020] shrink-0" />
-              )}
-              <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] truncate">
-                  {leagueName}
-                </div>
-                <div className="text-sm font-extrabold text-white truncate">
-                  {seasonName}
-                </div>
-              </div>
-            </div>
-            <ChevronDown className="w-4 h-4 text-[#c89b3c] shrink-0" />
-          </button>
-
-          {openDropdown === "league" && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-[#c89b3c]/60 bg-[#121816] shadow-2xl p-1.5 max-h-72 overflow-y-auto space-y-1">
+          {allSeasons.length > 1 ? (
+            <>
               <button
                 type="button"
-                onClick={() => setOpenDropdown(null)}
-                className="w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer bg-[#2a2210] border border-[#c89b3c]/70 text-[#f0c020]"
+                onClick={() =>
+                  setOpenDropdown((prev) =>
+                    prev === "league" ? null : "league"
+                  )
+                }
+                className="w-full text-left rounded-xl border border-white/15 bg-[#151d1a]/95 hover:border-[#c89b3c]/70 px-3.5 py-3 flex items-center justify-between gap-3 transition shadow-md cursor-pointer"
               >
+                <div className="flex items-center gap-3 min-w-0">
+                  {leagueLogoUrl ? (
+                    <img
+                      src={leagueLogoUrl}
+                      alt={leagueName}
+                      className="w-10 h-10 object-contain shrink-0"
+                    />
+                  ) : (
+                    <Award className="w-9 h-9 text-[#f0c020] shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] truncate">
+                      {leagueName}
+                    </div>
+                    <div className="text-sm font-extrabold text-white truncate">
+                      {seasonName}
+                    </div>
+                  </div>
+                </div>
+                <ChevronDown className="w-4 h-4 text-[#c89b3c] shrink-0" />
+              </button>
+
+              {openDropdown === "league" && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-[#c89b3c]/60 bg-[#121816] shadow-2xl p-1.5 max-h-72 overflow-y-auto space-y-1">
+                  {allSeasons.map((opt) => {
+                    const isSelected =
+                      (seasonSlug && opt.slug === seasonSlug) ||
+                      (seasonId && opt.id === seasonId);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setOpenDropdown(null);
+                          if (!isSelected) {
+                            router.push(statsHref(basePath, opt.slug));
+                          }
+                        }}
+                        className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
+                          isSelected
+                            ? "bg-[#2a2210] border border-[#c89b3c]/70 text-[#f0c020]"
+                            : "hover:bg-white/5 text-[#e8e5d8]"
+                        }`}
+                      >
+                        {opt.leagueLogoUrl ? (
+                          <img
+                            src={opt.leagueLogoUrl}
+                            alt={opt.leagueName}
+                            className="w-7 h-7 object-contain shrink-0"
+                          />
+                        ) : (
+                          <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                            {opt.leagueName}
+                          </div>
+                          <div className="text-xs font-bold truncate">
+                            {opt.name}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full text-left rounded-xl border border-white/15 bg-[#151d1a]/95 px-3.5 py-3 flex items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-3 min-w-0">
                 {leagueLogoUrl ? (
                   <img
                     src={leagueLogoUrl}
                     alt={leagueName}
-                    className="w-7 h-7 object-contain shrink-0"
+                    className="w-10 h-10 object-contain shrink-0"
                   />
                 ) : (
-                  <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
+                  <Award className="w-9 h-9 text-[#f0c020] shrink-0" />
                 )}
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase font-bold text-[#a6a89e] truncate">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] truncate">
                     {leagueName}
                   </div>
-                  <div className="text-xs font-bold truncate">
+                  <div className="text-sm font-extrabold text-white truncate">
                     {seasonName}
                   </div>
                 </div>
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -1993,7 +1284,7 @@ export function StatsDashboard({
                     return (
                       <Link
                         key={roleMeta.key}
-                        href={playerHref(player.playerKey)}
+                        prefetch={false} href={playerHref(player.playerKey)}
                         className="group relative min-w-[155px] h-[160px] shrink-0 snap-start md:min-w-0 md:h-[180px] rounded-lg border border-white/15 hover:border-[#f0c020]/80 overflow-hidden bg-[#101513] flex flex-col justify-between p-2.5 transition"
                       >
                         {cardContent}
@@ -2333,7 +1624,7 @@ export function StatsDashboard({
                   ) : (
                     <Link
                       key={p.playerKey}
-                      href={playerHref(p.playerKey)}
+                      prefetch={false} href={playerHref(p.playerKey)}
                       className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-white/5 transition"
                     >
                       {rowInner}
@@ -2447,7 +1738,7 @@ export function StatsDashboard({
                   ) : (
                     <Link
                       key={p.playerKey}
-                      href={playerHref(p.playerKey)}
+                      prefetch={false} href={playerHref(p.playerKey)}
                       className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-3 transition hover:bg-[#f0c020]/10 ${
                         idx === 0 ? "bg-[#f0c020]/10" : ""
                       }`}
@@ -2807,387 +2098,32 @@ export function StatsDashboard({
             selectedDivisionPrimaryColor={selectedDivisionTheme?.primary_color}
             selectedDivisionSlug={selectedDivision?.slug ?? null}
             seasonSlug={seasonSlug}
+            basePath={basePath}
           />
         )}
 
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
         {activeSection === "players" && showLeaderboards && (
-        <div
-          style={
-            selectedDivisionTheme
-              ? {
-                  borderColor: `${selectedDivisionTheme.primary_color}66`,
-                  borderTopWidth: "3px",
-                  borderTopColor: selectedDivisionTheme.primary_color,
-                }
-              : undefined
-          }
-          className="mb-6 xp-panel overflow-hidden"
-        >
-          <div
-            style={
-              selectedDivisionTheme
-                ? {
-                    background: `linear-gradient(90deg, ${selectedDivisionTheme.primary_color}38 0%, #121615 70%)`,
-                  }
-                : undefined
+          <StatsPlayersTab
+            ddVersion={ddVersion}
+            selectedDivisionTheme={selectedDivisionTheme}
+            roleFilter={roleFilter}
+            onSelectRoleFilter={setRoleFilter}
+            sortKey={sortKey}
+            onSort={handleSort}
+            tablePlayers={tablePlayers}
+            sortColorByPlayerKey={sortColorByPlayerKey}
+            roleLeaderboardPlayers={roleLeaderboardPlayers}
+            exportingRoleLeaderboard={exportingRoleLeaderboard}
+            onExportRoleLeaderboardPng={handleExportRoleLeaderboardPng}
+            showAllPlayers={showAllPlayers}
+            onToggleShowAllPlayers={() => setShowAllPlayers((prev) => !prev)}
+            onNavigatePlayer={(playerKey) =>
+              router.push(playerHref(playerKey))
             }
-            className="bg-[#121615] border-b border-white/10 px-4 py-2 min-h-[60px] flex flex-wrap items-center justify-between gap-2"
-          >
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-[#f0c020] flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span>Top Players ({tablePlayers.length})</span>
-            </h2>
-            <div className="flex flex-wrap items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setRoleFilter("all")}
-                className={`xp-btn text-[10px] px-2 py-1 ${
-                  roleFilter === "all" ? "xp-btn-primary" : ""
-                }`}
-              >
-                All Roles
-              </button>
-              {LEAGUE_ROLES.map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setRoleFilter(r.key)}
-                  className={`xp-btn text-[10px] px-2 py-1 ${
-                    roleFilter === r.key ? "xp-btn-primary" : ""
-                  }`}
-                >
-                  <img
-                    src={r.icon}
-                    alt={r.label}
-                    className="w-3.5 h-3.5 object-contain"
-                  />
-                  <span>{r.label}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleExportRoleLeaderboardPng}
-                disabled={
-                  roleFilter === "all" ||
-                  roleLeaderboardPlayers.length === 0 ||
-                  exportingRoleLeaderboard
-                }
-                title={
-                  roleFilter === "all"
-                    ? "Select a role to export its Role Leaderboard PNG"
-                    : `Export ${getRoleMeta(roleFilter).label} Leaderboard PNG`
-                }
-                className="xp-btn xp-btn-gold text-[10px] px-2.5 py-1 flex items-center gap-1.5 ml-1"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>
-                  {exportingRoleLeaderboard ? "Exporting..." : "Export PNG"}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-black/35 text-[10px] uppercase text-[#a6a89e] border-b border-white/10">
-                <tr>
-                  <th className="px-3 py-2">Player</th>
-                  <th className="px-2 py-2">Team</th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "games" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("games")}
-                    title="Games Played"
-                  >
-                    Games
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "leagueRating" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("leagueRating")}
-                    title="Role-normalized 0–100 Rankr Rating"
-                  >
-                    Rating
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "kda" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("kda")}
-                    title="Kill / Death / Assist Ratio"
-                  >
-                    KDA
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "dpm" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("dpm")}
-                    title="Damage to Champions / Min"
-                  >
-                    DPM
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "gpm" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("gpm")}
-                    title="Gold Earned / Min"
-                  >
-                    GPM
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "csPerMin" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("csPerMin")}
-                    title="Creep Score / Min"
-                  >
-                    CS/m
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "kpPct" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("kpPct")}
-                    title="Kill Participation %"
-                  >
-                    KP%
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "damageSharePct" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("damageSharePct")}
-                    title="Team Damage Share %"
-                  >
-                    DMG%
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "visionPerMin" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("visionPerMin")}
-                    title="Vision Score / Min"
-                  >
-                    VS/m
-                  </th>
-                  <th
-                    className={`px-2 py-2 text-right cursor-pointer hover:text-white ${
-                      sortKey === "avgGoldDiff15" ? "text-[#f0c020]" : ""
-                    }`}
-                    onClick={() => handleSort("avgGoldDiff15")}
-                    title="Average Gold Diff at 15 Minutes vs Lane Opponent"
-                  >
-                    GD@15
-                  </th>
-                  <th className="px-3 py-2" title="Most Played Champions">
-                    Top Champs
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {(showAllPlayers ? tablePlayers : tablePlayers.slice(0, 15)).map(
-                  (p) => {
-                  const roleMeta = getRoleMeta(p.role as LeagueRole);
-                  const sortColor = sortColorByPlayerKey.get(p.playerKey);
-                  const sortCellStyle = (col: SortKey) =>
-                    sortKey === col && sortColor
-                      ? { color: sortColor }
-                      : undefined;
-                  return (
-                    <tr
-                      key={p.playerKey}
-                      onClick={
-                        p.isSub
-                          ? undefined
-                          : () => router.push(playerHref(p.playerKey))
-                      }
-                      className={
-                        p.isSub
-                          ? "bg-black/20"
-                          : "hover:bg-white/5 transition cursor-pointer"
-                      }
-                    >
-                      <td className="px-3 py-2 font-bold text-[#f0ede0] whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={roleMeta.icon}
-                            alt={roleMeta.label}
-                            className="w-4 h-4 object-contain shrink-0"
-                          />
-                          <span>{p.displayName}</span>
-                          {p.isSub && (
-                            <span className="px-1 py-0.5 rounded bg-black/60 border border-white/20 text-[9px] font-bold uppercase text-[#a6a89e] shrink-0">
-                              SUB
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-[#c7c5b8] whitespace-nowrap">
-                        {p.isSub || !p.teamName ? (
-                          <span className="text-[#a6a89e]">—</span>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            {p.teamLogoUrl && (
-                              <img
-                                src={p.teamLogoUrl}
-                                alt={p.teamName}
-                                className="w-4 h-4 object-contain shrink-0"
-                              />
-                            )}
-                            <span>{p.teamName}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td
-                        style={sortCellStyle("games")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "games"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        }`}
-                      >
-                        {p.games}
-                      </td>
-                      <td
-                        style={sortCellStyle("leagueRating")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "leagueRating"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? p.leagueRating.toFixed(1) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("kda")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "kda" ? "font-bold" : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? p.kda.toFixed(2) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("dpm")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "dpm" ? "font-bold" : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? Math.round(p.dpm) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("gpm")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "gpm" ? "font-bold" : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? Math.round(p.gpm) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("csPerMin")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "csPerMin"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? p.csPerMin.toFixed(1) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("kpPct")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "kpPct" ? "font-bold" : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? `${p.kpPct.toFixed(0)}%` : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("damageSharePct")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "damageSharePct"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? `${p.damageSharePct.toFixed(0)}%` : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("visionPerMin")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "visionPerMin"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${p.games <= 0 ? "text-[#a6a89e]" : ""}`}
-                      >
-                        {p.games > 0 ? p.visionPerMin.toFixed(2) : "—"}
-                      </td>
-                      <td
-                        style={sortCellStyle("avgGoldDiff15")}
-                        className={`px-2 py-2 text-right tabular-nums ${
-                          sortKey === "avgGoldDiff15"
-                            ? "font-bold"
-                            : "text-[#e8e5d8]"
-                        } ${
-                          p.avgGoldDiff15 === null ||
-                          p.avgGoldDiff15 === undefined ||
-                          p.games <= 0
-                            ? "text-[#a6a89e]"
-                            : ""
-                        }`}
-                      >
-                        {p.games > 0 &&
-                        p.avgGoldDiff15 !== null &&
-                        p.avgGoldDiff15 !== undefined
-                          ? `${p.avgGoldDiff15 >= 0 ? "+" : ""}${Math.round(
-                              p.avgGoldDiff15
-                            )}`
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1">
-                          {p.topChampions.slice(0, 3).map((c) => (
-                            <img
-                              key={c.name}
-                              src={getChampionIconUrl(c.name, ddVersion)}
-                              alt={c.name}
-                              title={`${c.name} (${c.games}G)`}
-                              className="w-5 h-5 rounded border border-white/20 object-cover"
-                            />
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {tablePlayers.length > 15 && (
-            <div className="bg-[#121615] border-t border-white/10 px-3 py-2 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-[#a6a89e]">
-                Showing{" "}
-                {showAllPlayers
-                  ? tablePlayers.length
-                  : Math.min(15, tablePlayers.length)}{" "}
-                of {tablePlayers.length} players
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAllPlayers((prev) => !prev)}
-                className="xp-btn text-xs"
-              >
-                {showAllPlayers
-                  ? "Show Top 15 ▲"
-                  : `Show All ${tablePlayers.length} Players ▼`}
-              </button>
-            </div>
-          )}
-        </div>
+          />
         )}
+
         {/* Teams Standings / Playoff Bracket */}
         {activeSection === "teams" && (
           <StatsTeamsTab

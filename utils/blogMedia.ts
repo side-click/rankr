@@ -99,32 +99,51 @@ export async function cleanupBlogMedia(
 }
 
 /**
- * Best-effort removal of `ballot-overlays` objects attached to a deleted ranking/tier list.
+ * Best-effort removal of `ranking-overlays` (and legacy `ballot-overlays`) objects
+ * attached to a removed overlay or deleted ranking/tier list.
  */
 export async function cleanupRankingOverlays(
   supabase: SupabaseClient,
   overlays?: { url?: string | null }[] | null
 ): Promise<void> {
   if (!Array.isArray(overlays) || overlays.length === 0) return;
-  const marker = "/storage/v1/object/public/ballot-overlays/";
-  const paths = new Set<string>();
+  const markers: { bucket: string; marker: string }[] = [
+    {
+      bucket: "ranking-overlays",
+      marker: "/storage/v1/object/public/ranking-overlays/",
+    },
+    {
+      bucket: "ballot-overlays",
+      marker: "/storage/v1/object/public/ballot-overlays/",
+    },
+  ];
+  const pathsByBucket = new Map<string, Set<string>>();
   for (const item of overlays) {
     const url = item?.url;
     if (!url) continue;
-    const idx = url.indexOf(marker);
-    if (idx === -1) continue;
-    const raw = url.slice(idx + marker.length).split("?")[0];
-    if (raw) {
+    for (const { bucket, marker } of markers) {
+      const idx = url.indexOf(marker);
+      if (idx === -1) continue;
+      const raw = url.slice(idx + marker.length).split("?")[0];
+      if (!raw) continue;
+      let decoded = raw;
       try {
-        paths.add(decodeURIComponent(raw));
+        decoded = decodeURIComponent(raw);
       } catch {
-        paths.add(raw);
+        decoded = raw;
       }
+      const set = pathsByBucket.get(bucket) ?? new Set<string>();
+      set.add(decoded);
+      pathsByBucket.set(bucket, set);
     }
   }
-  if (paths.size === 0) return;
+  if (pathsByBucket.size === 0) return;
   try {
-    await supabase.storage.from("ballot-overlays").remove(Array.from(paths));
+    await Promise.all(
+      Array.from(pathsByBucket.entries()).map(([bucket, set]) =>
+        supabase.storage.from(bucket).remove(Array.from(set))
+      )
+    );
   } catch {
     // Non-fatal
   }

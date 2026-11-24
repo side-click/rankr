@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getLatestDdragonVersion } from "@/utils/riotApi";
+import { normalizeChampionKey } from "@/utils/formatters";
 import {
   loadUniqueSheetRows,
   SCDL_SHEET_ID,
   type SheetSourceConfig,
-} from "@/utils/scdlSheetStats";
+} from "@/utils/leagueStats";
 
 export interface DraftImportEntry {
   gameId: string;
@@ -41,18 +42,11 @@ function normUrl(url: string): string {
   return url.trim().replace(/\/+$/, "").toLowerCase();
 }
 
-function normChampKey(s: string): string {
-  const k = s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (k === "wukong") return "monkeyking";
-  if (k === "renataglasc") return "renata";
-  return k;
-}
-
 async function buildChampionNormalizer() {
   const ver = await getLatestDdragonVersion();
   const res = await fetch(
     `https://ddragon.leagueoflegends.com/cdn/${ver}/data/en_US/champion.json`,
-    { next: { revalidate: 3600 } }
+    { next: { revalidate: 86400 } }
   );
   const dd = (await res.json()) as {
     data: Record<string, { id: string; key: string; name: string }>;
@@ -62,8 +56,8 @@ async function buildChampionNormalizer() {
   const byName = new Map<string, string>();
   for (const champ of Object.values(dd.data)) {
     byKey.set(String(champ.key), champ.id);
-    byName.set(normChampKey(champ.id), champ.id);
-    byName.set(normChampKey(champ.name), champ.id);
+    byName.set(normalizeChampionKey(champ.id), champ.id);
+    byName.set(normalizeChampionKey(champ.name), champ.id);
   }
 
   return (raw: unknown): string | null => {
@@ -72,7 +66,7 @@ async function buildChampionNormalizer() {
     const s = String(raw).trim();
     if (!s || /^none$/i.test(s)) return null;
     if (/^\d+$/.test(s)) return byKey.get(s) ?? s;
-    return byName.get(normChampKey(s)) ?? s;
+    return byName.get(normalizeChampionKey(s)) ?? s;
   };
 }
 
@@ -290,6 +284,9 @@ export async function importMissingDraftsForSeason(
       "Missing Stats Sheet ID or Schedule / Draft Links Tab GID on this season (configure in Admin → Seasons)."
     );
   }
+  if (!/^[a-zA-Z0-9_-]{10,120}$/.test(sheetId) || !/^\d+$/.test(scheduleGid)) {
+    throw new Error("Invalid Google Sheet ID or Schedule Tab GID format.");
+  }
 
   const [uniqueRows, existingRes, normalizeChamp] = await Promise.all([
     loadUniqueSheetRows({ ...config, bypassCache: true }),
@@ -333,7 +330,7 @@ export async function importMissingDraftsForSeason(
     };
     if (r.side === "Blue" && r.teamName) entry.blueTeam = r.teamName;
     if (r.side === "Red" && r.teamName) entry.redTeam = r.teamName;
-    if (r.champion) entry.playedChamps.add(normChampKey(r.champion));
+    if (r.champion) entry.playedChamps.add(normalizeChampionKey(r.champion));
     gamesById.set(r.gameId, entry);
   }
 
@@ -405,7 +402,17 @@ export async function importMissingDraftsForSeason(
       continue;
     }
 
-    if (url.includes("drafter.lol")) {
+    let parsedHost = "";
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
+        parsedHost = parsedUrl.hostname.toLowerCase();
+      }
+    } catch {
+      parsedHost = "";
+    }
+
+    if (parsedHost === "drafter.lol" || parsedHost.endsWith(".drafter.lol")) {
       manualReview.push({
         gameId: g.gameId,
         matchLabel: g.matchLabel,
@@ -422,9 +429,15 @@ export async function importMissingDraftsForSeason(
         bluePicks: string[];
         redPicks: string[];
       };
-      if (url.includes("lowbudgetlcs.com")) {
+      if (
+        parsedHost === "lowbudgetlcs.com" ||
+        parsedHost.endsWith(".lowbudgetlcs.com")
+      ) {
         parsed = await fetchLowBudgetDraft(url, normalizeChamp);
-      } else if (url.includes("draftify.lol")) {
+      } else if (
+        parsedHost === "draftify.lol" ||
+        parsedHost.endsWith(".draftify.lol")
+      ) {
         parsed = await fetchDraftifyDraft(url, normalizeChamp);
       } else {
         manualReview.push({
@@ -448,7 +461,7 @@ export async function importMissingDraftsForSeason(
       }
 
       const overlap = allPicks.filter((c) =>
-        g.playedChamps.has(normChampKey(c))
+        g.playedChamps.has(normalizeChampionKey(c))
       ).length;
       if (g.playedChamps.size >= 8 && overlap < 7) {
         warnings.push({

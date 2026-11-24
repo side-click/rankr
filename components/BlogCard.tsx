@@ -89,6 +89,7 @@ export function BlogCard({
     return (
       <Link
         href={`/blog/${blog.id}`}
+        prefetch={false}
         style={cardStyle}
         className="xp-panel relative overflow-hidden px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2 lg:grid lg:grid-cols-[148px_145px_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
@@ -189,6 +190,7 @@ export function BlogCard({
   return (
     <Link
       href={`/blog/${blog.id}`}
+      prefetch={false}
       style={cardStyle}
       className="xp-panel relative overflow-hidden p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >
@@ -217,6 +219,9 @@ export function BlogCard({
             <img
               src={profile.avatar_url}
               alt={authorDisplay}
+              width={48}
+              height={48}
+              loading="lazy"
               className="w-12 h-12 rounded-md object-cover border border-white/30 shrink-0"
             />
           ) : (

@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
-import { RetroWindow } from "@/components/RetroWindow";
+import type { Metadata } from "next";
+import { Search } from "lucide-react";
+import type { BlogCardData } from "@/components/BlogCard";
+import type { ContentCardData } from "@/components/ContentCard";
 import {
   ContentListGrid,
   type ContentItem,
 } from "@/components/ContentListGrid";
-import type { ContentCardData } from "@/components/ContentCard";
-import type { BlogCardData } from "@/components/BlogCard";
+import { RetroWindow } from "@/components/RetroWindow";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
-import { Search } from "lucide-react";
-
-import type { Metadata } from "next";
+import { attachPublicProfiles } from "@/utils/publicProfiles";
+import { compactRankingCardRow } from "@/utils/recentContentQuery";
+import { createPublicClient } from "@/utils/supabase/server";
 
 export const metadata: Metadata = {
   title: "Browse Content | Rankr",
@@ -31,7 +32,7 @@ export default async function BrowsePage({
 }) {
   const params = await searchParams;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const [{ data: seasons }, { data: divisions }, { data: editions }] =
     await Promise.all([
@@ -40,7 +41,10 @@ export default async function BrowsePage({
         .select("*, leagues ( * )")
         .order("created_at", { ascending: false }),
       supabase.from("divisions").select("*").order("name"),
-      supabase.from("editions").select("*").order("sort_order", { ascending: true }),
+      supabase
+        .from("editions")
+        .select("*")
+        .order("sort_order", { ascending: true }),
     ]);
 
   const includeBallots = params.type !== "blog";
@@ -54,6 +58,7 @@ export default async function BrowsePage({
     .select(
       `
       id,
+      user_id,
       title,
       ranking_type,
       tier_variant,
@@ -67,7 +72,6 @@ export default async function BrowsePage({
       division_name_snapshot,
       division_logo_snapshot,
       edition_name_snapshot,
-      profiles ( username, avatar_url ),
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) ),
       divisions ( name, slug, logo_url, theme_key ),
       editions ( name, slug ),
@@ -109,6 +113,7 @@ export default async function BrowsePage({
     .select(
       `
       id,
+      user_id,
       title,
       subtitle,
       banner_url,
@@ -117,7 +122,6 @@ export default async function BrowsePage({
       season_id,
       season_name_snapshot,
       league_name_snapshot,
-      profiles ( username, avatar_url ),
       seasons ( name, slug, leagues ( name, short_name, slug, logo_url ) )
     `
     )
@@ -128,19 +132,34 @@ export default async function BrowsePage({
     blogQuery = blogQuery.eq("season_id", focusedSeasonRow.id);
   }
 
-  const [{ data: ballots }, { data: blogs }] = await Promise.all([
+  const [{ data: rawBallots }, { data: rawBlogs }] = await Promise.all([
     includeBallots ? query.limit(60) : Promise.resolve({ data: [] }),
     includeBlogs ? blogQuery.limit(60) : Promise.resolve({ data: [] }),
   ]);
 
+  const [ballots, blogs] = await Promise.all([
+    attachPublicProfiles(
+      supabase,
+      ((rawBallots ?? []) as unknown as (ContentCardData & {
+        user_id?: string | null;
+      })[]).map(compactRankingCardRow)
+    ),
+    attachPublicProfiles(
+      supabase,
+      (rawBlogs ?? []) as unknown as (BlogCardData & {
+        user_id?: string | null;
+      })[]
+    ),
+  ]);
+
   const authorFilter = params.author?.trim().toLowerCase() ?? "";
-  const filteredBallots = (ballots ?? []).filter((b) => {
+  const filteredBallots = ballots.filter((b) => {
     if (!authorFilter) return true;
     const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
     return (profile?.username ?? "").toLowerCase().includes(authorFilter);
   });
 
-  const filteredBlogs = (blogs ?? []).filter((b) => {
+  const filteredBlogs = blogs.filter((b) => {
     if (!authorFilter) return true;
     const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
     const authorDisplay = b.author_name?.trim() || profile?.username || "";
@@ -152,13 +171,13 @@ export default async function BrowsePage({
       kind: "ballot" as const,
       id: b.id,
       publishedAt: b.published_at,
-      data: b as unknown as ContentCardData,
+      data: b as ContentCardData,
     })),
     ...filteredBlogs.map((b) => ({
       kind: "blog" as const,
       id: b.id,
       publishedAt: b.published_at,
-      data: b as unknown as BlogCardData,
+      data: b as BlogCardData,
     })),
   ].sort((a, b) => {
     const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
@@ -211,8 +230,13 @@ export default async function BrowsePage({
                 ? s.leagues[0]
                 : s.leagues;
               const prefix =
-                (league as { short_name?: string | null; slug?: string; name?: string } | null)
-                  ?.short_name ||
+                (
+                  league as {
+                    short_name?: string | null;
+                    slug?: string;
+                    name?: string;
+                  } | null
+                )?.short_name ||
                 (league?.slug === "scdl" ? "SCDL" : league?.name);
               return (
                 <option key={s.id} value={s.slug}>
@@ -278,7 +302,7 @@ export default async function BrowsePage({
             <Search className="w-3.5 h-3.5" />
             <span>Filter</span>
           </button>
-          <Link href="/browse" className="xp-btn text-xs">
+          <Link href="/browse?season=" prefetch={false} className="xp-btn text-xs">
             Reset
           </Link>
         </div>

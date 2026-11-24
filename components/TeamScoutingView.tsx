@@ -16,14 +16,22 @@ import {
   type AggregatedPlayerStats,
   type AggregatedTeamStats,
 } from "@/utils/riotStatsAggregation";
-import type { ScdlSeriesDetail } from "@/utils/scdlSheetStats";
-import { resolveDivisionTheme } from "@/utils/themes";
+import type { ScdlSeriesDetail } from "@/utils/leagueStats";
+import { getThemeGradients, resolveDivisionTheme } from "@/utils/themes";
+import { deriveLeaguePrefix } from "@/utils/formatters";
+import {
+  championStatsHref,
+  matchStatsHref,
+  playerStatsHref,
+  statsHref,
+} from "@/utils/statsLinks";
 import type { DivisionTheme } from "@/types/database";
 
 interface TeamScoutingViewProps {
   ddVersion: string;
   leagueName?: string;
   seasonName: string;
+  seasonSlug?: string | null;
   divisionThemeKey: string;
   divisionThemes?: DivisionTheme[];
   team: AggregatedTeamStats;
@@ -32,17 +40,6 @@ interface TeamScoutingViewProps {
   teamLogoMap: Record<string, string | null>;
   roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
   basePath?: string;
-}
-
-function deriveLeaguePrefix(leagueName?: string): string {
-  const raw = (leagueName ?? "").trim();
-  if (!raw) return "League";
-  if (raw.length <= 6 && !raw.includes(" ")) return raw.toUpperCase();
-  const initials = raw
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  return initials || raw;
 }
 
 const RANK_COLOR_MAP: Record<string, string> = {
@@ -121,6 +118,7 @@ export function TeamScoutingView({
   ddVersion,
   leagueName,
   seasonName,
+  seasonSlug,
   divisionThemeKey,
   divisionThemes,
   team,
@@ -147,9 +145,7 @@ export function TeamScoutingView({
       ? "dragon"
       : null;
   const champHref = (name: string) =>
-    `${basePath}/champion/${encodeURIComponent(name)}${
-      divisionSlug ? `?division=${encodeURIComponent(divisionSlug)}` : ""
-    }`;
+    championStatsHref(name, basePath, seasonSlug, divisionSlug);
 
   const displayTeam = leagueTeam ?? team;
   const leaguePlayerByKey = new Map(
@@ -282,9 +278,11 @@ export function TeamScoutingView({
     <div className="space-y-4 w-[min(1560px,94vw)] relative left-1/2 -translate-x-1/2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          href={`${basePath}?division=${encodeURIComponent(
-            team.divisionId
-          )}&tab=teams`}
+          href={statsHref(basePath, seasonSlug, {
+            division: team.divisionId,
+            tab: "teams",
+          })}
+          prefetch={false}
           className="xp-btn text-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -418,9 +416,12 @@ export function TeamScoutingView({
                   {/* Top Row: Role Icon + Larger Player Name + Rank & Division Role Rank */}
                   <div className="min-w-0">
                     <Link
-                      href={`${basePath}/player/${encodeURIComponent(
-                        soloPlayer.playerKey
-                      )}`}
+                      href={playerStatsHref(
+                        soloPlayer.playerKey,
+                        basePath,
+                        seasonSlug
+                      )}
+                      prefetch={false}
                       className="group flex items-center gap-2 transition"
                     >
                       <img
@@ -471,7 +472,7 @@ export function TeamScoutingView({
                           return (
                             <Link
                               key={c.name}
-                              href={champHref(c.name)}
+                              prefetch={false} href={champHref(c.name)}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
@@ -535,7 +536,7 @@ export function TeamScoutingView({
                           return (
                             <Link
                               key={c.name}
-                              href={champHref(c.name)}
+                              prefetch={false} href={champHref(c.name)}
                               style={
                                 isPriority && isFlex
                                   ? DUAL_PRIORITY_FLEX_STYLE
@@ -597,7 +598,7 @@ export function TeamScoutingView({
                         {soloPlayer.masteryTop4.map((m) => (
                           <Link
                             key={m.championName}
-                            href={champHref(m.championName)}
+                            prefetch={false} href={champHref(m.championName)}
                             title={`${m.championName} — M${
                               m.championLevel
                             } (${m.championPoints.toLocaleString()} pts)`}
@@ -641,7 +642,7 @@ export function TeamScoutingView({
                 {bannedAgainstList.slice(0, 12).map((b) => (
                   <Link
                     key={b.name}
-                    href={champHref(b.name)}
+                    prefetch={false} href={champHref(b.name)}
                     className="group flex items-center justify-between gap-2 bg-black/35 border border-white/10 hover:border-[#f0c020]/70 transition rounded px-2.5 py-2 text-xs sm:text-[13px]"
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -681,7 +682,7 @@ export function TeamScoutingView({
                     {b1Picks.map((p, idx) => (
                       <Link
                         key={idx}
-                        href={champHref(p.champ)}
+                        prefetch={false} href={champHref(p.champ)}
                         className="group flex items-start gap-2"
                       >
                         <img
@@ -717,7 +718,7 @@ export function TeamScoutingView({
                           {p.champs.map((ch) => (
                             <Link
                               key={ch}
-                              href={champHref(ch)}
+                              prefetch={false} href={champHref(ch)}
                               className="inline-flex items-center gap-1 hover:text-[#f0c020] transition-colors font-bold text-[#f0ede0]"
                             >
                               <img
@@ -771,7 +772,7 @@ export function TeamScoutingView({
                     {r5Picks.map((p, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <Link
-                          href={champHref(p.champ)}
+                          prefetch={false} href={champHref(p.champ)}
                           className="shrink-0 mt-0.5"
                         >
                           <img
@@ -783,7 +784,7 @@ export function TeamScoutingView({
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-[#f0ede0] flex flex-wrap items-center gap-1 leading-tight">
                             <Link
-                              href={champHref(p.champ)}
+                              prefetch={false} href={champHref(p.champ)}
                               className="hover:text-[#f0c020] transition-colors"
                             >
                               {p.champ}
@@ -799,7 +800,7 @@ export function TeamScoutingView({
                                   vs
                                 </span>
                                 <Link
-                                  href={champHref(p.vsChamp)}
+                                  prefetch={false} href={champHref(p.vsChamp)}
                                   className="inline-flex items-center gap-1 group"
                                 >
                                   <img
@@ -863,9 +864,8 @@ export function TeamScoutingView({
                 return (
                   <Link
                     key={s.seriesKey}
-                    href={`${basePath}/match/${encodeURIComponent(
-                      s.seriesKey
-                    )}`}
+                    href={matchStatsHref(s.seriesKey, basePath, seasonSlug)}
+                    prefetch={false}
                     className="block rounded border border-white/15 bg-black/35 hover:bg-white/5 transition p-3.5"
                   >
                     {/* Mobile / Tablet Header (< lg) */}

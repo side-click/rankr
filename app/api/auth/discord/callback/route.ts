@@ -1,19 +1,27 @@
+import { timingSafeEqual } from "node:crypto";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import {
   enforceAllowlistAfterLogin,
   getRequestOrigin,
   sanitizeNextPath,
 } from "@/utils/auth-allowlist";
+import { createClient } from "@/utils/supabase/server";
 
 interface DiscordUser {
   id: string;
   username: string;
   global_name?: string | null;
-  email?: string | null;
+  verified?: boolean;
   avatar?: string | null;
+}
+
+function safeCompareStrings(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
 
 export async function GET(request: Request) {
@@ -45,7 +53,7 @@ export async function GET(request: Request) {
     return failRedirect("discord_callback_failed");
   }
 
-  if (!savedState || savedState !== returnedState) {
+  if (!savedState || !safeCompareStrings(savedState, returnedState)) {
     return failRedirect("discord_state_mismatch");
   }
 
@@ -80,7 +88,7 @@ export async function GET(request: Request) {
     return failRedirect("discord_token_missing");
   }
 
-  // Fetch Discord user profile
+  // Fetch Discord user profile (only identify scope — no unverified email linking)
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   });
@@ -90,7 +98,7 @@ export async function GET(request: Request) {
   }
 
   const discordUser = (await userRes.json()) as DiscordUser;
-  if (!discordUser.id) {
+  if (!discordUser.id || !/^\d{5,30}$/.test(discordUser.id)) {
     return failRedirect("discord_profile_invalid");
   }
 
@@ -103,8 +111,7 @@ export async function GET(request: Request) {
         discordUser.avatar.startsWith("a_") ? "gif" : "png"
       }`
     : null;
-  const fallbackEmail = `${discordUser.id}@discord.leaguerankr.local`;
-  const discordEmail = discordUser.email?.trim() || fallbackEmail;
+  const syntheticDiscordEmail = `${discordUser.id}@discord.leaguerankr.local`;
 
   const userMetadata = {
     provider_id: discordUser.id,
@@ -120,8 +127,8 @@ export async function GET(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // 1. Find existing user by discord_id in profiles
-  let targetEmail = discordEmail;
+  // 1. Find existing user strictly by immutable discord_id in profiles
+  let targetEmail = syntheticDiscordEmail;
   const { data: existingProfile } = await supabaseAdmin
     .from("profiles")
     .select("id")
@@ -147,24 +154,35 @@ export async function GET(request: Request) {
       })
       .eq("id", existingProfile.id);
   } else {
-    // 2. Create user (or link existing user with the same email)
+    // 2. Create a new Supabase auth user keyed strictly by Discord ID synthetic email
     const { data: created, error: createErr } =
       await supabaseAdmin.auth.admin.createUser({
-        email: discordEmail,
+        email: syntheticDiscordEmail,
         email_confirm: true,
         user_metadata: userMetadata,
       });
 
     if (createErr && !created?.user) {
-      // Email may already exist in auth.users from a prior sign-in
+      // Retry lookup only for this Discord user's own synthetic email
       const { data: linkProbe } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
-        email: discordEmail,
+        email: syntheticDiscordEmail,
       });
       if (!linkProbe?.user?.id) {
         return failRedirect("supabase_user_create_failed");
       }
-      targetEmail = linkProbe.user.email ?? discordEmail;
+      const { data: conflictCheck } = await supabaseAdmin
+        .from("profiles")
+        .select("discord_id")
+        .eq("id", linkProbe.user.id)
+        .maybeSingle();
+      if (
+        conflictCheck?.discord_id &&
+        conflictCheck.discord_id !== discordUser.id
+      ) {
+        return failRedirect("supabase_user_create_failed");
+      }
+      targetEmail = linkProbe.user.email ?? syntheticDiscordEmail;
       await supabaseAdmin.auth.admin.updateUserById(linkProbe.user.id, {
         user_metadata: userMetadata,
       });

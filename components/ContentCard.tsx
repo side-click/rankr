@@ -3,18 +3,14 @@ import { Award, User } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
+import { getLeaguePrefix, unwrap, type MaybeArray } from "@/utils/formatters";
 import type {
   PlayerTierListPayload,
   RankingType,
   TierVariant,
 } from "@/types/database";
 
-type MaybeArray<T> = T | T[] | null | undefined;
-
-function unwrap<T>(val: MaybeArray<T>): T | null {
-  if (!val) return null;
-  return Array.isArray(val) ? val[0] ?? null : val;
-}
+export { getLeaguePrefix };
 
 export interface ContentCardData {
   id: string;
@@ -53,17 +49,6 @@ export interface ContentCardData {
     team_name_snapshot: string | null;
     teams?: MaybeArray<{ name: string; logo_url: string | null }>;
   }>;
-}
-
-export function getLeaguePrefix(
-  league: { name?: string; short_name?: string | null; slug?: string } | null,
-  fallbackName?: string | null
-): string {
-  if (league?.short_name) return league.short_name;
-  if (league?.slug === "scdl") return "SCDL";
-  if (league?.name) return league.name;
-  if (fallbackName === "Scuttle Crab Draft League") return "SCDL";
-  return fallbackName ?? "";
 }
 
 export type ContentCardLayout = "grid" | "list";
@@ -189,6 +174,7 @@ export function ContentCard({
             ? `/tierlist/${ballot.id}`
             : `/rankings/${ballot.id}`
         }
+        prefetch={false}
         style={cardStyle}
         className="xp-panel relative overflow-hidden px-3 py-2.5 hover:brightness-110 transition flex flex-col gap-2.5 lg:grid lg:grid-cols-[148px_145px_auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3"
       >
@@ -394,6 +380,7 @@ export function ContentCard({
           ? `/tierlist/${ballot.id}`
           : `/rankings/${ballot.id}`
       }
+      prefetch={false}
       style={cardStyle}
       className="xp-panel relative overflow-hidden p-3.5 hover:brightness-110 transition flex flex-col justify-between gap-2.5"
     >

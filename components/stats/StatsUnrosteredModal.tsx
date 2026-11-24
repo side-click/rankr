@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Copy, Users, X } from "lucide-react";
-import type { UnrosteredSheetPlayer } from "@/utils/scdlSheetStats";
+import type { UnrosteredSheetPlayer } from "@/utils/leagueStats";
 
 interface StatsUnrosteredModalProps {
   unrosteredPlayers: UnrosteredSheetPlayer[];

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import {
   formatBlockedMessage,
   type ModerationFieldInput,
@@ -10,6 +9,10 @@ import {
   sendModerationWebhook,
   type ModerationContentType,
 } from "@/utils/moderationServer";
+import { createClient } from "@/utils/supabase/server";
+
+const MAX_FIELDS = 100;
+const MAX_TOTAL_CHARS = 100_000;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -19,6 +22,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username, discord_id, is_banned")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.is_banned) {
+    return NextResponse.json({ error: "Account suspended." }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => null)) as {
@@ -36,17 +49,34 @@ export async function POST(request: Request) {
     );
   }
 
+  if (body.fields.length > MAX_FIELDS) {
+    return NextResponse.json(
+      { error: `Too many fields (max ${MAX_FIELDS}).` },
+      { status: 400 }
+    );
+  }
+
+  const markdownContent =
+    typeof body.markdownContent === "string"
+      ? body.markdownContent.slice(0, MAX_TOTAL_CHARS)
+      : null;
+
+  const totalFieldChars = body.fields.reduce(
+    (sum, f) => sum + String(f?.value ?? "").length,
+    0
+  );
+  if (totalFieldChars > MAX_TOTAL_CHARS) {
+    return NextResponse.json(
+      { error: "Content exceeds maximum moderation payload size." },
+      { status: 400 }
+    );
+  }
+
   const mod = await evaluateContentModerationServer(body.fields, {
-    markdownContent: body.markdownContent,
+    markdownContent,
   });
 
   if (mod.action === "block") {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, discord_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
     await Promise.all([
       logModerationEvent({
         userId: user.id,

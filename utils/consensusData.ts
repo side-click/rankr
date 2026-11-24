@@ -1,5 +1,7 @@
 import { cache } from "react";
-import { createClient } from "@/utils/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createPublicClient } from "@/utils/supabase/server";
+import { attachPublicProfiles } from "@/utils/publicProfiles";
 import {
   attachConsensusChanges,
   computeAverageTeamRankings,
@@ -63,14 +65,18 @@ export interface ConsensusDataResult {
   }[];
 }
 
-const loadConsensusPageDataCached = cache(
+const fetchConsensusPageData = unstable_cache(
   async (
-    season?: string,
-    division?: string,
-    edition?: string
+    season: string,
+    division: string,
+    edition: string
   ): Promise<ConsensusDataResult> => {
-    const params = { season, division, edition };
-    const supabase = await createClient();
+    const params = {
+      season: season || undefined,
+      division: division || undefined,
+      edition: edition || undefined,
+    };
+    const supabase = createPublicClient();
 
   const [
     { data: seasons },
@@ -188,7 +194,7 @@ const loadConsensusPageDataCached = cache(
 
   const rankingSelectQuery = `
     id,
-    profiles ( username, avatar_url ),
+    user_id,
     ranking_entries (
       rank,
       team_id,
@@ -222,8 +228,14 @@ const loadConsensusPageDataCached = cache(
         : Promise.resolve({ data: [] }),
     ]);
 
-    rankings = (rankingRows ?? []) as ConsensusRankingInput[];
-    prevRankings = (prevRes.data ?? []) as ConsensusRankingInput[];
+    const rawCurrent = (rankingRows ?? []) as unknown as (ConsensusRankingInput & {
+      user_id?: string | null;
+    })[];
+    const rawPrev = (prevRes.data ?? []) as unknown as (ConsensusRankingInput & {
+      user_id?: string | null;
+    })[];
+    rankings = await attachPublicProfiles(supabase, rawCurrent);
+    prevRankings = rawPrev.map((r) => ({ ...r, profiles: null }));
   }
 
   const averageRows = attachConsensusChanges(
@@ -332,7 +344,15 @@ const loadConsensusPageDataCached = cache(
     rows: averageRows,
     contributors,
   };
-});
+  },
+  ["consensus-page-v1"],
+  { revalidate: 600, tags: ["consensus-data"] }
+);
+
+const loadConsensusPageDataCached = cache(
+  (season?: string, division?: string, edition?: string) =>
+    fetchConsensusPageData(season ?? "", division ?? "", edition ?? "")
+);
 
 export function loadConsensusPageData(params: {
   season?: string;

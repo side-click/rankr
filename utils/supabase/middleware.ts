@@ -5,6 +5,21 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 export const updateSession = async (request: NextRequest) => {
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+  const pathname = request.nextUrl.pathname;
+  const requiresSessionCheck =
+    pathname.startsWith("/admin") || pathname.startsWith("/matches");
+
+  if (!hasAuthCookie && !requiresSessionCheck) {
+    return NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+  }
+
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -32,7 +47,7 @@ export const updateSession = async (request: NextRequest) => {
     },
   });
 
-  // Refresh session if expired
+  // Refresh session only when an auth cookie exists or route requires auth
   await supabase.auth.getUser();
 
   return supabaseResponse;

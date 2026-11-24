@@ -25,16 +25,17 @@ const ROLE_TO_LOLALYTICS_LANE: Record<LeagueRole, string> = {
   support: "support",
 };
 
-const SPECIAL_LOLALYTICS_SLUGS: Record<string, string> = {
-  MonkeyKing: "wukong",
-  Nunu: "nunu",
-  Renata: "renata",
-  FiddleSticks: "fiddlesticks",
-};
+const SPECIAL_LOLALYTICS_SLUGS = new Map<string, string>([
+  ["MonkeyKing", "wukong"],
+  ["Nunu", "nunu"],
+  ["Renata", "renata"],
+  ["FiddleSticks", "fiddlesticks"],
+]);
 
 export function toLolalyticsSlug(championId: string): string {
-  if (SPECIAL_LOLALYTICS_SLUGS[championId]) {
-    return SPECIAL_LOLALYTICS_SLUGS[championId];
+  const special = SPECIAL_LOLALYTICS_SLUGS.get(championId);
+  if (special) {
+    return special;
   }
   return championId.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -93,22 +94,27 @@ export async function getChampionMatchups(
   championId: string,
   role: LeagueRole
 ): Promise<ChampionMatchupsResponse> {
-  const slug = toLolalyticsSlug(championId);
+  const catalog = await getChampionCatalog();
+  const validChamp = catalog.champions.find(
+    (c) => c.id.toLowerCase() === championId.trim().toLowerCase()
+  );
+  if (!validChamp) {
+    throw new Error("Unknown championId");
+  }
+
+  const slug = toLolalyticsSlug(validChamp.id);
   const lane = ROLE_TO_LOLALYTICS_LANE[role];
   const url = `https://lolalytics.com/lol/${encodeURIComponent(
     slug
   )}/counters/?lane=${lane}&tier=platinum_plus`;
 
-  const [catalog, res] = await Promise.all([
-    getChampionCatalog(),
-    fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      },
-      next: { revalidate: 3600 },
-    }),
-  ]);
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    },
+    next: { revalidate: 86400 },
+  });
 
   if (!res.ok) {
     throw new Error(`Lolalytics returned status ${res.status}`);
@@ -119,38 +125,43 @@ export async function getChampionMatchups(
 
   const byKey = new Map<number, (typeof catalog.champions)[number]>();
   for (const c of catalog.champions) {
-    byKey.set(Number(c.key), c);
+    const keyNum = Number(c.key);
+    if (Number.isFinite(keyNum)) byKey.set(keyNum, c);
   }
 
-  const mapped: MatchupStatEntry[] = [];
+  const entries: MatchupStatEntry[] = [];
   for (const m of rawMatchups) {
     const champ = byKey.get(m.cid);
-    if (!champ) continue;
-    mapped.push({
+    if (!champ || champ.id === validChamp.id) continue;
+    entries.push({
       championId: champ.id,
       name: champ.name,
       iconUrl: champ.iconUrl,
-      winRate: m.vsWr,
+      winRate: Number(m.vsWr.toFixed(2)),
       games: m.n,
     });
   }
 
-  // Counters: > 51% WR, top 5 by games played, ordered by strongest WR first
-  const counters = mapped
-    .filter((m) => m.winRate > 51)
-    .sort((a, b) => b.games - a.games)
-    .slice(0, 5)
-    .sort((a, b) => b.winRate - a.winRate);
+  const minGames =
+    entries.filter((e) => e.games >= 50).length >= 10
+      ? 50
+      : entries.filter((e) => e.games >= 20).length >= 10
+      ? 20
+      : 5;
 
-  // Countered By: < 49% WR, top 5 by games played, ordered by lowest WR first
-  const counteredBy = mapped
-    .filter((m) => m.winRate < 49)
-    .sort((a, b) => b.games - a.games)
-    .slice(0, 5)
-    .sort((a, b) => a.winRate - b.winRate);
+  const significant = entries.filter((e) => e.games >= minGames);
+  const pool = significant.length >= 6 ? significant : entries;
+
+  const counters = [...pool]
+    .sort((a, b) => b.winRate - a.winRate || b.games - a.games)
+    .slice(0, 6);
+
+  const counteredBy = [...pool]
+    .sort((a, b) => a.winRate - b.winRate || b.games - a.games)
+    .slice(0, 6);
 
   return {
-    championId,
+    championId: validChamp.id,
     role,
     tier: "platinum_plus",
     counters,

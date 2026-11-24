@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { CompactRiotMatch } from "@/utils/riotApi";
+import { normalizeChampionKey } from "@/utils/formatters";
 import draftsData from "@/data/scdl_drafts.json";
 import {
   aggregatePlayerStats,
@@ -389,65 +390,73 @@ const loadMergedDraftsCached = cache(
     fetchMergedDraftsFromDb(seasonId, seasonSlug)
 );
 
-async function loadSupabaseNativeRows(
-  seasonId: string
-): Promise<ParsedSheetRow[]> {
-  const sb = getSnapshotClient(false);
-  if (!sb) return [];
-  try {
-    const { data, error } = await sb
-      .from("league_game_participants")
-      .select("*")
-      .eq("season_id", seasonId)
-      .order("row_order", { ascending: true });
-    if (error || !Array.isArray(data)) return [];
-    return data.map((r, idx) => ({
-      matchLabel: String(r.match_label ?? r.game_id ?? ""),
-      gameId: String(r.game_id ?? ""),
-      teamName: String(r.team_name ?? ""),
-      playerName: String(r.player_name ?? ""),
-      champion: String(r.champion ?? ""),
-      role: normalizeRoleKey(String(r.role ?? "mid")),
-      kills: Number(r.kills ?? 0),
-      deaths: Number(r.deaths ?? 0),
-      assists: Number(r.assists ?? 0),
-      gold: Number(r.gold ?? 0),
-      cs: Number(r.cs ?? 0),
-      damageDealt: Number(r.damage_dealt ?? 0),
-      gameLength: Number(r.game_length ?? 0),
-      visionScore: Number(r.vision_score ?? 0),
-      win: Boolean(r.win),
-      side: String(r.side ?? "Blue").toLowerCase() === "red" ? "Red" : "Blue",
-      doubleKills: Number(r.double_kills ?? 0),
-      tripleKills: Number(r.triple_kills ?? 0),
-      quadraKills: Number(r.quadra_kills ?? 0),
-      pentaKills: Number(r.penta_kills ?? 0),
-      soloKills: Number(r.solo_kills ?? 0),
-      firstBlood: Boolean(r.first_blood),
-      teamKills: Number(r.team_kills ?? 0),
-      damageTaken: Number(r.damage_taken ?? 0),
-      damageMitigated: Number(r.damage_mitigated ?? 0),
-      ccScore: Number(r.cc_score ?? 0),
-      wardsPlaced: Number(r.wards_placed ?? 0),
-      wardsDestroyed: Number(r.wards_destroyed ?? 0),
-      controlWardsBought: Number(r.control_wards_bought ?? 0),
-      damageToObjectives: Number(r.damage_to_objectives ?? 0),
-      damageToTurrets: Number(r.damage_to_turrets ?? 0),
-      dragons: Number(r.dragons ?? 0),
-      barons: Number(r.barons ?? 0),
-      largestKillingSpree: Number(r.largest_killing_spree ?? 0),
-      goldDiff15: Number(r.gold_diff_15 ?? 0),
-      turretPlates: Number(r.turret_plates ?? 0),
-      objectivesStolen: Number(r.objectives_stolen ?? 0),
-      questionPings: Number(r.question_pings ?? 0),
-      flashKey:
-        r.flash_key === "D" || r.flash_key === "F" ? r.flash_key : undefined,
-      rowOrder: Number(r.row_order ?? idx + 1),
-    }));
-  } catch {
-    return [];
-  }
-}
+const fetchSupabaseNativeRowsCached = unstable_cache(
+  async (seasonId: string): Promise<ParsedSheetRow[]> => {
+    const sb = getSnapshotClient(false);
+    if (!sb) return [];
+    try {
+      const { data, error } = await sb
+        .from("league_game_participants")
+        .select(
+          "match_label, game_id, team_name, player_name, champion, role, kills, deaths, assists, gold, cs, damage_dealt, game_length, vision_score, win, side, double_kills, triple_kills, quadra_kills, penta_kills, solo_kills, first_blood, team_kills, damage_taken, damage_mitigated, cc_score, wards_placed, wards_destroyed, control_wards_bought, damage_to_objectives, damage_to_turrets, dragons, barons, largest_killing_spree, gold_diff_15, turret_plates, objectives_stolen, question_pings, flash_key, row_order"
+        )
+        .eq("season_id", seasonId)
+        .order("row_order", { ascending: true });
+      if (error || !Array.isArray(data)) return [];
+      return data.map((r, idx) => ({
+        matchLabel: String(r.match_label ?? r.game_id ?? ""),
+        gameId: String(r.game_id ?? ""),
+        teamName: String(r.team_name ?? ""),
+        playerName: String(r.player_name ?? ""),
+        champion: String(r.champion ?? ""),
+        role: normalizeRoleKey(String(r.role ?? "mid")),
+        kills: Number(r.kills ?? 0),
+        deaths: Number(r.deaths ?? 0),
+        assists: Number(r.assists ?? 0),
+        gold: Number(r.gold ?? 0),
+        cs: Number(r.cs ?? 0),
+        damageDealt: Number(r.damage_dealt ?? 0),
+        gameLength: Number(r.game_length ?? 0),
+        visionScore: Number(r.vision_score ?? 0),
+        win: Boolean(r.win),
+        side: String(r.side ?? "Blue").toLowerCase() === "red" ? "Red" : "Blue",
+        doubleKills: Number(r.double_kills ?? 0),
+        tripleKills: Number(r.triple_kills ?? 0),
+        quadraKills: Number(r.quadra_kills ?? 0),
+        pentaKills: Number(r.penta_kills ?? 0),
+        soloKills: Number(r.solo_kills ?? 0),
+        firstBlood: Boolean(r.first_blood),
+        teamKills: Number(r.team_kills ?? 0),
+        damageTaken: Number(r.damage_taken ?? 0),
+        damageMitigated: Number(r.damage_mitigated ?? 0),
+        ccScore: Number(r.cc_score ?? 0),
+        wardsPlaced: Number(r.wards_placed ?? 0),
+        wardsDestroyed: Number(r.wards_destroyed ?? 0),
+        controlWardsBought: Number(r.control_wards_bought ?? 0),
+        damageToObjectives: Number(r.damage_to_objectives ?? 0),
+        damageToTurrets: Number(r.damage_to_turrets ?? 0),
+        dragons: Number(r.dragons ?? 0),
+        barons: Number(r.barons ?? 0),
+        largestKillingSpree: Number(r.largest_killing_spree ?? 0),
+        goldDiff15: Number(r.gold_diff_15 ?? 0),
+        turretPlates: Number(r.turret_plates ?? 0),
+        objectivesStolen: Number(r.objectives_stolen ?? 0),
+        questionPings: Number(r.question_pings ?? 0),
+        flashKey:
+          r.flash_key === "D" || r.flash_key === "F" ? r.flash_key : undefined,
+        rowOrder: Number(r.row_order ?? idx + 1),
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ["supabase-native-rows-v1"],
+  { revalidate: 3600, tags: ["public-stats"] }
+);
+
+const loadSupabaseNativeRows = cache(async (seasonId: string) =>
+  fetchSupabaseNativeRowsCached(seasonId)
+);
 
 const SNAPSHOT_WRITE_INTERVAL_MS = 5 * 60_000;
 const lastSnapshotWriteBySheet = new Map<string, number>();
@@ -557,7 +566,7 @@ async function fetchCsvTabsFromGoogle(
   );
 }
 
-const SNAPSHOT_STALE_MS = 120_000;
+const SNAPSHOT_STALE_MS = 3_600_000;
 const inFlightRefreshBySheet = new Set<string>();
 
 function refreshSheetFromGoogleInBackground(
@@ -585,7 +594,7 @@ function refreshSheetFromGoogleInBackground(
     });
 }
 
-const fetchUniqueSheetRowsCached = cache(
+const fetchUniqueSheetRowsStable = unstable_cache(
   async (
     sheetId: string,
     gidsKey: string,
@@ -600,7 +609,7 @@ const fetchUniqueSheetRowsCached = cache(
       if (playoffSet.has(g)) playoffIndices.add(idx);
     });
 
-    // 1. Stale-while-revalidate: serve from fast Supabase snapshot (~15ms) first if available
+    // 1. Stale-while-revalidate: serve from Supabase snapshot first (cached 1h in Data Cache)
     const snap = await loadSheetSnapshotFallback(
       sheetId,
       playoffSet,
@@ -630,8 +639,19 @@ const fetchUniqueSheetRowsCached = cache(
       return rows;
     }
     if (snap && snap.rows.length > 0) return snap.rows;
-    throw new Error(`Failed to load SCDL sheet ${sheetId} and no backup snapshot exists`);
-  }
+    throw new Error(`Failed to load sheet ${sheetId} and no backup snapshot exists`);
+  },
+  ["unique-sheet-rows-v1"],
+  { revalidate: 3600, tags: ["public-stats"] }
+);
+
+const fetchUniqueSheetRowsCached = cache(
+  async (
+    sheetId: string,
+    gidsKey: string,
+    playoffGidsKey: string,
+    regularRoundsKey: string
+  ) => fetchUniqueSheetRowsStable(sheetId, gidsKey, playoffGidsKey, regularRoundsKey)
 );
 
 function dedupeParsedRows(
@@ -1482,12 +1502,6 @@ export async function fetchScdlSheetStats(
 
   // Audit draft dataset integrity: duplicate source URLs and pick vs played-champion mismatches
   const draftIntegrityIssues: DraftIntegrityIssue[] = [];
-  const normChamp = (s: string) => {
-    const k = s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (k === "wukong") return "monkeyking";
-    if (k === "renataglasc") return "renata";
-    return k;
-  };
   const gamesBySourceUrl = new Map<string, string[]>();
   for (const [gameId, gRows] of rowsByGame.entries()) {
     const draft = draftsByGameId[gameId];
@@ -1500,9 +1514,11 @@ export async function fetchScdlSheetStats(
       gamesBySourceUrl.set(src, list);
     }
     const draftPicks = [...draft.bluePicks, ...draft.redPicks]
-      .map(normChamp)
+      .map(normalizeChampionKey)
       .filter(Boolean);
-    const playedSet = new Set(gRows.map((r) => normChamp(r.champion)));
+    const playedSet = new Set(
+      gRows.map((r) => normalizeChampionKey(r.champion))
+    );
     if (draftPicks.length >= 10 && playedSet.size >= 8) {
       const matchesCount = draftPicks.filter((c) => playedSet.has(c)).length;
       if (matchesCount < 7) {

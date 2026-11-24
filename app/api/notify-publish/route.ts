@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import type { PlayerTierListPayload } from "@/types/database";
+import { getRequestOrigin } from "@/utils/auth-allowlist";
 import { evaluateContentModerationServer } from "@/utils/contentModerationServer";
 import {
   getServiceRoleClient,
   logModerationEvent,
   sendModerationWebhook,
 } from "@/utils/moderationServer";
+import {
+  dispatchPublishedBlogNotification,
+  dispatchPublishedRankingNotification,
+} from "@/utils/publishNotifications";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = getRequestOrigin(request);
 
   if (blogId) {
     const [{ data: blog }, { data: profile }] = await Promise.all([
@@ -65,9 +70,6 @@ export async function POST(request: Request) {
       ],
       { markdownContent: blog.content }
     );
-
-    const hasBanner = Boolean(blog.banner_url?.trim());
-    const hasMedia = hasBanner || mod.totalImageCount > 0;
 
     if (mod.action === "block") {
       const adminDb = getServiceRoleClient();
@@ -119,85 +121,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, blocked: true });
     }
 
-    if (mod.action === "allow" && !hasMedia) {
-      return NextResponse.json({ ok: true, skipped: true });
-    }
+    const res = await dispatchPublishedBlogNotification({
+      origin,
+      userId: user.id,
+      blogId: blog.id,
+      title: blog.title,
+      authorDisplay: blog.author_name || profile?.username || "Unknown",
+      discordId: profile?.discord_id ?? null,
+      leagueNameSnapshot: blog.league_name_snapshot ?? null,
+      seasonNameSnapshot: blog.season_name_snapshot ?? null,
+      hasBanner: Boolean(blog.banner_url?.trim()),
+      mod,
+    });
 
-    const blogUrl = `${origin}/blog/${blog.id}`;
-    const isFlagged = mod.action === "flag";
-    const actionType = isFlagged ? "flagged" : "media_review";
-
-    await Promise.all([
-      logModerationEvent({
-        userId: user.id,
-        contentType: "blog",
-        contentId: blog.id,
-        action: actionType,
-        categories:
-          mod.categories.length > 0 ? mod.categories : ["media_review"],
-        fieldNames: mod.flaggedFields,
-        matchedTerms: mod.matchedTerms,
-        titleSnapshot: blog.title,
-      }),
-      sendModerationWebhook({
-        title: isFlagged ? "⚠️ Flagged Blog Published" : "📢 Blog Published",
-        url: blogUrl,
-        color: isFlagged ? 0xe84a1b : 0x2d5a3f,
-        description: `**${blog.title}**\n${
-          blog.season_name_snapshot
-            ? `${
-                blog.league_name_snapshot
-                  ? `${blog.league_name_snapshot} — `
-                  : ""
-              }${blog.season_name_snapshot}`
-            : "General"
-        }`,
-        pingModerator: true,
-        fields: [
-          {
-            name: "Author",
-            value: `${blog.author_name || profile?.username || "Unknown"} (${
-              profile?.discord_id ?? "N/A"
-            })`,
-            inline: true,
-          },
-          {
-            name: "Moderation Check",
-            value:
-              mod.matchedTerms.length > 0
-                ? `Matched terms: \`${mod.matchedTerms.join("`, `")}\``
-                : "No flagged text detected",
-            inline: true,
-          },
-          ...(hasMedia
-            ? [
-                {
-                  name: "Images",
-                  value: `${hasBanner ? "Banner attached" : "No banner"}${
-                    mod.totalImageCount > 0
-                      ? ` • ${mod.totalImageCount} inline image${
-                          mod.totalImageCount === 1 ? "" : "s"
-                        }${
-                          mod.externalImageCount > 0
-                            ? ` (${mod.externalImageCount} external URL)`
-                            : ""
-                        }`
-                      : ""
-                  }`,
-                  inline: true,
-                },
-              ]
-            : []),
-          {
-            name: "Link",
-            value: `[Open Blog](${blogUrl})`,
-            inline: false,
-          },
-        ],
-      }),
-    ]);
-
-    return NextResponse.json({ ok: true, flagged: isFlagged });
+    return NextResponse.json({ ok: true, flagged: res.flagged });
   }
 
   const [{ data: ballot }, { data: entries }, { data: profile }] =
@@ -230,7 +167,7 @@ export async function POST(request: Request) {
   const contentType = isPlayer ? "tierlist" : "ranking";
   const tierData = ballot.tier_data as PlayerTierListPayload | null;
 
-  const fields = [
+  const mod = await evaluateContentModerationServer([
     { field: "Username", value: profile?.username },
     { field: "Title", value: ballot.title },
     { field: "General Notes", value: ballot.author_notes },
@@ -247,9 +184,8 @@ export async function POST(request: Request) {
         },
       ])
     ),
-  ];
+  ]);
 
-  const mod = await evaluateContentModerationServer(fields);
   const overlayCount = Array.isArray(ballot.overlays)
     ? ballot.overlays.length
     : 0;
@@ -307,72 +243,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, blocked: true });
   }
 
-  if (mod.action === "allow" && overlayCount === 0) {
-    return NextResponse.json({ ok: true, skipped: true });
-  }
-
-  const ballotUrl = isPlayer
-    ? `${origin}/tierlist/${ballot.id}`
-    : `${origin}/rankings/${ballot.id}`;
-  const isFlagged = mod.action === "flag";
   const displayTitle =
     ballot.title || (isPlayer ? "Player Tier List" : "Team Power Rankings");
+  const res = await dispatchPublishedRankingNotification({
+    origin,
+    userId: user.id,
+    rankingId: ballot.id,
+    isPlayer,
+    title: displayTitle,
+    username: profile?.username ?? "Unknown",
+    discordId: profile?.discord_id ?? null,
+    leagueNameSnapshot: ballot.league_name_snapshot ?? null,
+    seasonNameSnapshot: ballot.season_name_snapshot ?? null,
+    overlayCount,
+    mod,
+  });
 
-  await Promise.all([
-    logModerationEvent({
-      userId: user.id,
-      contentType,
-      contentId: ballot.id,
-      action: isFlagged ? "flagged" : "media_review",
-      categories:
-        mod.categories.length > 0 ? mod.categories : ["media_review"],
-      fieldNames: mod.flaggedFields,
-      matchedTerms: mod.matchedTerms,
-      titleSnapshot: displayTitle,
-    }),
-    sendModerationWebhook({
-      title: isFlagged ? "⚠️ Flagged Ranking Published" : "📢 Ranking Published",
-      url: ballotUrl,
-      color: isFlagged ? 0xe84a1b : 0x2d5a3f,
-      description: `**${displayTitle}**\n${
-        ballot.league_name_snapshot ? `${ballot.league_name_snapshot} — ` : ""
-      }${ballot.season_name_snapshot ?? ""}`,
-      pingModerator: true,
-      fields: [
-        {
-          name: "Author",
-          value: `${profile?.username ?? "Unknown"} (${
-            profile?.discord_id ?? "N/A"
-          })`,
-          inline: true,
-        },
-        {
-          name: "Moderation Check",
-          value:
-            mod.matchedTerms.length > 0
-              ? `Matched terms: \`${mod.matchedTerms.join("`, `")}\``
-              : "No flagged text detected",
-          inline: true,
-        },
-        ...(overlayCount > 0
-          ? [
-              {
-                name: "Image Overlays",
-                value: `${overlayCount} custom image overlay${
-                  overlayCount === 1 ? "" : "s"
-                } attached`,
-                inline: true,
-              },
-            ]
-          : []),
-        {
-          name: "Link",
-          value: `[Open Published Ranking](${ballotUrl})`,
-          inline: false,
-        },
-      ],
-    }),
-  ]);
-
-  return NextResponse.json({ ok: true, flagged: isFlagged });
+  return NextResponse.json({ ok: true, flagged: res.flagged });
 }

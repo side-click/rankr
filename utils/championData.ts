@@ -58,11 +58,11 @@ export async function getChampionCatalog(): Promise<ChampionCatalogResponse> {
   const [ddRes, merakiRes] = await Promise.all([
     fetch(
       `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 86400 } }
     ),
     fetch(
       "https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/championrates.json",
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 86400 } }
     ).catch(() => null),
   ]);
 

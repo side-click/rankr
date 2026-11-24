@@ -1,11 +1,32 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { createClient } from "@/utils/supabase/server";
-import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { BlogView } from "@/components/BlogView";
 import type { Blog } from "@/types/database";
+import { attachPublicProfiles } from "@/utils/publicProfiles";
+import { createClient, createPublicClient } from "@/utils/supabase/server";
+import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 
 export const dynamic = "force-dynamic";
+
+const loadPublishedBlogCached = cache(async (id: string) => {
+  const supabase = createPublicClient();
+  const { data: blog } = await supabase
+    .from("blogs")
+    .select(
+      `
+      *,
+      seasons ( id, name, slug, leagues ( id, name, short_name, slug, logo_url ) )
+    `
+    )
+    .eq("id", id)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (!blog) return null;
+  const [hydrated] = await attachPublicProfiles(supabase, [blog]);
+  return hydrated ?? null;
+});
 
 export async function generateMetadata({
   params,
@@ -13,34 +34,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-
-  const { data: blog } = await supabase
-    .from("blogs")
-    .select(
-      `
-      title,
-      subtitle,
-      banner_url,
-      author_name,
-      season_name_snapshot,
-      league_name_snapshot,
-      profiles ( username ),
-      seasons ( name, leagues ( name, short_name ) )
-    `
-    )
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
+  const blog = await loadPublishedBlogCached(id);
 
   if (!blog) {
     return { title: "Rankr — Blog" };
   }
 
-  const profile = Array.isArray(blog.profiles)
-    ? blog.profiles[0]
-    : blog.profiles;
-  const author = blog.author_name?.trim() || profile?.username || "Author";
+  const author =
+    blog.author_name?.trim() || blog.profiles?.username || "Author";
   const description =
     blog.subtitle?.trim() || `Published by ${author} on Rankr`;
 
@@ -68,22 +69,31 @@ export default async function BlogPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [supabase, auth] = await Promise.all([
-    createClient(),
+  const [publishedBlog, auth] = await Promise.all([
+    loadPublishedBlogCached(id),
     getServerAuthContext(),
   ]);
 
-  const { data: blog } = await supabase
-    .from("blogs")
-    .select(
+  let blog = publishedBlog;
+
+  if (!blog && auth.user) {
+    const supabase = await createClient();
+    const { data: privateBlog } = await supabase
+      .from("blogs")
+      .select(
+        `
+        *,
+        seasons ( id, name, slug, leagues ( id, name, short_name, slug, logo_url ) )
       `
-      *,
-      profiles ( id, username, avatar_url ),
-      seasons ( id, name, slug, leagues ( id, name, short_name, slug, logo_url ) )
-    `
-    )
-    .eq("id", id)
-    .maybeSingle();
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (privateBlog) {
+      const [hydrated] = await attachPublicProfiles(supabase, [privateBlog]);
+      blog = hydrated ?? null;
+    }
+  }
 
   if (!blog) {
     notFound();
