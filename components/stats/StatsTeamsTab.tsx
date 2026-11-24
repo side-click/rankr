@@ -347,15 +347,21 @@ export function StatsTeamsTab({
             </span>
           </div>
 
-          <div className="p-4">
+          <div className="p-3 sm:p-6">
             {rounds.length > 0 ? (
               <div className="overflow-x-auto pb-1">
                 <div className="mx-auto w-max flex flex-row items-stretch">
                   {rounds.map((r, rIdx) => {
                     const nextRound = rounds[rIdx + 1];
+                    const colWidthClass =
+                      rounds.length <= 2
+                        ? "w-[225px] sm:w-[310px] lg:w-[370px]"
+                        : "w-[215px] sm:w-[270px] lg:w-[310px]";
                     return (
                       <React.Fragment key={r.roundLabel}>
-                        <div className="flex flex-col justify-around gap-4 shrink-0 w-[270px]">
+                        <div
+                          className={`flex flex-col justify-around gap-3 sm:gap-5 lg:gap-6 shrink-0 ${colWidthClass}`}
+                        >
                         {r.cards.map((card) => {
                           const clickableSeries = Boolean(card.seriesKey);
                           return (
@@ -364,7 +370,7 @@ export function StatsTeamsTab({
                               className="rounded-lg border border-white/15 bg-black/45 overflow-hidden"
                             >
                               {card.label && (
-                                <div className="px-3 py-1 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                                <div className="px-2.5 sm:px-3.5 py-1.5 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
                                   <span className="truncate">{card.label}</span>
                                   {clickableSeries && card.seriesKey ? (
                                     <Link
@@ -381,19 +387,19 @@ export function StatsTeamsTab({
                               {[card.sideA, card.sideB].map((side, idx) => (
                                 <div
                                   key={`${card.key}-${idx}`}
-                                  className={`flex items-center justify-between gap-2 px-3 py-2 ${
+                                  className={`flex items-center justify-between gap-2 sm:gap-3 px-2.5 py-2 sm:px-4 sm:py-3 lg:py-3.5 ${
                                     idx === 0 ? "border-b border-white/10" : ""
                                   } ${side.won ? "bg-[#f0c020]/10" : ""}`}
                                 >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className="text-[10px] font-black text-[#c89b3c] w-5 text-center shrink-0 tabular-nums">
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <span className="text-[11px] sm:text-sm lg:text-base font-black text-[#c89b3c] w-5 sm:w-7 text-center shrink-0 tabular-nums">
                                       {side.seed != null ? `#${side.seed}` : "—"}
                                     </span>
                                     {side.logo && (
                                       <img
                                         src={side.logo}
                                         alt={side.name}
-                                        className="w-5 h-5 object-contain shrink-0"
+                                        className="w-5 h-5 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain shrink-0"
                                       />
                                     )}
                                     {side.teamId ? (
@@ -402,7 +408,7 @@ export function StatsTeamsTab({
                                         onClick={() =>
                                           onNavigateTeam(teamHref(side.teamId!))
                                         }
-                                        className={`text-xs font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
+                                        className={`text-xs sm:text-base lg:text-lg font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
                                           side.won
                                             ? "text-[#f0c020]"
                                             : "text-[#f0ede0]"
@@ -412,7 +418,7 @@ export function StatsTeamsTab({
                                       </button>
                                     ) : (
                                       <span
-                                        className={`text-xs truncate ${
+                                        className={`text-xs sm:text-sm lg:text-base truncate ${
                                           side.isPlaceholder
                                             ? "italic text-[#a6a89e]"
                                             : side.won
@@ -425,7 +431,7 @@ export function StatsTeamsTab({
                                     )}
                                   </div>
                                   <span
-                                    className={`text-sm font-black tabular-nums shrink-0 ${
+                                    className={`text-sm sm:text-lg lg:text-2xl font-black tabular-nums shrink-0 ${
                                       side.won
                                         ? "text-[#7cd438]"
                                         : "text-[#a6a89e]"
@@ -443,7 +449,7 @@ export function StatsTeamsTab({
                       {nextRound && (
                         <div
                           aria-hidden="true"
-                          className="flex flex-col justify-around shrink-0 w-10"
+                          className="flex flex-col justify-around shrink-0 w-6 sm:w-10 lg:w-14"
                         >
                           {nextRound.cards.map((nc) =>
                             nextRound.cards.length === r.cards.length ? (
