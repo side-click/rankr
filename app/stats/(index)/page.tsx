@@ -119,6 +119,7 @@ export default async function PublicStatsPage({
       isAdminView={false}
       initialStatsNotice={ctx.statsNotice}
       playoffBrackets={ctx.playoffBrackets}
+      statsRoundLabel={ctx.statsRoundLabel}
       initialDivision={params.division}
       initialTab={initialTab}
       initialSheetData={

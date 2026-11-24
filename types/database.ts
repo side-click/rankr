@@ -81,6 +81,7 @@ export interface Season {
   stats_playoff_gids?: string[] | null;
   stats_schedule_gid?: string | null;
   regular_season_rounds?: number | null;
+  stats_round_label?: string | null;
   stats_credits_label?: string | null;
   stats_credits_url?: string | null;
   stats_credits_attribution?: string | null;

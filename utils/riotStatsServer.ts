@@ -42,6 +42,7 @@ export interface LoadedStatsContext {
   teams: AggregatedTeamStats[];
   statsNotice: string | null;
   playoffBrackets?: SeasonPlayoffBrackets | null;
+  statsRoundLabel?: string | null;
   sheetConfig?: SheetSourceConfig;
 }
 
@@ -474,6 +475,12 @@ async function loadStatsContextInternal(
           playoff_brackets?: SeasonPlayoffBrackets | null;
         } | null
       )?.playoff_brackets ?? null,
+    statsRoundLabel:
+      (
+        activeSeason as unknown as {
+          stats_round_label?: string | null;
+        } | null
+      )?.stats_round_label ?? null,
     sheetConfig,
   };
 }

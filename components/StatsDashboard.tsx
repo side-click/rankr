@@ -106,6 +106,7 @@ interface StatsDashboardProps {
   isAdminView?: boolean;
   initialStatsNotice?: string | null;
   playoffBrackets?: SeasonPlayoffBrackets | null;
+  statsRoundLabel?: string | null;
   initialDivision?: string;
   initialTab?: "players" | "teams" | "division";
   initialSheetData?: {
@@ -182,6 +183,7 @@ export function StatsDashboard({
   isAdminView = true,
   initialStatsNotice = null,
   playoffBrackets = null,
+  statsRoundLabel = null,
   initialDivision,
   initialTab,
   initialSheetData = null,
@@ -545,6 +547,39 @@ export function StatsDashboard({
   }, [allDivisionPlayers]);
 
   const hasPlayoffStats = stageMatchCounts.playoffs > 0;
+
+  const latestRegularRound = useMemo(() => {
+    let maxNum = 0;
+    for (const p of allDivisionPlayers) {
+      for (const m of p.matches) {
+        if (isMatchPlayoff(m)) continue;
+        const match = m.matchLabel?.match(
+          /\b(?:round|week|wk|r|game|match)\s*(\d+)\b/i
+        );
+        if (match) {
+          const n = Number(match[1]);
+          if (Number.isFinite(n) && n > maxNum) maxNum = n;
+        }
+      }
+    }
+    return maxNum > 0 ? maxNum : null;
+  }, [allDivisionPlayers]);
+
+  const exportSubtitle = useMemo(() => {
+    if (stageBucket === "playoffs") return "Playoffs Only";
+    if (hasPlayoffStats) return "End of Regular Season";
+    if (latestRegularRound != null) {
+      const term = statsRoundLabel?.trim() || "Round";
+      return `Regular Season After ${term} ${latestRegularRound}`;
+    }
+    return `As of ${currentEditionName}`;
+  }, [
+    stageBucket,
+    hasPlayoffStats,
+    latestRegularRound,
+    statsRoundLabel,
+    currentEditionName,
+  ]);
 
   useEffect(() => {
     setStageBucket(hasPlayoffStats ? "playoffs" : "regular");
@@ -2695,9 +2730,7 @@ export function StatsDashboard({
                                     ? selectedDivision.name
                                     : "League"}{" "}
                                   &middot;{" "}
-                                  {stageBucket === "playoffs"
-                                    ? "Playoffs Only"
-                                    : `As of ${currentEditionName}`}
+                                  {exportSubtitle}
                                 </div>
                               </div>
                             </div>
@@ -3163,11 +3196,7 @@ export function StatsDashboard({
               divisionName={selectedDivision?.name ?? "League"}
               divisionLogoUrl={selectedDivision?.logo_url ?? null}
               currentEditionName={currentEditionName}
-              subtitleSuffix={
-                stageBucket === "playoffs"
-                  ? "Playoffs Only"
-                  : `As of ${currentEditionName}`
-              }
+              subtitleSuffix={exportSubtitle}
               bannerGradient={bannerGradient}
             />
           </div>

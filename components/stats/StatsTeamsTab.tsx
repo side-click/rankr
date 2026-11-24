@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ChevronRight, Flame, Trophy } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
@@ -47,7 +47,6 @@ export function StatsTeamsTab({
   playoffBracket = null,
   onNavigateTeam,
 }: StatsTeamsTabProps) {
-  const router = useRouter();
   if (!selectedDivision) {
     return (
       <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
@@ -297,6 +296,7 @@ export function StatsTeamsTab({
           m.winnerTeamName?.toLowerCase() === m.teamBName.toLowerCase();
         existing.cards.push({
           key: m.seriesKey,
+          label: m.roundLabel,
           seriesKey: m.seriesKey,
           sideA: {
             teamId: m.teamAId,
@@ -347,109 +347,126 @@ export function StatsTeamsTab({
             </span>
           </div>
 
-          <div className="p-4 space-y-5">
+          <div className="p-4">
             {rounds.length > 0 ? (
-              <div
-                className={`grid grid-cols-1 gap-4 items-start ${
-                  rounds.length <= 2
-                    ? "md:grid-cols-2"
-                    : "md:grid-cols-2 lg:grid-cols-3"
-                }`}
-              >
-                {rounds.map((r) => (
-                  <div key={r.roundLabel} className="space-y-2.5">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#c89b3c] border-b border-white/10 pb-1">
-                      {r.roundLabel}
-                    </div>
-                    <div className="space-y-2.5">
-                      {r.cards.map((card) => {
-                        const clickableSeries = Boolean(card.seriesKey);
-                        return (
-                          <div
-                            key={card.key}
-                            onClick={
-                              card.seriesKey
-                                ? () => router.push(seriesHref(card.seriesKey!))
-                                : undefined
-                            }
-                            className={`rounded-lg border border-white/15 bg-black/45 overflow-hidden transition ${
-                              clickableSeries
-                                ? "cursor-pointer hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5"
-                                : ""
-                            }`}
-                          >
-                            {card.label && (
-                              <div className="px-3 py-1 bg-white/[0.03] border-b border-white/10 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                                <span>{card.label}</span>
-                                <span>
-                                  {clickableSeries ? "Draft & Box Score →" : "Upcoming"}
-                                </span>
-                              </div>
-                            )}
-                            {[card.sideA, card.sideB].map((side, idx) => (
-                              <div
-                                key={`${card.key}-${idx}`}
-                                className={`flex items-center justify-between gap-2 px-3 py-2 ${
-                                  idx === 0 ? "border-b border-white/10" : ""
-                                } ${side.won ? "bg-[#f0c020]/10" : ""}`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="text-[10px] font-black text-[#c89b3c] w-5 text-center shrink-0 tabular-nums">
-                                    {side.seed != null ? `#${side.seed}` : "—"}
-                                  </span>
-                                  {side.logo && (
-                                    <img
-                                      src={side.logo}
-                                      alt={side.name}
-                                      className="w-5 h-5 object-contain shrink-0"
-                                    />
-                                  )}
-                                  {side.teamId ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onNavigateTeam(teamHref(side.teamId!));
-                                      }}
-                                      className={`text-xs font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
-                                        side.won
-                                          ? "text-[#f0c020]"
-                                          : "text-[#f0ede0]"
-                                      }`}
+              <div className="flex flex-col md:flex-row items-stretch gap-4 md:gap-0 overflow-x-auto pb-1">
+                {rounds.map((r, rIdx) => {
+                  const nextRound = rounds[rIdx + 1];
+                  return (
+                    <React.Fragment key={r.roundLabel}>
+                      <div className="flex flex-col justify-around gap-4 shrink-0 w-full md:w-[270px]">
+                        {r.cards.map((card) => {
+                          const clickableSeries = Boolean(card.seriesKey);
+                          return (
+                            <div
+                              key={card.key}
+                              className="rounded-lg border border-white/15 bg-black/45 overflow-hidden"
+                            >
+                              {card.label && (
+                                <div className="px-3 py-1 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                                  <span className="truncate">{card.label}</span>
+                                  {clickableSeries && card.seriesKey ? (
+                                    <Link
+                                      href={seriesHref(card.seriesKey)}
+                                      className="text-[#c89b3c] hover:text-[#f0c020] hover:underline transition shrink-0"
                                     >
-                                      {side.name}
-                                    </button>
+                                      Draft &amp; Box Score &rarr;
+                                    </Link>
                                   ) : (
-                                    <span
-                                      className={`text-xs truncate ${
-                                        side.isPlaceholder
-                                          ? "italic text-[#a6a89e]"
-                                          : side.won
-                                          ? "font-extrabold text-[#f0c020]"
-                                          : "font-extrabold text-[#f0ede0]"
-                                      }`}
-                                    >
-                                      {side.name}
-                                    </span>
+                                    <span className="shrink-0">Upcoming</span>
                                   )}
                                 </div>
-                                <span
-                                  className={`text-sm font-black tabular-nums shrink-0 ${
-                                    side.won
-                                      ? "text-[#7cd438]"
-                                      : "text-[#a6a89e]"
-                                  }`}
+                              )}
+                              {[card.sideA, card.sideB].map((side, idx) => (
+                                <div
+                                  key={`${card.key}-${idx}`}
+                                  className={`flex items-center justify-between gap-2 px-3 py-2 ${
+                                    idx === 0 ? "border-b border-white/10" : ""
+                                  } ${side.won ? "bg-[#f0c020]/10" : ""}`}
                                 >
-                                  {side.wins != null ? side.wins : "—"}
-                                </span>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-[10px] font-black text-[#c89b3c] w-5 text-center shrink-0 tabular-nums">
+                                      {side.seed != null ? `#${side.seed}` : "—"}
+                                    </span>
+                                    {side.logo && (
+                                      <img
+                                        src={side.logo}
+                                        alt={side.name}
+                                        className="w-5 h-5 object-contain shrink-0"
+                                      />
+                                    )}
+                                    {side.teamId ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onNavigateTeam(teamHref(side.teamId!))
+                                        }
+                                        className={`text-xs font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
+                                          side.won
+                                            ? "text-[#f0c020]"
+                                            : "text-[#f0ede0]"
+                                        }`}
+                                      >
+                                        {side.name}
+                                      </button>
+                                    ) : (
+                                      <span
+                                        className={`text-xs truncate ${
+                                          side.isPlaceholder
+                                            ? "italic text-[#a6a89e]"
+                                            : side.won
+                                            ? "font-extrabold text-[#f0c020]"
+                                            : "font-extrabold text-[#f0ede0]"
+                                        }`}
+                                      >
+                                        {side.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-sm font-black tabular-nums shrink-0 ${
+                                      side.won
+                                        ? "text-[#7cd438]"
+                                        : "text-[#a6a89e]"
+                                    }`}
+                                  >
+                                    {side.wins != null ? side.wins : "—"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {nextRound && (
+                        <div
+                          aria-hidden="true"
+                          className="hidden md:flex flex-col justify-around shrink-0 w-10"
+                        >
+                          {nextRound.cards.map((nc) =>
+                            nextRound.cards.length === r.cards.length ? (
+                              <div
+                                key={`conn-${nc.key}`}
+                                className="flex items-center flex-1"
+                              >
+                                <div className="w-full border-t-2 border-white/20" />
                               </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                            ) : (
+                              <div
+                                key={`conn-${nc.key}`}
+                                className="flex items-center flex-1"
+                              >
+                                <div className="w-1/2 h-1/2 border-t-2 border-b-2 border-r-2 border-white/20 rounded-r-sm" />
+                                <div className="w-1/2 border-t-2 border-white/20" />
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center text-xs text-[#a6a89e] py-3">

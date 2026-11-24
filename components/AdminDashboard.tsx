@@ -643,6 +643,7 @@ export function AdminDashboard({
         season.regular_season_rounds > 0
           ? Math.floor(season.regular_season_rounds)
           : null,
+      stats_round_label: season.stats_round_label?.trim() || null,
       stats_credits_label: season.stats_credits_label?.trim() || null,
       stats_credits_url: season.stats_credits_url?.trim() || null,
       stats_credits_attribution:
@@ -2457,6 +2458,9 @@ export function AdminDashboard({
                         const hasRegRounds =
                           s.regular_season_rounds != null &&
                           s.regular_season_rounds > 0;
+                        const hasRoundLabel = Boolean(
+                          s.stats_round_label?.trim()
+                        );
                         const hasCreditsLabel = Boolean(
                           s.stats_credits_label?.trim()
                         );
@@ -2741,6 +2745,37 @@ export function AdminDashboard({
                                       provider === "none"
                                         ? "opacity-45 cursor-not-allowed"
                                         : hasRegRounds
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Series / Round Term (Optional)
+                                    {hasRoundLabel && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={s.stats_round_label ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_round_label:
+                                                  e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="e.g., Round, Week, Match (default: Round)"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      hasRoundLabel
                                         ? "!border-[#7cd438]/60"
                                         : ""
                                     }`}
