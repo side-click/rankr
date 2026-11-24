@@ -418,7 +418,7 @@ export function StatsTeamsTab({
                                       </button>
                                     ) : (
                                       <span
-                                        className={`text-xs sm:text-sm lg:text-base truncate ${
+                                        className={`text-xs sm:text-sm lg:text-base truncate pr-1 ${
                                           side.isPlaceholder
                                             ? "italic text-[#a6a89e]"
                                             : side.won
