@@ -210,12 +210,15 @@ export default async function RootLayout({
             </a>
           </div>
           <div className="max-w-3xl mx-auto text-[10px] text-[#7e8781] leading-relaxed">
-            Rankr is an independent platform and is not affiliated with or
-            representing Scuttle Crab Draft League (SCDL). All SCDL names,
-            logos, and league content remain the property of SCDL. Rankr
-            isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the views
-            or opinions of Riot Games or anyone officially involved in producing
-            or managing Riot Games properties. Riot Games, and all associated
+            Rankr is an independent community platform and isn&apos;t endorsed
+            by, affiliated with, or officially representing Scuttle Crab Draft
+            League (SCDL) or any other hosted league, nor does it reflect the
+            views or opinions of their organizers or staff. All league, team,
+            and player names, logos, stats, and related content remain the
+            property of their respective leagues and owners. Rankr isn&apos;t
+            endorsed by Riot Games and doesn&apos;t reflect the views or
+            opinions of Riot Games or anyone officially involved in producing or
+            managing Riot Games properties. Riot Games, and all associated
             properties are trademarks or registered trademarks of Riot Games,
             Inc.
           </div>
