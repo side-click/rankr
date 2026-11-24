@@ -2,7 +2,7 @@
   <img src="public/images/brand/rankr-wordmark.png" alt="Rankr" height="48" />
 </p>
 
-Power rankings, player tier lists, scouting analytics, and community content for amateur League of Legends draft leagues — live at **[leaguerankr.com](https://leaguerankr.com)**.
+Power rankings, player tier lists, scouting analytics, and community content for amateur League of Legends leagues and tournaments — live at **[leaguerankr.com](https://leaguerankr.com)**.
 
 <img width="600" alt="image" src="https://github.com/user-attachments/assets/1dd5182c-b732-4453-b61b-da5c38f806c7" />
 
