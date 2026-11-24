@@ -20,8 +20,24 @@ import type {
 } from "@/types/database";
 
 const EditorLoadingFallback = () => (
-  <div className="xp-window xp-window-scdl p-6 min-h-[460px] flex items-center justify-center text-center text-xs text-[#a6a89e] animate-pulse">
-    Loading editor...
+  <div className="min-h-[460px] flex items-center justify-center px-3">
+    <div className="w-full max-w-md xp-window xp-window-scdl">
+      <div className="xp-titlebar xp-titlebar-scdl">
+        <span className="truncate">Loading Workspace...</span>
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="text-xs font-semibold text-[#e8e5d8] tracking-wide">
+          Loading editor...
+        </div>
+        <div
+          className="xp-progress-track"
+          role="progressbar"
+          aria-label="Loading editor..."
+        >
+          <div className="xp-progress-blocks" />
+        </div>
+      </div>
+    </div>
   </div>
 );
 

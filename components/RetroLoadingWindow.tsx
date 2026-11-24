@@ -1,23 +1,53 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { RetroWindow } from "@/components/RetroWindow";
+
+const RETRO_LOADING_MESSAGES = [
+  "Reticulating splines...",
+  "Inserting Floppy Disk 2...",
+  "Downloading more RAM...",
+  "Calibrating 56k modem...",
+  "Defragging the hot takes...",
+  "Polishing CRT pixels...",
+  "Warming up the dial-up...",
+  "Untangling Baron pit wards...",
+  "Bribing the scuttle crab...",
+  "Rewinding the VHS...",
+];
 
 export function RetroLoadingWindow({
   title = "Loading...",
+  theme = "scdl",
 }: {
   title?: string;
+  theme?: "scdl" | "baron" | "dragon";
 }) {
+  const [message, setMessage] = useState(RETRO_LOADING_MESSAGES[0]);
+
+  useEffect(() => {
+    const idx = Math.floor(Math.random() * RETRO_LOADING_MESSAGES.length);
+    setMessage(RETRO_LOADING_MESSAGES[idx]);
+  }, []);
+
   return (
     <div className="min-h-screen">
-      <RetroWindow title={title} theme="scdl">
-        <div className="py-12 px-4 text-center space-y-3 animate-pulse">
-          <div className="h-4 w-48 mx-auto rounded bg-white/10" />
-          <div className="h-3 w-72 mx-auto rounded bg-white/5" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto pt-4">
-            <div className="h-20 rounded bg-white/5 border border-white/10" />
-            <div className="h-20 rounded bg-white/5 border border-white/10" />
-            <div className="h-20 rounded bg-white/5 border border-white/10" />
+      <div className="max-w-md mx-auto pt-8">
+        <RetroWindow title={title} theme={theme}>
+          <div className="p-5 space-y-3">
+            <div className="text-xs font-semibold text-[#e8e5d8] tracking-wide">
+              {message}
+            </div>
+            <div
+              className="xp-progress-track"
+              role="progressbar"
+              aria-label={message}
+            >
+              <div className="xp-progress-blocks" />
+            </div>
           </div>
-        </div>
-      </RetroWindow>
+        </RetroWindow>
+      </div>
     </div>
   );
 }

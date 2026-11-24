@@ -1540,8 +1540,19 @@ export function ChampionPoolEditor({
   if (loadingRecord) {
     return (
       <RetroWindow key="pool-loading" title="Champion Pool Editor" theme="scdl">
-        <div className="py-12 min-h-[420px] flex items-center justify-center text-center text-xs text-[#a6a89e]">
-          Loading encrypted champion pool...
+        <div className="min-h-[420px] flex items-center justify-center px-4">
+          <div className="w-full max-w-sm space-y-3">
+            <div className="text-xs font-semibold text-[#e8e5d8] tracking-wide">
+              Loading encrypted champion pool...
+            </div>
+            <div
+              className="xp-progress-track"
+              role="progressbar"
+              aria-label="Loading encrypted champion pool..."
+            >
+              <div className="xp-progress-blocks" />
+            </div>
+          </div>
         </div>
       </RetroWindow>
     );
