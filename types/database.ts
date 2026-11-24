@@ -38,6 +38,37 @@ export interface League {
   created_at: string;
 }
 
+export type PlayoffBracketFormat = "4-team" | "6-team" | "8-team";
+
+export interface PlayoffBracketSeedSlot {
+  seed: number;
+  teamId: string;
+  teamName: string;
+  logoUrl?: string | null;
+}
+
+export interface PlayoffBracketMatchSlot {
+  id: string;
+  label: string;
+  roundLabel: string;
+  roundOrder: number;
+  teamASeed?: number | null;
+  teamAId?: string | null;
+  teamBSeed?: number | null;
+  teamBId?: string | null;
+  sourceMatchA?: string | null;
+  sourceMatchB?: string | null;
+}
+
+export interface DivisionPlayoffBracket {
+  format: PlayoffBracketFormat;
+  seeds: PlayoffBracketSeedSlot[];
+  matches: PlayoffBracketMatchSlot[];
+  updatedAt?: string;
+}
+
+export type SeasonPlayoffBrackets = Record<string, DivisionPlayoffBracket>;
+
 export interface Season {
   id: string;
   league_id: string;
@@ -53,6 +84,7 @@ export interface Season {
   stats_credits_label?: string | null;
   stats_credits_url?: string | null;
   stats_credits_attribution?: string | null;
+  playoff_brackets?: SeasonPlayoffBrackets | null;
   created_at: string;
   leagues?: Pick<
     League,

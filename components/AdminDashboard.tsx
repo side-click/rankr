@@ -8,15 +8,23 @@ import type {
   AllowedDiscordUser,
   AppSettings,
   Division,
+  DivisionPlayoffBracket,
   DivisionTheme,
   Edition,
   League,
+  PlayoffBracketFormat,
+  PlayoffBracketSeedSlot,
   Profile,
   RankingType,
   Season,
+  SeasonPlayoffBrackets,
   SeasonPlayer,
   Team,
 } from "@/types/database";
+import {
+  buildStandardPlayoffBracket,
+  getSeedCountForFormat,
+} from "@/utils/playoffBrackets";
 import { RetroWindow } from "@/components/RetroWindow";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import {
@@ -139,6 +147,16 @@ export function AdminDashboard({
   }
   const [leagues, setLeagues] = useState<League[]>(initialLeagues);
   const [seasons, setSeasons] = useState<Season[]>(initialSeasons);
+  const [bracketDrafts, setBracketDrafts] = useState<
+    Record<
+      string,
+      {
+        divisionId: string;
+        format: PlayoffBracketFormat;
+        seedTeamIds: string[];
+      }
+    >
+  >({});
   const [divisions, setDivisions] = useState<Division[]>(initialDivisions);
   const [themes, setThemes] = useState<DivisionTheme[]>(
     initialThemes.length > 0
@@ -646,6 +664,58 @@ export function AdminDashboard({
       error = fallback.error;
     }
     setStatusMsg(error ? `Error: ${error.message}` : `Saved ${season.name}.`);
+    await refreshAll();
+    setBusy(false);
+  }
+
+  async function handleSavePlayoffBracket(
+    season: Season,
+    divisionId: string,
+    divisionName: string,
+    bracket: DivisionPlayoffBracket | null
+  ) {
+    setBusy(true);
+    const nextBrackets: SeasonPlayoffBrackets = {
+      ...(season.playoff_brackets ?? {}),
+    };
+    if (bracket) {
+      nextBrackets[divisionId] = bracket;
+    } else {
+      delete nextBrackets[divisionId];
+    }
+    const payload =
+      Object.keys(nextBrackets).length > 0 ? nextBrackets : null;
+
+    const { error } = await supabase
+      .from("seasons")
+      .update({ playoff_brackets: payload })
+      .eq("id", season.id);
+
+    if (error) {
+      if (
+        error.message.includes("playoff_brackets") ||
+        error.message.includes("column")
+      ) {
+        setStatusMsg(
+          "Error: playoff_brackets column missing — run migration 034_season_playoff_brackets.sql in Supabase first."
+        );
+      } else {
+        setStatusMsg(`Error saving playoff bracket: ${error.message}`);
+      }
+      setBusy(false);
+      return;
+    }
+
+    setSeasons((prev) =>
+      prev.map((item) =>
+        item.id === season.id ? { ...item, playoff_brackets: payload } : item
+      )
+    );
+    setStatusMsg(
+      bracket
+        ? `Saved ${bracket.format} playoff bracket for ${divisionName} (${season.name}).`
+        : `Cleared playoff bracket for ${divisionName} (${season.name}).`
+    );
     await refreshAll();
     setBusy(false);
   }
@@ -2373,253 +2443,661 @@ export function AdminDashboard({
                         </button>
                       </div>
 
-                      <details className="pt-1 border-t border-white/10 text-[11px]">
-                        <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
-                          Stats &amp; Credits Source (
-                          {s.stats_provider ?? "google_sheet"}
-                          {s.stats_sheet_id ? " • sheet linked" : ""})
-                        </summary>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Stats Provider
-                            </label>
-                            <select
-                              value={s.stats_provider ?? "google_sheet"}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_provider: e.target
-                                            .value as Season["stats_provider"],
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            >
-                              <option value="google_sheet">
-                                Google Sheet CSV
-                              </option>
-                              <option value="supabase_native">
-                                Supabase Native (league_game_participants)
-                              </option>
-                              <option value="none">None (Solo/Duo only)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Google Sheet ID
-                            </label>
-                            <input
-                              type="text"
-                              value={s.stats_sheet_id ?? ""}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_sheet_id: e.target.value,
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="1tdi8ftaQ50sYS92H39YybU29..."
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Sheet Tab GIDs (comma-separated)
-                            </label>
-                            <input
-                              type="text"
-                              value={(s.stats_sheet_gids ?? []).join(", ")}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_sheet_gids: e.target.value
-                                            .split(",")
-                                            .map((g) => g.trim())
-                                            .filter(Boolean),
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="1733612942, 1849724071"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Playoff Tab GIDs (Optional, comma-separated)
-                            </label>
-                            <input
-                              type="text"
-                              value={(s.stats_playoff_gids ?? []).join(", ")}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_playoff_gids: e.target.value
-                                            .split(",")
-                                            .map((g) => g.trim())
-                                            .filter(Boolean),
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="e.g., 987654321"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Schedule / Draft Links Tab GID (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              value={s.stats_schedule_gid ?? ""}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_schedule_gid: e.target.value,
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="e.g., 728267243"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Regular Season Rounds (Optional cutoff)
-                            </label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={s.regular_season_rounds ?? ""}
-                              onChange={(e) => {
-                                const val = e.target.value.trim();
-                                const num = val ? Number(val) : null;
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          regular_season_rounds:
-                                            num && Number.isFinite(num)
-                                              ? num
-                                              : null,
-                                        }
-                                      : item
-                                  )
-                                );
-                              }}
-                              placeholder="e.g., 7 (Round 8+ = Playoffs)"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Credits Link Label
-                            </label>
-                            <input
-                              type="text"
-                              value={s.stats_credits_label ?? ""}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_credits_label: e.target.value,
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="e.g. SCDL 4.5 Master Google Sheet"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Credits URL (optional override)
-                            </label>
-                            <input
-                              type="text"
-                              value={s.stats_credits_url ?? ""}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_credits_url: e.target.value,
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="https://docs.google.com/spreadsheets/d/..."
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                              Credits Attribution
-                            </label>
-                            <input
-                              type="text"
-                              value={s.stats_credits_attribution ?? ""}
-                              onChange={(e) =>
-                                setSeasons((prev) =>
-                                  prev.map((item) =>
-                                    item.id === s.id
-                                      ? {
-                                          ...item,
-                                          stats_credits_attribution:
-                                            e.target.value,
-                                        }
-                                      : item
-                                  )
-                                )
-                              }
-                              placeholder="the SCDL Admin Team (special thanks to Pandora)"
-                              className="w-full xp-inset px-2 py-1 text-xs"
-                            />
-                          </div>
-                          <div className="sm:col-span-2 flex justify-end">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleSaveSeason(s)}
-                              className="xp-btn xp-btn-primary text-xs"
-                            >
-                              <Save className="w-3.5 h-3.5" />
-                              <span>Save Stats &amp; Credits Config</span>
-                            </button>
-                          </div>
-                        </div>
-                      </details>
+                      {(() => {
+                        const provider = s.stats_provider ?? "google_sheet";
+                        const isGoogleSheet = provider === "google_sheet";
+                        const hasSheetId = Boolean(s.stats_sheet_id?.trim());
+                        const hasSheetGids =
+                          (s.stats_sheet_gids ?? []).length > 0;
+                        const hasPlayoffGids =
+                          (s.stats_playoff_gids ?? []).length > 0;
+                        const hasScheduleGid = Boolean(
+                          s.stats_schedule_gid?.trim()
+                        );
+                        const hasRegRounds =
+                          s.regular_season_rounds != null &&
+                          s.regular_season_rounds > 0;
+                        const hasCreditsLabel = Boolean(
+                          s.stats_credits_label?.trim()
+                        );
+                        const hasCreditsUrl = Boolean(
+                          s.stats_credits_url?.trim()
+                        );
+                        const hasCreditsAttr = Boolean(
+                          s.stats_credits_attribution?.trim()
+                        );
+                        const seasonDivs = divisions.filter(
+                          (d) => d.season_id === s.id
+                        );
+                        const rawDraft = bracketDrafts[s.id];
+                        const activeDivId =
+                          rawDraft &&
+                          seasonDivs.some((d) => d.id === rawDraft.divisionId)
+                            ? rawDraft.divisionId
+                            : seasonDivs[0]?.id ?? "";
+                        const activeDiv =
+                          seasonDivs.find((d) => d.id === activeDivId) ?? null;
+                        const savedDivBracket = activeDivId
+                          ? s.playoff_brackets?.[activeDivId]
+                          : undefined;
+                        const activeFormat: PlayoffBracketFormat =
+                          rawDraft && rawDraft.divisionId === activeDivId
+                            ? rawDraft.format
+                            : savedDivBracket?.format ?? "4-team";
+                        const seedCount = getSeedCountForFormat(activeFormat);
+                        const draftSeedTeamIds = Array.from(
+                          { length: seedCount },
+                          (_, idx) => {
+                            if (
+                              rawDraft &&
+                              rawDraft.divisionId === activeDivId
+                            ) {
+                              return rawDraft.seedTeamIds[idx] ?? "";
+                            }
+                            return (
+                              savedDivBracket?.seeds.find(
+                                (sd) => sd.seed === idx + 1
+                              )?.teamId ?? ""
+                            );
+                          }
+                        );
+                        const divTeams = [...teams]
+                          .filter((t) => t.division_id === activeDivId)
+                          .sort((a, b) => a.name.localeCompare(b.name));
+                        const teamById = new Map(
+                          divTeams.map((t) => [t.id, t])
+                        );
+                        const hasAnyBracket = Object.keys(
+                          s.playoff_brackets ?? {}
+                        ).length > 0;
+
+                        const previewSlots: PlayoffBracketSeedSlot[] =
+                          draftSeedTeamIds.map((tid, idx) => {
+                            const tm = teamById.get(tid);
+                            return {
+                              seed: idx + 1,
+                              teamId: tid,
+                              teamName: tm?.name ?? `Seed #${idx + 1}`,
+                              logoUrl: tm?.logo_url ?? null,
+                            };
+                          });
+                        const round1Matches = buildStandardPlayoffBracket(
+                          activeFormat,
+                          previewSlots
+                        ).matches.filter((m) => m.roundOrder === 1);
+
+                        return (
+                          <>
+                            <details className="pt-1 border-t border-white/10 text-[11px]">
+                              <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
+                                Data Sources &amp; Credits
+                              </summary>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Stats Provider
+                                  </label>
+                                  <select
+                                    value={provider}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_provider: e.target
+                                                  .value as Season["stats_provider"],
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full xp-inset px-2 py-1 text-xs"
+                                  >
+                                    <option value="google_sheet">
+                                      Google Sheet CSV
+                                    </option>
+                                    <option value="supabase_native">
+                                      Supabase Native (league_game_participants)
+                                    </option>
+                                    <option value="none">
+                                      None (Solo/Duo only)
+                                    </option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Google Sheet ID
+                                    {isGoogleSheet && hasSheetId && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    disabled={!isGoogleSheet}
+                                    value={s.stats_sheet_id ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_sheet_id: e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="1tdi8ftaQ50sYS92H39YybU29..."
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      !isGoogleSheet
+                                        ? "opacity-45 cursor-not-allowed"
+                                        : hasSheetId
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Sheet Tab GIDs (comma-separated)
+                                    {isGoogleSheet && hasSheetGids && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    disabled={!isGoogleSheet}
+                                    value={(s.stats_sheet_gids ?? []).join(", ")}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_sheet_gids: e.target.value
+                                                  .split(",")
+                                                  .map((g) => g.trim())
+                                                  .filter(Boolean),
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="1733612942, 1849724071"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      !isGoogleSheet
+                                        ? "opacity-45 cursor-not-allowed"
+                                        : hasSheetGids
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Playoff Tab GIDs (Optional, comma-separated)
+                                    {isGoogleSheet && hasPlayoffGids && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    disabled={!isGoogleSheet}
+                                    value={(s.stats_playoff_gids ?? []).join(
+                                      ", "
+                                    )}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_playoff_gids:
+                                                  e.target.value
+                                                    .split(",")
+                                                    .map((g) => g.trim())
+                                                    .filter(Boolean),
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="e.g., 987654321"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      !isGoogleSheet
+                                        ? "opacity-45 cursor-not-allowed"
+                                        : hasPlayoffGids
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Schedule / Draft Links Tab GID (Optional)
+                                    {isGoogleSheet && hasScheduleGid && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    disabled={!isGoogleSheet}
+                                    value={s.stats_schedule_gid ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_schedule_gid:
+                                                  e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="e.g., 728267243"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      !isGoogleSheet
+                                        ? "opacity-45 cursor-not-allowed"
+                                        : hasScheduleGid
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Regular Season Rounds (Optional cutoff)
+                                    {provider !== "none" && hasRegRounds && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    disabled={provider === "none"}
+                                    value={s.regular_season_rounds ?? ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value.trim();
+                                      const num = val ? Number(val) : null;
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                regular_season_rounds:
+                                                  num && Number.isFinite(num)
+                                                    ? num
+                                                    : null,
+                                              }
+                                            : item
+                                        )
+                                      );
+                                    }}
+                                    placeholder="e.g., 7 (Round 8+ = Playoffs)"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      provider === "none"
+                                        ? "opacity-45 cursor-not-allowed"
+                                        : hasRegRounds
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Credits Link Label
+                                    {hasCreditsLabel && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={s.stats_credits_label ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_credits_label:
+                                                  e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="e.g. SCDL 4.5 Master Google Sheet"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      hasCreditsLabel
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Credits URL (optional override)
+                                    {hasCreditsUrl && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={s.stats_credits_url ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_credits_url:
+                                                  e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      hasCreditsUrl
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-[#c7c5b8]">
+                                    Credits Attribution
+                                    {hasCreditsAttr && (
+                                      <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={s.stats_credits_attribution ?? ""}
+                                    onChange={(e) =>
+                                      setSeasons((prev) =>
+                                        prev.map((item) =>
+                                          item.id === s.id
+                                            ? {
+                                                ...item,
+                                                stats_credits_attribution:
+                                                  e.target.value,
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    placeholder="the SCDL Admin Team (special thanks to Pandora)"
+                                    className={`w-full xp-inset px-2 py-1 text-xs ${
+                                      hasCreditsAttr
+                                        ? "!border-[#7cd438]/60"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+                                <div className="sm:col-span-2 flex justify-end">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => handleSaveSeason(s)}
+                                    className="xp-btn xp-btn-primary text-xs"
+                                  >
+                                    <Save className="w-3.5 h-3.5" />
+                                    <span>Save Config</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </details>
+
+                            <details className="pt-1 border-t border-white/10 text-[11px]">
+                              <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
+                                Playoff Brackets
+                                {hasAnyBracket && (
+                                  <Check className="w-3 h-3 text-[#7cd438] inline ml-1" />
+                                )}
+                              </summary>
+                              <div className="pt-2 space-y-2.5">
+                                {seasonDivs.length === 0 ? (
+                                  <div className="text-[11px] text-[#a6a89e]">
+                                    Add divisions first to configure playoff brackets.
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {seasonDivs.map((d) => {
+                                          const isSel = d.id === activeDivId;
+                                          const divHasBracket = Boolean(
+                                            s.playoff_brackets?.[d.id]
+                                          );
+                                          return (
+                                            <button
+                                              key={d.id}
+                                              type="button"
+                                              onClick={() => {
+                                                const saved =
+                                                  s.playoff_brackets?.[d.id];
+                                                const fmt =
+                                                  saved?.format ?? "4-team";
+                                                const cnt =
+                                                  getSeedCountForFormat(fmt);
+                                                setBracketDrafts((prev) => ({
+                                                  ...prev,
+                                                  [s.id]: {
+                                                    divisionId: d.id,
+                                                    format: fmt,
+                                                    seedTeamIds: Array.from(
+                                                      { length: cnt },
+                                                      (_, idx) =>
+                                                        saved?.seeds.find(
+                                                          (sd) =>
+                                                            sd.seed === idx + 1
+                                                        )?.teamId ?? ""
+                                                    ),
+                                                  },
+                                                }));
+                                              }}
+                                              className={`xp-btn text-[11px] px-2.5 py-1 ${
+                                                isSel ? "xp-btn-primary" : ""
+                                              }`}
+                                            >
+                                              <span>{d.name}</span>
+                                              {divHasBracket && (
+                                                <Check className="w-3 h-3 text-[#7cd438]" />
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+
+                                      <select
+                                        value={activeFormat}
+                                        onChange={(e) => {
+                                          const nextFmt = e.target
+                                            .value as PlayoffBracketFormat;
+                                          const nextCnt =
+                                            getSeedCountForFormat(nextFmt);
+                                          setBracketDrafts((prev) => ({
+                                            ...prev,
+                                            [s.id]: {
+                                              divisionId: activeDivId,
+                                              format: nextFmt,
+                                              seedTeamIds: Array.from(
+                                                { length: nextCnt },
+                                                (_, idx) =>
+                                                  draftSeedTeamIds[idx] ?? ""
+                                              ),
+                                            },
+                                          }));
+                                        }}
+                                        className="xp-inset px-2 py-1 text-xs"
+                                      >
+                                        <option value="4-team">
+                                          4-Team Single Elim (Semifinals → Finals)
+                                        </option>
+                                        <option value="6-team">
+                                          6-Team Single Elim (Top 2 Bye)
+                                        </option>
+                                        <option value="8-team">
+                                          8-Team Single Elim (QF → SF → Finals)
+                                        </option>
+                                      </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {draftSeedTeamIds.map((tid, idx) => (
+                                        <div
+                                          key={`seed-${idx + 1}`}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <span className="text-[11px] font-black text-[#f0c020] w-6 shrink-0 tabular-nums">
+                                            #{idx + 1}
+                                          </span>
+                                          <select
+                                            value={tid}
+                                            onChange={(e) => {
+                                              const nextIds = [
+                                                ...draftSeedTeamIds,
+                                              ];
+                                              nextIds[idx] = e.target.value;
+                                              setBracketDrafts((prev) => ({
+                                                ...prev,
+                                                [s.id]: {
+                                                  divisionId: activeDivId,
+                                                  format: activeFormat,
+                                                  seedTeamIds: nextIds,
+                                                },
+                                              }));
+                                            }}
+                                            className={`w-full xp-inset px-2 py-1 text-xs ${
+                                              tid ? "!border-[#7cd438]/60" : ""
+                                            }`}
+                                          >
+                                            <option value="">
+                                              — Select Seed #{idx + 1} Team —
+                                            </option>
+                                            {divTeams.map((tm) => (
+                                              <option key={tm.id} value={tm.id}>
+                                                {tm.name}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    <div className="rounded border border-white/10 bg-black/35 px-2.5 py-2 space-y-1">
+                                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                                        Round 1 Matchup Preview
+                                      </div>
+                                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#e5e2d0]">
+                                        {round1Matches.map((m) => {
+                                          const nameA =
+                                            (m.teamAId &&
+                                              teamById.get(m.teamAId)?.name) ||
+                                            "TBD";
+                                          const nameB =
+                                            (m.teamBId &&
+                                              teamById.get(m.teamBId)?.name) ||
+                                            "TBD";
+                                          return (
+                                            <span key={m.id}>
+                                              <span className="text-[#f0c020] font-bold">
+                                                #{m.teamASeed}
+                                              </span>{" "}
+                                              {nameA}{" "}
+                                              <span className="text-[#a6a89e]">
+                                                vs
+                                              </span>{" "}
+                                              <span className="text-[#f0c020] font-bold">
+                                                #{m.teamBSeed}
+                                              </span>{" "}
+                                              {nameB}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-2">
+                                      {savedDivBracket && (
+                                        <button
+                                          type="button"
+                                          disabled={busy}
+                                          onClick={() =>
+                                            handleSavePlayoffBracket(
+                                              s,
+                                              activeDivId,
+                                              activeDiv?.name ?? "Division",
+                                              null
+                                            )
+                                          }
+                                          className="xp-btn text-xs text-[#ff857a]"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <span>Clear Bracket</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => {
+                                          if (
+                                            draftSeedTeamIds.some((id) => !id)
+                                          ) {
+                                            setStatusMsg(
+                                              `Error: Please select all ${seedCount} seed teams before saving.`
+                                            );
+                                            return;
+                                          }
+                                          if (
+                                            new Set(draftSeedTeamIds).size !==
+                                            seedCount
+                                          ) {
+                                            setStatusMsg(
+                                              "Error: Each seed slot must be assigned to a different team."
+                                            );
+                                            return;
+                                          }
+                                          const confirmedSeeds: PlayoffBracketSeedSlot[] =
+                                            draftSeedTeamIds.map((tid, idx) => {
+                                              const tm = teamById.get(tid);
+                                              return {
+                                                seed: idx + 1,
+                                                teamId: tid,
+                                                teamName: tm?.name ?? tid,
+                                                logoUrl: tm?.logo_url ?? null,
+                                              };
+                                            });
+                                          const bracket =
+                                            buildStandardPlayoffBracket(
+                                              activeFormat,
+                                              confirmedSeeds
+                                            );
+                                          handleSavePlayoffBracket(
+                                            s,
+                                            activeDivId,
+                                            activeDiv?.name ?? "Division",
+                                            bracket
+                                          );
+                                        }}
+                                        className="xp-btn xp-btn-primary text-xs"
+                                      >
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>Save Bracket</span>
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </details>
+                          </>
+                        );
+                      })()}
                     </div>
                   );
                 });

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronRight, Flame, Trophy } from "lucide-react";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import { resolveDivisionTheme } from "@/utils/themes";
@@ -10,6 +10,10 @@ import type {
   StatsStageBucket,
 } from "@/utils/riotStatsAggregation";
 import type { PlayoffSeriesMatchup } from "@/utils/scdlSheetStats";
+import type {
+  DivisionPlayoffBracket,
+  PlayoffBracketMatchSlot,
+} from "@/types/database";
 
 export interface StatsDivisionItem {
   id: string;
@@ -28,18 +32,22 @@ interface StatsTeamsTabProps {
   seasonSlug?: string | null;
   stageBucket?: StatsStageBucket;
   playoffSeries?: PlayoffSeriesMatchup[];
+  playoffBracket?: DivisionPlayoffBracket | null;
   onNavigateTeam: (href: string) => void;
 }
 
 export function StatsTeamsTab({
   selectedDivision,
   filteredTeams,
+  activeTeams,
   basePath,
   seasonSlug,
   stageBucket = "regular",
   playoffSeries = [],
+  playoffBracket = null,
   onNavigateTeam,
 }: StatsTeamsTabProps) {
+  const router = useRouter();
   if (!selectedDivision) {
     return (
       <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
@@ -54,23 +62,6 @@ export function StatsTeamsTab({
   );
 
   if (stageBucket === "playoffs") {
-    const roundsMap = new Map<
-      string,
-      { roundLabel: string; roundOrder: number; matches: PlayoffSeriesMatchup[] }
-    >();
-    for (const s of divPlayoffSeries) {
-      const existing = roundsMap.get(s.roundLabel) ?? {
-        roundLabel: s.roundLabel,
-        roundOrder: s.roundOrder,
-        matches: [],
-      };
-      existing.matches.push(s);
-      roundsMap.set(s.roundLabel, existing);
-    }
-    const rounds = [...roundsMap.values()].sort(
-      (a, b) => a.roundOrder - b.roundOrder
-    );
-
     const seriesHref = (seriesKey: string) => {
       const qp = new URLSearchParams();
       if (seasonSlug) qp.set("season", seasonSlug);
@@ -79,6 +70,257 @@ export function StatsTeamsTab({
         qs ? `?${qs}` : ""
       }`;
     };
+
+    const teamHref = (teamId: string) =>
+      `${basePath}/team/${encodeURIComponent(teamId)}${
+        seasonSlug ? `?season=${encodeURIComponent(seasonSlug)}` : ""
+      }`;
+
+    interface ResolvedBracketSide {
+      teamId: string | null;
+      name: string;
+      logo: string | null;
+      seed: number | null;
+      wins: number | null;
+      won: boolean;
+      isPlaceholder?: boolean;
+    }
+
+    interface ResolvedBracketCard {
+      key: string;
+      label?: string;
+      seriesKey: string | null;
+      sideA: ResolvedBracketSide;
+      sideB: ResolvedBracketSide;
+    }
+
+    let rounds: {
+      roundLabel: string;
+      roundOrder: number;
+      cards: ResolvedBracketCard[];
+    }[] = [];
+
+    if (playoffBracket && playoffBracket.matches.length > 0) {
+      const teamLookup = new Map<
+        string,
+        { teamId: string; teamName: string; logoUrl: string | null; seed: number | null }
+      >();
+      for (const sd of playoffBracket.seeds) {
+        teamLookup.set(sd.teamId, {
+          teamId: sd.teamId,
+          teamName: sd.teamName,
+          logoUrl: sd.logoUrl ?? null,
+          seed: sd.seed,
+        });
+      }
+      for (const t of [...activeTeams, ...filteredTeams]) {
+        if (t.divisionId !== selectedDivision.id) continue;
+        const existing = teamLookup.get(t.teamId);
+        teamLookup.set(t.teamId, {
+          teamId: t.teamId,
+          teamName: t.teamName,
+          logoUrl: t.logoUrl ?? existing?.logoUrl ?? null,
+          seed: existing?.seed ?? t.seed ?? null,
+        });
+      }
+
+      const matchById = new Map<string, PlayoffBracketMatchSlot>();
+      for (const m of playoffBracket.matches) {
+        matchById.set(m.id, m);
+      }
+
+      const sortedSlots = [...playoffBracket.matches].sort(
+        (a, b) => a.roundOrder - b.roundOrder
+      );
+      const winnerByMatchId = new Map<
+        string,
+        { teamId: string | null; teamName: string; logoUrl: string | null; seed: number | null }
+      >();
+
+      const roundsMap = new Map<
+        string,
+        { roundLabel: string; roundOrder: number; cards: ResolvedBracketCard[] }
+      >();
+
+      const resolveSlotSide = (
+        directTeamId: string | null | undefined,
+        directSeed: number | null | undefined,
+        sourceMatchId: string | null | undefined
+      ) => {
+        if (directTeamId) {
+          const info = teamLookup.get(directTeamId);
+          return {
+            teamId: directTeamId,
+            name: info?.teamName ?? directTeamId,
+            logo: info?.logoUrl ?? null,
+            seed: directSeed ?? info?.seed ?? null,
+            isPlaceholder: false,
+          };
+        }
+        if (sourceMatchId) {
+          const prevWinner = winnerByMatchId.get(sourceMatchId);
+          if (prevWinner) {
+            return {
+              teamId: prevWinner.teamId,
+              name: prevWinner.teamName,
+              logo: prevWinner.logoUrl,
+              seed: prevWinner.seed,
+              isPlaceholder: false,
+            };
+          }
+          const srcLabel = matchById.get(sourceMatchId)?.label ?? "Previous Match";
+          return {
+            teamId: null,
+            name: `Winner of ${srcLabel}`,
+            logo: null,
+            seed: null,
+            isPlaceholder: true,
+          };
+        }
+        return {
+          teamId: null,
+          name: "TBD",
+          logo: null,
+          seed: directSeed ?? null,
+          isPlaceholder: true,
+        };
+      };
+
+      const matchesSide = (
+        side: { teamId: string | null; name: string },
+        seriesTeamId: string | null,
+        seriesTeamName: string
+      ) => {
+        if (side.teamId && seriesTeamId && side.teamId === seriesTeamId) {
+          return true;
+        }
+        return (
+          side.name.trim().toLowerCase() === seriesTeamName.trim().toLowerCase()
+        );
+      };
+
+      for (const slot of sortedSlots) {
+        const resA = resolveSlotSide(slot.teamAId, slot.teamASeed, slot.sourceMatchA);
+        const resB = resolveSlotSide(slot.teamBId, slot.teamBSeed, slot.sourceMatchB);
+
+        let matchedSeries: PlayoffSeriesMatchup | null = null;
+        if (!resA.isPlaceholder && !resB.isPlaceholder) {
+          matchedSeries =
+            divPlayoffSeries.find(
+              (s) =>
+                (matchesSide(resA, s.teamAId, s.teamAName) &&
+                  matchesSide(resB, s.teamBId, s.teamBName)) ||
+                (matchesSide(resA, s.teamBId, s.teamBName) &&
+                  matchesSide(resB, s.teamAId, s.teamAName))
+            ) ?? null;
+        }
+
+        let winsA: number | null = null;
+        let winsB: number | null = null;
+        let wonA = false;
+        let wonB = false;
+
+        if (matchedSeries) {
+          const aIsSeriesA = matchesSide(
+            resA,
+            matchedSeries.teamAId,
+            matchedSeries.teamAName
+          );
+          winsA = aIsSeriesA ? matchedSeries.teamAWins : matchedSeries.teamBWins;
+          winsB = aIsSeriesA ? matchedSeries.teamBWins : matchedSeries.teamAWins;
+          if (matchedSeries.winnerTeamName) {
+            const winLower = matchedSeries.winnerTeamName.trim().toLowerCase();
+            wonA = winLower === resA.name.trim().toLowerCase();
+            wonB = winLower === resB.name.trim().toLowerCase();
+            if (wonA) {
+              winnerByMatchId.set(slot.id, {
+                teamId: resA.teamId,
+                teamName: resA.name,
+                logoUrl: resA.logo,
+                seed: resA.seed,
+              });
+            } else if (wonB) {
+              winnerByMatchId.set(slot.id, {
+                teamId: resB.teamId,
+                teamName: resB.name,
+                logoUrl: resB.logo,
+                seed: resB.seed,
+              });
+            }
+          }
+        }
+
+        const bucket = roundsMap.get(slot.roundLabel) ?? {
+          roundLabel: slot.roundLabel,
+          roundOrder: slot.roundOrder,
+          cards: [],
+        };
+        bucket.cards.push({
+          key: slot.id,
+          label: slot.label,
+          seriesKey: matchedSeries?.seriesKey ?? null,
+          sideA: {
+            ...resA,
+            wins: winsA,
+            won: wonA,
+          },
+          sideB: {
+            ...resB,
+            wins: winsB,
+            won: wonB,
+          },
+        });
+        roundsMap.set(slot.roundLabel, bucket);
+      }
+
+      rounds = [...roundsMap.values()].sort(
+        (a, b) => a.roundOrder - b.roundOrder
+      );
+    } else if (divPlayoffSeries.length > 0) {
+      const roundsMap = new Map<
+        string,
+        {
+          roundLabel: string;
+          roundOrder: number;
+          cards: ResolvedBracketCard[];
+        }
+      >();
+      for (const m of divPlayoffSeries) {
+        const existing = roundsMap.get(m.roundLabel) ?? {
+          roundLabel: m.roundLabel,
+          roundOrder: m.roundOrder,
+          cards: [],
+        };
+        const aWon =
+          m.winnerTeamName?.toLowerCase() === m.teamAName.toLowerCase();
+        const bWon =
+          m.winnerTeamName?.toLowerCase() === m.teamBName.toLowerCase();
+        existing.cards.push({
+          key: m.seriesKey,
+          seriesKey: m.seriesKey,
+          sideA: {
+            teamId: m.teamAId,
+            name: m.teamAName,
+            logo: m.teamALogoUrl,
+            seed: m.teamASeed,
+            wins: m.teamAWins,
+            won: aWon,
+          },
+          sideB: {
+            teamId: m.teamBId,
+            name: m.teamBName,
+            logo: m.teamBLogoUrl,
+            seed: m.teamBSeed,
+            wins: m.teamBWins,
+            won: bWon,
+          },
+        });
+        roundsMap.set(m.roundLabel, existing);
+      }
+      rounds = [...roundsMap.values()].sort(
+        (a, b) => a.roundOrder - b.roundOrder
+      );
+    }
 
     return (
       <div className="space-y-5">
@@ -101,50 +343,52 @@ export function StatsTeamsTab({
               <span>{selectedDivision.name} Playoff Bracket</span>
             </h2>
             <span className="text-[11px] text-[#a6a89e]">
-              Regular season seeds frozen &middot; Click any series for draft &amp; box score
+              Click any team for full scouting sheet &middot; Click any series for draft &amp; box score
             </span>
           </div>
 
           <div className="p-4 space-y-5">
             {rounds.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              <div
+                className={`grid grid-cols-1 gap-4 items-start ${
+                  rounds.length <= 2
+                    ? "md:grid-cols-2"
+                    : "md:grid-cols-2 lg:grid-cols-3"
+                }`}
+              >
                 {rounds.map((r) => (
                   <div key={r.roundLabel} className="space-y-2.5">
                     <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#c89b3c] border-b border-white/10 pb-1">
                       {r.roundLabel}
                     </div>
                     <div className="space-y-2.5">
-                      {r.matches.map((m) => {
-                        const aWon =
-                          m.winnerTeamName?.toLowerCase() ===
-                          m.teamAName.toLowerCase();
-                        const bWon =
-                          m.winnerTeamName?.toLowerCase() ===
-                          m.teamBName.toLowerCase();
+                      {r.cards.map((card) => {
+                        const clickableSeries = Boolean(card.seriesKey);
                         return (
-                          <Link
-                            key={m.seriesKey}
-                            href={seriesHref(m.seriesKey)}
-                            className="block rounded-lg border border-white/15 bg-black/45 hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5 transition overflow-hidden"
+                          <div
+                            key={card.key}
+                            onClick={
+                              card.seriesKey
+                                ? () => router.push(seriesHref(card.seriesKey!))
+                                : undefined
+                            }
+                            className={`rounded-lg border border-white/15 bg-black/45 overflow-hidden transition ${
+                              clickableSeries
+                                ? "cursor-pointer hover:border-[#f0c020]/70 hover:bg-[#f0c020]/5"
+                                : ""
+                            }`}
                           >
-                            {[
-                              {
-                                name: m.teamAName,
-                                logo: m.teamALogoUrl,
-                                seed: m.teamASeed,
-                                wins: m.teamAWins,
-                                won: aWon,
-                              },
-                              {
-                                name: m.teamBName,
-                                logo: m.teamBLogoUrl,
-                                seed: m.teamBSeed,
-                                wins: m.teamBWins,
-                                won: bWon,
-                              },
-                            ].map((side, idx) => (
+                            {card.label && (
+                              <div className="px-3 py-1 bg-white/[0.03] border-b border-white/10 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                                <span>{card.label}</span>
+                                <span>
+                                  {clickableSeries ? "Draft & Box Score →" : "Upcoming"}
+                                </span>
+                              </div>
+                            )}
+                            {[card.sideA, card.sideB].map((side, idx) => (
                               <div
-                                key={`${m.seriesKey}-${idx}`}
+                                key={`${card.key}-${idx}`}
                                 className={`flex items-center justify-between gap-2 px-3 py-2 ${
                                   idx === 0 ? "border-b border-white/10" : ""
                                 } ${side.won ? "bg-[#f0c020]/10" : ""}`}
@@ -160,15 +404,34 @@ export function StatsTeamsTab({
                                       className="w-5 h-5 object-contain shrink-0"
                                     />
                                   )}
-                                  <span
-                                    className={`text-xs font-extrabold truncate ${
-                                      side.won
-                                        ? "text-[#f0c020]"
-                                        : "text-[#f0ede0]"
-                                    }`}
-                                  >
-                                    {side.name}
-                                  </span>
+                                  {side.teamId ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigateTeam(teamHref(side.teamId!));
+                                      }}
+                                      className={`text-xs font-extrabold truncate text-left hover:text-[#f0c020] hover:underline transition cursor-pointer ${
+                                        side.won
+                                          ? "text-[#f0c020]"
+                                          : "text-[#f0ede0]"
+                                      }`}
+                                    >
+                                      {side.name}
+                                    </button>
+                                  ) : (
+                                    <span
+                                      className={`text-xs truncate ${
+                                        side.isPlaceholder
+                                          ? "italic text-[#a6a89e]"
+                                          : side.won
+                                          ? "font-extrabold text-[#f0c020]"
+                                          : "font-extrabold text-[#f0ede0]"
+                                      }`}
+                                    >
+                                      {side.name}
+                                    </span>
+                                  )}
                                 </div>
                                 <span
                                   className={`text-sm font-black tabular-nums shrink-0 ${
@@ -177,11 +440,11 @@ export function StatsTeamsTab({
                                       : "text-[#a6a89e]"
                                   }`}
                                 >
-                                  {side.wins}
+                                  {side.wins != null ? side.wins : "—"}
                                 </span>
                               </div>
                             ))}
-                          </Link>
+                          </div>
                         );
                       })}
                     </div>
@@ -190,43 +453,7 @@ export function StatsTeamsTab({
               </div>
             ) : (
               <div className="text-center text-xs text-[#a6a89e] py-3">
-                No playoff series recorded for {selectedDivision.name} yet — matchups and scores will appear here automatically once playoff games are added to the stats sheet.
-              </div>
-            )}
-
-            {filteredTeams.length > 0 && (
-              <div className="border-t border-white/10 pt-3">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e] mb-2">
-                  Frozen Regular Season Seeds
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {filteredTeams.map((t) => (
-                    <button
-                      key={t.teamId}
-                      type="button"
-                      onClick={() =>
-                        onNavigateTeam(
-                          `${basePath}/team/${encodeURIComponent(t.teamId)}`
-                        )
-                      }
-                      className="flex items-center gap-2 px-2.5 py-2 rounded border border-white/10 bg-black/35 hover:border-[#f0c020]/60 text-left transition cursor-pointer min-w-0"
-                    >
-                      <span className="text-xs font-black text-[#f0c020] tabular-nums shrink-0">
-                        {t.seed != null ? `#${t.seed}` : "—"}
-                      </span>
-                      {t.logoUrl && (
-                        <img
-                          src={t.logoUrl}
-                          alt={t.teamName}
-                          className="w-5 h-5 object-contain shrink-0"
-                        />
-                      )}
-                      <span className="text-xs font-bold text-[#f0ede0] truncate flex-1">
-                        {t.teamName}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                No playoff bracket configured for {selectedDivision.name} yet — confirm seeds in Admin or add playoff games to the stats sheet.
               </div>
             )}
           </div>

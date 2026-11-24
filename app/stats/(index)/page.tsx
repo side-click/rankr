@@ -118,6 +118,7 @@ export default async function PublicStatsPage({
       soloPrioMap={soloPrioMap}
       isAdminView={false}
       initialStatsNotice={ctx.statsNotice}
+      playoffBrackets={ctx.playoffBrackets}
       initialDivision={params.division}
       initialTab={initialTab}
       initialSheetData={

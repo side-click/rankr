@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import type { SeasonPlayoffBrackets } from "@/types/database";
 import { createClient, createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { normalizeRoster } from "@/utils/roles";
@@ -40,6 +41,7 @@ export interface LoadedStatsContext {
   players: AggregatedPlayerStats[];
   teams: AggregatedTeamStats[];
   statsNotice: string | null;
+  playoffBrackets?: SeasonPlayoffBrackets | null;
   sheetConfig?: SheetSourceConfig;
 }
 
@@ -466,6 +468,12 @@ async function loadStatsContextInternal(
     players: aggregatedPlayers,
     teams: aggregatedTeams,
     statsNotice,
+    playoffBrackets:
+      (
+        activeSeason as unknown as {
+          playoff_brackets?: SeasonPlayoffBrackets | null;
+        } | null
+      )?.playoff_brackets ?? null,
     sheetConfig,
   };
 }

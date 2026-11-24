@@ -62,6 +62,7 @@ import type {
   UnrosteredSheetPlayer,
 } from "@/utils/scdlSheetStats";
 import type { DraftImportSummary } from "@/utils/draftImporter";
+import type { SeasonPlayoffBrackets } from "@/types/database";
 
 interface DivisionItem {
   id: string;
@@ -104,6 +105,7 @@ interface StatsDashboardProps {
   soloPrioMap?: Record<string, SoloPrioEntry>;
   isAdminView?: boolean;
   initialStatsNotice?: string | null;
+  playoffBrackets?: SeasonPlayoffBrackets | null;
   initialDivision?: string;
   initialTab?: "players" | "teams" | "division";
   initialSheetData?: {
@@ -179,6 +181,7 @@ export function StatsDashboard({
   soloPrioMap,
   isAdminView = true,
   initialStatsNotice = null,
+  playoffBrackets = null,
   initialDivision,
   initialTab,
   initialSheetData = null,
@@ -3124,6 +3127,11 @@ export function StatsDashboard({
             seasonSlug={seasonSlug}
             stageBucket={stageBucket}
             playoffSeries={sheetData?.playoffSeries ?? []}
+            playoffBracket={
+              selectedDivision
+                ? playoffBrackets?.[selectedDivision.id] ?? null
+                : null
+            }
             onNavigateTeam={(href) => router.push(href)}
           />
         )}
