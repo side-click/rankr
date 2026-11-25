@@ -917,21 +917,39 @@ export function AdminModerationTab({
                         &bull; {new Date(ev.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-[11px] text-[#a6a89e] flex flex-wrap gap-x-3 gap-y-0.5">
-                      {ev.field_names.length > 0 && (
-                        <span>Fields: {ev.field_names.join(", ")}</span>
-                      )}
-                      {ev.categories.length > 0 && (
-                        <span>
-                          Categories: {ev.categories.join(", ")}
-                        </span>
-                      )}
-                      {ev.matched_terms.length > 0 && (
-                        <span className="text-[#ff857a]">
-                          Terms: {ev.matched_terms.join(", ")}
-                        </span>
-                      )}
-                    </div>
+                    {(() => {
+                      const displayTerms = ev.matched_terms.filter(
+                        (t) => !t.startsWith("excerpt:")
+                      );
+                      const excerpts = ev.matched_terms
+                        .filter((t) => t.startsWith("excerpt:"))
+                        .map((t) => t.slice("excerpt:".length).trim())
+                        .filter(Boolean);
+                      return (
+                        <>
+                          <div className="text-[11px] text-[#a6a89e] flex flex-wrap gap-x-3 gap-y-0.5">
+                            {ev.field_names.length > 0 && (
+                              <span>Fields: {ev.field_names.join(", ")}</span>
+                            )}
+                            {ev.categories.length > 0 && (
+                              <span>
+                                Categories: {ev.categories.join(", ")}
+                              </span>
+                            )}
+                            {displayTerms.length > 0 && (
+                              <span className="text-[#ff857a]">
+                                Terms: {displayTerms.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          {excerpts.length > 0 && (
+                            <div className="text-[11px] text-[#d6d3c4] italic break-words">
+                              Excerpt: {excerpts.join(" • ")}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     {contentHref && (

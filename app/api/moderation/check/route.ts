@@ -135,12 +135,28 @@ export async function POST(request: Request) {
           },
           {
             name: "Matched / Categories",
-            value:
-              mod.matchedTerms.length > 0
-                ? `${mod.categories.join(", ")} (\`${mod.matchedTerms.join("`, `")}\`)`
-                : mod.categories.join(", ") || "prohibited",
+            value: (() => {
+              const terms = mod.matchedTerms.filter(
+                (t) => !t.startsWith("excerpt:")
+              );
+              return terms.length > 0
+                ? `${mod.categories.join(", ")} (\`${terms.join("`, `")}\`)`
+                : mod.categories.join(", ") || "prohibited";
+            })(),
             inline: false,
           },
+          ...(mod.flaggedExcerpts.length > 0
+            ? [
+                {
+                  name: "Offending Excerpt",
+                  value: mod.flaggedExcerpts
+                    .join("\n")
+                    .replace(/`/g, "'")
+                    .slice(0, 300),
+                  inline: false,
+                },
+              ]
+            : []),
         ],
       }),
     ]);

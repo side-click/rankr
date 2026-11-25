@@ -258,12 +258,29 @@ async function handleBlockedContent(params: {
         },
         {
           name: "Matched / Categories",
-          value:
-            matchedTerms.length > 0
-              ? `${categories.join(", ")} (\`${matchedTerms.join("`, `")}\`)`
-              : categories.join(", ") || "prohibited",
+          value: (() => {
+            const terms = matchedTerms.filter((t) => !t.startsWith("excerpt:"));
+            return terms.length > 0
+              ? `${categories.join(", ")} (\`${terms.join("`, `")}\`)`
+              : categories.join(", ") || "prohibited";
+          })(),
           inline: false,
         },
+        ...(() => {
+          const excerpts = matchedTerms
+            .filter((t) => t.startsWith("excerpt:"))
+            .map((t) => t.slice("excerpt:".length).trim())
+            .filter(Boolean);
+          return excerpts.length > 0
+            ? [
+                {
+                  name: "Offending Excerpt",
+                  value: excerpts.join("\n").replace(/`/g, "'").slice(0, 300),
+                  inline: false,
+                },
+              ]
+            : [];
+        })(),
       ],
     }),
   ]);

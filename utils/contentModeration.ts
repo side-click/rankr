@@ -19,6 +19,7 @@ export interface ModerationResult {
   flaggedFields: string[];
   categories: ModerationCategory[];
   matchedTerms: string[];
+  flaggedExcerpts: string[];
   externalImageCount: number;
   totalImageCount: number;
 }

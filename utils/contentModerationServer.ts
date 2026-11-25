@@ -60,6 +60,12 @@ function escapeRegex(raw: string): string {
   return raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function buildExcerpt(raw: string, maxLen = 140): string {
+  const collapsed = raw.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= maxLen) return collapsed;
+  return `${collapsed.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
 function stripInvisibleAndDiacritics(raw: string): string {
   return raw
     .normalize("NFKD")
@@ -245,11 +251,15 @@ export async function evaluateContentModerationServer(
   const flaggedFieldSet = new Set<string>();
   const categorySet = new Set<ModerationCategory>();
   const matchedSet = new Set<string>();
+  const fieldTextMap = new Map<string, string>();
   const aiInputs: { field: string; text: string }[] = [];
 
   for (const item of fields) {
     const raw = (item.value ?? "").trim();
     if (!raw) continue;
+    if (!fieldTextMap.has(item.field)) {
+      fieldTextMap.set(item.field, raw);
+    }
 
     const cleanRaw = applyAllowlist(
       stripInvisibleAndDiacritics(raw),
@@ -297,6 +307,19 @@ export async function evaluateContentModerationServer(
 
   const blockedFields = Array.from(blockedFieldSet);
   const flaggedFields = Array.from(flaggedFieldSet);
+  const offendingFields = Array.from(new Set([...blockedFields, ...flaggedFields]));
+  const flaggedExcerpts: string[] = [];
+  for (const fieldName of offendingFields) {
+    if (flaggedExcerpts.length >= 2) break;
+    const rawText = fieldTextMap.get(fieldName);
+    if (rawText) {
+      flaggedExcerpts.push(`${fieldName}: "${buildExcerpt(rawText)}"`);
+    }
+  }
+  for (const ex of flaggedExcerpts) {
+    matchedSet.add(`excerpt:${ex}`);
+  }
+
   const action: ModerationResult["action"] =
     blockedFields.length > 0
       ? "block"
@@ -310,6 +333,7 @@ export async function evaluateContentModerationServer(
     flaggedFields,
     categories: Array.from(categorySet),
     matchedTerms: Array.from(matchedSet),
+    flaggedExcerpts,
     externalImageCount: imageStats.externalImages,
     totalImageCount: imageStats.totalImages,
   };

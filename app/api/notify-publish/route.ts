@@ -118,9 +118,26 @@ export async function POST(request: Request) {
             },
             {
               name: "Matched Terms",
-              value: `\`${mod.matchedTerms.join("`, `")}\``,
+              value: (() => {
+                const terms = mod.matchedTerms.filter(
+                  (t) => !t.startsWith("excerpt:")
+                );
+                return terms.length > 0 ? `\`${terms.join("`, `")}\`` : "None";
+              })(),
               inline: false,
             },
+            ...(mod.flaggedExcerpts.length > 0
+              ? [
+                  {
+                    name: "Offending Excerpt",
+                    value: mod.flaggedExcerpts
+                      .join("\n")
+                      .replace(/`/g, "'")
+                      .slice(0, 300),
+                    inline: false,
+                  },
+                ]
+              : []),
           ],
         }),
       ]);
@@ -248,9 +265,26 @@ export async function POST(request: Request) {
           },
           {
             name: "Matched Terms",
-            value: `\`${mod.matchedTerms.join("`, `")}\``,
+            value: (() => {
+              const terms = mod.matchedTerms.filter(
+                (t) => !t.startsWith("excerpt:")
+              );
+              return terms.length > 0 ? `\`${terms.join("`, `")}\`` : "None";
+            })(),
             inline: false,
           },
+          ...(mod.flaggedExcerpts.length > 0
+            ? [
+                {
+                  name: "Offending Excerpt",
+                  value: mod.flaggedExcerpts
+                    .join("\n")
+                    .replace(/`/g, "'")
+                    .slice(0, 300),
+                  inline: false,
+                },
+              ]
+            : []),
         ],
       }),
     ]);
