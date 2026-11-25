@@ -458,36 +458,54 @@ const fetchHomeDataStable = unstable_cache(
     );
   }
 
-  const statsCandidates = focusedSeason
+  const rawStatsCandidates = focusedSeason
     ? [focusedSeason]
     : liveSeasons.length > 0
     ? liveSeasons
     : allSeasons.slice(0, 2);
 
+  const sheetSeasonIdSet = new Set(
+    (seasonsRaw ?? [])
+      .filter((sr) => Boolean((sr as { stats_sheet_id?: string | null }).stats_sheet_id))
+      .map((sr) => String(sr.id))
+  );
+  const statsCandidates = [...rawStatsCandidates].sort((a, b) => {
+    const aHas = sheetSeasonIdSet.has(a.id) ? 1 : 0;
+    const bHas = sheetSeasonIdSet.has(b.id) ? 1 : 0;
+    return bHas - aHas;
+  });
+
+  const loadFirstPopulatedStats = async () => {
+    let firstEntry: {
+      season: (typeof statsCandidates)[number];
+      stats: Awaited<ReturnType<typeof loadCachedHomeStatsBlock>>;
+    } | null = null;
+    for (const s of statsCandidates) {
+      const stats = await loadCachedHomeStatsBlock(s.slug);
+      const entry = { season: s, stats };
+      if (!firstEntry) firstEntry = entry;
+      if (
+        stats.divisionTopPerformers.length > 0 ||
+        stats.divisionStandings.length > 0 ||
+        stats.recentMatches.length > 0
+      ) {
+        return entry;
+      }
+    }
+    return firstEntry;
+  };
+
   const [
     { data: recentBallotsRaw },
     { data: recentBlogsRaw },
     { data: consensusRankingsRaw },
-    statsResults,
+    pickedStats,
   ] = await Promise.all([
     ballotsQuery,
     blogsQuery,
     consensusRankingsQuery,
-    Promise.all(
-      statsCandidates.map(async (s) => ({
-        season: s,
-        stats: await loadCachedHomeStatsBlock(s.slug),
-      }))
-    ),
+    loadFirstPopulatedStats(),
   ]);
-
-  const pickedStats =
-    statsResults.find(
-      (entry) =>
-        entry.stats.divisionTopPerformers.length > 0 ||
-        entry.stats.divisionStandings.length > 0 ||
-        entry.stats.recentMatches.length > 0
-    ) ?? statsResults[0];
 
   const divisionStandings = pickedStats?.stats.divisionStandings ?? [];
   const divisionTopPerformers = pickedStats?.stats.divisionTopPerformers ?? [];

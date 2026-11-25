@@ -451,6 +451,11 @@ async function auditWarmAndInteractive(browser, targets, storageStatePath = null
       page.waitForURL((u) => u.pathname === target.path, { timeout: 15000 }).catch(() => {}),
       link.click(),
     ]);
+    await page
+      .locator(".xp-progress-track")
+      .first()
+      .waitFor({ state: "detached", timeout: 15000 })
+      .catch(() => {});
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const navMs = Date.now() - t0;
     page.off("response", onResponse);
@@ -478,8 +483,9 @@ async function auditWarmAndInteractive(browser, targets, storageStatePath = null
     });
   }
 
-  // Interactive tab switch latency on /stats
+  // Interactive tab & multi-season switch latency on /stats
   const interactiveTimings = [];
+  const seasonSwitchTimings = [];
   if (matchesPageFilter(cfg, "stats", "/stats")) {
     await page.goto(`${cfg.baseUrl}/stats`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
     for (const tabLabel of ["Teams", "General", "Players"]) {
@@ -492,10 +498,60 @@ async function auditWarmAndInteractive(browser, targets, storageStatePath = null
         interactiveTimings.push({ label: `/stats -> ${tabLabel} tab`, ms });
       }
     }
+
+    const seasonTrig = page
+      .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+      .first()
+      .locator("button")
+      .first();
+    if ((await seasonTrig.count().catch(() => 0)) > 0) {
+      await seasonTrig.click();
+      await page.waitForTimeout(100);
+      const optCount = await page
+        .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+        .first()
+        .locator("div.absolute button")
+        .count();
+      await seasonTrig.click().catch(() => {});
+
+      if (optCount > 1) {
+        // Switch through each season (then back to initial if needed)
+        const order = [...Array(optCount).keys(), 0];
+        for (const idx of order) {
+          await seasonTrig.click();
+          await page.waitForTimeout(100);
+          const optBtn = page
+            .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+            .first()
+            .locator("div.absolute button")
+            .nth(idx);
+          const alreadySelected = await optBtn
+            .evaluate((el) => el.className.includes("f0c020"))
+            .catch(() => false);
+          if (alreadySelected) {
+            await seasonTrig.click().catch(() => {});
+            continue;
+          }
+          const optLabel = (await optBtn.innerText()).replace(/\s+/g, " ").trim();
+          const prevUrl = page.url();
+          const t0 = Date.now();
+          await optBtn.click();
+          await page.waitForURL((u) => u.toString() !== prevUrl, { timeout: 15000 }).catch(() => {});
+          await page
+            .locator(".xp-progress-track")
+            .first()
+            .waitFor({ state: "detached", timeout: 15000 })
+            .catch(() => {});
+          await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+          const ms = Date.now() - t0;
+          seasonSwitchTimings.push({ label: `/stats season -> ${optLabel}`, ms });
+        }
+      }
+    }
   }
 
   await ctx.close();
-  return { warmResults, interactiveTimings };
+  return { warmResults, interactiveTimings, seasonSwitchTimings };
 }
 
 async function auditPublicApis(browser) {
@@ -629,6 +685,21 @@ async function main() {
                       ? `Investigate SSR database fan-out or missing unstable_cache on ${route.path}`
                       : null,
                 });
+                const dcl = round(nav.domContentLoadedMs);
+                if (dcl > 0) {
+                  reporter.record({
+                    suite,
+                    category: "ttfb",
+                    name: `Stream/DCL run #${i}`,
+                    metric: dcl,
+                    status: dcl <= 1200 * budgetScale ? "PASS" : dcl <= 2400 * budgetScale ? "WARN" : "FAIL",
+                    details: `${dcl}ms (wall=${res.wallMs}ms)`,
+                    recommendation:
+                      dcl > 1200 * budgetScale
+                        ? `Streamed SSR payload took ${dcl}ms on ${route.path}; check heavy uncached DB queries or full-table loads`
+                        : null,
+                  });
+                }
               }
 
               if (hasMetric(cfg, "vitals")) {
@@ -857,6 +928,26 @@ async function main() {
       const pubWarm = await auditWarmAndInteractive(browser, publicWarmTargets, null);
       allWarm.push(...pubWarm.warmResults);
       allInteractive.push(...pubWarm.interactiveTimings);
+
+      for (const sw of pubWarm.seasonSwitchTimings || []) {
+        reporter.record({
+          suite: "WarmGuest",
+          category: "season-switch",
+          name: sw.label,
+          metric: sw.ms,
+          status:
+            sw.ms <= 1200 * budgetScale
+              ? "PASS"
+              : sw.ms <= 2400 * budgetScale
+              ? "WARN"
+              : "FAIL",
+          details: `${sw.ms}ms`,
+          recommendation:
+            sw.ms > 1200 * budgetScale
+              ? `Speed up ${sw.label} (${sw.ms}ms); ensure compacted stats payload is cached via unstable_cache`
+              : null,
+        });
+      }
 
       if (canAuth) {
         const authWarm = await auditWarmAndInteractive(

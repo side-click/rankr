@@ -177,15 +177,19 @@ interface CachedSoloPrioPlayerRecord {
   byRole: Record<string, string | null>;
 }
 
-const loadCachedSoloPrioIndex = unstable_cache(
-  async (): Promise<Record<string, CachedSoloPrioPlayerRecord>> => {
+const loadCachedSoloPrioForKeys = unstable_cache(
+  async (sortedKeysCsv: string): Promise<Record<string, CachedSoloPrioPlayerRecord>> => {
+    const keys = sortedKeysCsv.split(",").filter(Boolean);
+    if (keys.length === 0) return {};
+
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("riot_player_stats")
-      .select("player_key, role, matches, mastery_top4");
+      .select("player_key, role, matches, mastery_top4")
+      .in("player_key", keys);
 
     if (error) {
-      throw new Error(`loadCachedSoloPrioIndex failed: ${error.message}`);
+      throw new Error(`loadCachedSoloPrioForKeys failed: ${error.message}`);
     }
 
     const index: Record<string, CachedSoloPrioPlayerRecord> = {};
@@ -221,14 +225,21 @@ const loadCachedSoloPrioIndex = unstable_cache(
     }
     return index;
   },
-  ["public-solo-prio-index-v3"],
+  ["public-solo-prio-keys-v4"],
   { revalidate: 3600, tags: ["public-stats"] }
 );
 
 export async function loadPublicSoloPrioMap(
   players: { playerKey: string; role: string }[]
 ): Promise<Record<string, SoloPrioEntry>> {
-  const index = await loadCachedSoloPrioIndex();
+  const uniqueKeys = [
+    ...new Set(
+      players.map((p) => p.playerKey.trim().toLowerCase()).filter(Boolean)
+    ),
+  ].sort();
+  if (uniqueKeys.length === 0) return {};
+
+  const index = await loadCachedSoloPrioForKeys(uniqueKeys.join(","));
   const result: Record<string, SoloPrioEntry> = {};
   for (const p of players) {
     const rec = index[p.playerKey.toLowerCase()];

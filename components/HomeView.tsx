@@ -36,6 +36,8 @@ export function HomeView({ data }: { data: HomeData }) {
     try {
       if (focusedSlug) {
         localStorage.setItem(FOCUS_STORAGE_KEY, focusedSlug);
+      } else {
+        localStorage.removeItem(FOCUS_STORAGE_KEY);
       }
     } catch {}
   }, [focusedSlug]);

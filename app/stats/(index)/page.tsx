@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { StatsDashboard } from "@/components/StatsDashboard";
 import {
   loadPublicSoloPrioMap,
@@ -46,6 +47,80 @@ export const metadata: Metadata = {
   },
 };
 
+const loadCachedPublicStatsDashboard = unstable_cache(
+  async (effectiveSeasonKey: string) => {
+    const ctx = await loadPublicStatsContext(effectiveSeasonKey || undefined, {
+      includeRiotStats: false,
+    });
+    const sheetSummary = await fetchScdlSheetStats(
+      ctx.players,
+      ctx.teams,
+      ctx.sheetConfig
+    ).catch(() => null);
+
+    const allProCandidatesMap = new Map<
+      string,
+      { playerKey: string; role: string }
+    >();
+    if (sheetSummary && sheetSummary.matchCount > 0) {
+      const scopes = ["all", ...ctx.divisions.map((d) => d.id)];
+      for (const scope of scopes) {
+        const scoped = sheetSummary.players.filter((p) =>
+          scope === "all" ? true : p.divisionId === scope
+        );
+        for (const stage of ["regular", "playoffs"] as const) {
+          const rated = computeRoleNormalizedRatings(
+            filterPlayersByStage(scoped, stage)
+          ).filter((p) => p.games > 0);
+          for (const roleDef of LEAGUE_ROLES) {
+            const top = rated
+              .filter((p) => p.role === roleDef.key)
+              .sort((a, b) => b.leagueRating - a.leagueRating)[0];
+            if (top) {
+              allProCandidatesMap.set(top.playerKey, {
+                playerKey: top.playerKey,
+                role: top.role,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const soloPrioMap =
+      allProCandidatesMap.size > 0
+        ? await loadPublicSoloPrioMap([...allProCandidatesMap.values()]).catch(
+            () => undefined
+          )
+        : undefined;
+
+    return {
+      ddVersion: ctx.ddVersion,
+      leagueName: ctx.leagueName,
+      leagueLogoUrl: ctx.leagueLogoUrl,
+      seasonName: ctx.seasonName,
+      seasonId: ctx.seasonId,
+      seasonSlug: ctx.seasonSlug,
+      allSeasons: ctx.allSeasons,
+      currentEditionName: ctx.currentEditionName,
+      divisions: ctx.divisions,
+      players: sheetSummary ? [] : ctx.players,
+      teams: sheetSummary ? [] : ctx.teams,
+      soloPrioMap,
+      statsNotice: ctx.statsNotice,
+      divisionThemes: ctx.divisionThemes,
+      seasonStructure: ctx.seasonStructure,
+      playoffBrackets: ctx.playoffBrackets,
+      statsRoundLabel: ctx.statsRoundLabel,
+      initialSheetData: sheetSummary
+        ? compactSheetSummaryForDashboard(sheetSummary, ctx.divisions)
+        : null,
+    };
+  },
+  ["public-stats-dashboard-v1"],
+  { revalidate: 3600, tags: ["public-stats"] }
+);
+
 export default async function PublicStatsPage({
   searchParams,
 }: {
@@ -59,79 +134,34 @@ export default async function PublicStatsPage({
       ? params.tab
       : undefined;
   const effectiveSeason = await getFocusedSeasonSlug(params.season);
-  const ctx = await loadPublicStatsContext(effectiveSeason, {
-    includeRiotStats: false,
-  });
-  const sheetSummary = await fetchScdlSheetStats(
-    ctx.players,
-    ctx.teams,
-    ctx.sheetConfig
-  ).catch(() => null);
-
-  const allProCandidatesMap = new Map<
-    string,
-    { playerKey: string; role: string }
-  >();
-  if (sheetSummary) {
-    const scopes = ["all", ...ctx.divisions.map((d) => d.id)];
-    for (const scope of scopes) {
-      const scoped = sheetSummary.players.filter((p) =>
-        scope === "all" ? true : p.divisionId === scope
-      );
-      for (const stage of ["regular", "playoffs"] as const) {
-        const rated = computeRoleNormalizedRatings(
-          filterPlayersByStage(scoped, stage)
-        ).filter((p) => p.games > 0);
-        for (const roleDef of LEAGUE_ROLES) {
-          const top = rated
-            .filter((p) => p.role === roleDef.key)
-            .sort((a, b) => b.leagueRating - a.leagueRating)[0];
-          if (top) {
-            allProCandidatesMap.set(top.playerKey, {
-              playerKey: top.playerKey,
-              role: top.role,
-            });
-          }
-        }
-      }
-    }
-  }
-  const soloPrioMap = await loadPublicSoloPrioMap(
-    allProCandidatesMap.size > 0
-      ? [...allProCandidatesMap.values()]
-      : ctx.players
-  ).catch(() => undefined);
+  const data = await loadCachedPublicStatsDashboard(effectiveSeason ?? "");
 
   return (
     <StatsDashboard
-      key={ctx.seasonId}
+      key={data.seasonId}
       missingTable={false}
       hasRiotKey={false}
-      ddVersion={ctx.ddVersion}
-      leagueName={ctx.leagueName}
-      leagueLogoUrl={ctx.leagueLogoUrl}
-      seasonName={ctx.seasonName}
-      seasonId={ctx.seasonId}
-      seasonSlug={ctx.seasonSlug}
-      allSeasons={ctx.allSeasons}
-      currentEditionName={ctx.currentEditionName}
-      divisions={ctx.divisions}
-      players={sheetSummary ? [] : ctx.players}
-      teams={sheetSummary ? [] : ctx.teams}
-      soloPrioMap={soloPrioMap}
+      ddVersion={data.ddVersion}
+      leagueName={data.leagueName}
+      leagueLogoUrl={data.leagueLogoUrl}
+      seasonName={data.seasonName}
+      seasonId={data.seasonId}
+      seasonSlug={data.seasonSlug}
+      allSeasons={data.allSeasons}
+      currentEditionName={data.currentEditionName}
+      divisions={data.divisions}
+      players={data.players}
+      teams={data.teams}
+      soloPrioMap={data.soloPrioMap}
       isAdminView={false}
-      initialStatsNotice={ctx.statsNotice}
-      divisionThemes={ctx.divisionThemes}
-      seasonStructure={ctx.seasonStructure}
-      playoffBrackets={ctx.playoffBrackets}
-      statsRoundLabel={ctx.statsRoundLabel}
+      initialStatsNotice={data.statsNotice}
+      divisionThemes={data.divisionThemes}
+      seasonStructure={data.seasonStructure}
+      playoffBrackets={data.playoffBrackets}
+      statsRoundLabel={data.statsRoundLabel}
       initialDivision={params.division}
       initialTab={initialTab}
-      initialSheetData={
-        sheetSummary
-          ? compactSheetSummaryForDashboard(sheetSummary, ctx.divisions)
-          : null
-      }
+      initialSheetData={data.initialSheetData}
     />
   );
 }

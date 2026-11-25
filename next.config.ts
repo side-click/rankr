@@ -25,7 +25,7 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   experimental: {
     staleTimes: {
-      dynamic: 180,
+      dynamic: 0,
     },
   },
   images: {

@@ -254,6 +254,106 @@ async function runSignedOutSuite(browser, entities) {
           details: `href=${consHref} -> ${page.url()}`,
         });
       }
+
+      // Cross-Page SPA Focus Persistence Round-Trip (catches stale Client Router Cache desync!)
+      await page.goto(`${cfg.baseUrl}/`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
+      const altFocusBtn = page.locator("button", { hasText: /^Focus$/ }).first();
+      if ((await altFocusBtn.count()) > 0) {
+        const altSeasonCardText = await altFocusBtn
+          .locator("xpath=ancestor::div[contains(@class,'xp-panel')][1]")
+          .innerText()
+          .catch(() => "");
+        await Promise.all([
+          page.waitForURL((u) => u.search.includes("season="), { timeout: 15000 }).catch(() => {}),
+          altFocusBtn.click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForTimeout(200);
+        const focusedSlugParam = new URL(page.url()).searchParams.get("season") || "";
+        const expectedTitleLine =
+          altSeasonCardText
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean)[1] || focusedSlugParam;
+
+        // 1. Click header Stats -> check focused season applied
+        await Promise.all([
+          page.waitForURL((u) => u.pathname === "/stats", { timeout: 15000 }).catch(() => {}),
+          page.locator('header a[href="/stats"]').first().click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        const statsTriggerTxt = await page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+          .first()
+          .locator("button")
+          .first()
+          .innerText()
+          .catch(() => "");
+        const statsMatches = statsTriggerTxt
+          .toLowerCase()
+          .includes(expectedTitleLine.split("(")[0].trim().toLowerCase());
+
+        // 2. Click header Consensus -> check focused season applied
+        await Promise.all([
+          page.waitForURL((u) => u.pathname === "/consensus", { timeout: 15000 }).catch(() => {}),
+          page.locator('header a[href="/consensus"]').first().click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        const consTriggerTxt = await page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-3 > div")
+          .first()
+          .locator("button")
+          .first()
+          .innerText()
+          .catch(() => "");
+        const consMatches = consTriggerTxt
+          .toLowerCase()
+          .includes(expectedTitleLine.split("(")[0].trim().toLowerCase());
+
+        // 3. Click header Browse Content -> check focused season applied
+        await Promise.all([
+          page.waitForURL((u) => u.pathname === "/browse", { timeout: 15000 }).catch(() => {}),
+          page.locator('header a[href="/browse"]').first().click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        const browseSeasonVal = await page
+          .locator('select[name="season"]')
+          .inputValue()
+          .catch(() => "");
+        const browseMatches = !focusedSlugParam || browseSeasonVal === focusedSlugParam;
+
+        // 4. Click Rankr logo (<Link href="/">) -> verify Home STILL shows focused season!
+        await Promise.all([
+          page.waitForURL((u) => u.pathname === "/", { timeout: 15000 }).catch(() => {}),
+          page.locator('header a[href="/"]').first().click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForTimeout(200);
+        const homeFocusedAfterNav = await page
+          .locator("button", { hasText: /^Focused ✓$/ })
+          .first()
+          .locator("xpath=ancestor::div[contains(@class,'xp-panel')][1]")
+          .innerText()
+          .catch(() => "");
+        const homePersists = homeFocusedAfterNav
+          .toLowerCase()
+          .includes(expectedTitleLine.split("(")[0].trim().toLowerCase());
+
+        reporter.record({
+          suite,
+          category: "cache",
+          name: `SPA Focus persists across Stats -> Consensus -> Browse -> Home (${focusedSlugParam})`,
+          status: statsMatches && consMatches && browseMatches && homePersists ? "PASS" : "FAIL",
+          details: `stats=${statsMatches}, consensus=${consMatches}, browse=${browseMatches}, homePersists=${homePersists}`,
+          recommendation: !(statsMatches && consMatches && browseMatches && homePersists)
+            ? "Set experimental.staleTimes.dynamic = 0 in next.config.ts so cookie-scoped pages don't serve stale Router Cache"
+            : null,
+        });
+
+        // Cleanly unfocus back to auto-primary state
+        await page.locator("button", { hasText: /^Focused ✓$/ }).first().click().catch(() => {});
+        await page.waitForTimeout(300);
+      }
     }
 
     // 2. BROWSE: Dependent dropdowns, edition swap, submit + reload persistence

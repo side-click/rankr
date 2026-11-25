@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { exportElementToPng } from "@/utils/exportImage";
@@ -173,6 +173,8 @@ export function StatsDashboard({
   initialSheetData = null,
 }: StatsDashboardProps) {
   const router = useRouter();
+  const [isSeasonPending, startSeasonTransition] = useTransition();
+  const [pendingSeasonName, setPendingSeasonName] = useState<string | null>(null);
   const basePath = isAdminView ? "/admin/stats" : "/stats";
   const playerHref = (playerKey: string) =>
     playerStatsHref(playerKey, basePath, seasonSlug);
@@ -890,7 +892,10 @@ export function StatsDashboard({
                         onClick={() => {
                           setOpenDropdown(null);
                           if (!isSelected) {
-                            router.push(statsHref(basePath, opt.slug));
+                            setPendingSeasonName(opt.name);
+                            startSeasonTransition(() => {
+                              router.push(statsHref(basePath, opt.slug));
+                            });
                           }
                         }}
                         className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
@@ -1080,6 +1085,35 @@ export function StatsDashboard({
         </div>
       </div>
 
+      {isSeasonPending && (
+        <div className="mb-4 xp-window xp-window-scdl">
+          <div className="xp-titlebar xp-titlebar-scdl">
+            <span className="truncate">
+              Loading {pendingSeasonName ?? "Season"}...
+            </span>
+          </div>
+          <div className="p-4 space-y-2.5">
+            <div className="text-xs font-semibold text-[#e8e5d8] tracking-wide">
+              Loading stats for {pendingSeasonName ?? "selected season"}...
+            </div>
+            <div
+              className="xp-progress-track"
+              role="progressbar"
+              aria-label="Loading stats..."
+            >
+              <div className="xp-progress-blocks" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={
+          isSeasonPending
+            ? "opacity-45 pointer-events-none transition-opacity duration-150"
+            : "transition-opacity duration-150"
+        }
+      >
       {/* Section Toggle Buttons: Players | Teams | Division */}
       <div className="grid grid-cols-3 gap-2.5">
         {(
@@ -2277,6 +2311,7 @@ export function StatsDashboard({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

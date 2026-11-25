@@ -71,6 +71,27 @@ function parseViewAsCookie(raw: string | undefined): ViewAsState | null {
  * so unrelated pages don't issue an extra Supabase query on every logged-in visit.
  */
 export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> => {
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+
+  if (!hasAuthCookie) {
+    return {
+      user: null,
+      profile: null,
+      discordId: null,
+      isAdmin: false,
+      realIsAdmin: false,
+      viewAs: null,
+      isBanned: false,
+      operatorLeagueIds: [],
+      captainTeamIds: [],
+      isOperator: false,
+      hasMatchHubAccess: false,
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -102,7 +123,6 @@ export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> =
   const isBanned = Boolean(profile?.is_banned);
   const discordId = profile?.discord_id ?? null;
 
-  const cookieStore = await cookies();
   const viewAs = realIsAdmin
     ? parseViewAsCookie(cookieStore.get(VIEW_AS_COOKIE_NAME)?.value)
     : null;
