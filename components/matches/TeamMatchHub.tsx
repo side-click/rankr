@@ -482,12 +482,12 @@ export function TeamMatchHub({
             )}
           </div>
 
-          {/* Block 2: My Team / Team Roster Panel */}
+          {/* Block 2: Roster Panel */}
           <div className="lg:col-span-4 xp-panel p-4 space-y-3">
             <div className="flex items-center gap-2 border-b border-white/10 pb-2.5">
               <Users className="w-4 h-4 text-[#f0c020] shrink-0" />
               <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] truncate">
-                {canManageCodes ? "My Team" : "Team Roster"}
+                Roster
               </h2>
             </div>
 
@@ -567,7 +567,7 @@ export function TeamMatchHub({
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#f0c020]" />
               <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
-                Full Team Schedule ({myMatches.length})
+                Schedule ({myMatches.length})
               </h2>
             </div>
           </div>
