@@ -394,6 +394,13 @@ export function StatsAdminControls({
             );
           })()}
 
+          <MatchDraftForm
+            seasonId={seasonId}
+            ddVersion={ddVersion}
+            onSaved={onRefreshSheet}
+            onError={(msg) => setSheetError(msg)}
+          />
+
           <div className="p-2.5 bg-black/30 border border-white/10 rounded space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-[11px] font-bold uppercase text-[#f0c020] flex items-center gap-1.5">
@@ -442,13 +449,6 @@ export function StatsAdminControls({
               </div>
             )}
           </div>
-
-          <MatchDraftForm
-            seasonId={seasonId}
-            ddVersion={ddVersion}
-            onSaved={onRefreshSheet}
-            onError={(msg) => setSheetError(msg)}
-          />
         </div>
       </RetroWindow>
 
