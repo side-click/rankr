@@ -1,7 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { Search } from "lucide-react";
 import type { BlogCardData } from "@/components/BlogCard";
+import { BrowseFilterForm } from "@/components/BrowseFilterForm";
 import type { ContentCardData } from "@/components/ContentCard";
 import {
   ContentListGrid,
@@ -185,130 +184,47 @@ export default async function BrowsePage({
     return tb - ta;
   });
 
-  const uniqueDivisionSlugs = Array.from(
-    new Map((divisions ?? []).map((d) => [d.slug, d])).values()
-  );
-  const uniqueEditionSlugs = Array.from(
-    new Map((editions ?? []).map((e) => [e.slug, e])).values()
-  );
+  const seasonOptions = (seasons ?? []).map((s) => {
+    const league = Array.isArray(s.leagues) ? s.leagues[0] : s.leagues;
+    const lgObj = league as {
+      short_name?: string | null;
+      slug?: string;
+      name?: string;
+    } | null;
+    const leaguePrefix =
+      lgObj?.short_name ||
+      (lgObj?.slug === "scdl" ? "SCDL" : lgObj?.name ?? null);
+    return {
+      id: s.id,
+      slug: s.slug,
+      name: s.name,
+      leaguePrefix,
+    };
+  });
 
   return (
     <RetroWindow title="Browse Content" theme="scdl">
-      <form
+      <BrowseFilterForm
         key={`${params.type ?? ""}|${effectiveSeason ?? ""}|${params.division ?? ""}|${params.edition ?? ""}|${params.author ?? ""}`}
-        method="GET"
-        className="xp-panel p-3 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end"
-      >
-        <div>
-          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
-            Type
-          </label>
-          <select
-            name="type"
-            defaultValue={params.type ?? ""}
-            className="w-full xp-inset px-2 py-1.5 text-xs"
-          >
-            <option value="">All Types</option>
-            <option value="team">Team Power Rankings</option>
-            <option value="player">Player Tier Lists</option>
-            <option value="blog">Blogs</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
-            Season
-          </label>
-          <select
-            name="season"
-            defaultValue={effectiveSeason ?? ""}
-            className="w-full xp-inset px-2 py-1.5 text-xs"
-          >
-            <option value="">All Seasons</option>
-            {(seasons ?? []).map((s) => {
-              const league = Array.isArray(s.leagues)
-                ? s.leagues[0]
-                : s.leagues;
-              const prefix =
-                (
-                  league as {
-                    short_name?: string | null;
-                    slug?: string;
-                    name?: string;
-                  } | null
-                )?.short_name ||
-                (league?.slug === "scdl" ? "SCDL" : league?.name);
-              return (
-                <option key={s.id} value={s.slug}>
-                  {prefix ? `${prefix}: ` : ""}
-                  {s.name}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
-            Division
-          </label>
-          <select
-            name="division"
-            defaultValue={params.division ?? ""}
-            className="w-full xp-inset px-2 py-1.5 text-xs"
-          >
-            {uniqueDivisionSlugs.length !== 1 && (
-              <option value="">All Divisions</option>
-            )}
-            {uniqueDivisionSlugs.map((d) => (
-              <option key={d.slug} value={d.slug}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
-            Edition
-          </label>
-          <select
-            name="edition"
-            defaultValue={params.edition ?? ""}
-            className="w-full xp-inset px-2 py-1.5 text-xs"
-          >
-            <option value="">All Editions</option>
-            {uniqueEditionSlugs.map((e) => (
-              <option key={e.slug} value={e.slug}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-bold text-[#d4d2c5] mb-1">
-            Author
-          </label>
-          <input
-            type="text"
-            name="author"
-            defaultValue={params.author ?? ""}
-            placeholder="Author name..."
-            className="w-full xp-inset px-2 py-1.5 text-xs"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <button type="submit" className="xp-btn xp-btn-primary text-xs flex-1">
-            <Search className="w-3.5 h-3.5" />
-            <span>Filter</span>
-          </button>
-          <Link href="/browse?season=" prefetch={false} className="xp-btn text-xs">
-            Reset
-          </Link>
-        </div>
-      </form>
+        seasons={seasonOptions}
+        divisions={(divisions ?? []).map((d) => ({
+          id: d.id,
+          slug: d.slug,
+          name: d.name,
+          season_id: d.season_id,
+        }))}
+        editions={(editions ?? []).map((e) => ({
+          id: e.id,
+          slug: e.slug,
+          name: e.name,
+          season_id: e.season_id,
+        }))}
+        initialType={params.type ?? ""}
+        initialSeason={effectiveSeason ?? ""}
+        initialDivision={params.division ?? ""}
+        initialEdition={params.edition ?? ""}
+        initialAuthor={params.author ?? ""}
+      />
 
       <ContentListGrid items={mergedItems} showCount />
     </RetroWindow>
