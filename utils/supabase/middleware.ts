@@ -10,7 +10,9 @@ export const updateSession = async (request: NextRequest) => {
     .some((c) => c.name.startsWith("sb-"));
   const pathname = request.nextUrl.pathname;
   const requiresSessionCheck =
-    pathname.startsWith("/admin") || pathname.startsWith("/matches");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/team-hub") ||
+    pathname.startsWith("/matches");
 
   if (!hasAuthCookie && !requiresSessionCheck) {
     return NextResponse.next({

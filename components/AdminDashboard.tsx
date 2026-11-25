@@ -442,7 +442,7 @@ export function AdminDashboard({
           teamId: team.id,
           label: team.name,
         };
-        redirectTo = "/matches";
+        redirectTo = "/team-hub";
       } else {
         payload = { mode: "public", label: "Regular User" };
         redirectTo = "/";
@@ -1934,10 +1934,10 @@ export function AdminDashboard({
         ))}
         <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
           <Link
-            href="/matches"
+            href="/team-hub"
             className="xp-btn text-xs border-[#7cd438]/60 text-[#7cd438]"
           >
-            <span>Match Hub (preview)</span>
+            <span>Team Hub (preview)</span>
           </Link>
           <Link
             href="/admin/stats"

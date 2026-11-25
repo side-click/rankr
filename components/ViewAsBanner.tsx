@@ -60,21 +60,21 @@ export function ViewAsBanner({ viewAs }: { viewAs: ViewAsState }) {
               Stats Controls
             </Link>
             <Link
-              href="/matches"
+              href="/team-hub"
               prefetch={false}
               className="underline text-[#c89b3c] hover:text-white"
             >
-              Match Hub
+              Team Hub
             </Link>
           </>
         )}
         {viewAs.mode === "captain" && (
           <Link
-            href="/matches"
+            href="/team-hub"
             prefetch={false}
             className="underline text-[#7cd438] hover:text-white"
           >
-            Match Hub
+            Team Hub
           </Link>
         )}
         <button

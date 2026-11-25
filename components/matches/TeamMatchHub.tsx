@@ -107,9 +107,17 @@ export function TeamMatchHub({
     [seasons]
   );
 
+  const activeSeason = useMemo(
+    () => seasons.find((s) => s.slug === selectedSeasonSlug) ?? seasons[0] ?? null,
+    [seasons, selectedSeasonSlug]
+  );
+
   if (!myTeam) {
     return (
-      <RetroWindow title="Team Match Hub" theme="scdl">
+      <RetroWindow
+        title={`Team Hub${activeSeason ? ` — ${activeSeason.name}` : ""}`}
+        theme="scdl"
+      >
         <div className="p-6 text-center text-xs text-[#a6a89e]">
           No active teams found.
         </div>
@@ -120,7 +128,7 @@ export function TeamMatchHub({
   const canManageCodes = codeAccessSet.has(myTeam.id);
 
   const myDiv = divisionById.get(myTeam.division_id) ?? null;
-  const mySeason = myDiv ? seasonById.get(myDiv.season_id) ?? null : null;
+  const mySeason = (myDiv ? seasonById.get(myDiv.season_id) : null) ?? activeSeason;
   const seasonQuery = mySeason?.slug
     ? `?season=${encodeURIComponent(mySeason.slug)}`
     : "";
@@ -203,7 +211,7 @@ export function TeamMatchHub({
 
   return (
     <RetroWindow
-      title={`Team Match Hub${mySeason ? ` — ${mySeason.name}` : ""}`}
+      title={`Team Hub${mySeason ? ` — ${mySeason.name}` : ""}`}
       theme="scdl"
       statusText={errorMsg ?? undefined}
     >
@@ -221,7 +229,7 @@ export function TeamMatchHub({
                   onChange={(e) => {
                     const slug = e.target.value;
                     router.push(
-                      slug ? `/matches?season=${encodeURIComponent(slug)}` : "/matches"
+                      slug ? `/team-hub?season=${encodeURIComponent(slug)}` : "/team-hub"
                     );
                   }}
                   className="xp-inset px-2.5 py-1 text-xs font-bold"

@@ -269,10 +269,10 @@ export function AdminTeamsTab({
                   </div>
                 </div>
 
-                {/* Discord-linked Match Hub Captains */}
+                {/* Discord-linked Team Hub Captains */}
                 <div className="pt-2 border-t border-white/10 space-y-1.5">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                    Match Hub Captains (Discord ID)
+                    Team Hub Captains (Discord ID)
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {teamCaptains
