@@ -38,6 +38,8 @@ interface TeamMatchHubProps {
   divisions: Division[];
   teams: Team[];
   accessibleTeamIds: string[];
+  codeAccessTeamIds: string[];
+  defaultTeamId?: string;
   matches: SeasonMatch[];
   initialCodes: TournamentCode[];
   teamStatsMap: Record<string, MatchHubTeamStatInfo>;
@@ -49,6 +51,8 @@ export function TeamMatchHub({
   divisions,
   teams,
   accessibleTeamIds,
+  codeAccessTeamIds,
+  defaultTeamId,
   matches,
   initialCodes,
   teamStatsMap,
@@ -58,9 +62,15 @@ export function TeamMatchHub({
     () => teams.filter((t) => accessibleTeamIds.includes(t.id)),
     [teams, accessibleTeamIds]
   );
+  const codeAccessSet = useMemo(
+    () => new Set(codeAccessTeamIds),
+    [codeAccessTeamIds]
+  );
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(
-    accessibleTeams[0]?.id ?? ""
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(() =>
+    defaultTeamId && accessibleTeams.some((t) => t.id === defaultTeamId)
+      ? defaultTeamId
+      : accessibleTeams[0]?.id ?? ""
   );
   const [codes, setCodes] = useState<TournamentCode[]>(initialCodes);
   const [generatingKey, setGeneratingKey] = useState<string | null>(null);
@@ -89,11 +99,13 @@ export function TeamMatchHub({
     return (
       <RetroWindow title="Team Match Hub" theme="scdl">
         <div className="p-6 text-center text-xs text-[#a6a89e]">
-          No active teams are assigned to your account yet.
+          No active teams found.
         </div>
       </RetroWindow>
     );
   }
+
+  const canManageCodes = codeAccessSet.has(myTeam.id);
 
   const myDiv = divisionById.get(myTeam.division_id) ?? null;
   const mySeason = myDiv ? seasonById.get(myDiv.season_id) ?? null : null;
@@ -321,101 +333,103 @@ export function TeamMatchHub({
                   </div>
                 )}
 
-                {/* Tournament Codes */}
-                <div className="space-y-1.5 pt-1 border-t border-white/10">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                    <span className="flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-[#7cd438]" />
-                      <span>Tournament Lobby Codes</span>
-                    </span>
-                    <span>Copy &amp; paste in LoL Custom Lobby</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {Array.from(
-                      { length: Math.max(1, nextMatch.best_of) },
-                      (_, i) => i + 1
-                    ).map((gNum) => {
-                      const codeRow = codes.find(
-                        (c) =>
-                          c.match_id === nextMatch.id && c.game_number === gNum
-                      );
-                      const busyKey = `${nextMatch.id}-${gNum}`;
-                      return (
-                        <div
-                          key={busyKey}
-                          className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-black/40 border border-white/10 text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#c89b3c] tabular-nums">
-                              Game {gNum}
-                            </span>
-                            {codeRow ? (
-                              <>
-                                <code className="px-2 py-0.5 rounded bg-black/70 border border-white/15 text-[#7cd438] font-mono text-[11px]">
-                                  {codeRow.code}
-                                </code>
-                                {codeRow.provider === "placeholder" && (
-                                  <span className="px-1.5 py-0.5 rounded bg-[#2a2210] border border-[#c89b3c]/50 text-[9px] font-bold uppercase text-[#f0c020]">
-                                    Preview Code
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-[#a6a89e] text-[11px]">
-                                Not generated yet
+                {/* Tournament Codes (Captains / Operators / Admins only) */}
+                {canManageCodes && (
+                  <div className="space-y-1.5 pt-1 border-t border-white/10">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                      <span className="flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-[#7cd438]" />
+                        <span>Tournament Lobby Codes</span>
+                      </span>
+                      <span>Copy &amp; paste in LoL Custom Lobby</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {Array.from(
+                        { length: Math.max(1, nextMatch.best_of) },
+                        (_, i) => i + 1
+                      ).map((gNum) => {
+                        const codeRow = codes.find(
+                          (c) =>
+                            c.match_id === nextMatch.id && c.game_number === gNum
+                        );
+                        const busyKey = `${nextMatch.id}-${gNum}`;
+                        return (
+                          <div
+                            key={busyKey}
+                            className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-black/40 border border-white/10 text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[#c89b3c] tabular-nums">
+                                Game {gNum}
                               </span>
-                            )}
-                          </div>
-                          {codeRow ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCopyCode(codeRow.code)}
-                              className="xp-btn text-[11px] px-2.5 py-1"
-                            >
-                              {copiedCode === codeRow.code ? (
+                              {codeRow ? (
                                 <>
-                                  <Check className="w-3 h-3 text-[#7cd438]" />
-                                  <span>Copied</span>
+                                  <code className="px-2 py-0.5 rounded bg-black/70 border border-white/15 text-[#7cd438] font-mono text-[11px]">
+                                    {codeRow.code}
+                                  </code>
+                                  {codeRow.provider === "placeholder" && (
+                                    <span className="px-1.5 py-0.5 rounded bg-[#2a2210] border border-[#c89b3c]/50 text-[9px] font-bold uppercase text-[#f0c020]">
+                                      Preview Code
+                                    </span>
+                                  )}
                                 </>
                               ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>Copy</span>
-                                </>
+                                <span className="text-[#a6a89e] text-[11px]">
+                                  Not generated yet
+                                </span>
                               )}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={generatingKey === busyKey}
-                              onClick={() =>
-                                handleGenerateCode(nextMatch.id, gNum)
-                              }
-                              className="xp-btn xp-btn-primary text-[11px] px-2.5 py-1"
-                            >
-                              <KeyRound className="w-3 h-3" />
-                              <span>
-                                {generatingKey === busyKey
-                                  ? "Generating..."
-                                  : "Generate Code"}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+                            </div>
+                            {codeRow ? (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCode(codeRow.code)}
+                                className="xp-btn text-[11px] px-2.5 py-1"
+                              >
+                                {copiedCode === codeRow.code ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-[#7cd438]" />
+                                    <span>Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={generatingKey === busyKey}
+                                onClick={() =>
+                                  handleGenerateCode(nextMatch.id, gNum)
+                                }
+                                className="xp-btn xp-btn-primary text-[11px] px-2.5 py-1"
+                              >
+                                <KeyRound className="w-3 h-3" />
+                                <span>
+                                  {generatingKey === busyKey
+                                    ? "Generating..."
+                                    : "Generate Code"}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
 
-          {/* Block 2: My Team Panel */}
+          {/* Block 2: My Team / Team Roster Panel */}
           <div className="lg:col-span-4 xp-panel p-4 space-y-3">
             <div className="flex items-center gap-2 border-b border-white/10 pb-2.5">
               <Users className="w-4 h-4 text-[#f0c020] shrink-0" />
               <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020] truncate">
-                My Team
+                {canManageCodes ? "My Team" : "Team Roster"}
               </h2>
             </div>
 
@@ -537,23 +551,24 @@ export function TeamMatchHub({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {matchCodes.length > 0 ? (
-                        <span className="text-[10px] text-[#7cd438] font-bold">
-                          {matchCodes.length} code(s) ready
-                        </span>
-                      ) : (
-                        m.status !== "completed" && (
-                          <button
-                            type="button"
-                            disabled={generatingKey === `${m.id}-1`}
-                            onClick={() => handleGenerateCode(m.id, 1)}
-                            className="xp-btn text-[11px] px-2 py-0.5"
-                          >
-                            <KeyRound className="w-3 h-3" />
-                            <span>Gen G1 Code</span>
-                          </button>
-                        )
-                      )}
+                      {canManageCodes &&
+                        (matchCodes.length > 0 ? (
+                          <span className="text-[10px] text-[#7cd438] font-bold">
+                            {matchCodes.length} code(s) ready
+                          </span>
+                        ) : (
+                          m.status !== "completed" && (
+                            <button
+                              type="button"
+                              disabled={generatingKey === `${m.id}-1`}
+                              onClick={() => handleGenerateCode(m.id, 1)}
+                              className="xp-btn text-[11px] px-2 py-0.5"
+                            >
+                              <KeyRound className="w-3 h-3" />
+                              <span>Gen G1 Code</span>
+                            </button>
+                          )
+                        ))}
                       {opp && (
                         <Link
                           href={`/stats/team/${encodeURIComponent(

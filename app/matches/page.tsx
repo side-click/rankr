@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Swords } from "lucide-react";
 import {
   TeamMatchHub,
   type MatchHubPlayerKeyMap,
   type MatchHubTeamStatInfo,
 } from "@/components/matches/TeamMatchHub";
-import { RetroWindow } from "@/components/RetroWindow";
-import { SignInRequiredWindow } from "@/components/SignInRequiredWindow";
 import type {
   Division,
   Season,
@@ -34,36 +31,11 @@ export default async function MatchesHubPage() {
     createClient(),
   ]);
 
-  if (!auth.user) {
-    return (
-      <SignInRequiredWindow
-        title="Team Match Hub — Sign In Required"
-        message="Sign in with Discord to access your team schedule, opponent scouting, and tournament codes."
-      />
-    );
-  }
+  const captainTeamIds = auth.user
+    ? await getCaptainTeamIds(supabase, auth.discordId, auth)
+    : [];
 
-  const captainTeamIds = await getCaptainTeamIds(supabase, auth.discordId, auth);
-  const hasMatchHubAccess =
-    auth.isAdmin || auth.isOperator || captainTeamIds.length > 0;
-
-  if (!hasMatchHubAccess) {
-    return (
-      <RetroWindow title="Team Match Hub — Restricted" theme="scdl">
-        <div className="py-8 px-4 text-center space-y-2.5">
-          <Swords className="w-9 h-9 mx-auto text-[#c89b3c]" />
-          <h1 className="text-base font-bold text-[#f0ede0]">
-            Captain Assignment Required
-          </h1>
-          <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
-            Ask a league operator to link your Discord ID to your team.
-          </p>
-        </div>
-      </RetroWindow>
-    );
-  }
-
-  const [{ data: seasons }, { data: divisions }, { data: teams }, matchesRes, codesRes] =
+  const [{ data: seasons }, { data: divisions }, { data: teams }, matchesRes] =
     await Promise.all([
       supabase
         .from("seasons")
@@ -80,7 +52,6 @@ export default async function MatchesHubPage() {
         .from("season_matches")
         .select("*")
         .order("round_number", { ascending: true }),
-      supabase.from("tournament_codes").select("*"),
     ]);
 
   const seasonList = (seasons ?? []) as Season[];
@@ -89,36 +60,56 @@ export default async function MatchesHubPage() {
   const matchList = !matchesRes.error
     ? ((matchesRes.data ?? []) as SeasonMatch[])
     : [];
-  const codeList = !codesRes.error
-    ? ((codesRes.data ?? []) as TournamentCode[])
-    : [];
 
   const divById = new Map(divisionList.map((d) => [d.id, d]));
   const seasonById = new Map(seasonList.map((s) => [s.id, s]));
   const opLeagueSet = new Set(auth.operatorLeagueIds);
   const captainTeamSet = new Set(captainTeamIds);
 
-  const accessibleTeamIds = teamList
-    .filter((t) => {
-      if (auth.isAdmin) return true;
-      if (captainTeamSet.has(t.id)) return true;
-      const div = divById.get(t.division_id);
-      const season = div ? seasonById.get(div.season_id) : null;
-      return Boolean(season && opLeagueSet.has(season.league_id));
-    })
-    .map((t) => t.id);
+  const codeAccessTeamIds = auth.user
+    ? teamList
+        .filter((t) => {
+          if (auth.isAdmin) return true;
+          if (captainTeamSet.has(t.id)) return true;
+          const div = divById.get(t.division_id);
+          const season = div ? seasonById.get(div.season_id) : null;
+          return Boolean(season && opLeagueSet.has(season.league_id));
+        })
+        .map((t) => t.id)
+    : [];
+  const codeAccessTeamSet = new Set(codeAccessTeamIds);
 
-  // Load stats for the primary accessible team's season so Match Hub displays accurate W-L and seeds
-  const firstAccessibleTeam = teamList.find((t) =>
-    accessibleTeamIds.includes(t.id)
-  );
-  const firstAccessibleSeasonSlug = firstAccessibleTeam
-    ? seasonById.get(
-        divById.get(firstAccessibleTeam.division_id)?.season_id ?? ""
-      )?.slug
+  let codeList: TournamentCode[] = [];
+  if (codeAccessTeamIds.length > 0) {
+    const codesRes = await supabase.from("tournament_codes").select("*");
+    if (!codesRes.error && Array.isArray(codesRes.data)) {
+      const matchById = new Map(matchList.map((m) => [m.id, m]));
+      codeList = (codesRes.data as TournamentCode[]).filter((c) => {
+        if (auth.isAdmin) return true;
+        const match = matchById.get(c.match_id);
+        if (!match) return false;
+        return Boolean(
+          (match.team_a_id && codeAccessTeamSet.has(match.team_a_id)) ||
+            (match.team_b_id && codeAccessTeamSet.has(match.team_b_id))
+        );
+      });
+    }
+  }
+
+  const accessibleTeamIds = teamList.map((t) => t.id);
+  const defaultTeam =
+    teamList.find((t) => captainTeamSet.has(t.id)) ??
+    teamList.find((t) => codeAccessTeamSet.has(t.id)) ??
+    teamList[0];
+  const defaultTeamId = defaultTeam?.id ?? "";
+
+  // Load stats for the primary default team's season so Match Hub displays accurate W-L and seeds
+  const defaultSeasonSlug = defaultTeam
+    ? seasonById.get(divById.get(defaultTeam.division_id)?.season_id ?? "")
+        ?.slug
     : seasonList.find((s) => s.is_active)?.slug ?? seasonList[0]?.slug;
 
-  const statsCtx = await loadPublicStatsContext(firstAccessibleSeasonSlug, {
+  const statsCtx = await loadPublicStatsContext(defaultSeasonSlug, {
     includeRiotStats: false,
   }).catch(() => null);
 
@@ -158,6 +149,8 @@ export default async function MatchesHubPage() {
       divisions={divisionList}
       teams={teamList}
       accessibleTeamIds={accessibleTeamIds}
+      codeAccessTeamIds={codeAccessTeamIds}
+      defaultTeamId={defaultTeamId}
       matches={matchList}
       initialCodes={codeList}
       teamStatsMap={teamStatsMap}
