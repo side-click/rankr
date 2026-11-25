@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "audit:visual": "node scripts/visual-audit.mjs",
+    "audit:functional": "node scripts/functional-audit.mjs",
     "audit:perf": "node scripts/perf-audit.mjs"
   },
   "dependencies": {
