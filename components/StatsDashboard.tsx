@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState, useTransition } from "reac
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { exportElementToPng } from "@/utils/exportImage";
+import { RetroLoadingWindow } from "@/components/RetroLoadingWindow";
 import { StatsDataCredits } from "@/components/stats/StatsDataCredits";
 import {
   Award,
@@ -174,7 +175,6 @@ export function StatsDashboard({
 }: StatsDashboardProps) {
   const router = useRouter();
   const [isSeasonPending, startSeasonTransition] = useTransition();
-  const [pendingSeasonName, setPendingSeasonName] = useState<string | null>(null);
   const basePath = isAdminView ? "/admin/stats" : "/stats";
   const playerHref = (playerKey: string) =>
     playerStatsHref(playerKey, basePath, seasonSlug);
@@ -892,7 +892,6 @@ export function StatsDashboard({
                         onClick={() => {
                           setOpenDropdown(null);
                           if (!isSelected) {
-                            setPendingSeasonName(opt.name);
                             startSeasonTransition(() => {
                               router.push(statsHref(basePath, opt.slug));
                             });
@@ -1086,24 +1085,8 @@ export function StatsDashboard({
       </div>
 
       {isSeasonPending && (
-        <div className="mb-4 xp-window xp-window-scdl">
-          <div className="xp-titlebar xp-titlebar-scdl">
-            <span className="truncate">
-              Loading {pendingSeasonName ?? "Season"}...
-            </span>
-          </div>
-          <div className="p-4 space-y-2.5">
-            <div className="text-xs font-semibold text-[#e8e5d8] tracking-wide">
-              Loading stats for {pendingSeasonName ?? "selected season"}...
-            </div>
-            <div
-              className="xp-progress-track"
-              role="progressbar"
-              aria-label="Loading stats..."
-            >
-              <div className="xp-progress-blocks" />
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 bg-black/45 px-3 pt-16 pointer-events-none">
+          <RetroLoadingWindow />
         </div>
       )}
 
