@@ -52,7 +52,9 @@ export async function sendModerationWebhook(payload: {
   fields: { name: string; value: string; inline?: boolean }[];
   pingModerator?: boolean;
 }): Promise<void> {
-  const webhookUrl = process.env.DISCORD_MOD_WEBHOOK_URL;
+  const webhookUrl =
+    process.env.DISCORD_PUBLISH_WEBHOOK_URL?.trim() ||
+    process.env.DISCORD_MOD_WEBHOOK_URL;
   if (!webhookUrl) return;
   const pingUserId = payload.pingModerator
     ? process.env.DISCORD_MOD_PING_USER_ID?.trim()
