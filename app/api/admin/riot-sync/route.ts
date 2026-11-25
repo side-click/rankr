@@ -90,9 +90,23 @@ export async function POST(request: Request) {
         retryAfterSeconds: err.retryAfterSeconds,
       });
       if (results.length > 0) {
-        await supabase
-          .from("riot_player_stats")
-          .upsert(results, { onConflict: "player_key" });
+        const okResults = results.filter((r) => !r.sync_error);
+        const errResults = results.filter((r) => Boolean(r.sync_error));
+        if (okResults.length > 0) {
+          await supabase
+            .from("riot_player_stats")
+            .upsert(okResults, { onConflict: "player_key" });
+        }
+        if (errResults.length > 0) {
+          await Promise.all(
+            errResults.map((r) =>
+              supabase
+                .from("riot_player_stats")
+                .update({ sync_error: r.sync_error })
+                .eq("player_key", r.player_key)
+            )
+          );
+        }
       }
       return NextResponse.json(
         {
@@ -105,9 +119,27 @@ export async function POST(request: Request) {
     throw err;
   }
 
-  const { error: upsertErr } = await supabase
-    .from("riot_player_stats")
-    .upsert(results, { onConflict: "player_key" });
+  const okResults = results.filter((r) => !r.sync_error);
+  const errResults = results.filter((r) => Boolean(r.sync_error));
+
+  let upsertErr: { message: string; code?: string } | null = null;
+  if (okResults.length > 0) {
+    const res = await supabase
+      .from("riot_player_stats")
+      .upsert(okResults, { onConflict: "player_key" });
+    upsertErr = res.error;
+  }
+
+  if (!upsertErr && errResults.length > 0) {
+    await Promise.all(
+      errResults.map((r) =>
+        supabase
+          .from("riot_player_stats")
+          .update({ sync_error: r.sync_error })
+          .eq("player_key", r.player_key)
+      )
+    );
+  }
 
   if (upsertErr) {
     return NextResponse.json(
