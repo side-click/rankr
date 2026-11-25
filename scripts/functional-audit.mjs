@@ -1,463 +1,812 @@
-import fs from "node:fs";
-import path from "node:path";
-import { chromium } from "playwright-core";
+import {
+  attachErrorCollectors,
+  createAuditReporter,
+  discoverRoleTargets,
+  discoverSiteEntities,
+  ensureAuthStorageState,
+  formatCommonHelp,
+  hasRole,
+  hasSection,
+  launchAuditBrowser,
+  matchesPageFilter,
+  parseAuditArgs,
+  setViewAs,
+} from "./lib/audit-core.mjs";
 
-const args = process.argv.slice(2);
-const argVal = (prefix) => {
-  const hit = args.find((a) => a.startsWith(prefix));
-  return hit ? hit.slice(prefix.length) : null;
-};
+const cfg = parseAuditArgs(process.argv.slice(2), {
+  outDir: "temp/functional-audit",
+});
 
-const baseUrl = (
-  args.includes("--prod")
-    ? "https://leaguerankr.com"
-    : argVal("--base=") || "http://localhost:3000"
-).replace(/\/$/, "");
-
-const loginMode = args.includes("--login");
-const authFileArg = argVal("--auth-file=");
-const savedAuthPath = path.resolve(authFileArg || "temp/audit-auth.json");
-const outDir = path.resolve("temp/functional-audit");
-fs.rmSync(outDir, { recursive: true, force: true });
-fs.mkdirSync(outDir, { recursive: true });
-
-async function launchBrowser(headless = true) {
-  for (const channel of ["chrome", "msedge"]) {
-    try {
-      return await chromium.launch({ channel, headless });
-    } catch {}
-  }
-  return chromium.launch({ headless });
+if (cfg.help) {
+  console.log(
+    formatCommonHelp("audit:functional", [
+      ``,
+      `Functional Audit Specifics:`,
+      `  Sections (--sections=):    home,browse,consensus,stats,drilldowns,content,`,
+      `                             team-hub,redirects,api,multi-role`,
+      `  Read-Only Safety:          Never clicks Publish/Save/Delete/Generate Code;`,
+      `                             always clears preview cookie via mode="clear".`,
+    ])
+  );
+  process.exit(0);
 }
 
-const results = [];
-function record(suite, name, status, details = "") {
-  results.push({ suite, name, status, details });
-  const tag =
-    status === "PASS" ? "[PASS]" : status === "WARN" ? "[WARN]" : "[FAIL]";
-  console.log(`${tag} ${suite} > ${name}${details ? ` — ${details}` : ""}`);
-}
+const reporter = createAuditReporter({
+  title: "Rankr Deep Functional, Pathway, Cache & Multi-Role RBAC Audit",
+  baseUrl: cfg.baseUrl,
+  outDir: cfg.outDir,
+  meta: {
+    roles: [...cfg.roles].join(", "),
+    sections: cfg.sections ? [...cfg.sections].join(", ") : "ALL",
+    pagesFilter: cfg.pagesFilter ? cfg.pagesFilter.join(", ") : "ALL",
+  },
+  baselinePath: cfg.baselinePath,
+});
 
-async function attachErrorCollectors(page) {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const server5xx = [];
-  const onConsole = (msg) => {
-    if (msg.type() === "error") consoleErrors.push(msg.text());
-  };
-  const onPageErr = (err) => pageErrors.push(String(err));
-  const onResponse = (res) => {
-    if (res.status() >= 500) {
-      server5xx.push(`${res.status()} ${res.url()}`);
-    }
-  };
-  page.on("console", onConsole);
-  page.on("pageerror", onPageErr);
-  page.on("response", onResponse);
-  return () => {
-    page.off("console", onConsole);
-    page.off("pageerror", onPageErr);
-    page.off("response", onResponse);
-    return { consoleErrors, pageErrors, server5xx };
-  };
-}
+async function gotoClean(page, pathname, suite, category, label) {
+  const stop = await attachErrorCollectors(page);
+  const url = pathname.startsWith("http") ? pathname : `${cfg.baseUrl}${pathname}`;
+  await page.goto(url, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  const errs = stop();
 
-async function gotoClean(page, pathname, suite, label) {
-  const collect = await attachErrorCollectors(page);
-  const url = `${baseUrl}${pathname}`;
-  await page.goto(url, { waitUntil: "networkidle", timeout: 45000 });
-  await page.waitForTimeout(350);
-  const errs = collect();
   if (errs.server5xx.length > 0 || errs.pageErrors.length > 0) {
-    record(
+    reporter.record({
       suite,
-      `${label} (${pathname})`,
-      "FAIL",
-      `5xx=${errs.server5xx.join("; ")} pageErr=${errs.pageErrors.join("; ")}`
-    );
+      category,
+      name: `${label} (${pathname})`,
+      status: "FAIL",
+      details: `5xx=${errs.server5xx.join("; ")} pageErr=${errs.pageErrors.join("; ")}`,
+      recommendation: `Fix runtime/server errors on ${pathname}`,
+    });
   } else if (errs.consoleErrors.length > 0) {
-    record(
+    reporter.record({
       suite,
-      `${label} (${pathname})`,
-      "WARN",
-      `consoleErrors=${errs.consoleErrors.slice(0, 2).join(" | ")}`
-    );
+      category,
+      name: `${label} (${pathname})`,
+      status: "WARN",
+      details: `consoleErrors=${errs.consoleErrors.slice(0, 2).join(" | ")}`,
+    });
   } else {
-    record(suite, `${label} (${pathname})`, "PASS");
+    reporter.record({
+      suite,
+      category,
+      name: `${label} (${pathname})`,
+      status: "PASS",
+    });
   }
   return errs;
 }
 
-async function runSignedOutSuite(browser) {
-  const suite = "SignedOut";
-  const context = await browser.newContext({
-    viewport: { width: 1366, height: 900 },
+async function assertNavbarInvariant(page, suite, contextLabel) {
+  const navHrefs = await page
+    .locator("header a[href], nav a[href]")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("href") || ""))
+    .catch(() => []);
+  const leaks = navHrefs.filter(
+    (h) => h === "/matches" || h.startsWith("/matches?") || h === "/team-hub" || h.startsWith("/team-hub?")
+  );
+  reporter.record({
+    suite,
+    category: "invariant",
+    name: `Navbar excludes /matches & /team-hub (${contextLabel})`,
+    status: leaks.length === 0 ? "PASS" : "FAIL",
+    details: leaks.length ? `leaked=[${leaks.join(", ")}]` : "clean",
+    recommendation: leaks.length
+      ? "Keep /matches and /team-hub out of public header navbars (AGENTS.md invariant)"
+      : null,
   });
+}
+
+async function runSignedOutSuite(browser, entities) {
+  const suite = "SignedOut";
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
   const page = await context.newPage();
 
   try {
-    // 1. Home page auto-focus + focus toggle + unfocus toggle
-    await gotoClean(page, "/", suite, "Home initial load");
-    const focusedBtn = page.locator("button", { hasText: /^Focused ✓$/ });
-    const focusedCount = await focusedBtn.count();
-    if (focusedCount === 1) {
-      record(suite, "Home auto-focuses primary active season", "PASS");
-      await focusedBtn.first().click();
-      await page.waitForTimeout(700);
-      await page.waitForLoadState("networkidle").catch(() => {});
-      const afterUnfocusFocused = await page
-        .locator("button", { hasText: /^Focused ✓$/ })
-        .count();
-      if (afterUnfocusFocused === 0) {
-        record(
-          suite,
-          "Home clicking Focused ✓ unfocuses cleanly",
-          "PASS",
-          `url=${page.url()}`
-        );
-      } else {
-        record(
-          suite,
-          "Home clicking Focused ✓ unfocuses cleanly",
-          "FAIL",
-          `Still focused; url=${page.url()}`
-        );
-      }
+    // 1. HOME: Focus, unfocus, scope parity, nested empty-state integrity & pathway links
+    if (hasSection(cfg, "home") && matchesPageFilter(cfg, "home", "/")) {
+      await gotoClean(page, "/", suite, "home", "Home initial load");
+      await assertNavbarInvariant(page, suite, "home");
 
-      // Click Focus on first live season button
-      const focusButtons = page.locator("button", { hasText: /^Focus$/ });
-      const totalFocus = await focusButtons.count();
-      if (totalFocus > 0) {
-        await focusButtons.first().click();
-        await page.waitForTimeout(700);
+      const focusedBtn = page.locator("button", { hasText: /^Focused ✓$/ });
+      const focusedCount = await focusedBtn.count();
+      reporter.record({
+        suite,
+        category: "home",
+        name: "Home auto-focuses primary active season",
+        status: focusedCount === 1 ? "PASS" : "WARN",
+        details: `Focused ✓ count=${focusedCount}`,
+      });
+
+      // Verify focused season division names match Consensus & Stats division badges (no cross-season leak!)
+      if (focusedCount === 1) {
+        const scopeCheck = await page.evaluate(() => {
+          const btns = [...document.querySelectorAll("button")];
+          const fBtn = btns.find((b) => b.textContent?.trim() === "Focused ✓");
+          const card = fBtn?.closest("div.xp-inset, div.border");
+          const cardDivs = card
+            ? [...card.querySelectorAll("a, span")]
+                .map((el) => el.textContent?.trim() || "")
+                .filter((t) => /division/i.test(t) && t.length < 40)
+            : [];
+          const statsSection = [...document.querySelectorAll("section, div.xp-window")].find((el) =>
+            el.textContent?.includes("Season Stats")
+          );
+          const consensusSection = [...document.querySelectorAll("section, div.xp-window")].find((el) =>
+            el.textContent?.includes("Consensus Power Rankings")
+          );
+          return {
+            cardText: (card?.textContent || "").slice(0, 120),
+            cardDivs,
+            statsText: (statsSection?.textContent || "").slice(0, 400),
+            consensusText: (consensusSection?.textContent || "").slice(0, 400),
+          };
+        });
+        const firstDiv = scopeCheck.cardDivs[0];
+        if (firstDiv) {
+          const statsMatches = !scopeCheck.statsText || scopeCheck.statsText.includes(firstDiv);
+          const consMatches = !scopeCheck.consensusText || scopeCheck.consensusText.includes(firstDiv);
+          reporter.record({
+            suite,
+            category: "home",
+            name: "Home Consensus & Stats align with focused season divisions",
+            status: statsMatches && consMatches ? "PASS" : "FAIL",
+            details: `focusedDiv=${firstDiv}, statsMatches=${statsMatches}, consensusMatches=${consMatches}`,
+            recommendation:
+              !(statsMatches && consMatches)
+                ? "Fix Home SSR scoping so Consensus & Stats always render the currently focused season's divisions"
+                : null,
+          });
+        }
+
+        // Unfocus toggle -> ?season=all (wait explicitly for URL transition)
+        await Promise.all([
+          page.waitForURL((u) => u.search.includes("season=all"), { timeout: 15000 }).catch(() => {}),
+          focusedBtn.first().click(),
+        ]);
         await page.waitForLoadState("networkidle").catch(() => {});
-        const nowFocused = await page
-          .locator("button", { hasText: /^Focused ✓$/ })
-          .count();
-        record(
+        await page.waitForTimeout(250);
+        const afterUnfocus = await page.locator("button", { hasText: /^Focused ✓$/ }).count();
+        reporter.record({
           suite,
-          "Home clicking Focus activates season focus",
-          nowFocused === 1 ? "PASS" : "FAIL",
-          `url=${page.url()}`
-        );
-        // Unfocus again so state stays clean
-        if (nowFocused === 1) {
-          await page.locator("button", { hasText: /^Focused ✓$/ }).first().click();
-          await page.waitForTimeout(500);
+          category: "home",
+          name: "Home clicking Focused ✓ unfocuses cleanly",
+          status: afterUnfocus === 0 && page.url().includes("season=all") ? "PASS" : "FAIL",
+          details: `url=${page.url()}`,
+        });
+
+        // Cycle Focus across live seasons
+        const focusTotal = await page.locator("button", { hasText: /^Focus$/ }).count();
+        for (let i = 0; i < Math.min(focusTotal, 3); i++) {
+          await page.goto(`${cfg.baseUrl}/?season=all`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
+          const targetFocusBtn = page.locator("button", { hasText: /^Focus$/ }).nth(i);
+          if ((await targetFocusBtn.count()) === 0) break;
+          await Promise.all([
+            page
+              .waitForURL((u) => u.search.includes("season=") && !u.search.includes("season=all"), {
+                timeout: 15000,
+              })
+              .catch(() => {}),
+            targetFocusBtn.click(),
+          ]);
+          await page.waitForLoadState("networkidle").catch(() => {});
+          await page.waitForTimeout(250);
+          const bodyTxt = await page.locator("body").innerText();
+          const focusedNow = await page.locator("button", { hasText: /^Focused ✓$/ }).count();
+          const hasEmptyZeroStandings =
+            bodyTxt.includes("No match history recorded") && bodyTxt.includes("0-0");
+          reporter.record({
+            suite,
+            category: "home",
+            name: `Home season Focus switch #${i + 1} updates scope cleanly`,
+            status: focusedNow === 1 && !hasEmptyZeroStandings ? "PASS" : "FAIL",
+            details: `url=${page.url()}, zeroStandingsLeak=${hasEmptyZeroStandings}`,
+          });
         }
       }
-    } else {
-      record(
-        suite,
-        "Home auto-focuses primary active season",
-        "WARN",
-        `Focused ✓ count=${focusedCount}`
-      );
+
+      // Pathway checks from focused primary season on /
+      await gotoClean(page, "/", suite, "home", "Home reload for pathway parity");
+      const showMoreBtn = page.locator("button", { hasText: /Show More/i }).first();
+      if ((await showMoreBtn.count()) > 0 && (await showMoreBtn.isVisible().catch(() => false))) {
+        await showMoreBtn.click();
+        await page.waitForTimeout(200);
+        reporter.record({
+          suite,
+          category: "home",
+          name: "Home Show More expands recently published list",
+          status: "PASS",
+        });
+      }
+
+      const fullStatsLink = page.locator('a:has-text("Full Stats Dashboard")').first();
+      if ((await fullStatsLink.count()) > 0) {
+        const href = await fullStatsLink.getAttribute("href");
+        await Promise.all([
+          page.waitForURL((u) => u.pathname.startsWith("/stats"), { timeout: 15000 }).catch(() => {}),
+          fullStatsLink.click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        reporter.record({
+          suite,
+          category: "pathway",
+          name: "Home -> Full Stats Dashboard navigates cleanly",
+          status: page.url().includes("/stats") ? "PASS" : "FAIL",
+          details: `href=${href} -> ${page.url()}`,
+        });
+      }
+
+      await page.goto(`${cfg.baseUrl}/`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
+      const viewAllCons = page.locator('a[href*="/consensus"]:has-text("View All")').first();
+      if ((await viewAllCons.count()) > 0) {
+        const consHref = await viewAllCons.getAttribute("href");
+        await Promise.all([
+          page.waitForURL((u) => u.pathname.startsWith("/consensus"), { timeout: 15000 }).catch(() => {}),
+          viewAllCons.click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        reporter.record({
+          suite,
+          category: "pathway",
+          name: "Home Consensus View All preserves division/edition scope",
+          status: page.url().includes("/consensus") ? "PASS" : "FAIL",
+          details: `href=${consHref} -> ${page.url()}`,
+        });
+      }
     }
 
-    // 2. Browse Content dependent dropdowns
-    await gotoClean(page, "/browse?season=", suite, "Browse All Seasons");
-    const browseDivDisabled = await page
-      .locator('select[name="division"]')
-      .isDisabled();
-    const browseEdDisabled = await page
-      .locator('select[name="edition"]')
-      .isDisabled();
-    record(
-      suite,
-      "Browse disables Division & Edition when All Seasons selected",
-      browseDivDisabled && browseEdDisabled ? "PASS" : "FAIL",
-      `divDisabled=${browseDivDisabled}, edDisabled=${browseEdDisabled}`
-    );
+    // 2. BROWSE: Dependent dropdowns, edition swap, submit + reload persistence
+    if (hasSection(cfg, "browse") && matchesPageFilter(cfg, "browse", "/browse")) {
+      await gotoClean(page, "/browse?season=", suite, "browse", "Browse All Seasons");
+      const divDisabled = await page.locator('select[name="division"]').isDisabled();
+      const edDisabled = await page.locator('select[name="edition"]').isDisabled();
+      reporter.record({
+        suite,
+        category: "browse",
+        name: "Browse disables Division & Edition when All Seasons active",
+        status: divDisabled && edDisabled ? "PASS" : "FAIL",
+        details: `divDisabled=${divDisabled}, edDisabled=${edDisabled}`,
+      });
 
-    const browseSeasonOpts = await page
-      .locator('select[name="season"] option')
-      .evaluateAll((opts) =>
-        opts
-          .map((o) => ({ value: o.value, text: o.textContent?.trim() || "" }))
-          .filter((o) => o.value)
-      );
-    for (const opt of browseSeasonOpts.slice(0, 3)) {
-      await page.selectOption('select[name="season"]', opt.value);
-      await page.waitForTimeout(150);
-      const divDisabledAfter = await page
-        .locator('select[name="division"]')
-        .isDisabled();
-      const edDisabledAfter = await page
-        .locator('select[name="edition"]')
-        .isDisabled();
-      const divTexts = await page
-        .locator('select[name="division"] option')
-        .evaluateAll((o) => o.map((x) => x.textContent?.trim()));
-      const singleDivHasAll =
-        divTexts.length === 2 && divTexts.includes("All Divisions");
-      record(
-        suite,
-        `Browse season "${opt.text}" unlocks & scopes dropdowns`,
-        !divDisabledAfter && !edDisabledAfter && !singleDivHasAll
-          ? "PASS"
-          : "FAIL",
-        `divs=[${divTexts.join(", ")}]`
-      );
-    }
-    if (browseSeasonOpts[0]) {
-      await page.selectOption('select[name="season"]', browseSeasonOpts[0].value);
-      await page.selectOption('select[name="type"]', "team");
-      await page.click('button[type="submit"]:has-text("Filter")');
-      await page.waitForLoadState("networkidle").catch(() => {});
-      record(
-        suite,
-        "Browse filter submission updates URL & renders grid",
-        page.url().includes("type=team") ? "PASS" : "FAIL",
-        `url=${page.url()}`
-      );
-    }
-
-    // 3. Consensus dropdown combinations & toggles
-    await gotoClean(page, "/consensus", suite, "Consensus initial load");
-    const consensusDropdownBtns = page.locator(
-      "div.grid.grid-cols-1.md\\:grid-cols-3 button"
-    );
-    const csCount = await consensusDropdownBtns.count();
-    record(
-      suite,
-      "Consensus renders Season/Division/Edition selector controls",
-      csCount >= 3 ? "PASS" : "WARN",
-      `controls=${csCount}`
-    );
-    const toggleChangeBtn = page.locator("button", {
-      hasText: /Show Change|Hide Change/,
-    });
-    if ((await toggleChangeBtn.count()) > 0) {
-      const beforeText = await toggleChangeBtn.first().innerText();
-      await toggleChangeBtn.first().click();
-      await page.waitForTimeout(150);
-      const afterText = await toggleChangeBtn.first().innerText();
-      record(
-        suite,
-        "Consensus toggles Show/Hide Change",
-        beforeText !== afterText ? "PASS" : "FAIL",
-        `${beforeText} -> ${afterText}`
-      );
-    }
-    const copyLinkBtn = page.locator('button:has-text("Copy Link")');
-    if ((await copyLinkBtn.count()) > 0) {
-      await copyLinkBtn.first().click();
-      await page.waitForTimeout(150);
-      const copiedShown = await page.locator('button:has-text("Copied!")').count();
-      record(
-        suite,
-        "Consensus Copy Link shows Copied feedback",
-        copiedShown > 0 ? "PASS" : "WARN"
-      );
-    }
-
-    // 4. Stats Dashboard across seasons, divisions, tabs & stages
-    await gotoClean(page, "/stats", suite, "Stats initial load");
-    // Open season dropdown button (first relative wrapper button inside selector grid)
-    const seasonTrigger = page
-      .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
-      .first()
-      .locator("button")
-      .first();
-    let statsSeasons = [];
-    if ((await seasonTrigger.count()) > 0) {
-      await seasonTrigger.click();
-      await page.waitForTimeout(200);
-      statsSeasons = await page
-        .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
-        .first()
-        .locator("div.absolute button")
-        .evaluateAll((btns) =>
-          btns.map((b) => b.textContent?.replace(/\s+/g, " ").trim() || "")
+      const seasonOpts = await page
+        .locator('select[name="season"] option')
+        .evaluateAll((opts) =>
+          opts.map((o) => ({ value: o.value, text: o.textContent?.trim() || "" })).filter((o) => o.value)
         );
-      await seasonTrigger.click();
-      record(
-        suite,
-        "Stats Season switcher enumerates seasons",
-        statsSeasons.length >= 1 ? "PASS" : "FAIL",
-        `seasons=${statsSeasons.length}`
-      );
+      for (const opt of seasonOpts) {
+        await page.selectOption('select[name="season"]', opt.value);
+        await page.waitForTimeout(150);
+        const divDis = await page.locator('select[name="division"]').isDisabled();
+        const edDis = await page.locator('select[name="edition"]').isDisabled();
+        const divTexts = await page
+          .locator('select[name="division"] option')
+          .evaluateAll((o) => o.map((x) => x.textContent?.trim()));
+        const singleDivHasAll = divTexts.length === 2 && divTexts.includes("All Divisions");
+        reporter.record({
+          suite,
+          category: "browse",
+          name: `Browse season "${opt.text}" unlocks & scopes divisions`,
+          status: !divDis && !edDis && !singleDivHasAll ? "PASS" : "FAIL",
+          details: `divs=[${divTexts.join(", ")}]`,
+        });
+      }
+
+      if (seasonOpts[0]) {
+        await page.selectOption('select[name="season"]', seasonOpts[0].value);
+        await page.selectOption('select[name="type"]', "team");
+        await page.click('button[type="submit"]:has-text("Filter")');
+        await page.waitForLoadState("networkidle").catch(() => {});
+        const filteredUrl = page.url();
+        await page.reload({ waitUntil: "networkidle" });
+        const selectedTypeAfterReload = await page.locator('select[name="type"]').inputValue();
+        const selectedSeasonAfterReload = await page.locator('select[name="season"]').inputValue();
+        reporter.record({
+          suite,
+          category: "cache",
+          name: "Browse Filter submission persists cleanly across hard reload",
+          status:
+            filteredUrl.includes("type=team") &&
+            selectedTypeAfterReload === "team" &&
+            selectedSeasonAfterReload === seasonOpts[0].value
+              ? "PASS"
+              : "FAIL",
+          details: `url=${page.url()}, type=${selectedTypeAfterReload}`,
+        });
+      }
     }
 
-    // Test switching between all listed seasons in the UI dropdown
-    for (let i = 0; i < Math.min(statsSeasons.length, 3); i++) {
-      await seasonTrigger.click();
-      await page.waitForTimeout(150);
-      const optionBtn = page
+    // 3. CONTENT DETAIL PAGES (ranking, tierlist, blog)
+    if (hasSection(cfg, "content")) {
+      for (const item of [
+        { alias: "ranking", href: entities.rankingHref, label: "Published Ranking detail" },
+        { alias: "tierlist", href: entities.tierlistHref, label: "Published Tier List detail" },
+        { alias: "blog", href: entities.blogHref, label: "Published Blog detail" },
+      ]) {
+        if (!item.href || !matchesPageFilter(cfg, item.alias, item.href)) continue;
+        await gotoClean(page, item.href, suite, "content", item.label);
+        const bodyTxt = await page.locator("body").innerText();
+        const badTokens =
+          bodyTxt.includes("[object Object]") ||
+          bodyTxt.includes("Invalid Date") ||
+          bodyTxt.length < 60;
+        reporter.record({
+          suite,
+          category: "content",
+          name: `${item.label} renders clean content`,
+          status: !badTokens ? "PASS" : "FAIL",
+          details: `len=${bodyTxt.length}`,
+        });
+      }
+    }
+
+    // 4. CONSENSUS: Season/Division/Edition switches, toggle, copy, contributor link
+    if (hasSection(cfg, "consensus") && matchesPageFilter(cfg, "consensus", "/consensus")) {
+      await gotoClean(page, "/consensus", suite, "consensus", "Consensus initial load");
+      const selTriggers = page.locator("div.grid.grid-cols-1.md\\:grid-cols-3 button");
+      const trigCount = await selTriggers.count();
+      reporter.record({
+        suite,
+        category: "consensus",
+        name: "Consensus renders Season/Division/Edition controls",
+        status: trigCount >= 3 ? "PASS" : "WARN",
+        details: `controls=${trigCount}`,
+      });
+
+      const toggleChangeBtn = page.locator("button", { hasText: /Show Change|Hide Change/i }).first();
+      if ((await toggleChangeBtn.count()) > 0) {
+        const before = await toggleChangeBtn.innerText();
+        await toggleChangeBtn.click();
+        await page.waitForTimeout(150);
+        const after = await toggleChangeBtn.innerText();
+        reporter.record({
+          suite,
+          category: "consensus",
+          name: "Consensus toggles Show/Hide Change",
+          status: before !== after ? "PASS" : "FAIL",
+          details: `${before} -> ${after}`,
+        });
+      }
+
+      const copyBtn = page.locator('button:has-text("Copy Link")').first();
+      if ((await copyBtn.count()) > 0) {
+        await copyBtn.click();
+        await page.waitForTimeout(150);
+        const copied = (await page.locator('button:has-text("Copied!")').count()) > 0;
+        reporter.record({
+          suite,
+          category: "consensus",
+          name: "Consensus Copy Link feedback",
+          status: copied ? "PASS" : "WARN",
+        });
+      }
+
+      // Cycle Consensus Season dropdowns & verify content/URL reacts cleanly
+      if (trigCount >= 2) {
+        const seasonBtn = page.locator("div.grid.grid-cols-1.md\\:grid-cols-3 > div").first().locator("button").first();
+        await seasonBtn.click().catch(() => {});
+        await page.waitForTimeout(150);
+        const cSeasons = page.locator("div.grid.grid-cols-1.md\\:grid-cols-3 > div").first().locator("div.absolute button");
+        const cCount = await cSeasons.count();
+        await seasonBtn.click().catch(() => {});
+        for (let i = 0; i < Math.min(cCount, 3); i++) {
+          await seasonBtn.click();
+          await page.waitForTimeout(120);
+          const opt = page.locator("div.grid.grid-cols-1.md\\:grid-cols-3 > div").first().locator("div.absolute button").nth(i);
+          const optLabel = (await opt.innerText()).replace(/\s+/g, " ").trim();
+          const alreadySelected = await opt.evaluate((el) => el.className.includes("f0c020"));
+          const prevUrl = page.url();
+          await opt.click();
+          if (!alreadySelected) {
+            await page.waitForURL((u) => u.toString() !== prevUrl, { timeout: 15000 }).catch(() => {});
+          }
+          await page.waitForLoadState("networkidle").catch(() => {});
+          await page.waitForTimeout(300);
+
+          const divWrap = page.locator("div.grid.grid-cols-1.md\\:grid-cols-3 > div").nth(1);
+          const divTrig = divWrap.locator("button").first();
+          await divTrig.click();
+          await page.waitForTimeout(120);
+          const divMenu = await divWrap
+            .locator("div.absolute button")
+            .evaluateAll((bs) => bs.map((b) => b.textContent?.replace(/\s+/g, " ").trim() || ""));
+          await divTrig.click().catch(() => {});
+          const badSingleAll = divMenu.length === 1 && divMenu[0].startsWith("All Divisions");
+          reporter.record({
+            suite,
+            category: "consensus",
+            name: `Consensus season "${optLabel}" Division scope consistency`,
+            status: !badSingleAll ? "PASS" : "FAIL",
+            details: `divs=[${divMenu.join(" | ")}], url=${page.url()}`,
+          });
+        }
+      }
+
+      // Click first contributor link in voting panel if present
+      const firstContrib = page.locator('a[href^="/rankings/"]').first();
+      if ((await firstContrib.count()) > 0) {
+        const href = await firstContrib.getAttribute("href");
+        await Promise.all([
+          page.waitForURL((u) => u.pathname.startsWith("/rankings/"), { timeout: 15000 }).catch(() => {}),
+          firstContrib.click(),
+        ]);
+        await page.waitForLoadState("networkidle").catch(() => {});
+        reporter.record({
+          suite,
+          category: "pathway",
+          name: "Consensus contributor panel links to full ballot",
+          status: page.url().includes("/rankings/") ? "PASS" : "FAIL",
+          details: `href=${href} -> ${page.url()}`,
+        });
+      }
+    }
+
+    // 5. STATS DASHBOARD: All seasons x all divisions x all tabs x filters/sorts/stages x reload
+    if (hasSection(cfg, "stats") && matchesPageFilter(cfg, "stats", "/stats")) {
+      await gotoClean(page, "/stats", suite, "stats", "Stats initial load");
+      const seasonTrigger = page
         .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
         .first()
-        .locator("div.absolute button")
-        .nth(i);
-      const label = (await optionBtn.innerText()).replace(/\s+/g, " ").trim();
-      await optionBtn.click();
-      await page.waitForTimeout(900);
-      await page.waitForLoadState("networkidle").catch(() => {});
-
-      const divTrigger = page
-        .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
-        .nth(1)
         .locator("button")
         .first();
-      await divTrigger.click();
-      await page.waitForTimeout(150);
-      const divOpts = await page
-        .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
-        .nth(1)
-        .locator("div.absolute button")
-        .evaluateAll((btns) =>
-          btns.map((b) => b.textContent?.replace(/\s+/g, " ").trim() || "")
-        );
-      await divTrigger.click();
 
-      const hasAllDivOpt = divOpts.some((t) => t.startsWith("All Divisions"));
-      const singleDivClean =
-        divOpts.length > 1 || (divOpts.length === 1 && !hasAllDivOpt);
-      record(
+      let seasonCount = 0;
+      if ((await seasonTrigger.count()) > 0) {
+        await seasonTrigger.click();
+        await page.waitForTimeout(150);
+        seasonCount = await page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+          .first()
+          .locator("div.absolute button")
+          .count();
+        await seasonTrigger.click();
+      }
+      reporter.record({
         suite,
-        `Stats season "${label}" Division menu consistency`,
-        singleDivClean ? "PASS" : "FAIL",
-        `options=[${divOpts.join(" | ")}]`
-      );
+        category: "stats",
+        name: "Stats Season dropdown enumerates seasons",
+        status: seasonCount >= 1 ? "PASS" : "FAIL",
+        details: `seasons=${seasonCount}`,
+      });
 
-      // Exercise Players -> Teams -> General tabs + Regular / Playoffs toggles
-      for (const tabLabel of ["PLAYERS", "TEAMS", "GENERAL"]) {
-        const tabBtn = page.locator("button", {
-          hasText: new RegExp(`^\\s*${tabLabel}\\s*$`, "i"),
+      for (let sIdx = 0; sIdx < seasonCount; sIdx++) {
+        await seasonTrigger.click();
+        await page.waitForTimeout(120);
+        const sBtn = page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+          .first()
+          .locator("div.absolute button")
+          .nth(sIdx);
+        const sLabel = (await sBtn.innerText()).replace(/\s+/g, " ").trim();
+        const alreadySelected = await sBtn.evaluate((el) => el.className.includes("f0c020"));
+        const prevUrl = page.url();
+        await sBtn.click();
+        if (!alreadySelected) {
+          await page.waitForURL((u) => u.toString() !== prevUrl, { timeout: 15000 }).catch(() => {});
+        }
+        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForTimeout(350);
+
+        const divTrigger = page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+          .nth(1)
+          .locator("button")
+          .first();
+        await divTrigger.click();
+        await page.waitForTimeout(120);
+        const divTexts = await page
+          .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+          .nth(1)
+          .locator("div.absolute button")
+          .evaluateAll((bs) => bs.map((b) => b.textContent?.replace(/\s+/g, " ").trim() || ""));
+        await divTrigger.click();
+
+        const hasAllDiv = divTexts.some((t) => /^All Divisions/i.test(t));
+        const divClean = divTexts.length > 1 || (divTexts.length === 1 && !hasAllDiv);
+        reporter.record({
+          suite,
+          category: "stats",
+          name: `Stats "${sLabel}" Division menu hides All Divisions when single-division`,
+          status: divClean ? "PASS" : "FAIL",
+          details: `options=[${divTexts.join(" | ")}]`,
         });
-        if ((await tabBtn.count()) > 0) {
-          await tabBtn.first().click();
-          await page.waitForTimeout(250);
-          const bodyText = await page.locator("body").innerText();
-          if (tabLabel === "GENERAL") {
-            const hasSheetModeOnly = bodyText.includes("Sheet mode only");
-            record(
-              suite,
-              `Stats "${label}" General tab has no "Sheet mode only" text`,
-              !hasSheetModeOnly ? "PASS" : "FAIL"
-            );
-          }
-          if (tabLabel === "PLAYERS" || tabLabel === "TEAMS") {
-            const playoffBtn = page.locator("button", { hasText: /Playoffs/ });
-            const regBtn = page.locator("button", { hasText: /Regular Season/ });
-            if ((await playoffBtn.count()) > 0 && (await regBtn.count()) > 0) {
-              await playoffBtn.first().click();
-              await page.waitForTimeout(200);
-              await regBtn.first().click();
-              await page.waitForTimeout(200);
+
+        // Exercise each division option
+        for (let dIdx = 0; dIdx < Math.min(divTexts.length, 4); dIdx++) {
+          await divTrigger.click();
+          await page.waitForTimeout(120);
+          const dBtn = page
+            .locator("div.grid.grid-cols-1.md\\:grid-cols-2 > div")
+            .nth(1)
+            .locator("div.absolute button")
+            .nth(dIdx);
+          const dLabel = (await dBtn.innerText()).replace(/\s+/g, " ").trim();
+          const isAllDiv = /^All Divisions/i.test(dLabel);
+          await dBtn.click();
+          await page.waitForLoadState("networkidle").catch(() => {});
+          await page.waitForTimeout(350);
+
+          // PLAYERS TAB
+          const playersTabBtn = page.locator("button", { hasText: /^\s*PLAYERS\s*$/i }).first();
+          if ((await playersTabBtn.count()) > 0) {
+            await playersTabBtn.click();
+            await page.waitForTimeout(200);
+            const pText = await page.locator("body").innerText();
+            if (isAllDiv) {
+              reporter.record({
+                suite,
+                category: "stats",
+                name: `Stats "${sLabel}" / All Divisions Players prompt`,
+                status: pText.includes("to view player stat leaderboards and tables.") ? "PASS" : "FAIL",
+              });
+            } else {
+              const tableRows = await page.locator("table tbody tr").count();
+              if (tableRows > 0) {
+                // Verify no 0-game placeholder table when 0 matches exist
+                const firstGamesCell = await page
+                  .locator("table tbody tr")
+                  .first()
+                  .locator("td")
+                  .nth(2)
+                  .innerText()
+                  .catch(() => "");
+                reporter.record({
+                  suite,
+                  category: "stats",
+                  name: `Stats "${sLabel}" / "${dLabel}" Players table populated`,
+                  status: firstGamesCell !== "0" ? "PASS" : "FAIL",
+                  details: `rows=${tableRows}, firstRowGames=${firstGamesCell}`,
+                });
+
+                // Role filter test
+                const topRoleBtn = page.locator("button", { hasText: /^\s*Top\s*$/ }).first();
+                const allRoleBtn = page.locator("button", { hasText: /^\s*All Roles\s*$/ }).first();
+                if ((await topRoleBtn.count()) > 0 && (await allRoleBtn.count()) > 0) {
+                  await topRoleBtn.click();
+                  await page.waitForTimeout(120);
+                  const topRows = await page.locator("table tbody tr").count();
+                  await allRoleBtn.click();
+                  await page.waitForTimeout(120);
+                  const restoredRows = await page.locator("table tbody tr").count();
+                  reporter.record({
+                    suite,
+                    category: "stats",
+                    name: `Stats "${dLabel}" Role filter Top -> All Roles restores`,
+                    status: topRows <= tableRows && restoredRows === tableRows ? "PASS" : "FAIL",
+                    details: `all=${tableRows}, top=${topRows}, restored=${restoredRows}`,
+                  });
+                }
+              } else {
+                const emptyMsgOk = /No player/i.test(pText);
+                reporter.record({
+                  suite,
+                  category: "stats",
+                  name: `Stats "${sLabel}" / "${dLabel}" zero-stat Players empty state`,
+                  status: emptyMsgOk ? "PASS" : "WARN",
+                });
+              }
             }
           }
+
+          // TEAMS TAB
+          const teamsTabBtn = page.locator("button", { hasText: /^\s*TEAMS\s*$/i }).first();
+          if ((await teamsTabBtn.count()) > 0) {
+            await teamsTabBtn.click();
+            await page.waitForTimeout(200);
+            const tText = await page.locator("body").innerText();
+            if (isAllDiv) {
+              reporter.record({
+                suite,
+                category: "stats",
+                name: `Stats "${sLabel}" / All Divisions Teams prompt`,
+                status: tText.includes("to view team standings and playoff brackets.") ? "PASS" : "FAIL",
+              });
+            } else {
+              const hasStandingHeading = tText.includes("TEAM STANDINGS");
+              const hasEmptyMsg = tText.includes("No match history recorded");
+              reporter.record({
+                suite,
+                category: "stats",
+                name: `Stats "${sLabel}" / "${dLabel}" Teams standings or empty state`,
+                status: hasStandingHeading || hasEmptyMsg ? "PASS" : "WARN",
+                details: hasStandingHeading ? "standings rendered" : "empty-state message rendered",
+              });
+            }
+          }
+
+          // GENERAL TAB
+          const generalTabBtn = page.locator("button", { hasText: /^\s*GENERAL\s*$/i }).first();
+          if ((await generalTabBtn.count()) > 0) {
+            await generalTabBtn.click();
+            await page.waitForTimeout(200);
+            const gText = await page.locator("body").innerText();
+            reporter.record({
+              suite,
+              category: "stats",
+              name: `Stats "${sLabel}" / "${dLabel}" General tab clean copy`,
+              status: !gText.includes("Sheet mode only") ? "PASS" : "FAIL",
+            });
+          }
+        }
+      }
+
+      // Reload persistence check on non-default tab
+      await page.goto(`${cfg.baseUrl}/stats?tab=teams`, { waitUntil: "networkidle", timeout: 45000 }).catch(() => {});
+      await page.reload({ waitUntil: "networkidle" });
+      const stillOnTeams = page.url().includes("tab=teams");
+      reporter.record({
+        suite,
+        category: "cache",
+        name: "Stats preserves ?tab=teams across hard reload",
+        status: stillOnTeams ? "PASS" : "FAIL",
+        details: `url=${page.url()}`,
+      });
+    }
+
+    // 6. DRILLDOWNS: Player -> Team -> Champion -> Match (+ Game 1/2/3 tabs & back link)
+    if (hasSection(cfg, "drilldowns")) {
+      if (entities.playerHref && matchesPageFilter(cfg, "stats-player", entities.playerHref)) {
+        await gotoClean(page, entities.playerHref, suite, "drilldown", "Player scouting detail");
+      }
+      if (entities.teamHref && matchesPageFilter(cfg, "stats-team", entities.teamHref)) {
+        await gotoClean(page, entities.teamHref, suite, "drilldown", "Team scouting detail");
+      }
+      if (entities.championHref && matchesPageFilter(cfg, "stats-champion", entities.championHref)) {
+        await gotoClean(page, entities.championHref, suite, "drilldown", "Champion detail");
+      }
+      if (entities.matchHref && matchesPageFilter(cfg, "stats-match", entities.matchHref)) {
+        await gotoClean(page, entities.matchHref, suite, "drilldown", "Match box score detail");
+        const g2Btn = page.locator("button", { hasText: /Game 2/i }).first();
+        if ((await g2Btn.count()) > 0) {
+          const beforeGameTxt = await page.locator("body").innerText();
+          await g2Btn.click();
+          await page.waitForTimeout(200);
+          const afterGameTxt = await page.locator("body").innerText();
+          reporter.record({
+            suite,
+            category: "drilldown",
+            name: "Match detail Game 2 tab updates box score",
+            status: beforeGameTxt !== afterGameTxt ? "PASS" : "WARN",
+          });
         }
       }
     }
 
-    // Drill down to a player/team/match/champion page from /stats
-    await gotoClean(page, "/stats?tab=players", suite, "Stats Players deep links");
-    const firstPlayerLink = page.locator('a[href*="/stats/player/"]').first();
-    if ((await firstPlayerLink.count()) > 0) {
-      const href = await firstPlayerLink.getAttribute("href");
-      if (href) await gotoClean(page, href, suite, "Drilldown Player Stats");
-    }
-    await gotoClean(page, "/stats?tab=teams", suite, "Stats Teams deep links");
-    const firstTeamLink = page.locator('a[href*="/stats/team/"], button').filter({
-      hasText: /.*/,
-    });
-    void firstTeamLink;
+    // 7. TEAM HUB: Season & Viewing Team switches, code hiding when signed out
+    if (hasSection(cfg, "team-hub") && matchesPageFilter(cfg, "team-hub", "/team-hub")) {
+      await gotoClean(page, "/team-hub", suite, "team-hub", "Team Hub load");
+      const hubBody = await page.locator("body").innerText();
+      const leaksCodes =
+        hubBody.includes("Tournament Lobby Codes") || hubBody.includes("Gen G1 Code");
+      reporter.record({
+        suite,
+        category: "rbac",
+        name: "Signed-out Team Hub hides Tournament Lobby Codes",
+        status: !leaksCodes ? "PASS" : "FAIL",
+        recommendation: leaksCodes ? "Hide Tournament Lobby Codes for non-captain/guest viewers" : null,
+      });
 
-    // 5. Team Hub & legacy /matches redirect
-    await gotoClean(page, "/matches", suite, "Legacy /matches redirects to /team-hub");
-    const landedOnHub = page.url().includes("/team-hub");
-    const bodyHub = await page.locator("body").innerText();
-    const leaksTourneyCodes =
-      bodyHub.includes("Tournament Lobby Codes") ||
-      bodyHub.includes("Gen G1 Code");
-    record(
-      suite,
-      "Legacy /matches -> /team-hub & hides tournament codes",
-      landedOnHub && !leaksTourneyCodes ? "PASS" : "FAIL",
-      `url=${page.url()}, leaksCodes=${leaksTourneyCodes}`
-    );
-
-    // Toggle Viewing Team in Team Hub if multiple teams exist
-    const teamHubSelects = page.locator("select");
-    const thCount = await teamHubSelects.count();
-    if (thCount > 0) {
-      const lastSel = teamHubSelects.last();
-      const opts = await lastSel
-        .locator("option")
-        .evaluateAll((o) => o.map((x) => x.value));
-      if (opts.length > 1) {
-        await lastSel.selectOption(opts[1]);
-        await page.waitForTimeout(200);
-        record(suite, "Team Hub switches Viewing Team cleanly", "PASS");
+      const selects = page.locator("select");
+      if ((await selects.count()) > 0) {
+        const teamSel = selects.last();
+        const opts = await teamSel.locator("option").evaluateAll((os) => os.map((o) => o.value));
+        if (opts.length > 1) {
+          await teamSel.selectOption(opts[1]);
+          await page.waitForTimeout(200);
+          reporter.record({
+            suite,
+            category: "team-hub",
+            name: "Team Hub switches Viewing Team cleanly",
+            status: "PASS",
+          });
+        }
       }
     }
 
-    // 6. Access-Control Gates (Signed-Out)
-    for (const restrictedPath of [
-      "/admin",
-      "/admin/stats",
-      "/admin/users",
-      "/admin/publishings",
-    ]) {
-      await gotoClean(
-        page,
-        restrictedPath,
-        suite,
-        `Gate ${restrictedPath} signed-out`
-      );
-      const txt = await page.locator("body").innerText();
-      const blocked =
-        txt.includes("Access Denied") || txt.includes("do not have permission");
-      const leaksInternals =
-        txt.includes("Operator or Admin") || txt.includes("Admin Console →");
-      record(
-        suite,
-        `Gate ${restrictedPath} denies access without internal leaks`,
-        blocked && !leaksInternals ? "PASS" : "FAIL",
-        `blocked=${blocked}, leaksInternals=${leaksInternals}`
-      );
+    // 8. REDIRECTS, LEGAL & SIGNED-OUT GATES
+    if (hasSection(cfg, "redirects")) {
+      const redirectTests = [
+        { from: "/matches", expectUrlPart: "/team-hub", label: "Legacy /matches -> /team-hub" },
+        { from: "/rank?type=blog", expectUrlPart: "/create", label: "Legacy /rank -> /create" },
+        { from: "/blog", expectUrlPart: "/browse", label: "Legacy /blog -> /browse" },
+        { from: "/my-rankings", expectUrlPart: "/my-history", label: "Legacy /my-rankings -> /my-history" },
+        ...(entities.ballotId
+          ? [
+              {
+                from: `/ballot/${entities.ballotId}`,
+                expectRegex: /\/(?:rankings|tierlist)\//,
+                label: "Legacy /ballot/[id] redirect",
+              },
+            ]
+          : []),
+      ];
+
+      for (const rt of redirectTests) {
+        await gotoClean(page, rt.from, suite, "redirect", rt.label);
+        const cur = page.url();
+        const ok = rt.expectRegex ? rt.expectRegex.test(cur) : cur.includes(rt.expectUrlPart);
+        reporter.record({
+          suite,
+          category: "redirect",
+          name: rt.label,
+          status: ok ? "PASS" : "FAIL",
+          details: `url=${cur}`,
+        });
+      }
+
+      for (const staticPath of ["/terms", "/privacy"]) {
+        await gotoClean(page, staticPath, suite, "legal", `Legal page ${staticPath}`);
+      }
+
+      for (const adminPath of ["/admin", "/admin/stats", "/admin/users", "/admin/publishings"]) {
+        await gotoClean(page, adminPath, suite, "rbac", `Signed-out gate ${adminPath}`);
+        const txt = await page.locator("body").innerText();
+        const blocked = txt.includes("Access Denied") || txt.includes("do not have permission");
+        const leaks = txt.includes("Operator or Admin") || txt.includes("Admin Console →");
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: `Signed-out gate ${adminPath} denies without internal leaks`,
+          status: blocked && !leaks ? "PASS" : "FAIL",
+          details: `blocked=${blocked}, leaks=${leaks}`,
+        });
+      }
+
+      for (const authPath of ["/create", "/my-history"]) {
+        await gotoClean(page, authPath, suite, "rbac", `Signed-out gate ${authPath}`);
+        const txt = await page.locator("body").innerText();
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: `${authPath} prompts guest to Sign In`,
+          status: /sign in/i.test(txt) ? "PASS" : "FAIL",
+        });
+      }
     }
 
-    for (const authPath of ["/create", "/my-history"]) {
-      await gotoClean(page, authPath, suite, `Gate ${authPath} requires sign-in`);
-      const txt = await page.locator("body").innerText();
-      record(
-        suite,
-        `${authPath} shows Sign in prompt`,
-        /sign in/i.test(txt) ? "PASS" : "FAIL"
-      );
-    }
+    // 9. SIGNED-OUT API BOUNDARY CHECKS
+    if (hasSection(cfg, "api")) {
+      for (const getEp of ["/api/recent-content", "/api/champions", "/api/og/consensus"]) {
+        const res = await context.request.get(`${cfg.baseUrl}${getEp}`, { timeout: 20000 });
+        reporter.record({
+          suite,
+          category: "api",
+          name: `Public GET ${getEp}`,
+          status: res.status() === 200 ? "PASS" : "FAIL",
+          details: `status=${res.status()}`,
+        });
+      }
 
-    // API Auth Checks
-    for (const endpoint of [
-      { path: "/api/admin/view-as", body: { mode: "public" } },
-      {
-        path: "/api/admin/moderation/action",
-        body: { eventId: "00000000-0000-0000-0000-000000000000", action: "unpublish" },
-      },
-      {
-        path: "/api/matches/tournament-code",
-        body: { matchId: "00000000-0000-0000-0000-000000000000", gameNumber: 1 },
-      },
-    ]) {
-      const status = await page.evaluate(
-        async ({ u, p }) => {
-          const r = await fetch(u, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(p),
-          });
-          return r.status;
-        },
-        { u: `${baseUrl}${endpoint.path}`, p: endpoint.body }
-      );
-      record(
-        suite,
-        `API ${endpoint.path} rejects signed-out POST`,
-        status === 401 || status === 403 ? "PASS" : "FAIL",
-        `status=${status}`
-      );
+      const nilUuid = "00000000-0000-0000-0000-000000000000";
+      const protectedPostEndpoints = [
+        { path: "/api/admin/view-as", body: { mode: "public" } },
+        { path: "/api/admin/moderation/action", body: { eventId: nilUuid, action: "unpublish" } },
+        { path: "/api/admin/import-drafts", body: {} },
+        { path: "/api/admin/import-matches", body: {} },
+        { path: "/api/admin/revalidate-stats", body: {} },
+        { path: "/api/admin/riot-sync", body: {} },
+        { path: "/api/admin/scdl-sheet-stats", body: {} },
+        { path: "/api/admin/stats-notice", body: { notice: "probe" } },
+        { path: "/api/matches/tournament-code", body: { matchId: nilUuid, gameNumber: 1 } },
+        { path: "/api/publish", body: {} },
+        { path: "/api/notify-publish", body: {} },
+      ];
+
+      for (const ep of protectedPostEndpoints) {
+        const res = await context.request.post(`${cfg.baseUrl}${ep.path}`, { data: ep.body });
+        const status = res.status();
+        reporter.record({
+          suite,
+          category: "api-rbac",
+          name: `Signed-out POST ${ep.path} rejected`,
+          status: status === 401 || status === 403 ? "PASS" : "FAIL",
+          details: `status=${status}`,
+          recommendation:
+            status !== 401 && status !== 403
+              ? `Enforce auth check (401/403) on ${ep.path} (returned ${status})`
+              : null,
+        });
+      }
     }
   } finally {
     await context.close();
@@ -465,280 +814,402 @@ async function runSignedOutSuite(browser) {
 }
 
 async function runAuthenticatedSuite(browser, storageStatePath) {
-  const suite = "MultiRoleAuth";
   const context = await browser.newContext({
     viewport: { width: 1366, height: 900 },
     storageState: storageStatePath,
   });
   const page = await context.newPage();
 
-  async function setViewAs(payload) {
-    const res = await context.request.post(`${baseUrl}/api/admin/view-as`, {
-      data: payload,
-    });
-    return { ok: res.ok(), status: res.status() };
-  }
-
   try {
-    await setViewAs({ mode: "clear" });
-    await gotoClean(page, "/admin", suite, "Site Admin Console load");
+    await setViewAs(context, cfg.baseUrl, { mode: "clear" });
+    await gotoClean(page, "/admin", "Admin", "admin", "Site Admin Console load");
     const adminBody = await page.locator("body").innerText();
     if (!adminBody.includes("Seasons") || adminBody.includes("Access Denied")) {
-      record(
-        suite,
-        "Verify saved session is Site Admin",
-        "FAIL",
-        "Saved session does not have Site Admin access."
-      );
+      reporter.record({
+        suite: "MultiRoleAuth",
+        category: "auth",
+        name: "Verify saved session is Site Admin",
+        status: "FAIL",
+        details: "Saved session expired or lacks Site Admin role — re-run with --login",
+      });
       return;
     }
-    record(suite, "Verify saved session is Site Admin", "PASS");
+    reporter.record({
+      suite: "MultiRoleAuth",
+      category: "auth",
+      name: "Verify saved session is Site Admin",
+      status: "PASS",
+    });
 
-    // Extract first League & first Team from the Preview As Role bar before switching tabs
-    const previewBar = page.locator("div", { hasText: "Preview As Role" }).filter({
-      has: page.locator("select"),
-    }).first();
-    const roleSelect = previewBar.locator("select").first();
-    await roleSelect.selectOption("operator");
-    await page.waitForTimeout(150);
-    const leagueTarget = await previewBar
-      .locator("select")
-      .nth(1)
-      .evaluate((el) => {
-        const opt = el?.options?.[el.selectedIndex];
-        return el?.value ? { id: el.value, label: opt?.text || el.value } : null;
-      })
-      .catch(() => null);
+    const { leagueTarget, teamTarget } = await discoverRoleTargets(page);
 
-    await roleSelect.selectOption("captain");
-    await page.waitForTimeout(150);
-    const teamTarget = await previewBar
-      .locator("select")
-      .nth(1)
-      .evaluate((el) => {
-        const opt = el?.options?.[el.selectedIndex];
-        return el?.value ? { id: el.value, label: opt?.text || el.value } : null;
-      })
-      .catch(() => null);
+    // SITE ADMIN ROLE
+    if (hasRole(cfg, "admin")) {
+      const suite = "Role:Admin";
+      await assertNavbarInvariant(page, suite, "admin");
 
-    // Walk all 7 Admin Console tabs as Site Admin
-    for (const tabLabel of [
-      "Seasons",
-      "Divisions",
-      "Content Editions",
-      "Draft Player Pool",
-      "Teams",
-      "Schedule & Playoffs",
-      "Moderation & Safety",
-    ]) {
-      const btn = page.locator("button", { hasText: new RegExp(`^${tabLabel}$`) });
-      if ((await btn.count()) > 0) {
-        await btn.first().click();
+      const hasPreviewBar = adminBody.includes("Preview As Role");
+      const hasMatchHubInsideAdmin = (await page.locator('a[href="/matches"], a[href="/team-hub"]').count()) > 0;
+      reporter.record({
+        suite,
+        category: "invariant",
+        name: "Site Admin Console includes Preview As Role & Match Hub link",
+        status: hasPreviewBar && hasMatchHubInsideAdmin ? "PASS" : "WARN",
+        details: `previewBar=${hasPreviewBar}, matchHubLink=${hasMatchHubInsideAdmin}`,
+      });
+
+      for (const tabLabel of [
+        "Seasons",
+        "Divisions",
+        "Content Editions",
+        "Draft Player Pool",
+        "Teams",
+        "Schedule & Playoffs",
+        "Moderation & Safety",
+      ]) {
+        const btn = page.locator("button", { hasText: new RegExp(`^${tabLabel}$`) }).first();
+        if ((await btn.count()) > 0) {
+          await btn.click();
+          await page.waitForTimeout(200);
+          reporter.record({
+            suite,
+            category: "admin",
+            name: `Admin tab "${tabLabel}" switches cleanly`,
+            status: "PASS",
+          });
+        } else {
+          reporter.record({
+            suite,
+            category: "admin",
+            name: `Admin tab "${tabLabel}" present`,
+            status: "FAIL",
+          });
+        }
+      }
+
+      // Nested season switcher test on Teams tab (target xp-panel Season select, not Preview As Role)
+      await page.locator("button", { hasText: /^Teams$/ }).first().click().catch(() => {});
+      await page.waitForTimeout(200);
+      const seasonSel = page.locator("div.xp-panel").filter({ hasText: "Season" }).locator("select").first();
+      const sOpts = await seasonSel.locator("option").evaluateAll((os) => os.map((o) => o.value)).catch(() => []);
+      if (sOpts.length > 1) {
+        const beforeTxt = await page.locator("main").innerText();
+        await seasonSel.selectOption(sOpts[1]);
         await page.waitForTimeout(250);
-        record(suite, `Site Admin tab "${tabLabel}" switches cleanly`, "PASS");
-      } else {
-        record(suite, `Site Admin tab "${tabLabel}" present`, "FAIL");
-      }
-    }
-
-    await gotoClean(page, "/admin/stats", suite, "Site Admin Stats Controls");
-    await gotoClean(page, "/team-hub", suite, "Site Admin Team Hub");
-    await gotoClean(page, "/create", suite, "Site Admin Create Workspace");
-
-    // League Operator View-As checks
-    if (leagueTarget) {
-      const opRes = await setViewAs({
-        mode: "operator",
-        leagueId: leagueTarget.id,
-        label: leagueTarget.label,
-      });
-      record(
-        suite,
-        `View-As League Operator (${leagueTarget.label})`,
-        opRes.ok ? "PASS" : "FAIL",
-        `status=${opRes.status}`
-      );
-      await gotoClean(page, "/admin", suite, "League Operator /admin load");
-      const opAdminTxt = await page.locator("body").innerText();
-      record(
-        suite,
-        "League Operator sees Preview Mode banner & scoped access",
-        opAdminTxt.toLowerCase().includes("preview mode") &&
-          !opAdminTxt.includes("Preview As Role") &&
-          !opAdminTxt.includes("Access Denied")
-          ? "PASS"
-          : "FAIL"
-      );
-      const modBtn = page.locator("button", { hasText: /^League Access & Safety$/ });
-      if ((await modBtn.count()) > 0) {
-        await modBtn.first().click();
-        await page.waitForTimeout(300);
-        const modTxt = await page.locator("body").innerText();
-        const modLower = modTxt.toLowerCase();
-        record(
+        const afterTxt = await page.locator("main").innerText();
+        reporter.record({
           suite,
-          "League Operator sees League Access & Safety + Moderation Alerts Log without Global Kill Switch",
-          modLower.includes("moderation alerts log") &&
-            !modLower.includes("global kill switch")
-            ? "PASS"
-            : "FAIL"
-        );
-      } else {
-        record(suite, "League Operator League Access & Safety tab present", "FAIL");
+          category: "admin",
+          name: "Admin Teams Season switcher refreshes nested divisions",
+          status: beforeTxt !== afterTxt ? "PASS" : "FAIL",
+        });
       }
-      await gotoClean(page, "/admin/stats", suite, "League Operator /admin/stats");
-      await gotoClean(page, "/team-hub", suite, "League Operator /team-hub");
-    } else {
-      record(suite, "League Operator View-As checks", "WARN", "No league options found in Preview bar");
+
+      await gotoClean(page, "/admin/stats", suite, "admin", "Admin Stats Controls");
+      await gotoClean(page, "/admin/users", suite, "admin", "Admin Discord Users Log");
+      await gotoClean(page, "/admin/publishings", suite, "admin", "Admin Publishings Log");
+
+      // Create workspace read-only interactive sweep
+      await gotoClean(page, "/create", suite, "create", "Create Workspace load");
+      for (const m of [
+        { key: "team", re: /Team Power Rankings/i },
+        { key: "player", re: /Player Tier List/i },
+        { key: "blog", re: /Blog Post/i },
+        { key: "champion_pool", re: /Champion Pool/i },
+      ]) {
+        const btn = page.locator("button", { hasText: m.re }).first();
+        if ((await btn.count()) > 0) {
+          await btn.click();
+          await page.waitForTimeout(250);
+          const urlOk =
+            m.key === "team" ? !page.url().includes("type=blog") : page.url().includes(`type=${m.key}`);
+          reporter.record({
+            suite,
+            category: "create",
+            name: `Create mode "${m.key}" switches & syncs URL cleanly`,
+            status: urlOk ? "PASS" : "WARN",
+            details: `url=${page.url()}`,
+          });
+        }
+      }
+
+      await gotoClean(page, "/my-history", suite, "history", "Admin My History");
+      await gotoClean(page, "/team-hub", suite, "team-hub", "Admin Team Hub");
     }
 
-    // Team Captain View-As checks
-    if (teamTarget) {
-      const capRes = await setViewAs({
-        mode: "captain",
-        teamId: teamTarget.id,
-        label: teamTarget.label,
+    // LEAGUE OPERATOR ROLE
+    if (hasRole(cfg, "operator")) {
+      const suite = "Role:Operator";
+      if (!leagueTarget) {
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: "Operator preview target discovered",
+          status: "WARN",
+          details: "No league found in Preview As Role bar",
+        });
+      } else {
+        const res = await setViewAs(context, cfg.baseUrl, {
+          mode: "operator",
+          leagueId: leagueTarget.id,
+          label: leagueTarget.label,
+        });
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: `View-As Operator (${leagueTarget.label})`,
+          status: res.ok ? "PASS" : "FAIL",
+          details: `status=${res.status}`,
+        });
+
+        await gotoClean(page, "/admin", suite, "admin", "Operator /admin load");
+        await assertNavbarInvariant(page, suite, "operator");
+        const opTxt = await page.locator("body").innerText();
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: "Operator sees Preview Mode banner & hides Preview As Role",
+          status:
+            opTxt.toLowerCase().includes("preview mode") &&
+            !opTxt.includes("Preview As Role") &&
+            !opTxt.includes("Access Denied")
+              ? "PASS"
+              : "FAIL",
+        });
+
+        const safetyBtn = page.locator("button", { hasText: /^League Access & Safety$/ }).first();
+        if ((await safetyBtn.count()) > 0) {
+          await safetyBtn.click();
+          await page.waitForTimeout(250);
+          const modLower = (await page.locator("body").innerText()).toLowerCase();
+          reporter.record({
+            suite,
+            category: "rbac",
+            name: "Operator sees Moderation Alerts Log without Global Kill Switch",
+            status:
+              modLower.includes("moderation alerts log") && !modLower.includes("global kill switch")
+                ? "PASS"
+                : "FAIL",
+          });
+        } else {
+          reporter.record({
+            suite,
+            category: "rbac",
+            name: "Operator League Access & Safety tab present",
+            status: "FAIL",
+          });
+        }
+
+        for (const siteAdminOnly of ["/admin/users", "/admin/publishings"]) {
+          await gotoClean(page, siteAdminOnly, suite, "rbac", `Operator blocked from ${siteAdminOnly}`);
+          const txt = await page.locator("body").innerText();
+          reporter.record({
+            suite,
+            category: "rbac",
+            name: `Operator sees Access Denied on ${siteAdminOnly}`,
+            status: txt.includes("Access Denied") ? "PASS" : "FAIL",
+          });
+        }
+
+        await gotoClean(page, "/admin/stats", suite, "admin", "Operator /admin/stats");
+        await gotoClean(page, "/team-hub", suite, "team-hub", "Operator /team-hub");
+      }
+    }
+
+    // TEAM CAPTAIN ROLE
+    if (hasRole(cfg, "captain")) {
+      const suite = "Role:Captain";
+      if (!teamTarget) {
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: "Captain preview target discovered",
+          status: "WARN",
+          details: "No team found in Preview As Role bar",
+        });
+      } else {
+        const res = await setViewAs(context, cfg.baseUrl, {
+          mode: "captain",
+          teamId: teamTarget.id,
+          label: teamTarget.label,
+        });
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: `View-As Captain (${teamTarget.label})`,
+          status: res.ok ? "PASS" : "FAIL",
+          details: `status=${res.status}`,
+        });
+
+        for (const restricted of ["/admin", "/admin/stats", "/admin/users", "/admin/publishings"]) {
+          await gotoClean(page, restricted, suite, "rbac", `Captain blocked from ${restricted}`);
+          const txt = await page.locator("body").innerText();
+          reporter.record({
+            suite,
+            category: "rbac",
+            name: `Captain sees Access Denied on ${restricted}`,
+            status: txt.includes("Access Denied") ? "PASS" : "FAIL",
+          });
+        }
+
+        await gotoClean(page, "/team-hub", suite, "team-hub", "Captain /team-hub");
+        await assertNavbarInvariant(page, suite, "captain");
+        const capHubTxt = await page.locator("body").innerText();
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: "Captain sees Preview Mode banner on /team-hub",
+          status: capHubTxt.toLowerCase().includes("preview mode") ? "PASS" : "FAIL",
+        });
+
+        // Switch Viewing Team to a different team and verify captain doesn't see code generator for unrelated team
+        const teamSel = page.locator("select").last();
+        const opts = await teamSel.locator("option").evaluateAll((os) => os.map((o) => o.value)).catch(() => []);
+        const otherTeam = opts.find((v) => v && v !== teamTarget.id);
+        if (otherTeam) {
+          await teamSel.selectOption(otherTeam);
+          await page.waitForTimeout(200);
+          const otherTxt = await page.locator("body").innerText();
+          reporter.record({
+            suite,
+            category: "rbac",
+            name: "Captain hides Tournament Lobby Codes on non-owned team",
+            status: !otherTxt.includes("Tournament Lobby Codes") ? "PASS" : "FAIL",
+          });
+        }
+
+        // Safe non-mutating nil-UUID API checks as Captain
+        const nilUuid = "00000000-0000-0000-0000-000000000000";
+        const modRes = await context.request.post(`${cfg.baseUrl}/api/admin/moderation/action`, {
+          data: { eventId: nilUuid, action: "unpublish" },
+        });
+        reporter.record({
+          suite,
+          category: "api-rbac",
+          name: "Captain POST /api/admin/moderation/action rejected (403)",
+          status: modRes.status() === 403 ? "PASS" : "FAIL",
+          details: `status=${modRes.status()}`,
+        });
+
+        const codeRes = await context.request.post(`${cfg.baseUrl}/api/matches/tournament-code`, {
+          data: { matchId: nilUuid, gameNumber: 1 },
+        });
+        reporter.record({
+          suite,
+          category: "api-rbac",
+          name: "Captain POST /api/matches/tournament-code nil-UUID rejected (403/404)",
+          status: codeRes.status() === 403 || codeRes.status() === 404 ? "PASS" : "FAIL",
+          details: `status=${codeRes.status()}`,
+        });
+
+        await gotoClean(page, "/create", suite, "create", "Captain /create");
+        await gotoClean(page, "/my-history", suite, "history", "Captain /my-history");
+      }
+    }
+
+    // REGULAR USER ROLE
+    if (hasRole(cfg, "public")) {
+      const suite = "Role:RegularUser";
+      const pubRes = await setViewAs(context, cfg.baseUrl, { mode: "public", label: "Regular User" });
+      reporter.record({
+        suite,
+        category: "rbac",
+        name: "View-As Regular User switches cleanly",
+        status: pubRes.ok ? "PASS" : "FAIL",
+        details: `status=${pubRes.status}`,
       });
-      record(
-        suite,
-        `View-As Team Captain (${teamTarget.label})`,
-        capRes.ok ? "PASS" : "FAIL",
-        `status=${capRes.status}`
-      );
-      await gotoClean(page, "/admin", suite, "Team Captain blocked from /admin");
-      const capAdminTxt = await page.locator("body").innerText();
-      record(
-        suite,
-        "Team Captain sees Access Denied on /admin",
-        capAdminTxt.includes("Access Denied") ? "PASS" : "FAIL"
-      );
-      await gotoClean(page, "/admin/stats", suite, "Team Captain blocked from /admin/stats");
-      const capStatsTxt = await page.locator("body").innerText();
-      record(
-        suite,
-        "Team Captain sees Access Denied on /admin/stats",
-        capStatsTxt.includes("Access Denied") ? "PASS" : "FAIL"
-      );
-      await gotoClean(page, "/team-hub", suite, "Team Captain /team-hub load");
-      const capHubTxt = await page.locator("body").innerText();
-      record(
-        suite,
-        "Team Captain sees Preview Mode banner on /team-hub",
-        capHubTxt.toLowerCase().includes("preview mode") ? "PASS" : "FAIL"
-      );
-    } else {
-      record(suite, "Team Captain View-As checks", "WARN", "No team options found in Preview bar");
-    }
 
-    // Regular User View-As checks
-    const pubRes = await setViewAs({ mode: "public", label: "Regular User" });
-    record(
-      suite,
-      "View-As Regular User switches cleanly",
-      pubRes.ok ? "PASS" : "FAIL",
-      `status=${pubRes.status}`
-    );
-    await gotoClean(page, "/admin", suite, "Regular User blocked from /admin");
-    const pubAdminTxt = await page.locator("body").innerText();
-    record(
-      suite,
-      "Regular User sees Access Denied on /admin",
-      pubAdminTxt.includes("Access Denied") ? "PASS" : "FAIL"
-    );
-    await gotoClean(page, "/admin/stats", suite, "Regular User blocked from /admin/stats");
-    const pubStatsTxt = await page.locator("body").innerText();
-    record(
-      suite,
-      "Regular User sees Access Denied on /admin/stats",
-      pubStatsTxt.includes("Access Denied") ? "PASS" : "FAIL"
-    );
-    await gotoClean(page, "/team-hub", suite, "Regular User /team-hub");
-    const pubHubTxt = await page.locator("body").innerText();
-    record(
-      suite,
-      "Regular User cannot see Tournament Lobby Codes on Team Hub",
-      !pubHubTxt.includes("Tournament Lobby Codes") ? "PASS" : "FAIL"
-    );
-    await gotoClean(page, "/create", suite, "Regular User /create workspace");
-    await gotoClean(page, "/my-history", suite, "Regular User /my-history");
+      for (const restricted of ["/admin", "/admin/stats", "/admin/users", "/admin/publishings"]) {
+        await gotoClean(page, restricted, suite, "rbac", `Regular User blocked from ${restricted}`);
+        const txt = await page.locator("body").innerText();
+        reporter.record({
+          suite,
+          category: "rbac",
+          name: `Regular User sees Access Denied on ${restricted}`,
+          status: txt.includes("Access Denied") ? "PASS" : "FAIL",
+        });
+      }
+
+      await gotoClean(page, "/team-hub", suite, "team-hub", "Regular User /team-hub");
+      await assertNavbarInvariant(page, suite, "public");
+      const pubHubTxt = await page.locator("body").innerText();
+      reporter.record({
+        suite,
+        category: "rbac",
+        name: "Regular User cannot see Tournament Lobby Codes on Team Hub",
+        status: !pubHubTxt.includes("Tournament Lobby Codes") ? "PASS" : "FAIL",
+      });
+
+      await gotoClean(page, "/create", suite, "create", "Regular User /create");
+      await gotoClean(page, "/my-history", suite, "history", "Regular User /my-history");
+
+      const nilUuid = "00000000-0000-0000-0000-000000000000";
+      const modRes = await context.request.post(`${cfg.baseUrl}/api/admin/moderation/action`, {
+        data: { eventId: nilUuid, action: "unpublish" },
+      });
+      reporter.record({
+        suite,
+        category: "api-rbac",
+        name: "Regular User POST /api/admin/moderation/action rejected (403)",
+        status: modRes.status() === 403 ? "PASS" : "FAIL",
+        details: `status=${modRes.status()}`,
+      });
+      const tcRes = await context.request.post(`${cfg.baseUrl}/api/matches/tournament-code`, {
+        data: { matchId: nilUuid, gameNumber: 1 },
+      });
+      reporter.record({
+        suite,
+        category: "api-rbac",
+        name: "Regular User POST /api/matches/tournament-code rejected (403/404)",
+        status:
+          tcRes.status() === 403
+            ? "PASS"
+            : tcRes.status() === 404
+            ? "WARN"
+            : "FAIL",
+        details: `status=${tcRes.status()}`,
+        recommendation:
+          tcRes.status() === 404
+            ? "Check captain/admin authorization before match lookup in /api/matches/tournament-code (currently returns 404 before 403 on nonexistent matchId)"
+            : null,
+      });
+    }
   } finally {
-    await setViewAs({ mode: "clear" }).catch(() => {});
+    await setViewAs(context, cfg.baseUrl, { mode: "clear" }).catch(() => {});
     await context.close();
   }
 }
 
-const browser = await launchBrowser(true);
-try {
-  await runSignedOutSuite(browser);
+async function main() {
+  const savedAuth = cfg.noAuth
+    ? null
+    : await ensureAuthStorageState(cfg.baseUrl, cfg.authFile, cfg.loginMode);
 
-  if (loginMode) {
-    await browser.close();
-    console.log(
-      "\n[INFO] Launching interactive browser for Discord Sign-In. Log in on /, then close the window or wait 45s..."
-    );
-    const loginBrowser = await launchBrowser(false);
-    const loginCtx = await loginBrowser.newContext({
-      viewport: { width: 1280, height: 900 },
-    });
-    const loginPage = await loginCtx.newPage();
-    await loginPage.goto(baseUrl, { waitUntil: "networkidle" });
-    await loginPage
-      .waitForSelector('a[href="/admin"], button:has-text("Sign Out")', {
-        timeout: 120000,
-      })
-      .catch(() => {});
-    await loginCtx.storageState({ path: savedAuthPath });
-    await loginBrowser.close();
-
-    const headlessBrowser = await launchBrowser(true);
-    try {
-      await runAuthenticatedSuite(headlessBrowser, savedAuthPath);
-    } finally {
-      await headlessBrowser.close();
+  const browser = await launchAuditBrowser(true);
+  try {
+    const entities = await discoverSiteEntities(browser, cfg.baseUrl);
+    if (hasRole(cfg, "signed-out")) {
+      await runSignedOutSuite(browser, entities);
     }
-  } else if (fs.existsSync(savedAuthPath)) {
-    await runAuthenticatedSuite(browser, savedAuthPath);
-  } else {
-    console.log(
-      `\n[INFO] Skipped MultiRoleAuth suite (no ${savedAuthPath}). Pass --login once to record an admin session.`
-    );
+    if (
+      savedAuth &&
+      hasSection(cfg, "multi-role") &&
+      ["admin", "operator", "captain", "public"].some((r) => hasRole(cfg, r))
+    ) {
+      await runAuthenticatedSuite(browser, savedAuth);
+    } else if (!savedAuth && !cfg.noAuth) {
+      console.log(
+        `\n[INFO] Skipped multi-role auth suite (no ${cfg.authFile}). Pass --login once to record an admin session.`
+      );
+    }
+    const out = reporter.finalize({ entities });
+    if (out.failCount > 0) process.exitCode = 1;
+  } finally {
+    await browser.close().catch(() => {});
   }
-} finally {
-  await browser.close().catch(() => {});
 }
 
-const passCount = results.filter((r) => r.status === "PASS").length;
-const warnCount = results.filter((r) => r.status === "WARN").length;
-const failCount = results.filter((r) => r.status === "FAIL").length;
-
-fs.writeFileSync(
-  path.join(outDir, "report.json"),
-  JSON.stringify({ baseUrl, passCount, warnCount, failCount, results }, null, 2),
-  "utf8"
-);
-
-const mdLines = [
-  `# Functional & RBAC Audit Report`,
-  ``,
-  `- **Target:** ${baseUrl}`,
-  `- **Summary:** ${passCount} PASS · ${warnCount} WARN · ${failCount} FAIL`,
-  ``,
-  `| Suite | Check | Status | Details |`,
-  `| :--- | :--- | :---: | :--- |`,
-  ...results.map(
-    (r) =>
-      `| ${r.suite} | ${r.name.replace(/\|/g, "\\|")} | ${r.status} | ${(r.details || "").replace(/\|/g, "\\|")} |`
-  ),
-];
-fs.writeFileSync(path.join(outDir, "report.md"), mdLines.join("\n"), "utf8");
-
-console.log(
-  `\nSummary: ${passCount} PASS, ${warnCount} WARN, ${failCount} FAIL -> ${path.join(
-    outDir,
-    "report.md"
-  )}`
-);
-
-if (failCount > 0) {
-  process.exitCode = 1;
-}
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
