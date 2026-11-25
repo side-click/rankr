@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       supabase
         .from("blogs")
         .select(
-          "id, title, subtitle, content, banner_url, author_name, status, user_id, league_name_snapshot, season_name_snapshot"
+          "id, title, subtitle, content, banner_url, author_name, status, user_id, season_id, league_name_snapshot, season_name_snapshot, seasons ( league_id )"
         )
         .eq("id", blogId)
         .eq("user_id", user.id)
@@ -59,6 +59,12 @@ export async function POST(request: Request) {
     if (!blog) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+
+    const blogSeason = Array.isArray(blog.seasons)
+      ? blog.seasons[0]
+      : blog.seasons;
+    const blogLeagueId =
+      (blogSeason as { league_id?: string } | null)?.league_id ?? null;
 
     const mod = await evaluateContentModerationServer(
       [
@@ -85,6 +91,7 @@ export async function POST(request: Request) {
           userId: user.id,
           contentType: "blog",
           contentId: blog.id,
+          leagueId: blogLeagueId,
           action: "auto_unpublished",
           categories: mod.categories,
           fieldNames: mod.blockedFields,
@@ -125,6 +132,7 @@ export async function POST(request: Request) {
       origin,
       userId: user.id,
       blogId: blog.id,
+      leagueId: blogLeagueId,
       title: blog.title,
       authorDisplay: blog.author_name || profile?.username || "Unknown",
       discordId: profile?.discord_id ?? null,
@@ -142,7 +150,7 @@ export async function POST(request: Request) {
       supabase
         .from("rankings")
         .select(
-          "id, title, status, ranking_type, tier_data, user_id, author_notes, overlays, league_name_snapshot, season_name_snapshot"
+          "id, title, status, ranking_type, tier_data, user_id, season_id, author_notes, overlays, league_name_snapshot, season_name_snapshot, seasons ( league_id )"
         )
         .eq("id", ballotId)
         .eq("user_id", user.id)
@@ -162,6 +170,12 @@ export async function POST(request: Request) {
   if (!ballot) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const ballotSeason = Array.isArray(ballot.seasons)
+    ? ballot.seasons[0]
+    : ballot.seasons;
+  const ballotLeagueId =
+    (ballotSeason as { league_id?: string } | null)?.league_id ?? null;
 
   const isPlayer = ballot.ranking_type === "player";
   const contentType = isPlayer ? "tierlist" : "ranking";
@@ -204,6 +218,7 @@ export async function POST(request: Request) {
         userId: user.id,
         contentType,
         contentId: ballot.id,
+        leagueId: ballotLeagueId,
         action: "auto_unpublished",
         categories: mod.categories,
         fieldNames: mod.blockedFields,
@@ -249,6 +264,7 @@ export async function POST(request: Request) {
     origin,
     userId: user.id,
     rankingId: ballot.id,
+    leagueId: ballotLeagueId,
     isPlayer,
     title: displayTitle,
     username: profile?.username ?? "Unknown",

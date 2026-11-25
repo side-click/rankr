@@ -8,6 +8,7 @@ export async function dispatchPublishedBlogNotification(params: {
   origin: string;
   userId: string;
   blogId: string;
+  leagueId?: string | null;
   title: string;
   authorDisplay: string;
   discordId: string | null;
@@ -20,6 +21,7 @@ export async function dispatchPublishedBlogNotification(params: {
     origin,
     userId,
     blogId,
+    leagueId,
     title,
     authorDisplay,
     discordId,
@@ -41,6 +43,7 @@ export async function dispatchPublishedBlogNotification(params: {
             userId,
             contentType: "blog",
             contentId: blogId,
+            leagueId: leagueId ?? null,
             action: isFlagged ? "flagged" : "media_review",
             categories:
               mod.categories.length > 0 ? mod.categories : ["media_review"],
@@ -109,6 +112,7 @@ export async function dispatchPublishedRankingNotification(params: {
   origin: string;
   userId: string;
   rankingId: string;
+  leagueId?: string | null;
   isPlayer: boolean;
   title: string;
   username: string;
@@ -122,6 +126,7 @@ export async function dispatchPublishedRankingNotification(params: {
     origin,
     userId,
     rankingId,
+    leagueId,
     isPlayer,
     title,
     username,
@@ -146,6 +151,7 @@ export async function dispatchPublishedRankingNotification(params: {
             userId,
             contentType,
             contentId: rankingId,
+            leagueId: leagueId ?? null,
             action: isFlagged ? "flagged" : "media_review",
             categories:
               mod.categories.length > 0 ? mod.categories : ["media_review"],

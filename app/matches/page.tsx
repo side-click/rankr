@@ -43,7 +43,7 @@ export default async function MatchesHubPage() {
     );
   }
 
-  const captainTeamIds = await getCaptainTeamIds(supabase, auth.discordId);
+  const captainTeamIds = await getCaptainTeamIds(supabase, auth.discordId, auth);
   const hasMatchHubAccess =
     auth.isAdmin || auth.isOperator || captainTeamIds.length > 0;
 

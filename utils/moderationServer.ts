@@ -20,6 +20,7 @@ export async function logModerationEvent(entry: {
   userId: string;
   contentType: ModerationContentType;
   contentId?: string | null;
+  leagueId?: string | null;
   action: ModerationAction;
   categories: string[];
   fieldNames: string[];
@@ -33,6 +34,7 @@ export async function logModerationEvent(entry: {
       user_id: entry.userId,
       content_type: entry.contentType,
       content_id: entry.contentId ?? null,
+      league_id: entry.leagueId ?? null,
       action: entry.action,
       categories: entry.categories,
       field_names: entry.fieldNames,

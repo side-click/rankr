@@ -1,6 +1,14 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
+
+export const VIEW_AS_COOKIE_NAME = "rankr_view_as";
+
+export type ViewAsState =
+  | { mode: "operator"; leagueId: string; label?: string }
+  | { mode: "captain"; teamId: string; label?: string }
+  | { mode: "public"; label?: string };
 
 export interface ServerAuthContext {
   user: {
@@ -16,11 +24,45 @@ export interface ServerAuthContext {
   } | null;
   discordId: string | null;
   isAdmin: boolean;
+  realIsAdmin: boolean;
+  viewAs: ViewAsState | null;
   isBanned: boolean;
   operatorLeagueIds: string[];
   captainTeamIds: string[];
   isOperator: boolean;
   hasMatchHubAccess: boolean;
+}
+
+function parseViewAsCookie(raw: string | undefined): ViewAsState | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown> | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    const label =
+      typeof parsed.label === "string" && parsed.label.trim()
+        ? parsed.label.trim().slice(0, 80)
+        : undefined;
+    if (
+      parsed.mode === "operator" &&
+      typeof parsed.leagueId === "string" &&
+      parsed.leagueId.trim()
+    ) {
+      return { mode: "operator", leagueId: parsed.leagueId.trim(), label };
+    }
+    if (
+      parsed.mode === "captain" &&
+      typeof parsed.teamId === "string" &&
+      parsed.teamId.trim()
+    ) {
+      return { mode: "captain", teamId: parsed.teamId.trim(), label };
+    }
+    if (parsed.mode === "public") {
+      return { mode: "public", label: label ?? "Regular User" };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -40,6 +82,8 @@ export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> =
       profile: null,
       discordId: null,
       isAdmin: false,
+      realIsAdmin: false,
+      viewAs: null,
       isBanned: false,
       operatorLeagueIds: [],
       captainTeamIds: [],
@@ -54,10 +98,71 @@ export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> =
     .eq("id", user.id)
     .maybeSingle();
 
-  const isAdmin = Boolean(profile?.is_admin);
+  const realIsAdmin = Boolean(profile?.is_admin);
   const isBanned = Boolean(profile?.is_banned);
   const discordId = profile?.discord_id ?? null;
 
+  const cookieStore = await cookies();
+  const viewAs = realIsAdmin
+    ? parseViewAsCookie(cookieStore.get(VIEW_AS_COOKIE_NAME)?.value)
+    : null;
+
+  if (viewAs) {
+    if (viewAs.mode === "operator") {
+      return {
+        user: {
+          id: user.id,
+          user_metadata: user.user_metadata as Record<string, unknown> | undefined,
+        },
+        profile: profile ?? null,
+        discordId,
+        isAdmin: false,
+        realIsAdmin: true,
+        viewAs,
+        isBanned,
+        operatorLeagueIds: [viewAs.leagueId],
+        captainTeamIds: [],
+        isOperator: true,
+        hasMatchHubAccess: true,
+      };
+    }
+    if (viewAs.mode === "captain") {
+      return {
+        user: {
+          id: user.id,
+          user_metadata: user.user_metadata as Record<string, unknown> | undefined,
+        },
+        profile: profile ?? null,
+        discordId,
+        isAdmin: false,
+        realIsAdmin: true,
+        viewAs,
+        isBanned,
+        operatorLeagueIds: [],
+        captainTeamIds: [viewAs.teamId],
+        isOperator: false,
+        hasMatchHubAccess: true,
+      };
+    }
+    return {
+      user: {
+        id: user.id,
+        user_metadata: user.user_metadata as Record<string, unknown> | undefined,
+      },
+      profile: profile ?? null,
+      discordId,
+      isAdmin: false,
+      realIsAdmin: true,
+      viewAs,
+      isBanned,
+      operatorLeagueIds: [],
+      captainTeamIds: [],
+      isOperator: false,
+      hasMatchHubAccess: false,
+    };
+  }
+
+  const isAdmin = realIsAdmin;
   let operatorLeagueIds: string[] = [];
   if (discordId) {
     const opRes = await supabase
@@ -81,6 +186,8 @@ export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> =
     profile: profile ?? null,
     discordId,
     isAdmin,
+    realIsAdmin,
+    viewAs: null,
     isBanned,
     operatorLeagueIds,
     captainTeamIds: [],
@@ -94,8 +201,12 @@ export const getServerAuthContext = cache(async (): Promise<ServerAuthContext> =
  */
 export async function getCaptainTeamIds(
   supabase: SupabaseClient,
-  discordId: string | null
+  discordId: string | null,
+  auth?: ServerAuthContext
 ): Promise<string[]> {
+  if (auth?.viewAs) {
+    return auth.viewAs.mode === "captain" ? [auth.viewAs.teamId] : [];
+  }
   if (!discordId) return [];
   const { data, error } = await supabase
     .from("team_captains")

@@ -24,7 +24,10 @@ import type {
   TeamCaptain,
 } from "@/types/database";
 import { AdminDivisionsEditionsTab } from "@/components/admin/AdminDivisionsEditionsTab";
-import { AdminModerationTab } from "@/components/admin/AdminModerationTab";
+import {
+  AdminModerationTab,
+  type ModerationEventRow,
+} from "@/components/admin/AdminModerationTab";
 import { AdminPlayersTab } from "@/components/admin/AdminPlayersTab";
 import { AdminSchedulePlayoffsTab } from "@/components/admin/AdminSchedulePlayoffsTab";
 import { AdminSeasonsTab } from "@/components/admin/AdminSeasonsTab";
@@ -40,6 +43,7 @@ import { DEFAULT_DIVISION_THEMES } from "@/utils/themes";
 import {
   ArrowRightLeft,
   Ban,
+  Eye,
   Plus,
   Power,
   Save,
@@ -181,21 +185,18 @@ export function AdminDashboard({
     Record<string, string>
   >({});
   const [moderationEvents, setModerationEvents] = useState<
-    {
-      id: string;
-      user_id: string | null;
-      content_type: "ranking" | "tierlist" | "blog";
-      content_id: string | null;
-      action: "blocked" | "auto_unpublished" | "flagged" | "media_review";
-      categories: string[];
-      field_names: string[];
-      matched_terms: string[];
-      title_snapshot: string | null;
-      resolved: boolean;
-      resolved_at: string | null;
-      created_at: string;
-    }[]
+    ModerationEventRow[]
   >([]);
+  const [previewRole, setPreviewRole] = useState<
+    "operator" | "captain" | "public"
+  >("operator");
+  const [previewLeagueId, setPreviewLeagueId] = useState<string>(
+    initialLeagues[0]?.id ?? ""
+  );
+  const [previewTeamId, setPreviewTeamId] = useState<string>(
+    initialTeams[0]?.id ?? ""
+  );
+  const [previewBusy, setPreviewBusy] = useState(false);
   const [moderationLoading, setModerationLoading] = useState(false);
   const [moderationError, setModerationError] = useState<string | null>(null);
   const [moderationRules, setModerationRules] = useState<
@@ -295,16 +296,30 @@ export function AdminDashboard({
     setModerationError(null);
     setModerationRulesError(null);
     try {
+      const leagueIds = leagues.map((l) => l.id).filter(Boolean);
+      if (!isSiteAdmin && leagueIds.length === 0) {
+        setModerationEvents([]);
+        setExistingBlogIds(new Set());
+        return;
+      }
+
+      const evQuery = supabase
+        .from("moderation_events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(40);
+      const scopedEvQuery = !isSiteAdmin
+        ? evQuery.in("league_id", leagueIds)
+        : evQuery;
+
       const [evRes, rulesRes] = await Promise.all([
-        supabase
-          .from("moderation_events")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(40),
-        supabase
-          .from("moderation_rules")
-          .select("id, term, rule_type")
-          .order("created_at", { ascending: false }),
+        scopedEvQuery,
+        isSiteAdmin
+          ? supabase
+              .from("moderation_rules")
+              .select("id, term, rule_type")
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: null, error: null }),
       ]);
       if (evRes.error) {
         setModerationError(evRes.error.message);
@@ -334,6 +349,118 @@ export function AdminDashboard({
       }
     } finally {
       setModerationLoading(false);
+    }
+  }
+
+  async function handleModerateAlertContent(
+    ev: ModerationEventRow,
+    action: "unpublish" | "delete"
+  ) {
+    const label = ev.title_snapshot || ev.content_type;
+    const prompt =
+      action === "unpublish"
+        ? `Unpublish "${label}" back to draft and resolve this alert?`
+        : `Permanently DELETE "${label}" and resolve this alert? This cannot be undone.`;
+    if (!window.confirm(prompt)) return;
+
+    setBusy(true);
+    setStatusMsg(null);
+    try {
+      const res = await fetch("/api/admin/moderation/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: ev.id, action }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        resolved_at?: string;
+      };
+      if (!res.ok) {
+        setStatusMsg(json.error || `Failed to ${action} content.`);
+        return;
+      }
+      setModerationEvents((prev) =>
+        prev.map((row) =>
+          row.id === ev.id
+            ? {
+                ...row,
+                resolved: true,
+                resolved_at: json.resolved_at ?? new Date().toISOString(),
+              }
+            : row
+        )
+      );
+      if (ev.content_id) {
+        if (ev.content_type === "blog") {
+          setExistingBlogIds((prev) => {
+            const next = new Set(prev);
+            next.delete(ev.content_id!);
+            return next;
+          });
+        } else {
+          setPublishedBallots((prev) =>
+            prev.filter((b) => b.id !== ev.content_id)
+          );
+        }
+      }
+      setStatusMsg(
+        action === "unpublish"
+          ? `Unpublished "${label}" to draft and resolved alert.`
+          : `Deleted "${label}" and resolved alert.`
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleStartViewAs() {
+    setPreviewBusy(true);
+    setStatusMsg(null);
+    try {
+      let payload: Record<string, string>;
+      let redirectTo = "/";
+      if (previewRole === "operator") {
+        const league = leagues.find((l) => l.id === previewLeagueId);
+        if (!league) {
+          setStatusMsg("Select a league to preview as operator.");
+          return;
+        }
+        payload = {
+          mode: "operator",
+          leagueId: league.id,
+          label: league.short_name || league.name,
+        };
+        redirectTo = "/admin";
+      } else if (previewRole === "captain") {
+        const team = teams.find((t) => t.id === previewTeamId);
+        if (!team) {
+          setStatusMsg("Select a team to preview as captain.");
+          return;
+        }
+        payload = {
+          mode: "captain",
+          teamId: team.id,
+          label: team.name,
+        };
+        redirectTo = "/matches";
+      } else {
+        payload = { mode: "public", label: "Regular User" };
+        redirectTo = "/";
+      }
+
+      const res = await fetch("/api/admin/view-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setStatusMsg(json.error || "Failed to start role preview.");
+        return;
+      }
+      window.location.href = redirectTo;
+    } finally {
+      setPreviewBusy(false);
     }
   }
 
@@ -1723,6 +1850,68 @@ export function AdminDashboard({
       theme="scdl"
       statusText={statusMsg ?? undefined}
     >
+      {isSiteAdmin && (
+        <div className="mb-3 px-2.5 py-2 rounded bg-black/30 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-[#f0c020] font-bold">
+            <Eye className="w-3.5 h-3.5 shrink-0" />
+            <span>Preview As Role</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={previewRole}
+              onChange={(e) =>
+                setPreviewRole(
+                  e.target.value as "operator" | "captain" | "public"
+                )
+              }
+              className="xp-inset px-2 py-1 text-xs"
+            >
+              <option value="operator">League Operator</option>
+              <option value="captain">Team Captain</option>
+              <option value="public">Regular User</option>
+            </select>
+            {previewRole === "operator" && (
+              <select
+                value={previewLeagueId}
+                onChange={(e) => setPreviewLeagueId(e.target.value)}
+                className="xp-inset px-2 py-1 text-xs"
+              >
+                {leagues.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.short_name ? `${l.short_name} — ${l.name}` : l.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {previewRole === "captain" && (
+              <select
+                value={previewTeamId}
+                onChange={(e) => setPreviewTeamId(e.target.value)}
+                className="xp-inset px-2 py-1 text-xs max-w-[240px]"
+              >
+                {teams.map((t) => {
+                  const div = divisions.find((d) => d.id === t.division_id);
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {div ? ` (${div.name})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+            <button
+              type="button"
+              disabled={previewBusy}
+              onClick={() => void handleStartViewAs()}
+              className="xp-btn xp-btn-primary text-xs px-2.5 py-1"
+            >
+              {previewBusy ? "Starting..." : "Start Preview"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1.5 mb-4 pb-2 border-b border-white/10">
         {(
           [
@@ -2040,6 +2229,9 @@ export function AdminDashboard({
           }
           onDeleteModerationEvent={(id, label) =>
             void handleDeleteModerationEvent(id, label)
+          }
+          onModerateContent={(ev, action) =>
+            void handleModerateAlertContent(ev, action)
           }
         />
       )}

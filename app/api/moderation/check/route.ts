@@ -37,6 +37,8 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     contentType?: ModerationContentType;
     contentId?: string | null;
+    leagueId?: string | null;
+    seasonId?: string | null;
     title?: string | null;
     fields?: ModerationFieldInput[];
     markdownContent?: string | null;
@@ -77,11 +79,31 @@ export async function POST(request: Request) {
   });
 
   if (mod.action === "block") {
+    let resolvedLeagueId =
+      typeof body.leagueId === "string" && body.leagueId.trim()
+        ? body.leagueId.trim()
+        : null;
+    if (
+      !resolvedLeagueId &&
+      typeof body.seasonId === "string" &&
+      body.seasonId.trim()
+    ) {
+      const { data: seasonRow } = await supabase
+        .from("seasons")
+        .select("league_id")
+        .eq("id", body.seasonId.trim())
+        .maybeSingle();
+      resolvedLeagueId = seasonRow?.league_id
+        ? String(seasonRow.league_id)
+        : null;
+    }
+
     await Promise.all([
       logModerationEvent({
         userId: user.id,
         contentType: body.contentType,
         contentId: body.contentId ?? null,
+        leagueId: resolvedLeagueId,
         action: "blocked",
         categories: mod.categories,
         fieldNames: mod.blockedFields,

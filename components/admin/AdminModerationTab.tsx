@@ -32,6 +32,7 @@ import type {
 export interface ModerationEventRow {
   id: string;
   user_id: string | null;
+  league_id?: string | null;
   content_type: "ranking" | "tierlist" | "blog";
   content_id: string | null;
   action: "blocked" | "auto_unpublished" | "flagged" | "media_review";
@@ -98,6 +99,10 @@ interface AdminModerationTabProps {
   onLoadModerationEvents: () => void;
   onToggleModerationResolved: (id: string, resolved: boolean) => void;
   onDeleteModerationEvent: (id: string, label: string) => void;
+  onModerateContent: (
+    ev: ModerationEventRow,
+    action: "unpublish" | "delete"
+  ) => void;
 }
 
 export function AdminModerationTab({
@@ -148,6 +153,7 @@ export function AdminModerationTab({
   onLoadModerationEvents,
   onToggleModerationResolved,
   onDeleteModerationEvent,
+  onModerateContent,
 }: AdminModerationTabProps) {
   return (
     <div className="space-y-4">
@@ -802,165 +808,209 @@ export function AdminModerationTab({
               </>
             )}
           </div>
+        </>
+      )}
 
-          {/* Moderation Alerts Log */}
-          <div className="xp-panel p-3 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                Moderation Alerts Log ({moderationEvents.length})
-              </h2>
-              <button
-                type="button"
-                disabled={moderationLoading}
-                onClick={onLoadModerationEvents}
-                className="xp-btn text-[11px] px-2.5 py-1"
-              >
-                {moderationLoading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
-            {moderationError ? (
-              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
-                Run migration{" "}
-                <code className="text-[#f0c020]">028_moderation_events.sql</code>{" "}
-                in Supabase to enable the Moderation Alerts Log.
-              </div>
-            ) : moderationEvents.length === 0 ? (
-              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
-                {moderationLoading
-                  ? "Loading moderation events..."
-                  : "No moderation events recorded yet."}
-              </div>
-            ) : (
-              <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
-                {moderationEvents.map((ev) => {
-                  const authorProfile = ev.user_id
-                    ? profiles.find((p) => p.id === ev.user_id)
-                    : null;
-                  const contentHref =
-                    ev.content_id &&
-                    ev.action !== "blocked" &&
-                    ev.action !== "auto_unpublished"
-                      ? ev.content_type === "blog"
-                        ? `/blog/${ev.content_id}`
-                        : ev.content_type === "tierlist"
-                        ? `/tierlist/${ev.content_id}`
-                        : `/rankings/${ev.content_id}`
-                      : null;
-                  const badgeStyle =
-                    ev.action === "blocked" || ev.action === "auto_unpublished"
-                      ? "bg-[#3d1414] border-[#ff857a]/60 text-[#ff857a]"
-                      : ev.action === "flagged"
-                      ? "bg-[#3d2e12] border-[#f0c020]/60 text-[#f0c020]"
-                      : "bg-[#11241a] border-[#2f6343] text-[#7cd438]";
-                  const actionLabel =
-                    ev.action === "auto_unpublished"
-                      ? "Auto-Unpublished"
-                      : ev.action === "media_review"
-                      ? "Media Review"
-                      : ev.action === "blocked"
-                      ? "Blocked"
-                      : "Flagged";
-                  return (
-                    <div
-                      key={ev.id}
-                      className={`xp-inset p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs ${
-                        ev.resolved ? "opacity-55" : ""
-                      }`}
-                    >
-                      <div className="min-w-0 space-y-0.5 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span
-                            className={`px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase ${badgeStyle}`}
-                          >
-                            {actionLabel}
-                          </span>
-                          <span className="font-bold text-[#f0ede0] truncate">
-                            {ev.title_snapshot || `Untitled ${ev.content_type}`}
-                          </span>
-                          <span className="text-[11px] text-[#a6a89e]">
-                            by{" "}
-                            <strong className="text-[#d6d3c4]">
-                              {authorProfile?.username ?? "Unknown"}
-                            </strong>
-                          </span>
-                          <span className="text-[10px] text-[#8e9286]">
-                            &bull; {new Date(ev.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-[#a6a89e] flex flex-wrap gap-x-3 gap-y-0.5">
-                          {ev.field_names.length > 0 && (
-                            <span>Fields: {ev.field_names.join(", ")}</span>
-                          )}
-                          {ev.categories.length > 0 && (
-                            <span>
-                              Categories: {ev.categories.join(", ")}
-                            </span>
-                          )}
-                          {ev.matched_terms.length > 0 && (
-                            <span className="text-[#ff857a]">
-                              Terms: {ev.matched_terms.join(", ")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {contentHref && (
-                          <Link
-                            href={contentHref}
-                            prefetch={false}
-                            className="xp-btn text-[11px] px-2 py-1"
-                            title="Open published content"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </Link>
-                        )}
+      {/* Moderation Alerts Log (Site Admins see all; League Operators see their league's alerts) */}
+      <div className="xp-panel p-3 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+            Moderation Alerts Log ({moderationEvents.length})
+            {!isSiteAdmin && (
+              <span className="ml-1.5 text-[10px] font-normal text-[#a6a89e] normal-case">
+                (filtered to your assigned league
+                {leagues.length === 1 ? "" : "s"})
+              </span>
+            )}
+          </h2>
+          <button
+            type="button"
+            disabled={moderationLoading}
+            onClick={onLoadModerationEvents}
+            className="xp-btn text-[11px] px-2.5 py-1"
+          >
+            {moderationLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+        {moderationError ? (
+          <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+            Run migrations{" "}
+            <code className="text-[#f0c020]">028_moderation_events.sql</code>{" "}
+            and{" "}
+            <code className="text-[#f0c020]">
+              040_moderation_events_league_scope.sql
+            </code>{" "}
+            in Supabase to enable the Moderation Alerts Log.
+          </div>
+        ) : moderationEvents.length === 0 ? (
+          <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+            {moderationLoading
+              ? "Loading moderation events..."
+              : "No moderation events recorded yet."}
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+            {moderationEvents.map((ev) => {
+              const authorProfile = ev.user_id
+                ? profiles.find((p) => p.id === ev.user_id)
+                : null;
+              const matchedLeague = ev.league_id
+                ? leagues.find((l) => l.id === ev.league_id)
+                : null;
+              const contentExists =
+                Boolean(ev.content_id) &&
+                ev.action !== "blocked" &&
+                ev.action !== "auto_unpublished" &&
+                (ev.content_type === "blog"
+                  ? existingBlogIds.has(ev.content_id!)
+                  : publishedBallots.some((b) => b.id === ev.content_id));
+              const contentHref = contentExists
+                ? ev.content_type === "blog"
+                  ? `/blog/${ev.content_id}`
+                  : ev.content_type === "tierlist"
+                  ? `/tierlist/${ev.content_id}`
+                  : `/rankings/${ev.content_id}`
+                : null;
+              const badgeStyle =
+                ev.action === "blocked" || ev.action === "auto_unpublished"
+                  ? "bg-[#3d1414] border-[#ff857a]/60 text-[#ff857a]"
+                  : ev.action === "flagged"
+                  ? "bg-[#3d2e12] border-[#f0c020]/60 text-[#f0c020]"
+                  : "bg-[#11241a] border-[#2f6343] text-[#7cd438]";
+              const actionLabel =
+                ev.action === "auto_unpublished"
+                  ? "Auto-Unpublished"
+                  : ev.action === "media_review"
+                  ? "Media Review"
+                  : ev.action === "blocked"
+                  ? "Blocked"
+                  : "Flagged";
+              return (
+                <div
+                  key={ev.id}
+                  className={`xp-inset p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs ${
+                    ev.resolved ? "opacity-55" : ""
+                  }`}
+                >
+                  <div className="min-w-0 space-y-0.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase ${badgeStyle}`}
+                      >
+                        {actionLabel}
+                      </span>
+                      {matchedLeague && (
+                        <span className="px-1.5 py-0.5 rounded border border-[#c89b3c]/40 bg-[#2a2210] text-[10px] font-bold text-[#f0c020]">
+                          {matchedLeague.short_name || matchedLeague.name}
+                        </span>
+                      )}
+                      <span className="font-bold text-[#f0ede0] truncate">
+                        {ev.title_snapshot || `Untitled ${ev.content_type}`}
+                      </span>
+                      <span className="text-[11px] text-[#a6a89e]">
+                        by{" "}
+                        <strong className="text-[#d6d3c4]">
+                          {authorProfile?.username ?? "Unknown"}
+                        </strong>
+                      </span>
+                      <span className="text-[10px] text-[#8e9286]">
+                        &bull; {new Date(ev.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[#a6a89e] flex flex-wrap gap-x-3 gap-y-0.5">
+                      {ev.field_names.length > 0 && (
+                        <span>Fields: {ev.field_names.join(", ")}</span>
+                      )}
+                      {ev.categories.length > 0 && (
+                        <span>
+                          Categories: {ev.categories.join(", ")}
+                        </span>
+                      )}
+                      {ev.matched_terms.length > 0 && (
+                        <span className="text-[#ff857a]">
+                          Terms: {ev.matched_terms.join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    {contentHref && (
+                      <Link
+                        href={contentHref}
+                        prefetch={false}
+                        className="xp-btn text-[11px] px-2 py-1"
+                        title="Open published content"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    )}
+                    {contentExists && (
+                      <>
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() =>
-                            onToggleModerationResolved(ev.id, ev.resolved)
-                          }
-                          className={`xp-btn text-[11px] px-2.5 py-1 ${
-                            ev.resolved ? "" : "xp-btn-primary"
-                          }`}
+                          onClick={() => onModerateContent(ev, "unpublish")}
+                          className="xp-btn text-[11px] px-2 py-1 text-[#f0c020] border-[#c89b3c]/50"
+                          title="Revert published content back to draft and resolve alert"
                         >
-                          {ev.resolved ? "Reopen" : "Resolve"}
+                          Unpublish
                         </button>
-                        {(ev.action === "blocked" ||
-                          ev.action === "auto_unpublished" ||
-                          ev.resolved ||
-                          !ev.content_id ||
-                          ((ev.content_type === "ranking" ||
-                            ev.content_type === "tierlist") &&
-                            !publishedBallots.some(
-                              (b) => b.id === ev.content_id
-                            )) ||
-                          (ev.content_type === "blog" &&
-                            !existingBlogIds.has(ev.content_id))) && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              onDeleteModerationEvent(
-                                ev.id,
-                                ev.title_snapshot || ev.content_type
-                              )
-                            }
-                            className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
-                            title="Remove alert from log"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onModerateContent(ev, "delete")}
+                          className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                          title="Permanently delete content and resolve alert"
+                        >
+                          Delete Post
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        onToggleModerationResolved(ev.id, ev.resolved)
+                      }
+                      className={`xp-btn text-[11px] px-2.5 py-1 ${
+                        ev.resolved ? "" : "xp-btn-primary"
+                      }`}
+                    >
+                      {ev.resolved ? "Reopen" : "Resolve"}
+                    </button>
+                    {(ev.action === "blocked" ||
+                      ev.action === "auto_unpublished" ||
+                      ev.resolved ||
+                      !ev.content_id ||
+                      ((ev.content_type === "ranking" ||
+                        ev.content_type === "tierlist") &&
+                        !publishedBallots.some(
+                          (b) => b.id === ev.content_id
+                        )) ||
+                      (ev.content_type === "blog" &&
+                        !existingBlogIds.has(ev.content_id))) && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          onDeleteModerationEvent(
+                            ev.id,
+                            ev.title_snapshot || ev.content_type
+                          )
+                        }
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                        title="Remove alert from log"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         )
         .eq("id", matchId)
         .maybeSingle(),
-      getCaptainTeamIds(supabase, auth.discordId),
+      getCaptainTeamIds(supabase, auth.discordId, auth),
     ]);
 
     if (matchErr || !match) {

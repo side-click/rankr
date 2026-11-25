@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { Navbar } from "@/components/Navbar";
 import { AuthNoticeBanner } from "@/components/AuthNoticeBanner";
+import { ViewAsBanner } from "@/components/ViewAsBanner";
 import { createPublicClient } from "@/utils/supabase/server";
 import { getServerAuthContext } from "@/utils/supabase/serverAuth";
 import { RetroWindow } from "@/components/RetroWindow";
@@ -131,7 +132,10 @@ export default async function RootLayout({
         <Suspense fallback={null}>
           <AuthNoticeBanner />
         </Suspense>
-        {maintenanceMode && isAdmin && (
+        {auth.realIsAdmin && auth.viewAs && (
+          <ViewAsBanner viewAs={auth.viewAs} />
+        )}
+        {maintenanceMode && auth.realIsAdmin && (
           <div className="bg-[#7a1616] border-b border-[#ff857a] text-white text-xs font-bold px-4 py-2 text-center">
             KILL SWITCH ACTIVE — Rankr is currently offline for non-admin users.{" "}
             <Link href="/admin" className="underline text-[#f0c020] ml-1">

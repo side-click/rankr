@@ -204,6 +204,7 @@ async function handleBlockedContent(params: {
   discordId: string | null;
   contentType: "ranking" | "tierlist" | "blog";
   contentId?: string | null;
+  leagueId?: string | null;
   title: string;
   blockedFields: string[];
   categories: string[];
@@ -215,6 +216,7 @@ async function handleBlockedContent(params: {
     discordId,
     contentType,
     contentId,
+    leagueId,
     title,
     blockedFields,
     categories,
@@ -226,6 +228,7 @@ async function handleBlockedContent(params: {
       userId,
       contentType,
       contentId: contentId ?? null,
+      leagueId: leagueId ?? null,
       action: "blocked",
       categories,
       fieldNames: blockedFields,
@@ -408,6 +411,7 @@ export async function POST(request: Request) {
         origin,
         userId: user.id,
         rankingId,
+        leagueId: seasonRow?.league_id ?? null,
         isPlayer,
         title:
           existing.title ||
@@ -498,6 +502,7 @@ export async function POST(request: Request) {
           discordId: perm.discordId,
           contentType: "blog",
           contentId: body.existingId ?? null,
+          leagueId: seasonRow?.league_id ?? null,
           title: trimmedTitle,
           blockedFields: modResult.blockedFields,
           categories: modResult.categories,
@@ -585,6 +590,7 @@ export async function POST(request: Request) {
         origin,
         userId: user.id,
         blogId: savedId,
+        leagueId: seasonRow?.league_id ?? null,
         title: trimmedTitle,
         authorDisplay: displayAuthor || perm.profile.username,
         discordId: perm.discordId,
@@ -673,6 +679,7 @@ export async function POST(request: Request) {
           discordId: perm.discordId,
           contentType: body.kind === "player_tier" ? "tierlist" : "ranking",
           contentId: body.existingId ?? null,
+          leagueId: seasonRow.league_id ?? null,
           title: "Display Name",
           blockedFields: nameMod.blockedFields,
           categories: nameMod.categories,
@@ -756,6 +763,7 @@ export async function POST(request: Request) {
           discordId: perm.discordId,
           contentType: "ranking",
           contentId: body.existingId ?? null,
+          leagueId: seasonRow.league_id ?? null,
           title: defaultTitle,
           blockedFields: modResult.blockedFields,
           categories: modResult.categories,
@@ -874,6 +882,7 @@ export async function POST(request: Request) {
         origin,
         userId: user.id,
         rankingId: savedId,
+        leagueId: seasonRow.league_id ?? null,
         isPlayer: false,
         title: defaultTitle,
         username: resolvedAuthor,
@@ -947,6 +956,7 @@ export async function POST(request: Request) {
         discordId: perm.discordId,
         contentType: "tierlist",
         contentId: body.existingId ?? null,
+        leagueId: seasonRow.league_id ?? null,
         title: defaultTitle,
         blockedFields: modResult.blockedFields,
         categories: modResult.categories,
@@ -1054,6 +1064,7 @@ export async function POST(request: Request) {
       origin,
       userId: user.id,
       rankingId: savedId,
+      leagueId: seasonRow.league_id ?? null,
       isPlayer: true,
       title: defaultTitle,
       username: resolvedAuthor,
