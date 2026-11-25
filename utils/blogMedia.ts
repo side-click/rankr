@@ -4,19 +4,27 @@ const BLOG_MEDIA_PUBLIC_MARKER = "/storage/v1/object/public/blog-media/";
 
 /**
  * Resize and WebP-compress static PNG/JPEG/WEBP images client-side before
- * uploading to `blog-media`. GIFs are returned untouched to preserve animation.
+ * uploading to Supabase Storage. GIFs are returned untouched to preserve animation.
  */
 export async function optimizeBlogImageForUpload(
   file: File,
-  kind: "banner" | "inline"
+  kind: "banner" | "inline" | "logo" | "overlay"
 ): Promise<File> {
   if (file.type === "image/gif") return file;
   if (typeof window === "undefined" || typeof document === "undefined") {
     return file;
   }
 
-  const maxWidth = kind === "banner" ? 1600 : 1200;
-  const quality = kind === "banner" ? 0.86 : 0.85;
+  const maxDim =
+    kind === "banner"
+      ? 1600
+      : kind === "inline"
+      ? 1200
+      : kind === "overlay"
+      ? 1024
+      : 512;
+  const quality =
+    kind === "logo" ? 0.88 : kind === "inline" ? 0.85 : 0.86;
 
   try {
     const objectUrl = URL.createObjectURL(file);
@@ -27,8 +35,8 @@ export async function optimizeBlogImageForUpload(
       el.src = objectUrl;
     }).finally(() => URL.revokeObjectURL(objectUrl));
 
-    const scale =
-      img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
+    const maxNatural = Math.max(img.naturalWidth, img.naturalHeight);
+    const scale = maxNatural > maxDim ? maxDim / maxNatural : 1;
     const targetW = Math.max(1, Math.round(img.naturalWidth * scale));
     const targetH = Math.max(1, Math.round(img.naturalHeight * scale));
 

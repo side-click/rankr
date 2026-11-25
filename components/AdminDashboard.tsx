@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { optimizeBlogImageForUpload } from "@/utils/blogMedia";
 import type {
   AllowedDiscordUser,
   AppSettings,
@@ -713,25 +714,32 @@ export function AdminDashboard({
   }
 
 
-  async function handleLeagueLogoUpload(leagueId: string, file: File) {
+  async function uploadLogoAsset(pathPrefix: string, file: File): Promise<string | null> {
     setBusy(true);
     setStatusMsg(null);
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `league-${leagueId}-${Date.now()}.${ext}`;
+    const optimized = await optimizeBlogImageForUpload(file, "logo");
+    const ext = optimized.name.split(".").pop() ?? "webp";
+    const path = `${pathPrefix}-${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
       .from("team-logos")
-      .upload(path, file, { upsert: true, cacheControl: "31536000" });
+      .upload(path, optimized, { upsert: true, cacheControl: "31536000" });
 
     if (uploadErr) {
       setStatusMsg(`Upload failed: ${uploadErr.message}`);
       setBusy(false);
-      return;
+      return null;
     }
 
     const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    return pub.publicUrl;
+  }
+
+  async function handleLeagueLogoUpload(leagueId: string, file: File) {
+    const publicUrl = await uploadLogoAsset(`league-${leagueId}`, file);
+    if (!publicUrl) return;
     setLeagues((prev) =>
-      prev.map((l) => (l.id === leagueId ? { ...l, logo_url: pub.publicUrl } : l))
+      prev.map((l) => (l.id === leagueId ? { ...l, logo_url: publicUrl } : l))
     );
     setStatusMsg("League logo uploaded. Click Save.");
     setBusy(false);
@@ -785,24 +793,10 @@ export function AdminDashboard({
 
 
   async function handleLogoUpload(teamId: string, file: File) {
-    setBusy(true);
-    setStatusMsg(null);
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `${teamId}-${Date.now()}.${ext}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("team-logos")
-      .upload(path, file, { upsert: true, cacheControl: "31536000" });
-
-    if (uploadErr) {
-      setStatusMsg(`Upload failed: ${uploadErr.message}`);
-      setBusy(false);
-      return;
-    }
-
-    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    const publicUrl = await uploadLogoAsset(teamId, file);
+    if (!publicUrl) return;
     setTeams((prev) =>
-      prev.map((t) => (t.id === teamId ? { ...t, logo_url: pub.publicUrl } : t))
+      prev.map((t) => (t.id === teamId ? { ...t, logo_url: publicUrl } : t))
     );
     setStatusMsg("Logo uploaded. Click Save Team.");
     setBusy(false);
@@ -1036,25 +1030,11 @@ export function AdminDashboard({
 
 
   async function handleDivisionLogoUpload(divisionId: string, file: File) {
-    setBusy(true);
-    setStatusMsg(null);
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `division-${divisionId}-${Date.now()}.${ext}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("team-logos")
-      .upload(path, file, { upsert: true, cacheControl: "31536000" });
-
-    if (uploadErr) {
-      setStatusMsg(`Upload failed: ${uploadErr.message}`);
-      setBusy(false);
-      return;
-    }
-
-    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    const publicUrl = await uploadLogoAsset(`division-${divisionId}`, file);
+    if (!publicUrl) return;
     setDivisions((prev) =>
       prev.map((d) =>
-        d.id === divisionId ? { ...d, logo_url: pub.publicUrl } : d
+        d.id === divisionId ? { ...d, logo_url: publicUrl } : d
       )
     );
     setStatusMsg("Division logo uploaded. Click Save.");
@@ -1083,25 +1063,11 @@ export function AdminDashboard({
 
 
   async function handleThemeLogoUpload(themeKey: string, file: File) {
-    setBusy(true);
-    setStatusMsg(null);
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `theme-${themeKey}-${Date.now()}.${ext}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("team-logos")
-      .upload(path, file, { upsert: true, cacheControl: "31536000" });
-
-    if (uploadErr) {
-      setStatusMsg(`Upload failed: ${uploadErr.message}`);
-      setBusy(false);
-      return;
-    }
-
-    const { data: pub } = supabase.storage.from("team-logos").getPublicUrl(path);
+    const publicUrl = await uploadLogoAsset(`theme-${themeKey}`, file);
+    if (!publicUrl) return;
     setThemes((prev) =>
       prev.map((t) =>
-        t.key === themeKey ? { ...t, default_logo_url: pub.publicUrl } : t
+        t.key === themeKey ? { ...t, default_logo_url: publicUrl } : t
       )
     );
     setStatusMsg("Theme logo uploaded. Click Save.");

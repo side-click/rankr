@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { useRouter } from "next/navigation";
+import { optimizeBlogImageForUpload } from "@/utils/blogMedia";
 import { createClient } from "@/utils/supabase/client";
 import type { RankingOverlay } from "@/types/database";
 
@@ -115,7 +116,8 @@ export function useOverlayEditor({
       setUploadingOverlay(true);
       try {
         const supabase = createClient();
-        const ext = getFileExtension(file);
+        const optimized = await optimizeBlogImageForUpload(file, "overlay");
+        const ext = getFileExtension(optimized);
         const unique =
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
@@ -124,9 +126,9 @@ export function useOverlayEditor({
 
         const { error: uploadErr } = await supabase.storage
           .from(OVERLAY_BUCKET)
-          .upload(path, file, {
+          .upload(path, optimized, {
             cacheControl: "31536000",
-            contentType: file.type,
+            contentType: optimized.type,
             upsert: false,
           });
 
