@@ -1108,11 +1108,9 @@ export function StatsDashboard({
       )}
 
       <div
-        className={
-          isSeasonPending
-            ? "opacity-45 pointer-events-none transition-opacity duration-150"
-            : "transition-opacity duration-150"
-        }
+        className={`space-y-4 transition-opacity duration-150 ${
+          isSeasonPending ? "opacity-45 pointer-events-none" : ""
+        }`}
       >
       {/* Section Toggle Buttons: Players | Teams | Division */}
       <div className="grid grid-cols-3 gap-2.5">
