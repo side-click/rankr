@@ -1824,12 +1824,17 @@ export function PlayerTierEditor({
                 className="w-full xp-inset px-2 py-1.5 text-xs font-bold disabled:opacity-50"
               >
                 <option value="">Select a player pool...</option>
-                <option value="all">
-                  All Divisions
-                </option>
+                {seasonDivisions.length > 1 ? (
+                  <option value="all">All Divisions</option>
+                ) : (
+                  (currentSeason?.roster_type === "draft" ||
+                    seasonEditions.some((e) => e.is_players_only)) && (
+                    <option value="all">Draft Pool</option>
+                  )
+                )}
                 {seasonDivisions.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} Only
+                    {seasonDivisions.length > 1 ? `${d.name} Only` : d.name}
                   </option>
                 ))}
               </select>

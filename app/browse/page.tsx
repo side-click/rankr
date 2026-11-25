@@ -257,7 +257,9 @@ export default async function BrowsePage({
             defaultValue={params.division ?? ""}
             className="w-full xp-inset px-2 py-1.5 text-xs"
           >
-            <option value="">All Divisions</option>
+            {uniqueDivisionSlugs.length !== 1 && (
+              <option value="">All Divisions</option>
+            )}
             {uniqueDivisionSlugs.map((d) => (
               <option key={d.slug} value={d.slug}>
                 {d.name}

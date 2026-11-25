@@ -177,6 +177,7 @@ export function StatsDashboard({
   const playerHref = (playerKey: string) =>
     playerStatsHref(playerKey, basePath, seasonSlug);
   const resolveDivId = (raw: string | null | undefined): string | null => {
+    if (divisions.length === 1) return divisions[0].id;
     if (!raw) return null;
     if (raw === "all") return "all";
     const lower = raw.toLowerCase();
@@ -297,7 +298,7 @@ export function StatsDashboard({
       tabParam === "division"
     ) {
       setActiveSection(tabParam);
-    } else if (resolvedDiv === "all") {
+    } else if (resolvedDiv === "all" && divisions.length > 1) {
       setActiveSection("division");
     }
   }, [divisions, initialDivision, initialTab]);
@@ -1044,34 +1045,36 @@ export function StatsDashboard({
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={() => {
-                  selectDivision("all");
-                  setOpenDropdown(null);
-                }}
-                className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
-                  divisionFilter === "all"
-                    ? "bg-white/10 border border-[#c89b3c]/70"
-                    : "hover:bg-white/5"
-                }`}
-              >
-                {leagueLogoUrl ? (
-                  <img
-                    src={leagueLogoUrl}
-                    alt={leagueName}
-                    className="w-7 h-7 object-contain shrink-0"
-                  />
-                ) : (
-                  <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
-                )}
-                <span className="text-xs font-extrabold text-[#f0ede0] truncate flex-1">
-                  All Divisions
-                </span>
-                <span className="text-[10px] tabular-nums text-[#a6a89e]">
-                  {activePlayers.length}
-                </span>
-              </button>
+              {divisions.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    selectDivision("all");
+                    setOpenDropdown(null);
+                  }}
+                  className={`w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 transition cursor-pointer ${
+                    divisionFilter === "all"
+                      ? "bg-white/10 border border-[#c89b3c]/70"
+                      : "hover:bg-white/5"
+                  }`}
+                >
+                  {leagueLogoUrl ? (
+                    <img
+                      src={leagueLogoUrl}
+                      alt={leagueName}
+                      className="w-7 h-7 object-contain shrink-0"
+                    />
+                  ) : (
+                    <Award className="w-6 h-6 text-[#f0c020] shrink-0" />
+                  )}
+                  <span className="text-xs font-extrabold text-[#f0ede0] truncate flex-1">
+                    All Divisions
+                  </span>
+                  <span className="text-[10px] tabular-nums text-[#a6a89e]">
+                    {activePlayers.length}
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </div>

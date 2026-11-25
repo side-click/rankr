@@ -56,6 +56,7 @@ export function ChampionStatsContent({
   basePath = "/stats",
 }: ChampionStatsContentProps) {
   const [divisionFilter, setDivisionFilter] = useState<string>(() => {
+    if (ctx.divisions.length === 1) return ctx.divisions[0].slug;
     if (!initialDivision || initialDivision === "all") return "all";
     const lower = initialDivision.toLowerCase();
     const matched = ctx.divisions.find(
@@ -141,15 +142,17 @@ export function ChampionStatsContent({
         </Link>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => selectDivision("all")}
-            className={`xp-btn text-xs ${
-              divisionFilter === "all" ? "xp-btn-gold" : ""
-            }`}
-          >
-            All Divisions
-          </button>
+          {ctx.divisions.length > 1 && (
+            <button
+              type="button"
+              onClick={() => selectDivision("all")}
+              className={`xp-btn text-xs ${
+                divisionFilter === "all" ? "xp-btn-gold" : ""
+              }`}
+            >
+              All Divisions
+            </button>
+          )}
           {ctx.divisions.map((div) => (
             <button
               key={div.id}
