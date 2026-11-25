@@ -473,17 +473,10 @@ async function runAuthenticatedSuite(browser, storageStatePath) {
   const page = await context.newPage();
 
   async function setViewAs(payload) {
-    return page.evaluate(
-      async ({ url, body }) => {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        return { ok: res.ok, status: res.status };
-      },
-      { url: `${baseUrl}/api/admin/view-as`, body: payload }
-    );
+    const res = await context.request.post(`${baseUrl}/api/admin/view-as`, {
+      data: payload,
+    });
+    return { ok: res.ok(), status: res.status() };
   }
 
   try {
@@ -499,8 +492,36 @@ async function runAuthenticatedSuite(browser, storageStatePath) {
       );
       return;
     }
+    record(suite, "Verify saved session is Site Admin", "PASS");
 
-    // Walk all 7 Admin Console tabs
+    // Extract first League & first Team from the Preview As Role bar before switching tabs
+    const previewBar = page.locator("div", { hasText: "Preview As Role" }).filter({
+      has: page.locator("select"),
+    }).first();
+    const roleSelect = previewBar.locator("select").first();
+    await roleSelect.selectOption("operator");
+    await page.waitForTimeout(150);
+    const leagueTarget = await previewBar
+      .locator("select")
+      .nth(1)
+      .evaluate((el) => {
+        const opt = el?.options?.[el.selectedIndex];
+        return el?.value ? { id: el.value, label: opt?.text || el.value } : null;
+      })
+      .catch(() => null);
+
+    await roleSelect.selectOption("captain");
+    await page.waitForTimeout(150);
+    const teamTarget = await previewBar
+      .locator("select")
+      .nth(1)
+      .evaluate((el) => {
+        const opt = el?.options?.[el.selectedIndex];
+        return el?.value ? { id: el.value, label: opt?.text || el.value } : null;
+      })
+      .catch(() => null);
+
+    // Walk all 7 Admin Console tabs as Site Admin
     for (const tabLabel of [
       "Seasons",
       "Divisions",
@@ -514,9 +535,9 @@ async function runAuthenticatedSuite(browser, storageStatePath) {
       if ((await btn.count()) > 0) {
         await btn.first().click();
         await page.waitForTimeout(250);
-        record(suite, `Admin tab "${tabLabel}" switches cleanly`, "PASS");
+        record(suite, `Site Admin tab "${tabLabel}" switches cleanly`, "PASS");
       } else {
-        record(suite, `Admin tab "${tabLabel}" present`, "FAIL");
+        record(suite, `Site Admin tab "${tabLabel}" present`, "FAIL");
       }
     }
 
@@ -524,20 +545,98 @@ async function runAuthenticatedSuite(browser, storageStatePath) {
     await gotoClean(page, "/team-hub", suite, "Site Admin Team Hub");
     await gotoClean(page, "/create", suite, "Site Admin Create Workspace");
 
-    // Extract first league & first team for Operator / Captain previews via DOM on /admin
-    await gotoClean(page, "/admin?tab=teams", suite, "Read preview targets");
-    const firstLeagueId = await page.evaluate(async () => {
-      const sel = document.querySelector("select");
-      return sel ? sel.value : null;
-    });
-    void firstLeagueId;
+    // League Operator View-As checks
+    if (leagueTarget) {
+      const opRes = await setViewAs({
+        mode: "operator",
+        leagueId: leagueTarget.id,
+        label: leagueTarget.label,
+      });
+      record(
+        suite,
+        `View-As League Operator (${leagueTarget.label})`,
+        opRes.ok ? "PASS" : "FAIL",
+        `status=${opRes.status}`
+      );
+      await gotoClean(page, "/admin", suite, "League Operator /admin load");
+      const opAdminTxt = await page.locator("body").innerText();
+      record(
+        suite,
+        "League Operator sees Preview Mode banner & scoped access",
+        opAdminTxt.toLowerCase().includes("preview mode") &&
+          !opAdminTxt.includes("Preview As Role") &&
+          !opAdminTxt.includes("Access Denied")
+          ? "PASS"
+          : "FAIL"
+      );
+      const modBtn = page.locator("button", { hasText: /^League Access & Safety$/ });
+      if ((await modBtn.count()) > 0) {
+        await modBtn.first().click();
+        await page.waitForTimeout(300);
+        const modTxt = await page.locator("body").innerText();
+        const modLower = modTxt.toLowerCase();
+        record(
+          suite,
+          "League Operator sees League Access & Safety + Moderation Alerts Log without Global Kill Switch",
+          modLower.includes("moderation alerts log") &&
+            !modLower.includes("global kill switch")
+            ? "PASS"
+            : "FAIL"
+        );
+      } else {
+        record(suite, "League Operator League Access & Safety tab present", "FAIL");
+      }
+      await gotoClean(page, "/admin/stats", suite, "League Operator /admin/stats");
+      await gotoClean(page, "/team-hub", suite, "League Operator /team-hub");
+    } else {
+      record(suite, "League Operator View-As checks", "WARN", "No league options found in Preview bar");
+    }
 
-    // Test Regular User view-as
+    // Team Captain View-As checks
+    if (teamTarget) {
+      const capRes = await setViewAs({
+        mode: "captain",
+        teamId: teamTarget.id,
+        label: teamTarget.label,
+      });
+      record(
+        suite,
+        `View-As Team Captain (${teamTarget.label})`,
+        capRes.ok ? "PASS" : "FAIL",
+        `status=${capRes.status}`
+      );
+      await gotoClean(page, "/admin", suite, "Team Captain blocked from /admin");
+      const capAdminTxt = await page.locator("body").innerText();
+      record(
+        suite,
+        "Team Captain sees Access Denied on /admin",
+        capAdminTxt.includes("Access Denied") ? "PASS" : "FAIL"
+      );
+      await gotoClean(page, "/admin/stats", suite, "Team Captain blocked from /admin/stats");
+      const capStatsTxt = await page.locator("body").innerText();
+      record(
+        suite,
+        "Team Captain sees Access Denied on /admin/stats",
+        capStatsTxt.includes("Access Denied") ? "PASS" : "FAIL"
+      );
+      await gotoClean(page, "/team-hub", suite, "Team Captain /team-hub load");
+      const capHubTxt = await page.locator("body").innerText();
+      record(
+        suite,
+        "Team Captain sees Preview Mode banner on /team-hub",
+        capHubTxt.toLowerCase().includes("preview mode") ? "PASS" : "FAIL"
+      );
+    } else {
+      record(suite, "Team Captain View-As checks", "WARN", "No team options found in Preview bar");
+    }
+
+    // Regular User View-As checks
     const pubRes = await setViewAs({ mode: "public", label: "Regular User" });
     record(
       suite,
       "View-As Regular User switches cleanly",
-      pubRes.ok ? "PASS" : "FAIL"
+      pubRes.ok ? "PASS" : "FAIL",
+      `status=${pubRes.status}`
     );
     await gotoClean(page, "/admin", suite, "Regular User blocked from /admin");
     const pubAdminTxt = await page.locator("body").innerText();
@@ -546,13 +645,22 @@ async function runAuthenticatedSuite(browser, storageStatePath) {
       "Regular User sees Access Denied on /admin",
       pubAdminTxt.includes("Access Denied") ? "PASS" : "FAIL"
     );
-    await gotoClean(page, "/team-hub", suite, "Regular User Team Hub");
+    await gotoClean(page, "/admin/stats", suite, "Regular User blocked from /admin/stats");
+    const pubStatsTxt = await page.locator("body").innerText();
+    record(
+      suite,
+      "Regular User sees Access Denied on /admin/stats",
+      pubStatsTxt.includes("Access Denied") ? "PASS" : "FAIL"
+    );
+    await gotoClean(page, "/team-hub", suite, "Regular User /team-hub");
     const pubHubTxt = await page.locator("body").innerText();
     record(
       suite,
       "Regular User cannot see Tournament Lobby Codes on Team Hub",
       !pubHubTxt.includes("Tournament Lobby Codes") ? "PASS" : "FAIL"
     );
+    await gotoClean(page, "/create", suite, "Regular User /create workspace");
+    await gotoClean(page, "/my-history", suite, "Regular User /my-history");
   } finally {
     await setViewAs({ mode: "clear" }).catch(() => {});
     await context.close();
