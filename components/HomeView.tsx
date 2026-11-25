@@ -49,11 +49,13 @@ export function HomeView({ data }: { data: HomeData }) {
         )}; path=/; max-age=2592000; SameSite=Lax`;
       } else {
         localStorage.removeItem(FOCUS_STORAGE_KEY);
-        document.cookie = `${FOCUS_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+        document.cookie = `${FOCUS_COOKIE_NAME}=__all__; path=/; max-age=2592000; SameSite=Lax`;
       }
     } catch {}
     startFocusTransition(() => {
-      router.replace(slug ? `/?season=${encodeURIComponent(slug)}` : "/");
+      router.replace(
+        slug ? `/?season=${encodeURIComponent(slug)}` : "/?season=all"
+      );
     });
   }
 

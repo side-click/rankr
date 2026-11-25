@@ -1203,7 +1203,8 @@ export function StatsDashboard({
         {/* Players Section: All Divisions prompt */}
         {activeSection === "players" && !showLeaderboards && (
           <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
-            Select a specific division above to view division player leaderboards and rankings.
+            Select a specific division above to view player stat leaderboards
+            and tables.
           </div>
         )}
 
@@ -2187,7 +2188,7 @@ export function StatsDashboard({
           leaderboardPlayers.length === 0 &&
           (stageBucket !== "playoffs" || hasPlayoffStats) && (
             <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-4">
-              No player match stats recorded for{" "}
+              No player stats recorded for{" "}
               <strong className="text-[#f0ede0]">
                 {selectedDivision?.name ?? "this division"}
               </strong>{" "}

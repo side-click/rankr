@@ -1,7 +1,7 @@
 import { RetroWindow } from "@/components/RetroWindow";
 import { HomeView } from "@/components/HomeView";
 import { loadHomeData } from "@/utils/homeData";
-import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
+import { getHomeFocusPreference } from "@/utils/focusedSeasonServer";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function HomePage({
   searchParams: Promise<{ season?: string }>;
 }) {
   const params = await searchParams;
-  const effectiveSeason = await getFocusedSeasonSlug(params.season);
+  const effectiveSeason = await getHomeFocusPreference(params.season);
   const data = await loadHomeData(effectiveSeason);
 
   if (data.allSeasons.length === 0) {

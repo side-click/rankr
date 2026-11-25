@@ -463,25 +463,12 @@ export function ConsensusRankingsView({
           </div>
         </div>
 
-        {/* Outdated Fallback Notice */}
+        {/* Consensus View Body */}
         <div
           className={`space-y-4 transition-opacity duration-150 ${
             isPending ? "opacity-60 pointer-events-none" : ""
           }`}
         >
-        {isFallbackOutdated && latestEditionName && (
-          <div className="rounded-xl border border-[#c89b3c]/60 bg-[#2a2210]/80 px-4 py-3 flex items-center gap-3 text-xs text-[#f7d560]">
-            <AlertTriangle className="w-4 h-4 text-[#f0c020] shrink-0" />
-            <span>
-              Showing consensus for <strong>{editionName}</strong> —{" "}
-              <strong>{latestEditionName}</strong> currently has{" "}
-              {latestEditionCount}{" "}
-              {latestEditionCount === 1 ? "submission" : "submissions"} and
-              needs at least 2 published rankings before consensus is shown.
-            </span>
-          </div>
-        )}
-
         {/* Voting Panel Strip */}
         {contributors.length > 0 && (
           <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 flex flex-wrap items-center justify-start gap-3">
@@ -517,6 +504,30 @@ export function ConsensusRankingsView({
             </div>
           </div>
         )}
+
+        {/* Consensus Warning Line (below Voting Panel, above Action Controls) */}
+        {(isFallbackOutdated && latestEditionName) || submissionCount === 1 ? (
+          <div className="rounded-xl border border-[#c89b3c]/60 bg-[#2a2210]/80 px-4 py-2.5 flex items-center gap-3 text-xs text-[#f7d560]">
+            <AlertTriangle className="w-4 h-4 text-[#f0c020] shrink-0" />
+            <span>
+              {isFallbackOutdated && latestEditionName ? (
+                <>
+                  Showing consensus for <strong>{editionName}</strong> —{" "}
+                  <strong>{latestEditionName}</strong> currently has{" "}
+                  {latestEditionCount}{" "}
+                  {latestEditionCount === 1 ? "submission" : "submissions"} and
+                  needs at least 2 published rankings before consensus is shown.
+                </>
+              ) : (
+                <>
+                  Only 1 published ranking exists for{" "}
+                  <strong>{editionName}</strong> so far — consensus becomes
+                  more meaningful once at least 2 rankings are submitted.
+                </>
+              )}
+            </span>
+          </div>
+        ) : null}
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -579,14 +590,6 @@ export function ConsensusRankingsView({
           </div>
         ) : (
           <>
-            {submissionCount === 1 && (
-              <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-xs text-[#c7c5b8]">
-                Only 1 published ranking exists for{" "}
-                <strong>{editionName}</strong> so far — consensus becomes more
-                meaningful once at least 2 rankings are submitted.
-              </div>
-            )}
-
             <ScaledGraphicFrame designWidth={cardWidth}>
               <div
                 ref={cardRef}

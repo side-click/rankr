@@ -304,7 +304,7 @@ const fetchHomeDataStable = unstable_cache(
   ] = await Promise.all([
     supabase
       .from("seasons")
-      .select("id, name, slug, is_active, created_at, leagues ( * )")
+      .select("id, name, slug, is_active, stats_sheet_id, created_at, leagues ( * )")
       .order("is_active", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -370,10 +370,24 @@ const fetchHomeDataStable = unstable_cache(
   const liveSeasons = allSeasons.filter((s) => s.isActive);
   const archivedSeasons = allSeasons.filter((s) => !s.isActive);
 
-  const focusedSeason = focusedSeasonSlug
+  const isExplicitUnfocus = focusedSeasonSlug === "__all__";
+  const autoFocusSeasonRaw =
+    !focusedSeasonSlug && liveSeasons.length > 1
+      ? (seasonsRaw ?? []).find(
+          (sr) =>
+            sr.is_active &&
+            Boolean((sr as { stats_sheet_id?: string | null }).stats_sheet_id)
+        )
+      : null;
+
+  const focusedSeason = isExplicitUnfocus
+    ? null
+    : focusedSeasonSlug
     ? allSeasons.find((s) => s.slug === focusedSeasonSlug) ?? null
     : liveSeasons.length === 1
     ? liveSeasons[0]
+    : autoFocusSeasonRaw
+    ? allSeasons.find((s) => s.id === autoFocusSeasonRaw.id) ?? null
     : null;
 
   const targetSeasons = focusedSeason

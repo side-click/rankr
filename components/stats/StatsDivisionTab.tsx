@@ -127,6 +127,13 @@ export function StatsDivisionTab({
     );
   }, [allChampions, overview.champs, overview.bannedChamps]);
 
+  const hasGames = overview.totalGames > 0;
+  const emptyDash = (
+    <div className="text-2xl font-black text-[#6e7268] mt-1 leading-none">
+      &mdash;
+    </div>
+  );
+
   return (
     <>
       {/* Top Overview KPI Strip (10 Cards) */}
@@ -153,22 +160,29 @@ export function StatsDivisionTab({
             <BarChart3 className="w-3.5 h-3.5 text-[#f0c020]" />
             <span>Side Win Rate</span>
           </div>
-          <div className="mt-2 space-y-1.5">
-            <div className="flex justify-between text-[11px] font-bold">
-              <span className="text-[#5ea3ff]">
-                Blue {overview.blueWr.toFixed(1)}%
-              </span>
-              <span className="text-[#ff7b72]">
-                Red {overview.redWr.toFixed(1)}%
-              </span>
+          {hasGames ? (
+            <div className="mt-2 space-y-1.5">
+              <div className="flex justify-between text-[11px] font-bold">
+                <span className="text-[#5ea3ff]">
+                  Blue {overview.blueWr.toFixed(1)}%
+                </span>
+                <span className="text-[#ff7b72]">
+                  Red {overview.redWr.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#ff7b72]/70">
+                <div
+                  className="bg-[#3b82f6] h-full"
+                  style={{ width: `${overview.blueWr}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#ff7b72]/70">
-              <div
-                className="bg-[#3b82f6] h-full"
-                style={{ width: `${overview.blueWr}%` }}
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
 
         <div
@@ -201,7 +215,10 @@ export function StatsDivisionTab({
               </div>
             </div>
           ) : (
-            <div className="text-lg font-bold text-[#a6a89e] mt-1">—</div>
+            <>
+              {emptyDash}
+              <div />
+            </>
           )}
         </div>
 
@@ -213,13 +230,18 @@ export function StatsDivisionTab({
             <Droplet className="w-3.5 h-3.5 text-[#ff857a]" />
             <span>First Blood</span>
           </div>
-          <div className="text-2xl font-black text-[#7cd438] mt-1 tabular-nums">
-            {overview.fbWr !== null ? `${overview.fbWr.toFixed(0)}% WR` : "—"}
-          </div>
-          {overview.fbWr === null ? (
-            <div className="text-[10px] text-[#a6a89e]">No FB data</div>
+          {overview.fbWr !== null ? (
+            <>
+              <div className="text-2xl font-black text-[#7cd438] mt-1 tabular-nums">
+                {`${overview.fbWr.toFixed(0)}% WR`}
+              </div>
+              <div />
+            </>
           ) : (
-            <div />
+            <>
+              {emptyDash}
+              <div />
+            </>
           )}
         </div>
 
@@ -231,12 +253,19 @@ export function StatsDivisionTab({
             <Coins className="w-3.5 h-3.5 text-[#f0c020]" />
             <span>@15 Gold Lead</span>
           </div>
-          <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
-            {overview.gd15Wr !== null ? `${overview.gd15Wr.toFixed(0)}% WR` : "—"}
-          </div>
-          <div className="text-[10px] text-[#a6a89e]">
-            {overview.gd15Games > 0 ? "Teams ahead @15m" : "Sheet mode only"}
-          </div>
+          {overview.gd15Wr !== null ? (
+            <>
+              <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
+                {`${overview.gd15Wr.toFixed(0)}% WR`}
+              </div>
+              <div className="text-[10px] text-[#a6a89e]">Teams ahead @15m</div>
+            </>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
 
         <div
@@ -247,33 +276,34 @@ export function StatsDivisionTab({
             <Clock className="w-3.5 h-3.5 text-[#00b8c9]" />
             <span>Longest Game</span>
           </div>
-          <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
-            {overview.longestGame
-              ? formatMinutesSeconds(overview.longestGame.durationMin)
-              : "—"}
-          </div>
           {overview.longestGame ? (
-            <div
-              title={`${overview.longestGame.winner} def. ${overview.longestGame.loser}${
-                overview.longestGame.roundLabel
-                  ? ` • ${overview.longestGame.roundLabel}`
-                  : ""
-              }`}
-              className="text-[11px] leading-tight text-[#a6a89e]"
-            >
-              <div className="truncate">
-                {overview.longestGame.winner} def. {overview.longestGame.loser}
+            <>
+              <div className="text-2xl font-black text-[#f0c020] mt-1 tabular-nums">
+                {formatMinutesSeconds(overview.longestGame.durationMin)}
               </div>
-              {overview.longestGame.roundLabel && (
-                <div className="text-[#8e9286]">
-                  {overview.longestGame.roundLabel}
+              <div
+                title={`${overview.longestGame.winner} def. ${overview.longestGame.loser}${
+                  overview.longestGame.roundLabel
+                    ? ` • ${overview.longestGame.roundLabel}`
+                    : ""
+                }`}
+                className="text-[11px] leading-tight text-[#a6a89e]"
+              >
+                <div className="truncate">
+                  {overview.longestGame.winner} def. {overview.longestGame.loser}
                 </div>
-              )}
-            </div>
+                {overview.longestGame.roundLabel && (
+                  <div className="text-[#8e9286]">
+                    {overview.longestGame.roundLabel}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
-            <div className="text-[11px] leading-tight text-[#a6a89e]">
-              No match data
-            </div>
+            <>
+              {emptyDash}
+              <div />
+            </>
           )}
         </div>
 
@@ -285,37 +315,41 @@ export function StatsDivisionTab({
             <HelpCircle className="w-3.5 h-3.5 text-[#f0c020]" />
             <span>Most Toxic?</span>
           </div>
-          <div
-            title={
-              (overview.topPingPlayer?.tiedCount ?? 1) > 1
-                ? overview.topPingPlayer?.tiedNames?.join(", ")
-                : undefined
-            }
-            className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
-          >
-            {overview.topPingPlayer &&
-              (overview.topPingPlayer.tiedCount ?? 1) === 1 &&
-              overview.topPingPlayer.teamLogoUrl && (
-                <img
-                  src={overview.topPingPlayer.teamLogoUrl}
-                  alt={overview.topPingPlayer.teamName}
-                  crossOrigin="anonymous"
-                  className="w-4 h-4 object-contain shrink-0"
-                />
-              )}
-            <span className="truncate">
-              {!overview.topPingPlayer
-                ? "—"
-                : (overview.topPingPlayer.tiedCount ?? 1) > 1
-                ? `${overview.topPingPlayer.tiedCount} players tied`
-                : overview.topPingPlayer.name}
-            </span>
-          </div>
-          <div className="text-[10px] text-[#f0c020] font-bold tabular-nums">
-            {overview.topPingPlayer
-              ? `${overview.topPingPlayer.count} missing pings`
-              : "Sheet mode only"}
-          </div>
+          {overview.topPingPlayer ? (
+            <>
+              <div
+                title={
+                  (overview.topPingPlayer.tiedCount ?? 1) > 1
+                    ? overview.topPingPlayer.tiedNames?.join(", ")
+                    : undefined
+                }
+                className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
+              >
+                {(overview.topPingPlayer.tiedCount ?? 1) === 1 &&
+                  overview.topPingPlayer.teamLogoUrl && (
+                    <img
+                      src={overview.topPingPlayer.teamLogoUrl}
+                      alt={overview.topPingPlayer.teamName}
+                      crossOrigin="anonymous"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                <span className="truncate">
+                  {(overview.topPingPlayer.tiedCount ?? 1) > 1
+                    ? `${overview.topPingPlayer.tiedCount} players tied`
+                    : overview.topPingPlayer.name}
+                </span>
+              </div>
+              <div className="text-[10px] text-[#f0c020] font-bold tabular-nums">
+                {overview.topPingPlayer.count} missing pings
+              </div>
+            </>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
 
         <div
@@ -326,41 +360,50 @@ export function StatsDivisionTab({
             <Crown className="w-3.5 h-3.5 text-[#f0c020]" />
             <span>Most Pentakills</span>
           </div>
-          <div
-            title={
-              (overview.topPentaPlayer?.tiedCount ?? 1) > 1
-                ? overview.topPentaPlayer?.tiedNames?.join(", ")
-                : undefined
-            }
-            className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
-          >
-            {overview.topPentaPlayer &&
-              (overview.topPentaPlayer.tiedCount ?? 1) === 1 &&
-              overview.topPentaPlayer.teamLogoUrl && (
-                <img
-                  src={overview.topPentaPlayer.teamLogoUrl}
-                  alt={overview.topPentaPlayer.teamName}
-                  crossOrigin="anonymous"
-                  className="w-4 h-4 object-contain shrink-0"
-                />
-              )}
-            <span className="truncate">
-              {!overview.topPentaPlayer
-                ? "None yet"
-                : (overview.topPentaPlayer.tiedCount ?? 1) > 1
-                ? `${overview.topPentaPlayer.tiedCount} players tied`
-                : overview.topPentaPlayer.name}
-            </span>
-          </div>
-          <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
-            {overview.topPentaPlayer
-              ? `${overview.topPentaPlayer.count} ${
-                  overview.topPentaPlayer.count === 1
-                    ? "pentakill"
-                    : "pentakills"
-                }`
-              : "0 pentakills"}
-          </div>
+          {hasGames ? (
+            <>
+              <div
+                title={
+                  (overview.topPentaPlayer?.tiedCount ?? 1) > 1
+                    ? overview.topPentaPlayer?.tiedNames?.join(", ")
+                    : undefined
+                }
+                className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
+              >
+                {overview.topPentaPlayer &&
+                  (overview.topPentaPlayer.tiedCount ?? 1) === 1 &&
+                  overview.topPentaPlayer.teamLogoUrl && (
+                    <img
+                      src={overview.topPentaPlayer.teamLogoUrl}
+                      alt={overview.topPentaPlayer.teamName}
+                      crossOrigin="anonymous"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                <span className="truncate">
+                  {!overview.topPentaPlayer
+                    ? "None yet"
+                    : (overview.topPentaPlayer.tiedCount ?? 1) > 1
+                    ? `${overview.topPentaPlayer.tiedCount} players tied`
+                    : overview.topPentaPlayer.name}
+                </span>
+              </div>
+              <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
+                {overview.topPentaPlayer
+                  ? `${overview.topPentaPlayer.count} ${
+                      overview.topPentaPlayer.count === 1
+                        ? "pentakill"
+                        : "pentakills"
+                    }`
+                  : "0 pentakills"}
+              </div>
+            </>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
 
         <div
@@ -371,39 +414,48 @@ export function StatsDivisionTab({
             <Swords className="w-3.5 h-3.5 text-[#ff857a]" />
             <span>Most Objective Steals</span>
           </div>
-          <div
-            title={
-              (overview.topStealPlayer?.tiedCount ?? 1) > 1
-                ? overview.topStealPlayer?.tiedNames?.join(", ")
-                : undefined
-            }
-            className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
-          >
-            {overview.topStealPlayer &&
-              (overview.topStealPlayer.tiedCount ?? 1) === 1 &&
-              overview.topStealPlayer.teamLogoUrl && (
-                <img
-                  src={overview.topStealPlayer.teamLogoUrl}
-                  alt={overview.topStealPlayer.teamName}
-                  crossOrigin="anonymous"
-                  className="w-4 h-4 object-contain shrink-0"
-                />
-              )}
-            <span className="truncate">
-              {!overview.topStealPlayer
-                ? "None yet"
-                : (overview.topStealPlayer.tiedCount ?? 1) > 1
-                ? `${overview.topStealPlayer.tiedCount} players tied`
-                : overview.topStealPlayer.name}
-            </span>
-          </div>
-          <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
-            {overview.topStealPlayer
-              ? `${overview.topStealPlayer.count} ${
-                  overview.topStealPlayer.count === 1 ? "steal" : "steals"
-                }`
-              : "0 steals"}
-          </div>
+          {hasGames ? (
+            <>
+              <div
+                title={
+                  (overview.topStealPlayer?.tiedCount ?? 1) > 1
+                    ? overview.topStealPlayer?.tiedNames?.join(", ")
+                    : undefined
+                }
+                className="flex items-center gap-1.5 text-base font-black text-[#f0ede0] mt-1 min-w-0"
+              >
+                {overview.topStealPlayer &&
+                  (overview.topStealPlayer.tiedCount ?? 1) === 1 &&
+                  overview.topStealPlayer.teamLogoUrl && (
+                    <img
+                      src={overview.topStealPlayer.teamLogoUrl}
+                      alt={overview.topStealPlayer.teamName}
+                      crossOrigin="anonymous"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                <span className="truncate">
+                  {!overview.topStealPlayer
+                    ? "None yet"
+                    : (overview.topStealPlayer.tiedCount ?? 1) > 1
+                    ? `${overview.topStealPlayer.tiedCount} players tied`
+                    : overview.topStealPlayer.name}
+                </span>
+              </div>
+              <div className="text-[10px] text-[#a6a89e] font-bold tabular-nums">
+                {overview.topStealPlayer
+                  ? `${overview.topStealPlayer.count} ${
+                      overview.topStealPlayer.count === 1 ? "steal" : "steals"
+                    }`
+                  : "0 steals"}
+              </div>
+            </>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
 
         <div
@@ -414,14 +466,21 @@ export function StatsDivisionTab({
             <Eye className="w-3.5 h-3.5 text-[#00b8c9]" />
             <span>Wards Bought / Min</span>
           </div>
-          <div className="text-2xl font-black text-white mt-1 tabular-nums">
-            {overview.totalGames > 0
-              ? overview.controlWardsPerMin.toFixed(2)
-              : "—"}
-          </div>
-          <div className="text-[10px] text-[#a6a89e]">
-            {overview.totalControlWards} total bought
-          </div>
+          {hasGames ? (
+            <>
+              <div className="text-2xl font-black text-white mt-1 tabular-nums">
+                {overview.controlWardsPerMin.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-[#a6a89e]">
+                {overview.totalControlWards} total bought
+              </div>
+            </>
+          ) : (
+            <>
+              {emptyDash}
+              <div />
+            </>
+          )}
         </div>
       </div>
 

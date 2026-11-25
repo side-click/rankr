@@ -54,7 +54,8 @@ export function StatsTeamsTab({
   if (!selectedDivision) {
     return (
       <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
-        Select a specific division above to view division team standings and scouting sheets.
+        Select a specific division above to view team standings and playoff
+        brackets.
       </div>
     );
   }
@@ -582,6 +583,20 @@ export function StatsTeamsTab({
   const divisionGroups = [
     { division: selectedDivision, list: filteredTeams, isSingle: true },
   ];
+
+  const hasAnyTeamMatches = filteredTeams.some(
+    (t) =>
+      t.games > 0 || (t.seriesWins ?? 0) > 0 || (t.seriesLosses ?? 0) > 0
+  );
+
+  if (!hasAnyTeamMatches) {
+    return (
+      <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-6">
+        No match history recorded for{" "}
+        <strong className="text-[#f0ede0]">{selectedDivision.name}</strong> yet.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
