@@ -46,9 +46,9 @@ export function AuthNoticeBanner() {
           <ShieldAlert className="w-4 h-4 text-[#f0c020] shrink-0" />
           {authError === "not_authorized" ? (
             <span>
-              <strong>Invite-Only Sign In:</strong> Your Discord account is not
-              on the allowlist yet. You can still browse all rankings, or ask an
-              admin to approve your Discord ID
+              <strong>Invite-Only Sign In:</strong> Your Discord account has not
+              been granted sign-in access yet. You can still browse all
+              rankings, or contact a league organizer with your Discord ID
               {discordId ? (
                 <>
                   :{" "}

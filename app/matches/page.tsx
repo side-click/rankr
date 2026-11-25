@@ -53,10 +53,10 @@ export default async function MatchesHubPage() {
         <div className="py-8 px-4 text-center space-y-2.5">
           <Swords className="w-9 h-9 mx-auto text-[#c89b3c]" />
           <h1 className="text-base font-bold text-[#f0ede0]">
-            Captain or Operator Assignment Required
+            Captain Assignment Required
           </h1>
           <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
-            Ask a league operator to link your Discord ID to your team in Admin Console → Teams.
+            Ask a league operator to link your Discord ID to your team.
           </p>
         </div>
       </RetroWindow>

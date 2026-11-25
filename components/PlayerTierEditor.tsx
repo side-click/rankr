@@ -2220,9 +2220,8 @@ export function PlayerTierEditor({
           </div>
         ) : availablePlayers.length === 0 && totalPlacedPlayers === 0 ? (
           <div className="xp-inset p-8 text-center text-xs text-[#a6a89e]">
-            No players found for this season/division scope yet. An admin can
-            add the season pool under Admin Console → Setup Players, or populate
-            team rosters.
+            No players have been added for this season/division yet. Check back
+            once rosters are finalized.
           </div>
         ) : (
           <DndContext

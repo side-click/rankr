@@ -23,7 +23,7 @@ export default async function AdminTeamStatsPage({
       <RetroWindow title="Team Stats — Access Denied" theme="xp">
         <div className="py-8 px-4 text-center space-y-3">
           <ShieldAlert className="w-10 h-10 mx-auto text-[#ff857a]" />
-          <p className="text-xs text-[#a6a89e]">Admin Access Required.</p>
+          <p className="text-xs text-[#a6a89e]">You do not have permission to access this page.</p>
         </div>
       </RetroWindow>
     );

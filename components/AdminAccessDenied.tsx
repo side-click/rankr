@@ -9,7 +9,7 @@ interface AdminAccessDeniedProps {
 
 export function AdminAccessDenied({
   title = "Admin Console — Access Denied",
-  heading = "Admin Access Required",
+  heading = "Access Denied",
   message = "You do not have permission to access this page.",
 }: AdminAccessDeniedProps) {
   return (

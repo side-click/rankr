@@ -25,7 +25,7 @@ export default async function AdminPage() {
         <div className="py-8 px-4 text-center space-y-3">
           <ShieldAlert className="w-10 h-10 mx-auto text-[#ff857a]" />
           <h1 className="text-base font-bold text-[#f0ede0]">
-            Admin Access Required
+            Access Denied
           </h1>
           <p className="text-xs text-[#a6a89e] max-w-md mx-auto">
             You do not have permission to access this page.

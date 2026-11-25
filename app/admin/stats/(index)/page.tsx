@@ -31,8 +31,8 @@ export default async function AdminStatsPage({
     return (
       <AdminAccessDenied
         title="Stats Controls — Access Denied"
-        heading="Operator or Admin Access Required"
-        message="Stats administration is restricted to site admins and assigned league operators for that league."
+        heading="Access Denied"
+        message="You do not have permission to access this page."
       />
     );
   }
