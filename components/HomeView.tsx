@@ -450,7 +450,14 @@ export function HomeView({ data }: { data: HomeData }) {
       {(data.recentMatches.length > 0 ||
         data.divisionStandings.length > 0 ||
         data.divisionTopPerformers.length > 0) && (
-        <RetroWindow title="Season Stats" theme="scdl">
+        <RetroWindow
+          title={
+            data.statsSeasonLabel
+              ? `Season Stats — ${data.statsSeasonLabel}`
+              : "Season Stats"
+          }
+          theme="scdl"
+        >
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {/* Left Col: Top Performers (top) + Standings (bottom) */}
             <div className="md:col-span-7 space-y-4">

@@ -378,8 +378,7 @@ export function StatsDashboard({
     [selectedDivisionTheme]
   );
 
-  const showLeaderboards =
-    divisions.length <= 1 || selectedDivision !== null;
+  const showLeaderboards = selectedDivision !== null;
 
   async function handleExportLeaderboardPng() {
     if (!leaderboardCardRef.current) return;
@@ -2180,7 +2179,22 @@ export function StatsDashboard({
         )}
 
         {/* Full Players Leaderboard (Sortable + Role Filter) */}
-        {activeSection === "players" && showLeaderboards && (
+        {activeSection === "players" &&
+          showLeaderboards &&
+          leaderboardPlayers.length === 0 &&
+          (stageBucket !== "playoffs" || hasPlayoffStats) && (
+            <div className="xp-panel p-6 text-center text-xs text-[#a6a89e] mb-4">
+              No player match stats recorded for{" "}
+              <strong className="text-[#f0ede0]">
+                {selectedDivision?.name ?? "this division"}
+              </strong>{" "}
+              yet.
+            </div>
+          )}
+
+        {activeSection === "players" &&
+          showLeaderboards &&
+          leaderboardPlayers.length > 0 && (
           <StatsPlayersTab
             ddVersion={ddVersion}
             selectedDivisionTheme={selectedDivisionTheme}

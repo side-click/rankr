@@ -45,6 +45,7 @@ export default async function AdminStatsPage({
 
   return (
     <StatsDashboard
+      key={ctx.seasonId}
       missingTable={ctx.missingTable}
       hasRiotKey={ctx.hasRiotKey}
       ddVersion={ctx.ddVersion}

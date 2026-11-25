@@ -122,6 +122,7 @@ export interface HomeData {
   focusedSeason: HomeSeasonSummary | null;
   recentContent: ContentItem[];
   recentSeasonIds: string[];
+  statsSeasonLabel: string | null;
   divisionStandings: HomeDivisionStandings[];
   divisionTopPerformers: HomeDivisionTopPerformers[];
   topPerformers: HomeTopPerformer[];
@@ -196,7 +197,15 @@ const loadCachedHomeStatsBlock = unstable_cache(
           primaryColor: divTheme.primary_color,
           teams: divTeams,
         };
-      });
+      }).filter((d) =>
+        d.teams.some(
+          (t) =>
+            t.gamesWins > 0 ||
+            t.gamesLosses > 0 ||
+            t.seriesWins > 0 ||
+            t.seriesLosses > 0
+        )
+      );
 
       divisionTopPerformers = statsCtx.divisions.map((d) => {
         const divTheme = resolveDivisionTheme(d.theme_key);
@@ -227,7 +236,7 @@ const loadCachedHomeStatsBlock = unstable_cache(
           primaryColor: divTheme.primary_color,
           players: topDivPlayers,
         };
-      });
+      }).filter((d) => d.players.length > 0);
 
       topPerformers = ratedPlayers
         .filter((p) => p.games > 0)
@@ -427,25 +436,46 @@ const fetchHomeDataStable = unstable_cache(
     );
   }
 
-  const statsSeasonSlug =
-    focusedSeason?.slug ?? liveSeasons[0]?.slug ?? allSeasons[0]?.slug;
+  const statsCandidates = focusedSeason
+    ? [focusedSeason]
+    : liveSeasons.length > 0
+    ? liveSeasons
+    : allSeasons.slice(0, 2);
 
   const [
     { data: recentBallotsRaw },
     { data: recentBlogsRaw },
     { data: consensusRankingsRaw },
-    {
-      divisionStandings,
-      divisionTopPerformers,
-      topPerformers,
-      recentMatches,
-    },
+    statsResults,
   ] = await Promise.all([
     ballotsQuery,
     blogsQuery,
     consensusRankingsQuery,
-    loadCachedHomeStatsBlock(statsSeasonSlug),
+    Promise.all(
+      statsCandidates.map(async (s) => ({
+        season: s,
+        stats: await loadCachedHomeStatsBlock(s.slug),
+      }))
+    ),
   ]);
+
+  const pickedStats =
+    statsResults.find(
+      (entry) =>
+        entry.stats.divisionTopPerformers.length > 0 ||
+        entry.stats.divisionStandings.length > 0 ||
+        entry.stats.recentMatches.length > 0
+    ) ?? statsResults[0];
+
+  const divisionStandings = pickedStats?.stats.divisionStandings ?? [];
+  const divisionTopPerformers = pickedStats?.stats.divisionTopPerformers ?? [];
+  const topPerformers = pickedStats?.stats.topPerformers ?? [];
+  const recentMatches = pickedStats?.stats.recentMatches ?? [];
+  const statsSeasonLabel = pickedStats
+    ? `${
+        pickedStats.season.leagueShortName || pickedStats.season.leagueName
+      } — ${pickedStats.season.name}`
+    : null;
 
   type ConsensusRowWithScope = ConsensusRankingInput & {
     season_id: string | null;
@@ -562,6 +592,7 @@ const fetchHomeDataStable = unstable_cache(
     focusedSeason,
     recentContent,
     recentSeasonIds: targetSeasonIds,
+    statsSeasonLabel,
     divisionStandings,
     divisionTopPerformers,
     topPerformers,
