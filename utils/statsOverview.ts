@@ -27,6 +27,7 @@ export interface CompactSheetDashboardData {
   fetchedAt: string;
   rowCount: number;
   matchCount: number;
+  unrosteredPlayers?: SheetSyncSummary["unrosteredPlayers"];
   precomputed: PrecomputedSheetDashboardMeta;
 }
 
@@ -492,6 +493,7 @@ export function compactSheetSummaryForDashboard(
     fetchedAt: sheetSummary.fetchedAt,
     rowCount: sheetSummary.rowCount,
     matchCount: sheetSummary.matchCount,
+    unrosteredPlayers: sheetSummary.unrosteredPlayers,
     precomputed,
   };
 }
