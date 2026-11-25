@@ -25,8 +25,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function MatchesHubPage() {
-  const [auth, supabase] = await Promise.all([
+export default async function MatchesHubPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string; team?: string }>;
+}) {
+  const [params, auth, supabase] = await Promise.all([
+    searchParams,
     getServerAuthContext(),
     createClient(),
   ]);
@@ -66,8 +71,33 @@ export default async function MatchesHubPage() {
   const opLeagueSet = new Set(auth.operatorLeagueIds);
   const captainTeamSet = new Set(captainTeamIds);
 
+  const requestedSeasonParam = params.season?.trim() ?? "";
+  const captainDefaultTeam = teamList.find((t) => captainTeamSet.has(t.id));
+  const captainSeason = captainDefaultTeam
+    ? seasonById.get(divById.get(captainDefaultTeam.division_id)?.season_id ?? "")
+    : undefined;
+
+  const selectedSeason =
+    (requestedSeasonParam
+      ? seasonList.find(
+          (s) => s.slug === requestedSeasonParam || s.id === requestedSeasonParam
+        )
+      : undefined) ??
+    captainSeason ??
+    seasonList.find((s) => s.is_active) ??
+    seasonList[0];
+
+  const seasonDivisions = selectedSeason
+    ? divisionList.filter((d) => d.season_id === selectedSeason.id)
+    : [];
+  const seasonDivIds = new Set(seasonDivisions.map((d) => d.id));
+  const seasonTeams = teamList.filter((t) => seasonDivIds.has(t.division_id));
+  const seasonMatches = selectedSeason
+    ? matchList.filter((m) => m.season_id === selectedSeason.id)
+    : [];
+
   const codeAccessTeamIds = auth.user
-    ? teamList
+    ? seasonTeams
         .filter((t) => {
           if (auth.isAdmin) return true;
           if (captainTeamSet.has(t.id)) return true;
@@ -80,10 +110,16 @@ export default async function MatchesHubPage() {
   const codeAccessTeamSet = new Set(codeAccessTeamIds);
 
   let codeList: TournamentCode[] = [];
-  if (codeAccessTeamIds.length > 0) {
-    const codesRes = await supabase.from("tournament_codes").select("*");
+  if (codeAccessTeamIds.length > 0 && seasonMatches.length > 0) {
+    const codesRes = await supabase
+      .from("tournament_codes")
+      .select("*")
+      .in(
+        "match_id",
+        seasonMatches.map((m) => m.id)
+      );
     if (!codesRes.error && Array.isArray(codesRes.data)) {
-      const matchById = new Map(matchList.map((m) => [m.id, m]));
+      const matchById = new Map(seasonMatches.map((m) => [m.id, m]));
       codeList = (codesRes.data as TournamentCode[]).filter((c) => {
         if (auth.isAdmin) return true;
         const match = matchById.get(c.match_id);
@@ -96,20 +132,18 @@ export default async function MatchesHubPage() {
     }
   }
 
-  const accessibleTeamIds = teamList.map((t) => t.id);
+  const accessibleTeamIds = seasonTeams.map((t) => t.id);
+  const requestedTeamId = params.team?.trim() ?? "";
   const defaultTeam =
-    teamList.find((t) => captainTeamSet.has(t.id)) ??
-    teamList.find((t) => codeAccessTeamSet.has(t.id)) ??
-    teamList[0];
+    (requestedTeamId
+      ? seasonTeams.find((t) => t.id === requestedTeamId)
+      : undefined) ??
+    seasonTeams.find((t) => captainTeamSet.has(t.id)) ??
+    seasonTeams.find((t) => codeAccessTeamSet.has(t.id)) ??
+    seasonTeams[0];
   const defaultTeamId = defaultTeam?.id ?? "";
 
-  // Load stats for the primary default team's season so Match Hub displays accurate W-L and seeds
-  const defaultSeasonSlug = defaultTeam
-    ? seasonById.get(divById.get(defaultTeam.division_id)?.season_id ?? "")
-        ?.slug
-    : seasonList.find((s) => s.is_active)?.slug ?? seasonList[0]?.slug;
-
-  const statsCtx = await loadPublicStatsContext(defaultSeasonSlug, {
+  const statsCtx = await loadPublicStatsContext(selectedSeason?.slug, {
     includeRiotStats: false,
   }).catch(() => null);
 
@@ -146,12 +180,13 @@ export default async function MatchesHubPage() {
   return (
     <TeamMatchHub
       seasons={seasonList}
-      divisions={divisionList}
-      teams={teamList}
+      selectedSeasonSlug={selectedSeason?.slug ?? ""}
+      divisions={seasonDivisions}
+      teams={seasonTeams}
       accessibleTeamIds={accessibleTeamIds}
       codeAccessTeamIds={codeAccessTeamIds}
       defaultTeamId={defaultTeamId}
-      matches={matchList}
+      matches={seasonMatches}
       initialCodes={codeList}
       teamStatsMap={teamStatsMap}
       playerKeyByName={playerKeyByName}

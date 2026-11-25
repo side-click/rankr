@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { RetroWindow } from "@/components/RetroWindow";
 import { getRoleMeta, normalizeRoster, type LeagueRole } from "@/utils/roles";
@@ -35,6 +36,7 @@ export interface MatchHubPlayerKeyMap {
 
 interface TeamMatchHubProps {
   seasons: Season[];
+  selectedSeasonSlug: string;
   divisions: Division[];
   teams: Team[];
   accessibleTeamIds: string[];
@@ -48,6 +50,7 @@ interface TeamMatchHubProps {
 
 export function TeamMatchHub({
   seasons,
+  selectedSeasonSlug,
   divisions,
   teams,
   accessibleTeamIds,
@@ -58,6 +61,7 @@ export function TeamMatchHub({
   teamStatsMap,
   playerKeyByName,
 }: TeamMatchHubProps) {
+  const router = useRouter();
   const accessibleTeams = useMemo(
     () => teams.filter((t) => accessibleTeamIds.includes(t.id)),
     [teams, accessibleTeamIds]
@@ -72,6 +76,14 @@ export function TeamMatchHub({
       ? defaultTeamId
       : accessibleTeams[0]?.id ?? ""
   );
+
+  useEffect(() => {
+    const nextDefault =
+      defaultTeamId && accessibleTeams.some((t) => t.id === defaultTeamId)
+        ? defaultTeamId
+        : accessibleTeams[0]?.id ?? "";
+    setSelectedTeamId(nextDefault);
+  }, [defaultTeamId, accessibleTeams]);
   const [codes, setCodes] = useState<TournamentCode[]>(initialCodes);
   const [generatingKey, setGeneratingKey] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -196,27 +208,65 @@ export function TeamMatchHub({
       statusText={errorMsg ?? undefined}
     >
       <div className="space-y-4">
-        {/* Team Switcher when managing multiple teams */}
-        {accessibleTeams.length > 1 && (
-          <div className="xp-panel p-2.5 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
-              Viewing Team
-            </span>
-            <select
-              value={myTeam.id}
-              onChange={(e) => setSelectedTeamId(e.target.value)}
-              className="xp-inset px-2.5 py-1 text-xs font-bold"
-            >
-              {accessibleTeams.map((t) => {
-                const div = divisionById.get(t.division_id);
-                return (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                    {div ? ` (${div.name})` : ""}
-                  </option>
-                );
-              })}
-            </select>
+        {/* Season & Team Switchers */}
+        {(seasons.length > 1 || accessibleTeams.length > 1) && (
+          <div className="xp-panel p-2.5 flex flex-wrap items-center justify-between gap-3">
+            {seasons.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                  League / Season
+                </span>
+                <select
+                  value={selectedSeasonSlug}
+                  onChange={(e) => {
+                    const slug = e.target.value;
+                    router.push(
+                      slug ? `/matches?season=${encodeURIComponent(slug)}` : "/matches"
+                    );
+                  }}
+                  className="xp-inset px-2.5 py-1 text-xs font-bold"
+                >
+                  {seasons.map((s) => {
+                    const leagueObj = Array.isArray(s.leagues)
+                      ? s.leagues[0]
+                      : (s.leagues as
+                          | { name?: string; short_name?: string }
+                          | null
+                          | undefined);
+                    const prefix = leagueObj?.short_name || leagueObj?.name;
+                    return (
+                      <option key={s.id} value={s.slug}>
+                        {prefix ? `${prefix}: ` : ""}
+                        {s.name}
+                        {!s.is_active ? " (Inactive)" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+            {accessibleTeams.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#a6a89e]">
+                  Viewing Team
+                </span>
+                <select
+                  value={myTeam.id}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  className="xp-inset px-2.5 py-1 text-xs font-bold"
+                >
+                  {accessibleTeams.map((t) => {
+                    const div = divisionById.get(t.division_id);
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                        {div ? ` (${div.name})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
           </div>
         )}
 
