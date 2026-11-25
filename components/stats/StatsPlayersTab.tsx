@@ -246,6 +246,8 @@ export function StatsPlayersTab({
                         <img
                           src={roleMeta.icon}
                           alt={roleMeta.label}
+                          loading="lazy"
+                          decoding="async"
                           className="w-4 h-4 object-contain shrink-0"
                         />
                         <span>{p.displayName}</span>
@@ -265,6 +267,8 @@ export function StatsPlayersTab({
                             <img
                               src={p.teamLogoUrl}
                               alt={p.teamName}
+                              loading="lazy"
+                              decoding="async"
                               className="w-4 h-4 object-contain shrink-0"
                             />
                           )}
@@ -380,6 +384,8 @@ export function StatsPlayersTab({
                             src={getChampionIconUrl(c.name, ddVersion)}
                             alt={c.name}
                             title={`${c.name} (${c.games}G)`}
+                            loading="lazy"
+                            decoding="async"
                             className="w-5 h-5 rounded border border-white/20 object-cover"
                           />
                         ))}

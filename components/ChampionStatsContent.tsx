@@ -17,7 +17,7 @@ import { formatMinutesSeconds } from "@/utils/riotStatsAggregation";
 import { getRoleMeta, type LeagueRole } from "@/utils/roles";
 import { resolveDivisionTheme } from "@/utils/themes";
 import { formatSigned as formatSignedBase } from "@/utils/formatters";
-import { computeChampionStats } from "@/utils/championStats";
+import { computeChampionStats, type ChampionStatsPayload } from "@/utils/championStats";
 import {
   championStatsHref,
   matchStatsHref,
@@ -26,11 +26,24 @@ import {
   teamStatsHref,
 } from "@/utils/statsLinks";
 import type { LoadedStatsContext } from "@/utils/riotStatsServer";
-import type { ScdlSeriesDetail } from "@/utils/leagueStats";
+import type { ScdlSeriesDetail, SheetSourceConfig } from "@/utils/leagueStats";
+import type { DivisionTheme } from "@/types/database";
+
+export interface ChampionStatsViewMeta {
+  ddVersion: string;
+  leagueName: string;
+  seasonName: string;
+  seasonSlug: string | null;
+  divisions: LoadedStatsContext["divisions"];
+  divisionThemes: DivisionTheme[];
+  sheetConfig?: SheetSourceConfig;
+}
 
 interface ChampionStatsContentProps {
-  ctx: LoadedStatsContext;
-  series: ScdlSeriesDetail[];
+  meta?: ChampionStatsViewMeta;
+  statsByDivision?: Record<string, ChampionStatsPayload>;
+  ctx?: LoadedStatsContext;
+  series?: ScdlSeriesDetail[];
   championName: string;
   initialDivision?: string;
   basePath?: string;
@@ -49,12 +62,15 @@ function formatSigned(val: number): string {
 }
 
 export function ChampionStatsContent({
-  ctx,
+  meta,
+  statsByDivision,
+  ctx: rawCtx,
   series,
   championName,
   initialDivision,
   basePath = "/stats",
 }: ChampionStatsContentProps) {
+  const ctx = meta ?? rawCtx!;
   const [divisionFilter, setDivisionFilter] = useState<string>(() => {
     if (ctx.divisions.length === 1) return ctx.divisions[0].slug;
     if (!initialDivision || initialDivision === "all") return "all";
@@ -98,8 +114,11 @@ export function ChampionStatsContent({
   );
 
   const stats = useMemo(
-    () => computeChampionStats(ctx, series, championName, divisionFilter),
-    [ctx, series, championName, divisionFilter]
+    () =>
+      statsByDivision?.[divisionFilter] ??
+      statsByDivision?.all ??
+      computeChampionStats(rawCtx!, series ?? [], championName, divisionFilter),
+    [statsByDivision, rawCtx, series, championName, divisionFilter]
   );
 
   const sortedPlayers = useMemo(() => {

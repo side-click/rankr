@@ -253,6 +253,7 @@ export default async function MyRankingsPage() {
               >
                 <Link
                   href={cardHref}
+                  prefetch={false}
                   aria-label={blog.title}
                   className="absolute inset-0 z-0"
                 />
@@ -335,6 +336,7 @@ export default async function MyRankingsPage() {
                   <div className="relative z-10 flex items-center gap-2 shrink-0 pointer-events-auto">
                     <Link
                       href={`/create?type=blog&edit=${blog.id}`}
+                      prefetch={false}
                       className="xp-btn text-xs w-[88px] justify-center"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -450,6 +452,7 @@ export default async function MyRankingsPage() {
               >
                 <Link
                   href={primaryHref}
+                  prefetch={false}
                   aria-label={`Open ${edName} (${hasDivision ? divName : "All Divisions"})`}
                   className="absolute inset-0 z-0"
                 />
@@ -559,6 +562,7 @@ export default async function MyRankingsPage() {
                     {canEdit ? (
                       <Link
                         href={editHref}
+                        prefetch={false}
                         className="xp-btn text-xs w-[88px] justify-center"
                       >
                         <Edit3 className="w-3.5 h-3.5" />

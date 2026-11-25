@@ -1661,6 +1661,8 @@ export function StatsDashboard({
                           <img
                             src={getRoleMeta(p.role as LeagueRole).icon}
                             alt={getRoleMeta(p.role as LeagueRole).label}
+                            loading="lazy"
+                            decoding="async"
                             crossOrigin="anonymous"
                             className="w-4 h-4 object-contain shrink-0"
                           />
@@ -1668,6 +1670,8 @@ export function StatsDashboard({
                           <img
                             src={p.teamLogoUrl}
                             alt={p.teamName}
+                            loading="lazy"
+                            decoding="async"
                             crossOrigin="anonymous"
                             className="w-4 h-4 object-contain shrink-0"
                           />

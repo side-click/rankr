@@ -58,6 +58,7 @@ export default async function AdminTeamStatsPage({
       seriesHistory={scouting.seriesHistory}
       teamLogoMap={scouting.teamLogoMap}
       roleRankByPlayerKey={scouting.roleRankByPlayerKey}
+      soloChampsByPlayerKey={scouting.soloChampsByPlayerKey}
       basePath="/admin/stats"
     />
   );

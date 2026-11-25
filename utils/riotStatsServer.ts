@@ -607,6 +607,10 @@ export interface TeamScoutingPayload {
   divisionThemeKey: string;
   divisionSlug: string | null;
   roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
+  soloChampsByPlayerKey: Record<
+    string,
+    { name: string; games: number; wins: number; winRate: number }[]
+  >;
 }
 
 export async function loadTeamScoutingData(
@@ -661,13 +665,31 @@ export async function loadTeamScoutingData(
     });
   }
 
+  const soloChampsByPlayerKey: TeamScoutingPayload["soloChampsByPlayerKey"] =
+    {};
+  for (const p of team.players) {
+    soloChampsByPlayerKey[p.playerKey] = getRoleFilteredSoloChampions(
+      p.matches,
+      p.role,
+      7
+    );
+  }
+
+  const stripPlayerMatches = (t: AggregatedTeamStats): AggregatedTeamStats => ({
+    ...t,
+    players: t.players.map((p) =>
+      p.matches.length === 0 ? p : { ...p, matches: [] }
+    ),
+  });
+
   return {
-    team,
-    leagueTeam,
+    team: stripPlayerMatches(team),
+    leagueTeam: leagueTeam ? stripPlayerMatches(leagueTeam) : null,
     seriesHistory,
     teamLogoMap,
     divisionThemeKey,
     divisionSlug,
     roleRankByPlayerKey,
+    soloChampsByPlayerKey,
   };
 }

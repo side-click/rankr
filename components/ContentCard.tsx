@@ -188,6 +188,8 @@ export function ContentCard({
                 alt={profile.username}
                 width={32}
                 height={32}
+                loading="lazy"
+                decoding="async"
                 className="w-8 h-8 rounded-md object-cover border border-white/30 shrink-0"
               />
             ) : (
@@ -321,6 +323,8 @@ export function ContentCard({
                       alt={t.name}
                       width={16}
                       height={16}
+                      loading="lazy"
+                      decoding="async"
                       className="w-4 h-4 object-contain shrink-0"
                     />
                   )}
@@ -348,6 +352,8 @@ export function ContentCard({
                             alt={r.label}
                             width={14}
                             height={14}
+                            loading="lazy"
+                            decoding="async"
                             className="w-3.5 h-3.5 object-contain shrink-0"
                           />
                           <span>{r.label}</span>

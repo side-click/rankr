@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ChampionStatsContent } from "@/components/ChampionStatsContent";
 import { loadPublicStatsContext } from "@/utils/riotStatsServer";
+import { computeChampionStats, type ChampionStatsPayload } from "@/utils/championStats";
 import { fetchAllScdlSeries } from "@/utils/leagueStats";
 import { safeDecodeParam } from "@/utils/ogFonts";
 import { getFocusedSeasonSlug } from "@/utils/focusedSeasonServer";
@@ -65,11 +66,25 @@ export default async function PublicChampionStatsPage({
     includeRiotStats: false,
   });
   const series = await fetchAllScdlSeries(ctx.sheetConfig).catch(() => []);
+  const statsByDivision: Record<string, ChampionStatsPayload> = {
+    all: computeChampionStats(ctx, series, championName, "all"),
+  };
+  for (const d of ctx.divisions) {
+    statsByDivision[d.slug] = computeChampionStats(ctx, series, championName, d.slug);
+  }
 
   return (
     <ChampionStatsContent
-      ctx={ctx}
-      series={series}
+      meta={{
+        ddVersion: ctx.ddVersion,
+        leagueName: ctx.leagueName,
+        seasonName: ctx.seasonName,
+        seasonSlug: ctx.seasonSlug,
+        divisions: ctx.divisions,
+        divisionThemes: ctx.divisionThemes,
+        sheetConfig: ctx.sheetConfig,
+      }}
+      statsByDivision={statsByDivision}
       championName={championName}
       initialDivision={division}
       basePath="/stats"

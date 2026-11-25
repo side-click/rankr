@@ -80,6 +80,7 @@ export default async function PublicTeamStatsPage({
       seriesHistory={scouting.seriesHistory}
       teamLogoMap={scouting.teamLogoMap}
       roleRankByPlayerKey={scouting.roleRankByPlayerKey}
+      soloChampsByPlayerKey={scouting.soloChampsByPlayerKey}
       basePath="/stats"
     />
   );

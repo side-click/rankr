@@ -34,6 +34,14 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
+  async rewrites() {
+    return [
+      {
+        source: "/images/leagues/scdl/seasons/4-5/dragon/ticks.jpg",
+        destination: "/images/leagues/scdl/seasons/4-5/dragon/ticks.png",
+      },
+    ];
+  },
   async headers() {
     return [
       {

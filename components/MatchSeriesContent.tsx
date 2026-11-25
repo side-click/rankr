@@ -527,7 +527,7 @@ export async function MatchSeriesContent({
                 {division && (
                   <>
                     {" • "}
-                    <span style={{ color: divTheme.primary_color }}>
+                    <span style={{ color: divTheme.accent_text_color }}>
                       {division.name}
                     </span>
                   </>

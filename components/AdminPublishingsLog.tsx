@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Division, Edition, League, Season } from "@/types/database";
+import { LocalTimestamp } from "@/components/LocalTimestamp";
 import { TeamGroupIcon } from "@/components/TeamGroupIcon";
 import {
   buildMovedRankingTitle,
@@ -453,7 +454,7 @@ export function AdminPublishingsLog({
                   </div>
                   <div className="flex items-center gap-2.5">
                     <span className="text-[11px] text-[#a6a89e] tabular-nums">
-                      {new Date(rev.created_at).toLocaleString()}
+                      <LocalTimestamp iso={rev.created_at} />
                     </span>
                     <button
                       type="button"
@@ -647,6 +648,7 @@ export function AdminPublishingsLog({
                           ? `/tierlist/${b.id}`
                           : `/rankings/${b.id}`
                       }
+                      prefetch={false}
                       className="font-bold text-[#f0ede0] hover:text-[#f0c020] truncate"
                     >
                       {b.title || "Untitled Ranking"}
@@ -671,7 +673,7 @@ export function AdminPublishingsLog({
                     {editionLabel && <span>• {editionLabel}</span>}
                     {b.published_at && (
                       <span>
-                        • {new Date(b.published_at).toLocaleDateString()}
+                        • <LocalTimestamp iso={b.published_at} />
                       </span>
                     )}
                   </div>
@@ -696,6 +698,7 @@ export function AdminPublishingsLog({
                         ? `/tierlist/${b.id}`
                         : `/rankings/${b.id}`
                     }
+                    prefetch={false}
                     className="xp-btn text-[11px] px-2 py-1"
                     title="View Ranking"
                   >

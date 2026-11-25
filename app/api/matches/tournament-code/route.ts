@@ -60,6 +60,20 @@ export async function POST(req: Request) {
       getCaptainTeamIds(supabase, auth.discordId, auth),
     ]);
 
+    const hasAnyCodeRole =
+      auth.isAdmin ||
+      auth.operatorLeagueIds.length > 0 ||
+      captainTeamIds.length > 0;
+    if (!hasAnyCodeRole) {
+      return NextResponse.json(
+        {
+          error:
+            "Only site admins, league operators, or assigned team captains can generate tournament codes.",
+        },
+        { status: 403 }
+      );
+    }
+
     if (matchErr || !match) {
       return NextResponse.json(
         { error: matchErr?.message || "Match not found." },

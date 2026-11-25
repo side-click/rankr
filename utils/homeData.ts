@@ -39,6 +39,7 @@ export interface HomeSeasonSummary {
     logoUrl: string | null;
     themeKey: string;
     primaryColor: string;
+    accentTextColor: string;
     teamCount: number;
   }[];
 }
@@ -60,6 +61,7 @@ export interface HomeDivisionStandings {
   divisionSlug: string;
   logoUrl: string | null;
   primaryColor: string;
+  accentTextColor: string;
   teams: HomeStandingRow[];
 }
 
@@ -81,6 +83,7 @@ export interface HomeDivisionTopPerformers {
   divisionSlug: string;
   logoUrl: string | null;
   primaryColor: string;
+  accentTextColor: string;
   players: HomeTopPerformer[];
 }
 
@@ -95,6 +98,7 @@ export interface HomeRecentMatch {
   teamBWins: number;
   divisionName: string | null;
   divisionColor: string;
+  divisionTextColor: string;
 }
 
 export interface HomeConsensusSnapshot {
@@ -195,6 +199,7 @@ const loadCachedHomeStatsBlock = unstable_cache(
           divisionSlug: d.slug,
           logoUrl: d.logo_url,
           primaryColor: divTheme.primary_color,
+          accentTextColor: divTheme.accent_text_color,
           teams: divTeams,
         };
       }).filter((d) =>
@@ -234,6 +239,7 @@ const loadCachedHomeStatsBlock = unstable_cache(
           divisionSlug: d.slug,
           logoUrl: d.logo_url,
           primaryColor: divTheme.primary_color,
+          accentTextColor: divTheme.accent_text_color,
           players: topDivPlayers,
         };
       }).filter((d) => d.players.length > 0);
@@ -274,6 +280,7 @@ const loadCachedHomeStatsBlock = unstable_cache(
             teamBWins: s.teamBWins,
             divisionName: div?.name ?? null,
             divisionColor: theme.primary_color,
+            divisionTextColor: theme.accent_text_color,
           };
         });
     }
@@ -347,6 +354,7 @@ const fetchHomeDataStable = unstable_cache(
           logoUrl: d.logo_url,
           themeKey: d.theme_key,
           primaryColor: theme.primary_color,
+          accentTextColor: theme.accent_text_color,
           teamCount,
         };
       });

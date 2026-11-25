@@ -326,19 +326,19 @@ export function AdminUsersLog({
                         {p.username}
                       </span>
                       {p.is_admin && (
-                        <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#2d5a3f] text-[#7cd438] rounded-xs">
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-[#1b3a27] text-[#9be85d] rounded-xs">
                           Admin
                         </span>
                       )}
                       {!p.is_admin &&
                         p.discord_id &&
                         allowedIdSet.has(p.discord_id) && (
-                          <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#1f3d5a] text-[#7cc4ff] rounded-xs">
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-[#1f3d5a] text-[#7cc4ff] rounded-xs">
                             Allowed
                           </span>
                         )}
                       {p.is_banned && (
-                        <span className="px-1 py-0.5 text-[9px] font-bold uppercase bg-[#451717] text-[#ff857a] rounded-xs">
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-[#451717] text-[#ff857a] rounded-xs">
                           Banned
                         </span>
                       )}

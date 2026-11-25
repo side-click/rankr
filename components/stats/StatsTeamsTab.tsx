@@ -444,6 +444,8 @@ export function StatsTeamsTab({
                                   <img
                                     src={side.logo}
                                     alt={side.name}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="w-5 h-5 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain shrink-0"
                                   />
                                 )}
@@ -656,6 +658,8 @@ export function StatsTeamsTab({
                         <img
                           src={t.logoUrl}
                           alt={t.teamName}
+                          loading="lazy"
+                          decoding="async"
                           className="w-8 h-8 sm:w-16 sm:h-16 object-contain shrink-0 group-hover:scale-105 transition-transform"
                         />
                       )}

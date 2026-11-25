@@ -39,6 +39,10 @@ interface TeamScoutingViewProps {
   seriesHistory: ScdlSeriesDetail[];
   teamLogoMap: Record<string, string | null>;
   roleRankByPlayerKey: Record<string, { rank: number; total: number }>;
+  soloChampsByPlayerKey?: Record<
+    string,
+    { name: string; games: number; wins: number; winRate: number }[]
+  >;
   basePath?: string;
 }
 
@@ -126,6 +130,7 @@ export function TeamScoutingView({
   seriesHistory,
   teamLogoMap,
   roleRankByPlayerKey,
+  soloChampsByPlayerKey,
   basePath = "/admin/stats",
 }: TeamScoutingViewProps) {
   const leaguePrefix = deriveLeaguePrefix(leagueName);
@@ -156,11 +161,13 @@ export function TeamScoutingView({
   const champPlayersMap = new Map<string, Set<string>>();
   for (const soloPlayer of team.players) {
     const lp = leaguePlayerByKey.get(soloPlayer.playerKey);
-    const soloChamps = getRoleFilteredSoloChampions(
-      soloPlayer.matches,
-      soloPlayer.role,
-      7
-    );
+    const soloChamps =
+      soloChampsByPlayerKey?.[soloPlayer.playerKey] ??
+      getRoleFilteredSoloChampions(
+        soloPlayer.matches,
+        soloPlayer.role,
+        7
+      );
     for (const c of lp?.topChampions ?? []) {
       const set = champPlayersMap.get(c.name) ?? new Set<string>();
       set.add(soloPlayer.playerKey);
@@ -311,6 +318,8 @@ export function TeamScoutingView({
               <img
                 src={team.logoUrl}
                 alt={team.teamName}
+                fetchPriority="high"
+                decoding="async"
                 className="w-16 h-16 object-contain drop-shadow"
               />
             )}
@@ -398,11 +407,13 @@ export function TeamScoutingView({
                 "league"
               );
 
-              const soloChamps = getRoleFilteredSoloChampions(
-                soloPlayer.matches,
-                soloPlayer.role,
-                7
-              );
+              const soloChamps =
+                soloChampsByPlayerKey?.[soloPlayer.playerKey] ??
+                getRoleFilteredSoloChampions(
+                  soloPlayer.matches,
+                  soloPlayer.role,
+                  7
+                );
               const soloPrioRanks = getPriorityPickRanks(
                 soloChamps,
                 soloPlayer.masteryTop4
@@ -492,6 +503,8 @@ export function TeamScoutingView({
                                 <img
                                   src={getChampionIconUrl(c.name, ddVersion)}
                                   alt={c.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-6 h-6 rounded object-cover shrink-0"
                                 />
                                 <span className="font-bold text-[#f0ede0] group-hover:text-[#f0c020] transition-colors truncate">
@@ -556,6 +569,8 @@ export function TeamScoutingView({
                                 <img
                                   src={getChampionIconUrl(c.name, ddVersion)}
                                   alt={c.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-6 h-6 rounded object-cover shrink-0"
                                 />
                                 <span className="font-semibold text-[#e8e5d8] group-hover:text-[#f0c020] transition-colors truncate">
@@ -610,6 +625,8 @@ export function TeamScoutingView({
                                 ddVersion
                               )}
                               alt={m.championName}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full aspect-square object-cover block"
                             />
                             <div className="text-[11px] font-bold text-[#f0c020] py-0.5">

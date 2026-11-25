@@ -215,7 +215,7 @@ export function HomeView({ data }: { data: HomeData }) {
                               )}
                               <div className="min-w-0">
                                 <div
-                                  style={{ color: div.primaryColor }}
+                                  style={{ color: div.accentTextColor }}
                                   className="text-xs font-extrabold truncate"
                                 >
                                   {div.name}
@@ -496,7 +496,7 @@ export function HomeView({ data }: { data: HomeData }) {
                               />
                             )}
                             <span
-                              style={{ color: div.primaryColor }}
+                              style={{ color: div.accentTextColor }}
                               className="text-xs font-extrabold uppercase tracking-wider truncate"
                             >
                               {div.divisionName}
@@ -618,7 +618,7 @@ export function HomeView({ data }: { data: HomeData }) {
                             />
                           )}
                           <span
-                            style={{ color: div.primaryColor }}
+                            style={{ color: div.accentTextColor }}
                             className="text-xs font-extrabold uppercase tracking-wider truncate"
                           >
                             {div.divisionName}
@@ -723,7 +723,7 @@ export function HomeView({ data }: { data: HomeData }) {
                       <div className="flex flex-col items-center text-center space-y-0.5">
                         {m.divisionName && (
                           <span
-                            style={{ color: m.divisionColor }}
+                            style={{ color: m.divisionTextColor }}
                             className="text-[10px] font-extrabold uppercase tracking-wider leading-tight"
                           >
                             {m.divisionName}
