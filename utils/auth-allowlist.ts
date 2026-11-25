@@ -73,8 +73,7 @@ export async function enforceAllowlistAfterLogin(
     process.env.DISCORD_ADMIN_WEBHOOK_URL?.trim() ||
     process.env.DISCORD_MOD_WEBHOOK_URL?.trim();
   const pingUserIds = parseDiscordUserIds(
-    process.env.DISCORD_ADMIN_PING_USER_IDS,
-    process.env.DISCORD_MOD_PING_USER_ID
+    process.env.DISCORD_ADMIN_PING_USER_IDS
   );
   if (webhookUrl) {
     try {
