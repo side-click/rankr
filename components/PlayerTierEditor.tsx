@@ -125,19 +125,13 @@ function PlayerTileVisual({
       <span className="font-bold leading-none whitespace-nowrap">
         {player.name.split("#")[0].trim() || player.name}
       </span>
-      {player.team_logo_url ? (
+      {player.team_logo_url && (
         <img
           src={player.team_logo_url}
           alt={player.team_name ?? "Team"}
           title={player.team_name ?? undefined}
           className="w-3.5 h-3.5 object-contain shrink-0 pointer-events-none"
         />
-      ) : (
-        player.team_name && (
-          <span className="text-[10px] font-semibold text-[#9aa1ad] bg-black/35 px-1.5 py-0.5 rounded leading-none whitespace-nowrap max-w-[100px] truncate">
-            {player.team_name}
-          </span>
-        )
       )}
       {player.is_captain && (
         <img
@@ -800,17 +794,7 @@ export function PlayerTierEditor({
   const availablePlayers = useMemo<PlayerTierItem[]>(() => {
     if (!seasonId || !divisionScope) return [];
 
-    // Helper: team roster lookup map by lower name for this season
-    const teamRosterByName = new Map<
-      string,
-      {
-        team_name: string;
-        team_logo_url: string | null;
-        division_id: string;
-        role: LeagueRole;
-        is_captain: boolean;
-      }
-    >();
+    const stripTag = (raw: string) => raw.split("#")[0].trim() || raw.trim();
 
     const seasonDivIds = new Set(seasonDivisions.map((d) => d.id));
     const relevantTeams =
@@ -821,18 +805,11 @@ export function PlayerTierEditor({
     const teamRosterPlayers: PlayerTierItem[] = [];
     for (const team of relevantTeams) {
       const roster = normalizeRoster(team.roster, team.captain);
-      for (const slot of roster) {
-        const cleanName = slot.name.trim();
-        if (!cleanName) continue;
-        teamRosterByName.set(cleanName.toLowerCase(), {
-          team_name: team.name,
-          team_logo_url: team.logo_url,
-          division_id: team.division_id,
-          role: slot.role,
-          is_captain: Boolean(slot.is_captain),
-        });
+      roster.forEach((slot, slotIdx) => {
+        const cleanName = stripTag(slot.name);
+        if (!cleanName) return;
         teamRosterPlayers.push({
-          id: `team:${team.id}:${slot.role}:${cleanName.toLowerCase()}`,
+          id: `team:${team.id}:${slot.role}:${slotIdx}`,
           name: cleanName,
           role: slot.role,
           division_id: team.division_id,
@@ -840,7 +817,7 @@ export function PlayerTierEditor({
           team_logo_url: team.logo_url,
           is_captain: Boolean(slot.is_captain),
         });
-      }
+      });
     }
 
     if (divisionScope !== "all") {
@@ -852,45 +829,25 @@ export function PlayerTierEditor({
       return teamRosterPlayers;
     }
 
-    // Division scope = "all": pre-draft season_players + post-draft team players (unless Players-Only edition when season_players exists)
-    const poolFromSeason = seasonPlayers.filter(
-      (sp) => sp.season_id === seasonId && sp.is_active
-    );
-    const merged: PlayerTierItem[] = [];
-    const seenNames = new Set<string>();
-
-    for (const sp of poolFromSeason) {
-      const cleanName = sp.name.trim();
-      if (!cleanName) continue;
-      const key = cleanName.toLowerCase();
-      if (seenNames.has(key)) continue;
-      seenNames.add(key);
-
-      const teamMeta = currentEdition?.is_players_only
-        ? undefined
-        : teamRosterByName.get(key);
-
-      merged.push({
+    // Division scope = "all": Draft pool (season_players) OR fallback to team rosters (no cross-team name collapsing)
+    const poolFromSeason: PlayerTierItem[] = seasonPlayers
+      .filter((sp) => sp.season_id === seasonId && sp.is_active)
+      .map((sp) => ({
         id: `sp:${sp.id}`,
-        name: cleanName,
+        name: stripTag(sp.name),
         role: sp.role,
-        division_id: teamMeta?.division_id ?? sp.division_id,
-        team_name: teamMeta?.team_name ?? null,
-        team_logo_url: teamMeta?.team_logo_url ?? null,
-        is_captain: teamMeta?.is_captain ?? sp.is_captain,
-      });
+        division_id: sp.division_id,
+        team_name: null,
+        team_logo_url: null,
+        is_captain: sp.is_captain,
+      }))
+      .filter((sp) => Boolean(sp.name));
+
+    if (poolFromSeason.length > 0) {
+      return poolFromSeason;
     }
 
-    if (!currentEdition?.is_players_only || poolFromSeason.length === 0) {
-      for (const tp of teamRosterPlayers) {
-        const key = tp.name.trim().toLowerCase();
-        if (seenNames.has(key)) continue;
-        seenNames.add(key);
-        merged.push(tp);
-      }
-    }
-
-    return merged;
+    return teamRosterPlayers;
   }, [
     seasonId,
     divisionScope,

@@ -193,6 +193,7 @@ export interface MatchDraftRow {
 
 export interface DivisionTheme {
   key: string;
+  league_id?: string | null;
   name: string;
   primary_color: string;
   secondary_color: string;

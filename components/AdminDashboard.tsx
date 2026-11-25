@@ -1110,11 +1110,14 @@ export function AdminDashboard({
   async function handleAddTheme(e: React.FormEvent) {
     e.preventDefault();
     if (!newThemeName.trim()) return;
-    const key = slugify(newThemeName);
-    if (!key) return;
+    const baseSlug = slugify(newThemeName);
+    if (!baseSlug) return;
+    const leagueSlug = selectedSeasonLeague?.slug?.trim();
+    const key = leagueSlug ? `${leagueSlug}-${baseSlug}` : baseSlug;
     setBusy(true);
     const { error } = await supabase.from("division_themes").insert({
       key,
+      league_id: selectedSeason?.league_id ?? null,
       name: newThemeName.trim(),
       primary_color: newThemePrimary,
       secondary_color: newThemeSecondary,
@@ -1737,13 +1740,23 @@ export function AdminDashboard({
   const selectedSeasonLeague =
     leagues.find((l) => l.id === selectedSeason?.league_id) ?? null;
   const isSelectedLeagueScdl = selectedSeasonLeague?.slug === "scdl";
-  const visibleThemes = useMemo(
-    () =>
-      isSelectedLeagueScdl
-        ? themes
-        : themes.filter((t) => t.key !== "baron" && t.key !== "dragon"),
-    [themes, isSelectedLeagueScdl]
-  );
+  const visibleThemes = useMemo(() => {
+    const selectedLeagueId = selectedSeason?.league_id ?? null;
+    const usedThemeKeysInSeason = new Set(
+      seasonDivisions.map((d) => d.theme_key).filter(Boolean)
+    );
+    return themes.filter((t) => {
+      if (t.league_id) {
+        return selectedLeagueId ? t.league_id === selectedLeagueId : false;
+      }
+      if (t.key === "baron" || t.key === "dragon") {
+        return isSelectedLeagueScdl;
+      }
+      return (
+        isSelectedLeagueScdl || usedThemeKeysInSeason.has(t.key)
+      );
+    });
+  }, [themes, selectedSeason?.league_id, seasonDivisions, isSelectedLeagueScdl]);
   useEffect(() => {
     if (visibleThemes.length === 0) {
       if (newDivTheme !== "") setNewDivTheme("");

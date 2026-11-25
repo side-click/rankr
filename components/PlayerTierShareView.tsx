@@ -223,7 +223,7 @@ function renderPlayerPill(
       <span className="font-bold leading-none whitespace-nowrap">
         {displayName}
       </span>
-      {pl.team_logo_url ? (
+      {pl.team_logo_url && (
         <img
           src={pl.team_logo_url}
           alt={pl.team_name ?? "Team"}
@@ -232,12 +232,6 @@ function renderPlayerPill(
           onError={handleSnapshotImgError}
           className={`${styles.logo} object-contain shrink-0`}
         />
-      ) : (
-        pl.team_name && (
-          <span className="text-[10px] font-semibold text-[#a0a7b4] bg-black/35 px-1 py-0.5 rounded leading-none">
-            {pl.team_name}
-          </span>
-        )
       )}
       {pl.is_captain && (
         <img
