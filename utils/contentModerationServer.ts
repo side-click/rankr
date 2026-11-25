@@ -129,6 +129,24 @@ const TIER1_BLOCK_CATEGORIES = [
   "violence/graphic",
 ];
 
+// Raise soft-flag thresholds for categories noisy in League/esports commentary
+const SOFT_FLAG_MIN_SCORES: Record<string, number> = {
+  violence: 0.85,
+  harassment: 0.75,
+};
+
+function formatAiLabels(
+  cats: string[],
+  scores: Record<string, number>,
+  fallback: string[] = []
+): string[] {
+  const list = cats.length > 0 ? cats : fallback;
+  return list.map((cat) => {
+    const score = scores[cat];
+    return typeof score === "number" ? `${cat} (${score.toFixed(2)})` : cat;
+  });
+}
+
 async function runOpenAiModeration(
   inputs: { field: string; text: string }[]
 ): Promise<
@@ -182,14 +200,20 @@ async function runOpenAiModeration(
         findings.push({
           field: inputs[i].field,
           severity: "block",
-          labels: activeCats.length > 0 ? activeCats : ["high_severity"],
+          labels: formatAiLabels(activeCats, scores, ["high_severity"]),
         });
-      } else if (r.flagged || activeCats.length > 0) {
-        findings.push({
-          field: inputs[i].field,
-          severity: "flag",
-          labels: activeCats,
+      } else {
+        const flaggedCats = activeCats.filter((cat) => {
+          const minScore = SOFT_FLAG_MIN_SCORES[cat];
+          return minScore === undefined || (scores[cat] ?? 0) >= minScore;
         });
+        if (flaggedCats.length > 0) {
+          findings.push({
+            field: inputs[i].field,
+            severity: "flag",
+            labels: formatAiLabels(flaggedCats, scores),
+          });
+        }
       }
     }
     return findings;
