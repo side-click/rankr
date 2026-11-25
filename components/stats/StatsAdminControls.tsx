@@ -173,38 +173,50 @@ export function StatsAdminControls({
             </div>
           </div>
 
-          {sheetData && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px]">
-              {sheetData.missingDraftGames.length === 0 &&
+          {sheetData && (() => {
+            const allClean =
+              sheetData.missingDraftGames.length === 0 &&
               sheetData.incompleteDataGames.length === 0 &&
               sheetData.draftIntegrityIssues.length === 0 &&
               sheetData.unrosteredPlayers.length === 0 &&
-              missingDataPlayers.length === 0 ? (
-                <span className="px-2.5 py-1 rounded bg-[#143320]/90 border border-[#3a804d] text-[#7cd438] font-bold">
-                  &#10003; All Datasets Aligned ({sheetData.matchCount} games &middot;
-                  100% draft coverage &middot; no duplicates)
+              missingDataPlayers.length === 0;
+            const draftCoveragePct =
+              sheetData.matchCount > 0
+                ? Math.round(
+                    ((sheetData.matchCount - sheetData.missingDraftGames.length) /
+                      sheetData.matchCount) *
+                      100
+                  )
+                : 100;
+            const summaryParts = [
+              `${sheetData.matchCount} games`,
+              sheetData.missingDraftGames.length === 0
+                ? `${draftCoveragePct}% draft coverage`
+                : `${draftCoveragePct}% draft coverage (${sheetData.missingDraftGames.length} missing)`,
+              sheetData.draftIntegrityIssues.length === 0
+                ? "no duplicates/mismatches"
+                : `${sheetData.draftIntegrityIssues.length} draft mismatches/duplicates`,
+              ...(sheetData.incompleteDataGames.length > 0
+                ? [`${sheetData.incompleteDataGames.length} incomplete rows`]
+                : []),
+              `${sheetData.unrosteredPlayers.length} unrostered`,
+              `${missingDataPlayers.length} 0-game players`,
+            ];
+            return (
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span
+                  className={
+                    allClean
+                      ? "px-2.5 py-1 rounded bg-[#143320]/90 border border-[#3a804d] text-[#7cd438] font-bold"
+                      : "px-2.5 py-1 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-[#f0c020] font-bold"
+                  }
+                >
+                  {allClean ? "\u2713 All Datasets Aligned" : "Dataset Audit:"}{" "}
+                  ({summaryParts.join(" \u2022 ")})
                 </span>
-              ) : (
-                <span className="px-2.5 py-1 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-[#f0c020] font-bold">
-                  Dataset Audit:{" "}
-                  {[
-                    sheetData.missingDraftGames.length > 0 &&
-                      `${sheetData.missingDraftGames.length} missing drafts`,
-                    sheetData.draftIntegrityIssues.length > 0 &&
-                      `${sheetData.draftIntegrityIssues.length} draft mismatches/duplicates`,
-                    sheetData.incompleteDataGames.length > 0 &&
-                      `${sheetData.incompleteDataGames.length} incomplete rows`,
-                    sheetData.unrosteredPlayers.length > 0 &&
-                      `${sheetData.unrosteredPlayers.length} unrostered`,
-                    missingDataPlayers.length > 0 &&
-                      `${missingDataPlayers.length} 0-game players`,
-                  ]
-                    .filter(Boolean)
-                    .join(" \u2022 ")}
-                </span>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {draftImportResult && (
             <div className="p-2.5 bg-black/40 border border-[#c89b3c]/50 rounded text-[11px] text-[#e8e5d8] space-y-1.5">
