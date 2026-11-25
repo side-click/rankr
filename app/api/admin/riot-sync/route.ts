@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   RiotRateLimitError,
@@ -96,6 +97,8 @@ export async function POST(request: Request) {
           await supabase
             .from("riot_player_stats")
             .upsert(okResults, { onConflict: "player_key" });
+          revalidateTag("public-stats");
+          revalidateTag("home-stats");
         }
         if (errResults.length > 0) {
           await Promise.all(
@@ -128,6 +131,11 @@ export async function POST(request: Request) {
       .from("riot_player_stats")
       .upsert(okResults, { onConflict: "player_key" });
     upsertErr = res.error;
+  }
+
+  if (!upsertErr && okResults.length > 0) {
+    revalidateTag("public-stats");
+    revalidateTag("home-stats");
   }
 
   if (!upsertErr && errResults.length > 0) {
