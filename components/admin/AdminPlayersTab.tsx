@@ -1,25 +1,19 @@
 "use client";
 
 import React from "react";
-import { Plus, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { CAPTAIN_ICON, LEAGUE_ROLES, type LeagueRole } from "@/utils/roles";
 import type { SeasonPlayer } from "@/types/database";
 
 interface AdminPlayersTabProps {
   busy: boolean;
   selectedSeasonId: string;
+  isDraftLeague: boolean;
   filteredSeasonPlayers: SeasonPlayer[];
-  newSinglePlayerName: string;
-  setNewSinglePlayerName: (v: string) => void;
-  newSinglePlayerRole: LeagueRole;
-  setNewSinglePlayerRole: (r: LeagueRole) => void;
   bulkPasteByRole: Record<LeagueRole, string>;
   setBulkPasteByRole: React.Dispatch<
     React.SetStateAction<Record<LeagueRole, string>>
   >;
-  onPullPlayersFromTeams: () => void;
-  onStripPlayerTaglines: () => void;
-  onAddSinglePlayer: (e: React.FormEvent) => void;
   onClearRolePlayers: (role: LeagueRole, roleLabel: string) => void;
   onDeleteSeasonPlayer: (player: SeasonPlayer) => void;
   onBulkAddRolePlayers: (role: LeagueRole) => void;
@@ -28,16 +22,10 @@ interface AdminPlayersTabProps {
 export function AdminPlayersTab({
   busy,
   selectedSeasonId,
+  isDraftLeague,
   filteredSeasonPlayers,
-  newSinglePlayerName,
-  setNewSinglePlayerName,
-  newSinglePlayerRole,
-  setNewSinglePlayerRole,
   bulkPasteByRole,
   setBulkPasteByRole,
-  onPullPlayersFromTeams,
-  onStripPlayerTaglines,
-  onAddSinglePlayer,
   onClearRolePlayers,
   onDeleteSeasonPlayer,
   onBulkAddRolePlayers,
@@ -50,86 +38,24 @@ export function AdminPlayersTab({
         </div>
       ) : (
         <>
-          <div className="xp-panel p-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-                Season Player Pool ({filteredSeasonPlayers.length} players)
-              </h2>
-              <p className="text-[11px] text-[#a6a89e] mt-0.5">
-                Pre-draft &amp; season-wide player pool organized by role
-                (used for Draft Day / All-Divisions Player Tier Lists before
-                teams exist).
-              </p>
+          {!isDraftLeague && (
+            <div className="px-3 py-2 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-xs text-[#f0c020] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                This season is configured as <strong>Premade Teams</strong>{" "}
+                (not a Draft League) under{" "}
+                <strong>Seasons &rarr; Season Config</strong>. Draft Player
+                Pool is disabled.
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onPullPlayersFromTeams}
-                className="xp-btn xp-btn-primary text-xs"
-                title="Copy roster players from all divisions/teams in this season into this pool (skips duplicates)"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Pull from Assigned Teams</span>
-              </button>
-              <button
-                type="button"
-                disabled={busy || filteredSeasonPlayers.length === 0}
-                onClick={onStripPlayerTaglines}
-                className="xp-btn xp-btn-danger text-xs"
-                title="Remove #tagline suffixes (e.g. #NA1) from all players in this season's pool"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Strip #Taglines</span>
-              </button>
-            </div>
-          </div>
+          )}
 
-          <form
-            onSubmit={onAddSinglePlayer}
-            className="xp-panel p-3 flex flex-wrap items-end gap-2"
+          <div
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ${
+              !isDraftLeague ? "opacity-45 pointer-events-none select-none" : ""
+            }`}
+            aria-disabled={!isDraftLeague}
           >
-            <div>
-              <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                Player Name
-              </label>
-              <input
-                type="text"
-                value={newSinglePlayerName}
-                onChange={(e) => setNewSinglePlayerName(e.target.value)}
-                placeholder="Summoner#NA1"
-                className="xp-inset px-2 py-1 text-xs w-48"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[#c7c5b8]">
-                Role
-              </label>
-              <select
-                value={newSinglePlayerRole}
-                onChange={(e) =>
-                  setNewSinglePlayerRole(e.target.value as LeagueRole)
-                }
-                className="xp-inset px-2 py-1 text-xs"
-              >
-                {LEAGUE_ROLES.map((r) => (
-                  <option key={r.key} value={r.key}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={busy || !newSinglePlayerName.trim()}
-              className="xp-btn text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Player</span>
-            </button>
-          </form>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {LEAGUE_ROLES.map((role) => {
               const rolePlayers = filteredSeasonPlayers.filter(
                 (p) => p.role === role.key

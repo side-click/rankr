@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { BulkTeamRosterImporter } from "@/components/admin/AdminDataImportPanel";
 import { CAPTAIN_ICON, LEAGUE_ROLES, normalizeRoster } from "@/utils/roles";
@@ -59,6 +59,17 @@ export function AdminTeamsTab({
   onRefresh,
   onStatusMsg,
 }: AdminTeamsTabProps) {
+  const [captainSearchByTeam, setCaptainSearchByTeam] = useState<
+    Record<string, string>
+  >({});
+  const authDiscordProfiles = useMemo(
+    () =>
+      profiles.filter(
+        (p): p is Profile & { discord_id: string } => Boolean(p.discord_id)
+      ),
+    [profiles]
+  );
+
   return (
     <div className="space-y-4">
       {!selectedDivisionId ? (
@@ -269,10 +280,10 @@ export function AdminTeamsTab({
                   </div>
                 </div>
 
-                {/* Discord-linked Team Hub Captains */}
+                {/* Link Captain Discord */}
                 <div className="pt-2 border-t border-white/10 space-y-1.5">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-[#a6a89e]">
-                    Team Hub Captains (Discord ID)
+                    Link Captain Discord
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {teamCaptains
@@ -302,36 +313,109 @@ export function AdminTeamsTab({
                         );
                       })}
                   </div>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      value={newCaptainDiscordByTeam[team.id] ?? ""}
-                      onChange={(e) =>
-                        setNewCaptainDiscordByTeam((prev) => ({
-                          ...prev,
-                          [team.id]: e.target.value,
-                        }))
-                      }
-                      placeholder="Discord User ID for tourney codes..."
-                      className="flex-1 xp-inset px-2 py-1 text-[11px]"
-                    />
-                    <button
-                      type="button"
-                      disabled={
-                        busy || !(newCaptainDiscordByTeam[team.id] ?? "").trim()
-                      }
-                      onClick={() =>
-                        onAddTeamCaptain(
-                          team.id,
-                          newCaptainDiscordByTeam[team.id] ?? ""
-                        )
-                      }
-                      className="xp-btn text-[11px] px-2 py-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Add</span>
-                    </button>
-                  </div>
+                  {(() => {
+                    const teamCaptainIds = new Set(
+                      teamCaptains
+                        .filter((c) => c.team_id === team.id)
+                        .map((c) => c.discord_id)
+                    );
+                    const q = (captainSearchByTeam[team.id] ?? "")
+                      .trim()
+                      .toLowerCase();
+                    const matchingProfiles = q
+                      ? authDiscordProfiles
+                          .filter(
+                            (p) =>
+                              !teamCaptainIds.has(p.discord_id) &&
+                              ((p.username ?? "").toLowerCase().includes(q) ||
+                                p.discord_id.toLowerCase().includes(q))
+                          )
+                          .slice(0, 6)
+                      : [];
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={newCaptainDiscordByTeam[team.id] ?? ""}
+                            onChange={(e) =>
+                              setNewCaptainDiscordByTeam((prev) => ({
+                                ...prev,
+                                [team.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Discord User ID..."
+                            className="flex-1 xp-inset px-2 py-1 text-[11px] min-w-0"
+                          />
+                          <button
+                            type="button"
+                            disabled={
+                              busy ||
+                              !(newCaptainDiscordByTeam[team.id] ?? "").trim()
+                            }
+                            onClick={() =>
+                              onAddTeamCaptain(
+                                team.id,
+                                newCaptainDiscordByTeam[team.id] ?? ""
+                              )
+                            }
+                            className="xp-btn text-[11px] px-2 py-1 shrink-0"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Add</span>
+                          </button>
+                        </div>
+                        {authDiscordProfiles.length > 0 && (
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={captainSearchByTeam[team.id] ?? ""}
+                              onChange={(e) =>
+                                setCaptainSearchByTeam((prev) => ({
+                                  ...prev,
+                                  [team.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Or search signed-in Discord users..."
+                              className="w-full xp-inset px-2 py-1 text-[11px]"
+                            />
+                            {q && (
+                              <div className="mt-1 max-h-32 overflow-y-auto bg-[#14171d] border border-white/15 rounded divide-y divide-white/5">
+                                {matchingProfiles.length === 0 ? (
+                                  <div className="px-2 py-1 text-[10px] text-[#7e8781]">
+                                    No matching signed-in Discord users
+                                  </div>
+                                ) : (
+                                  matchingProfiles.map((p) => (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => {
+                                        onAddTeamCaptain(team.id, p.discord_id);
+                                        setCaptainSearchByTeam((prev) => ({
+                                          ...prev,
+                                          [team.id]: "",
+                                        }));
+                                      }}
+                                      className="w-full text-left px-2 py-1 text-[11px] hover:bg-white/10 flex items-center justify-between gap-2 cursor-pointer"
+                                    >
+                                      <span className="font-bold text-[#f0ede0] truncate">
+                                        {p.username || "Discord User"}
+                                      </span>
+                                      <span className="text-[10px] text-[#a6a89e] font-mono shrink-0">
+                                        {p.discord_id}
+                                      </span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex justify-end gap-2">

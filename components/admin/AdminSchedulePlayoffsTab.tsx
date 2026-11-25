@@ -16,11 +16,12 @@ import {
   buildStandardPlayoffBracket,
   getSeedCountForFormat,
 } from "@/utils/playoffBrackets";
-import { Calendar, Check, Plus, RotateCcw, Save, Trash2, Trophy } from "lucide-react";
+import { Calendar, Plus, RotateCcw, Save, Trash2, Trophy } from "lucide-react";
 
 interface AdminSchedulePlayoffsTabProps {
   season: Season;
   divisions: Division[];
+  selectedDivId: string;
   teams: Team[];
   matches: SeasonMatch[];
   backups: SeasonConfigBackup[];
@@ -71,6 +72,7 @@ function generateRoundRobinPairings(
 export function AdminSchedulePlayoffsTab({
   season,
   divisions,
+  selectedDivId,
   teams,
   matches,
   backups,
@@ -82,9 +84,6 @@ export function AdminSchedulePlayoffsTab({
   onStatusMsg,
 }: AdminSchedulePlayoffsTabProps) {
   const supabase = createClient();
-  const [selectedDivId, setSelectedDivId] = useState<string>(
-    divisions[0]?.id ?? ""
-  );
   const [localBusy, setLocalBusy] = useState(false);
 
   // Add match form state
@@ -101,12 +100,6 @@ export function AdminSchedulePlayoffsTab({
   const [bracketFormat, setBracketFormat] =
     useState<PlayoffBracketFormat>("4-team");
   const [seedTeamIds, setSeedTeamIds] = useState<string[]>(["", "", "", ""]);
-
-  useEffect(() => {
-    if (!divisions.some((d) => d.id === selectedDivId)) {
-      setSelectedDivId(divisions[0]?.id ?? "");
-    }
-  }, [divisions, selectedDivId]);
 
   const activeDiv =
     divisions.find((d) => d.id === selectedDivId) ?? divisions[0] ?? null;
@@ -436,48 +429,17 @@ export function AdminSchedulePlayoffsTab({
 
   return (
     <div className="space-y-4">
-      {/* Division Switcher */}
-      <div className="xp-panel p-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {divisions.map((d) => {
-            const isSel = d.id === activeDiv.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => setSelectedDivId(d.id)}
-                className={`xp-btn text-xs px-3 py-1 ${
-                  isSel ? "xp-btn-primary" : ""
-                }`}
-              >
-                {d.logo_url && (
-                  <img
-                    src={d.logo_url}
-                    alt={d.name}
-                    className="w-4 h-4 object-contain shrink-0"
-                  />
-                )}
-                <span>{d.name}</span>
-                {season.playoff_brackets?.[d.id] && (
-                  <Check className="w-3 h-3 text-[#7cd438]" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <span className="text-[11px] text-[#a6a89e]">
-          {divTeams.length} teams · {divMatches.length} scheduled matches
-        </span>
-      </div>
-
       {/* Match Schedule Section */}
       <div className="xp-panel p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Calendar className="w-4 h-4 text-[#f0c020]" />
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#f0c020]">
               Match Schedule
             </h3>
+            <span className="text-[11px] text-[#a6a89e]">
+              ({divTeams.length} teams · {divMatches.length} scheduled matches)
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {divisions.some(

@@ -295,7 +295,7 @@ export function AdminSeasonsTab({
 
                   <details className="pt-1 border-t border-white/10 text-[11px]">
                     <summary className="cursor-pointer text-[#a6a89e] hover:text-[#f0c020] font-semibold select-none">
-                      Data Sources &amp; Credits
+                      Season Config
                     </summary>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                       <div>

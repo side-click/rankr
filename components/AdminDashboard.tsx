@@ -48,6 +48,7 @@ import {
   Power,
   Save,
   ShieldAlert,
+  Trash2,
   Upload,
   User,
   X,
@@ -122,10 +123,11 @@ export function AdminDashboard({
 
   const validTabs = [
     "seasons",
+    "divisions",
     "editions",
+    "players",
     "teams",
     "schedule",
-    "players",
     "moderation",
   ] as const;
   type AdminTab = (typeof validTabs)[number];
@@ -275,14 +277,12 @@ export function AdminDashboard({
   const [newDivName, setNewDivName] = useState("");
   const [newDivTheme, setNewDivTheme] = useState<string>("baron");
   const [newThemeName, setNewThemeName] = useState("");
-  const [newThemePrimary, setNewThemePrimary] = useState("#6b2d8b");
-  const [newThemeSecondary, setNewThemeSecondary] = useState("#00b8c9");
-  const [newThemeText, setNewThemeText] = useState("#c77dff");
+  const [newThemePrimary, setNewThemePrimary] = useState("#dc2626");
+  const [newThemeSecondary, setNewThemeSecondary] = useState("#16a34a");
+  const [newThemeText, setNewThemeText] = useState("#2563eb");
   const [newEditionName, setNewEditionName] = useState("");
   const [newEditionPlayersOnly, setNewEditionPlayersOnly] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [newSinglePlayerName, setNewSinglePlayerName] = useState("");
-  const [newSinglePlayerRole, setNewSinglePlayerRole] = useState<LeagueRole>("top");
   const [bulkPasteByRole, setBulkPasteByRole] = useState<Record<LeagueRole, string>>({
     top: "",
     jungle: "",
@@ -1133,7 +1133,6 @@ export function AdminDashboard({
   }
 
   async function handleDeleteTheme(theme: DivisionTheme) {
-    if (theme.key === "baron" || theme.key === "dragon") return;
     if (!confirm(`Delete theme "${theme.name}"?`)) return;
     setBusy(true);
     const { error } = await supabase
@@ -1415,37 +1414,6 @@ export function AdminDashboard({
     setBusy(false);
   }
 
-  async function handleAddSinglePlayer(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedSeasonId || !newSinglePlayerName.trim()) return;
-    const trimmed = newSinglePlayerName.trim();
-    const existingForSeason = seasonPlayers.filter(
-      (p) => p.season_id === selectedSeasonId
-    );
-    if (
-      existingForSeason.some(
-        (p) => p.name.trim().toLowerCase() === trimmed.toLowerCase()
-      )
-    ) {
-      setStatusMsg(`"${trimmed}" is already in this season's player pool.`);
-      return;
-    }
-    setBusy(true);
-    const { error } = await supabase.from("season_players").insert({
-      season_id: selectedSeasonId,
-      name: trimmed,
-      role: newSinglePlayerRole,
-    });
-    if (!error) {
-      setNewSinglePlayerName("");
-      setStatusMsg(`Added ${trimmed} (${newSinglePlayerRole}).`);
-      await refreshAll();
-    } else {
-      setStatusMsg(`Error: ${error.message}`);
-    }
-    setBusy(false);
-  }
-
   async function handleBulkAddRolePlayers(role: LeagueRole) {
     if (!selectedSeasonId) return;
     const raw = bulkPasteByRole[role] ?? "";
@@ -1546,74 +1514,6 @@ export function AdminDashboard({
         : `Cleared ${count} ${roleLabel} players from season pool.`
     );
     await refreshAll();
-    setBusy(false);
-  }
-
-  async function handlePullPlayersFromTeams() {
-    if (!selectedSeasonId) return;
-    const divIds = new Set(
-      divisions
-        .filter((d) => d.season_id === selectedSeasonId)
-        .map((d) => d.id)
-    );
-    const seasonTeams = teams.filter((t) => divIds.has(t.division_id));
-    if (seasonTeams.length === 0) {
-      setStatusMsg("No assigned teams found in this season.");
-      return;
-    }
-
-    const existingForSeason = seasonPlayers.filter(
-      (p) => p.season_id === selectedSeasonId
-    );
-    const seen = new Set(
-      existingForSeason.map((p) => p.name.trim().toLowerCase())
-    );
-
-    const toInsert: {
-      season_id: string;
-      division_id: string;
-      team_id: string;
-      name: string;
-      role: LeagueRole;
-      is_captain: boolean;
-    }[] = [];
-
-    for (const team of seasonTeams) {
-      const roster = normalizeRoster(team.roster, team.captain);
-      for (const slot of roster) {
-        const name = slot.name.trim();
-        if (!name) continue;
-        const key = name.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        toInsert.push({
-          season_id: selectedSeasonId,
-          division_id: team.division_id,
-          team_id: team.id,
-          name,
-          role: slot.role,
-          is_captain: Boolean(slot.is_captain),
-        });
-      }
-    }
-
-    if (toInsert.length === 0) {
-      setStatusMsg("All assigned team players are already in the season pool.");
-      return;
-    }
-
-    setBusy(true);
-    const { error } = await supabase.from("season_players").insert(toInsert);
-    if (!error) {
-      setStatusMsg(
-        `Pulled ${toInsert.length} assigned team player${
-          toInsert.length === 1 ? "" : "s"
-        } into the season pool.`
-      );
-      await refreshAll();
-    } else {
-      setStatusMsg(`Error: ${error.message}`);
-    }
     setBusy(false);
   }
 
@@ -1834,6 +1734,25 @@ export function AdminDashboard({
 
   const selectedSeason =
     seasons.find((s) => s.id === selectedSeasonId) ?? null;
+  const selectedSeasonLeague =
+    leagues.find((l) => l.id === selectedSeason?.league_id) ?? null;
+  const isSelectedLeagueScdl = selectedSeasonLeague?.slug === "scdl";
+  const visibleThemes = useMemo(
+    () =>
+      isSelectedLeagueScdl
+        ? themes
+        : themes.filter((t) => t.key !== "baron" && t.key !== "dragon"),
+    [themes, isSelectedLeagueScdl]
+  );
+  useEffect(() => {
+    if (visibleThemes.length === 0) {
+      if (newDivTheme !== "") setNewDivTheme("");
+    } else if (!visibleThemes.some((t) => t.key === newDivTheme)) {
+      setNewDivTheme(visibleThemes[0].key);
+    }
+  }, [visibleThemes, newDivTheme]);
+  const isSelectedSeasonDraft =
+    (selectedSeason?.roster_type ?? "draft") === "draft";
   const filteredTeams = selectedDivisionId
     ? teams.filter((t) => t.division_id === selectedDivisionId)
     : [];
@@ -1916,8 +1835,9 @@ export function AdminDashboard({
         {(
           [
             ["seasons", "Seasons"],
-            ["editions", "Divisions and Content Editions"],
-            ["players", "Players"],
+            ["divisions", "Divisions"],
+            ["editions", "Content Editions"],
+            ["players", "Draft Player Pool"],
             ["teams", "Teams"],
             ["schedule", "Schedule & Playoffs"],
             ["moderation", isSiteAdmin ? "Moderation & Safety" : "League Access & Safety"],
@@ -1948,11 +1868,12 @@ export function AdminDashboard({
         </div>
       </div>
 
-      {(tab === "editions" ||
+      {(tab === "divisions" ||
+        tab === "editions" ||
         tab === "teams" ||
         tab === "schedule" ||
         tab === "players") && (
-        <div className="xp-panel p-3 mb-4 flex flex-wrap items-center gap-3">
+        <div className="xp-panel p-3 mb-4 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
               Season
@@ -1984,41 +1905,47 @@ export function AdminDashboard({
             </select>
           </div>
 
-          {tab === "teams" && (
+          {(tab === "teams" || tab === "schedule") && (
             <div>
-              <label className="block text-[10px] font-bold uppercase text-[#a6a89e] mb-1">
+              <label className="block text-[10px] font-bold uppercase text-[#a6a89e]">
                 Division
               </label>
               {seasonDivisions.length === 0 ? (
-                <span className="text-xs text-[#a6a89e]">
+                <div className="mt-0.5 text-xs text-[#a6a89e] py-1">
                   No divisions in this season
-                </span>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {seasonDivisions.map((d) => {
-                    const isSel = d.id === selectedDivisionId;
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => setSelectedDivisionId(d.id)}
-                        className={`xp-btn text-xs px-3 py-1 ${
-                          isSel ? "xp-btn-primary" : ""
-                        }`}
-                      >
-                        {d.logo_url && (
-                          <img
-                            src={d.logo_url}
-                            alt={d.name}
-                            className="w-4 h-4 object-contain shrink-0"
-                          />
-                        )}
-                        <span>{d.name}</span>
-                      </button>
-                    );
-                  })}
                 </div>
+              ) : (
+                <select
+                  value={selectedDivisionId}
+                  onChange={(e) => setSelectedDivisionId(e.target.value)}
+                  className="xp-inset px-2 py-1 text-xs font-bold mt-0.5"
+                >
+                  {seasonDivisions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
               )}
+            </div>
+          )}
+
+          {tab === "players" && (
+            <div className="sm:ml-auto">
+              <button
+                type="button"
+                disabled={
+                  busy ||
+                  !isSelectedSeasonDraft ||
+                  filteredSeasonPlayers.length === 0
+                }
+                onClick={() => void handleStripPlayerTaglines()}
+                className="xp-btn xp-btn-danger text-xs"
+                title="Remove #tagline suffixes (e.g. #NA1) from all players in this season's draft pool"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Strip #Taglines</span>
+              </button>
             </div>
           )}
         </div>
@@ -2059,6 +1986,7 @@ export function AdminDashboard({
           <AdminSchedulePlayoffsTab
             season={selectedSeason}
             divisions={seasonDivisions}
+            selectedDivId={selectedDivisionId}
             teams={teams}
             matches={seasonMatches}
             backups={seasonBackups}
@@ -2079,21 +2007,15 @@ export function AdminDashboard({
         </div>
       )}
 
-      {/* TAB: SETUP PLAYERS (Season-wide Pre-Draft / Draft Pool) */}
+      {/* TAB: DRAFT PLAYER POOL */}
       {tab === "players" && (
         <AdminPlayersTab
           busy={busy}
           selectedSeasonId={selectedSeasonId}
+          isDraftLeague={isSelectedSeasonDraft}
           filteredSeasonPlayers={filteredSeasonPlayers}
-          newSinglePlayerName={newSinglePlayerName}
-          setNewSinglePlayerName={setNewSinglePlayerName}
-          newSinglePlayerRole={newSinglePlayerRole}
-          setNewSinglePlayerRole={setNewSinglePlayerRole}
           bulkPasteByRole={bulkPasteByRole}
           setBulkPasteByRole={setBulkPasteByRole}
-          onPullPlayersFromTeams={() => void handlePullPlayersFromTeams()}
-          onStripPlayerTaglines={() => void handleStripPlayerTaglines()}
-          onAddSinglePlayer={handleAddSinglePlayer}
           onClearRolePlayers={(role, roleLabel) =>
             void handleClearRolePlayers(role, roleLabel)
           }
@@ -2130,15 +2052,16 @@ export function AdminDashboard({
         />
       )}
 
-      {/* TAB 3: SETUP DIVISIONS AND EDITIONS */}
-      {tab === "editions" && (
+      {/* TAB: DIVISIONS OR CONTENT EDITIONS */}
+      {(tab === "divisions" || tab === "editions") && (
         <AdminDivisionsEditionsTab
+          mode={tab === "divisions" ? "divisions" : "editions"}
           busy={busy}
           seasonDivisions={seasonDivisions}
           setDivisions={setDivisions}
           filteredEditions={filteredEditions}
           setEditions={setEditions}
-          themes={themes}
+          themes={visibleThemes}
           setThemes={setThemes}
           newDivName={newDivName}
           setNewDivName={setNewDivName}

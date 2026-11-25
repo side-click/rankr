@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  AlertTriangle,
   Archive,
   ArrowDown,
   ArrowUp,
@@ -15,6 +16,7 @@ import {
 import type { Division, DivisionTheme, Edition } from "@/types/database";
 
 interface AdminDivisionsEditionsTabProps {
+  mode: "divisions" | "editions";
   busy: boolean;
   seasonDivisions: Division[];
   setDivisions: React.Dispatch<React.SetStateAction<Division[]>>;
@@ -56,6 +58,7 @@ interface AdminDivisionsEditionsTabProps {
 }
 
 export function AdminDivisionsEditionsTab({
+  mode,
   busy,
   seasonDivisions,
   setDivisions,
@@ -97,18 +100,28 @@ export function AdminDivisionsEditionsTab({
 }: AdminDivisionsEditionsTabProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Left: Divisions */}
-        <div className="lg:col-span-5 xp-panel p-3 space-y-3">
-          <h2 className="font-bold text-xs uppercase text-[#f0c020]">
-            Divisions
-          </h2>
-          <div className="space-y-2">
-            {seasonDivisions.length === 0 ? (
-              <div className="xp-inset p-3 text-xs text-[#a6a89e]">
-                No divisions in this season yet.
+      {mode === "divisions" && (
+        <>
+          <div className="xp-panel p-3 space-y-3">
+            <h2 className="font-bold text-xs uppercase text-[#f0c020]">
+              Divisions
+            </h2>
+            {seasonDivisions.length === 0 && (
+              <div className="px-3 py-2 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-xs text-[#f0c020] flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>
+                  At least one division is required before you can add teams,
+                  schedules, or rankings for this season. For a single-division
+                  league, create one division (e.g. named after your league).
+                </span>
               </div>
-            ) : (
+            )}
+            <div className="space-y-2">
+              {seasonDivisions.length === 0 ? (
+                <div className="xp-inset p-3 text-xs text-[#a6a89e]">
+                  No divisions in this season yet.
+                </div>
+              ) : (
               seasonDivisions.map((d) => (
                 <div key={d.id} className="xp-inset p-2 space-y-2 text-xs">
                   <div className="flex items-center gap-2">
@@ -222,11 +235,15 @@ export function AdminDivisionsEditionsTab({
               onChange={(e) => setNewDivTheme(e.target.value)}
               className="xp-inset px-2 py-1 text-xs"
             >
-              {themes.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name}
-                </option>
-              ))}
+              {themes.length === 0 ? (
+                <option value="">Default Theme</option>
+              ) : (
+                themes.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.name}
+                  </option>
+                ))
+              )}
             </select>
             <button type="submit" disabled={busy} className="xp-btn text-xs">
               <Plus className="w-3.5 h-3.5" />
@@ -234,9 +251,11 @@ export function AdminDivisionsEditionsTab({
             </button>
           </form>
         </div>
+        </>
+      )}
 
-        {/* Right: Editions */}
-        <div className="lg:col-span-7 xp-panel p-3 space-y-3">
+      {mode === "editions" && (
+        <div className="xp-panel p-3 space-y-3">
           <div>
             <h2 className="font-bold text-xs uppercase text-[#f0c020]">
               Editions
@@ -424,9 +443,10 @@ export function AdminDivisionsEditionsTab({
             </button>
           </form>
         </div>
-      </div>
+      )}
 
-      {/* Bottom: Division Themes */}
+      {/* Division Themes (shown under Divisions tab) */}
+      {mode === "divisions" && (
       <div className="xp-panel p-3 space-y-3">
         <h2 className="font-bold text-xs uppercase text-[#f0c020]">
           Division Themes
@@ -478,17 +498,15 @@ export function AdminDivisionsEditionsTab({
                 >
                   <Save className="w-3 h-3" />
                 </button>
-                {th.key !== "baron" && th.key !== "dragon" && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onDeleteTheme(th)}
-                    className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
-                    title="Delete Theme"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onDeleteTheme(th)}
+                  className="xp-btn xp-btn-danger text-[11px] px-2 py-1"
+                  title="Delete Theme"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -625,6 +643,7 @@ export function AdminDivisionsEditionsTab({
           </div>
         </form>
       </div>
+      )}
     </div>
   );
 }
