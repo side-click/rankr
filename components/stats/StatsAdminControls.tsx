@@ -5,10 +5,12 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   Download,
   Megaphone,
   RefreshCw,
   Users,
+  XCircle,
 } from "lucide-react";
 import { RetroWindow } from "@/components/RetroWindow";
 import { MatchDraftForm } from "@/components/stats/MatchDraftForm";
@@ -174,12 +176,6 @@ export function StatsAdminControls({
           </div>
 
           {sheetData && (() => {
-            const allClean =
-              sheetData.missingDraftGames.length === 0 &&
-              sheetData.incompleteDataGames.length === 0 &&
-              sheetData.draftIntegrityIssues.length === 0 &&
-              sheetData.unrosteredPlayers.length === 0 &&
-              missingDataPlayers.length === 0;
             const draftCoveragePct =
               sheetData.matchCount > 0
                 ? Math.round(
@@ -188,31 +184,61 @@ export function StatsAdminControls({
                       100
                   )
                 : 100;
+            const severity: "error" | "warning" | "ok" =
+              sheetData.matchCount === 0 ||
+              sheetData.draftIntegrityIssues.length > 0 ||
+              sheetData.missingDraftGames.length >= 3 ||
+              sheetData.incompleteDataGames.length >= 3 ||
+              draftCoveragePct < 90
+                ? "error"
+                : sheetData.missingDraftGames.length > 0 ||
+                  sheetData.incompleteDataGames.length > 0
+                ? "warning"
+                : "ok";
             const summaryParts = [
-              `${sheetData.matchCount} games`,
               sheetData.missingDraftGames.length === 0
                 ? `${draftCoveragePct}% draft coverage`
                 : `${draftCoveragePct}% draft coverage (${sheetData.missingDraftGames.length} missing)`,
               sheetData.draftIntegrityIssues.length === 0
                 ? "no duplicates/mismatches"
                 : `${sheetData.draftIntegrityIssues.length} draft mismatches/duplicates`,
-              ...(sheetData.incompleteDataGames.length > 0
-                ? [`${sheetData.incompleteDataGames.length} incomplete rows`]
-                : []),
+              sheetData.incompleteDataGames.length === 0
+                ? "all rows complete"
+                : `${sheetData.incompleteDataGames.length} incomplete ${
+                    sheetData.incompleteDataGames.length === 1 ? "game" : "games"
+                  }`,
               `${sheetData.unrosteredPlayers.length} unrostered`,
               `${missingDataPlayers.length} 0-game players`,
             ];
+            const badgeMeta =
+              severity === "error"
+                ? {
+                    className:
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded border bg-[#451717]/90 border-[#9e3535] text-[#ff857a] font-bold",
+                    label: "Dataset Issue:",
+                    Icon: XCircle,
+                  }
+                : severity === "warning"
+                ? {
+                    className:
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded border bg-[#2a2210]/90 border-[#c89b3c]/50 text-[#f0c020] font-bold",
+                    label: "Dataset Warning:",
+                    Icon: AlertTriangle,
+                  }
+                : {
+                    className:
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded border bg-[#143320]/90 border-[#3a804d] text-[#7cd438] font-bold",
+                    label: "Dataset OK:",
+                    Icon: CheckCircle2,
+                  };
+            const StatusIcon = badgeMeta.Icon;
             return (
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                <span
-                  className={
-                    allClean
-                      ? "px-2.5 py-1 rounded bg-[#143320]/90 border border-[#3a804d] text-[#7cd438] font-bold"
-                      : "px-2.5 py-1 rounded bg-[#2a2210]/90 border border-[#c89b3c]/50 text-[#f0c020] font-bold"
-                  }
-                >
-                  {allClean ? "\u2713 All Datasets Aligned" : "Dataset Audit:"}{" "}
-                  ({summaryParts.join(" \u2022 ")})
+                <span className={badgeMeta.className}>
+                  <StatusIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {badgeMeta.label} {summaryParts.join(" \u2022 ")}
+                  </span>
                 </span>
               </div>
             );
