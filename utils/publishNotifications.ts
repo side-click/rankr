@@ -30,26 +30,26 @@ export async function dispatchPublishedBlogNotification(params: {
   } = params;
 
   const hasMedia = hasBanner || mod.totalImageCount > 0;
-  if (mod.action === "allow" && !hasMedia) {
-    return { flagged: false };
-  }
-
   const blogUrl = `${origin}/blog/${blogId}`;
   const isFlagged = mod.action === "flag";
-  const actionType = isFlagged ? "flagged" : "media_review";
+  const shouldLogModeration = isFlagged || hasMedia;
 
   await Promise.all([
-    logModerationEvent({
-      userId,
-      contentType: "blog",
-      contentId: blogId,
-      action: actionType,
-      categories:
-        mod.categories.length > 0 ? mod.categories : ["media_review"],
-      fieldNames: mod.flaggedFields,
-      matchedTerms: mod.matchedTerms,
-      titleSnapshot: title,
-    }),
+    ...(shouldLogModeration
+      ? [
+          logModerationEvent({
+            userId,
+            contentType: "blog",
+            contentId: blogId,
+            action: isFlagged ? "flagged" : "media_review",
+            categories:
+              mod.categories.length > 0 ? mod.categories : ["media_review"],
+            fieldNames: mod.flaggedFields,
+            matchedTerms: mod.matchedTerms,
+            titleSnapshot: title,
+          }),
+        ]
+      : []),
     sendModerationWebhook({
       title: isFlagged ? "⚠️ Flagged Blog Published" : "📢 Blog Published",
       url: blogUrl,
@@ -59,7 +59,7 @@ export async function dispatchPublishedBlogNotification(params: {
           ? `${leagueNameSnapshot ? `${leagueNameSnapshot} — ` : ""}${seasonNameSnapshot}`
           : "General"
       }`,
-      pingModerator: true,
+      pingModerator: isFlagged,
       fields: [
         {
           name: "Author",
@@ -132,28 +132,29 @@ export async function dispatchPublishedRankingNotification(params: {
     mod,
   } = params;
 
-  if (mod.action === "allow" && overlayCount === 0) {
-    return { flagged: false };
-  }
-
   const contentType = isPlayer ? "tierlist" : "ranking";
   const rankingUrl = isPlayer
     ? `${origin}/tierlist/${rankingId}`
     : `${origin}/rankings/${rankingId}`;
   const isFlagged = mod.action === "flag";
+  const shouldLogModeration = isFlagged || overlayCount > 0;
 
   await Promise.all([
-    logModerationEvent({
-      userId,
-      contentType,
-      contentId: rankingId,
-      action: isFlagged ? "flagged" : "media_review",
-      categories:
-        mod.categories.length > 0 ? mod.categories : ["media_review"],
-      fieldNames: mod.flaggedFields,
-      matchedTerms: mod.matchedTerms,
-      titleSnapshot: title,
-    }),
+    ...(shouldLogModeration
+      ? [
+          logModerationEvent({
+            userId,
+            contentType,
+            contentId: rankingId,
+            action: isFlagged ? "flagged" : "media_review",
+            categories:
+              mod.categories.length > 0 ? mod.categories : ["media_review"],
+            fieldNames: mod.flaggedFields,
+            matchedTerms: mod.matchedTerms,
+            titleSnapshot: title,
+          }),
+        ]
+      : []),
     sendModerationWebhook({
       title: isFlagged ? "⚠️ Flagged Ranking Published" : "📢 Ranking Published",
       url: rankingUrl,
@@ -161,7 +162,7 @@ export async function dispatchPublishedRankingNotification(params: {
       description: `**${title}**\n${
         leagueNameSnapshot ? `${leagueNameSnapshot} — ` : ""
       }${seasonNameSnapshot ?? ""}`,
-      pingModerator: true,
+      pingModerator: isFlagged,
       fields: [
         {
           name: "Author",

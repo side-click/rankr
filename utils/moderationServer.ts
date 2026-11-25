@@ -44,6 +44,21 @@ export async function logModerationEvent(entry: {
   }
 }
 
+export function parseDiscordUserIds(
+  ...values: Array<string | undefined>
+): string[] {
+  const raw = values.find((v) => v && v.trim().length > 0);
+  if (!raw) return [];
+  const seen = new Set<string>();
+  for (const part of raw.split(/[\s,]+/)) {
+    const id = part.trim();
+    if (/^\d{5,30}$/.test(id)) {
+      seen.add(id);
+    }
+  }
+  return [...seen];
+}
+
 export async function sendModerationWebhook(payload: {
   title: string;
   color: number;
@@ -53,21 +68,24 @@ export async function sendModerationWebhook(payload: {
   pingModerator?: boolean;
 }): Promise<void> {
   const webhookUrl =
-    process.env.DISCORD_PUBLISH_WEBHOOK_URL?.trim() ||
-    process.env.DISCORD_MOD_WEBHOOK_URL;
+    process.env.DISCORD_CONTENT_MOD_WEBHOOK_URL?.trim() ||
+    process.env.DISCORD_MOD_WEBHOOK_URL?.trim();
   if (!webhookUrl) return;
-  const pingUserId = payload.pingModerator
-    ? process.env.DISCORD_MOD_PING_USER_ID?.trim()
-    : undefined;
+  const pingUserIds = payload.pingModerator
+    ? parseDiscordUserIds(
+        process.env.DISCORD_CONTENT_MOD_PING_USER_IDS,
+        process.env.DISCORD_MOD_PING_USER_ID
+      )
+    : [];
 
   await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ...(pingUserId
+      ...(pingUserIds.length > 0
         ? {
-            content: `<@${pingUserId}>`,
-            allowed_mentions: { users: [pingUserId] },
+            content: pingUserIds.map((id) => `<@${id}>`).join(" "),
+            allowed_mentions: { users: pingUserIds },
           }
         : {}),
       embeds: [

@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { parseDiscordUserIds } from "@/utils/moderationServer";
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
 
@@ -68,18 +69,23 @@ export async function enforceAllowlistAfterLogin(
   const avatarUrl =
     typeof meta.avatar_url === "string" ? meta.avatar_url : undefined;
 
-  const webhookUrl = process.env.DISCORD_MOD_WEBHOOK_URL;
-  const pingUserId = process.env.DISCORD_MOD_PING_USER_ID?.trim();
+  const webhookUrl =
+    process.env.DISCORD_ADMIN_WEBHOOK_URL?.trim() ||
+    process.env.DISCORD_MOD_WEBHOOK_URL?.trim();
+  const pingUserIds = parseDiscordUserIds(
+    process.env.DISCORD_ADMIN_PING_USER_IDS,
+    process.env.DISCORD_MOD_PING_USER_ID
+  );
   if (webhookUrl) {
     try {
       await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(pingUserId
+          ...(pingUserIds.length > 0
             ? {
-                content: `<@${pingUserId}>`,
-                allowed_mentions: { users: [pingUserId] },
+                content: pingUserIds.map((id) => `<@${id}>`).join(" "),
+                allowed_mentions: { users: pingUserIds },
               }
             : {}),
           embeds: [
