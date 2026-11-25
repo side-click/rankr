@@ -84,6 +84,14 @@ export default async function TeamHubPage({
         )
       : undefined) ??
     captainSeason ??
+    seasonList.find(
+      (s) => s.is_active && matchList.some((m) => m.season_id === s.id)
+    ) ??
+    seasonList.find(
+      (s) =>
+        s.is_active &&
+        Boolean((s as { stats_sheet_id?: string | null }).stats_sheet_id)
+    ) ??
     seasonList.find((s) => s.is_active) ??
     seasonList[0];
 

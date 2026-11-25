@@ -103,9 +103,34 @@ const fetchConsensusPageData = unstable_cache(
   const allDivisions = divisions ?? [];
   const allEditions = editions ?? [];
 
+  const activeSeasons = allSeasons.filter((s) => s.is_active);
+  let defaultActiveSeason = activeSeasons[0] ?? null;
+  if (!params.season && activeSeasons.length > 1) {
+    const activeIds = activeSeasons.map((s) => s.id);
+    const { data: activeRankingRows } = await supabase
+      .from("rankings")
+      .select("season_id")
+      .eq("status", "published")
+      .eq("ranking_type", "team")
+      .in("season_id", activeIds);
+    const countsBySeason = new Map<string, number>();
+    for (const row of activeRankingRows ?? []) {
+      if (!row.season_id) continue;
+      countsBySeason.set(
+        row.season_id,
+        (countsBySeason.get(row.season_id) ?? 0) + 1
+      );
+    }
+    defaultActiveSeason =
+      [...activeSeasons].sort(
+        (a, b) =>
+          (countsBySeason.get(b.id) ?? 0) - (countsBySeason.get(a.id) ?? 0)
+      )[0] ?? defaultActiveSeason;
+  }
+
   const selectedSeason =
     (params.season ? allSeasons.find((s) => s.slug === params.season) : null) ??
-    allSeasons.find((s) => s.is_active) ??
+    defaultActiveSeason ??
     allSeasons[0] ??
     null;
 

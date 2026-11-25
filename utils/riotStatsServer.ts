@@ -373,6 +373,11 @@ async function loadStatsContextInternal(
     (seasonSlug
       ? visibleSeasons.find((s) => s.slug === seasonSlug)
       : null) ??
+    visibleSeasons.find(
+      (s) =>
+        s.is_active &&
+        Boolean((s as { stats_sheet_id?: string | null }).stats_sheet_id)
+    ) ??
     visibleSeasons.find((s) => s.is_active) ??
     visibleSeasons[0] ??
     null;
