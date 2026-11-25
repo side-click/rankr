@@ -1066,6 +1066,7 @@ export function AdminDashboard({
     setBusy(true);
     const { error } = await supabase.from("division_themes").upsert({
       key: theme.key,
+      league_id: theme.league_id ?? selectedSeason?.league_id ?? null,
       name: theme.name.trim(),
       primary_color: theme.primary_color,
       secondary_color: theme.secondary_color,
