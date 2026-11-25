@@ -104,6 +104,7 @@ export default async function PublicStatsPage({
 
   return (
     <StatsDashboard
+      key={ctx.seasonId}
       missingTable={false}
       hasRiotKey={false}
       ddVersion={ctx.ddVersion}

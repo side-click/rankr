@@ -122,13 +122,22 @@ export function AdminDivisionsEditionsTab({
                   No divisions in this season yet.
                 </div>
               ) : (
-              seasonDivisions.map((d) => (
+              seasonDivisions.map((d) => {
+                const matchedTheme = themes.find((t) => t.key === d.theme_key);
+                const effectiveLogo =
+                  d.logo_url || matchedTheme?.default_logo_url || null;
+                const needsCustomLogo =
+                  !matchedTheme?.default_logo_url ||
+                  Boolean(
+                    d.logo_url && d.logo_url !== matchedTheme.default_logo_url
+                  );
+                return (
                 <div key={d.id} className="xp-inset p-2 space-y-2 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 shrink-0 bg-black/30 border border-white/10 p-0.5 flex items-center justify-center">
-                      {d.logo_url ? (
+                      {effectiveLogo ? (
                         <img
-                          src={d.logo_url}
+                          src={effectiveLogo}
                           alt={d.name}
                           className="w-full h-full object-contain"
                         />
@@ -169,57 +178,82 @@ export function AdminDivisionsEditionsTab({
                         </option>
                       ))}
                     </select>
+                    {!needsCustomLogo && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onSaveDivision(d)}
+                          className="xp-btn xp-btn-primary text-[11px] px-2 py-1 shrink-0"
+                          title="Save Division"
+                        >
+                          <Save className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onDeleteDivision(d)}
+                          className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
+                          title="Delete Division"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={d.logo_url ?? ""}
-                      onChange={(e) =>
-                        setDivisions((prev) =>
-                          prev.map((item) =>
-                            item.id === d.id
-                              ? { ...item, logo_url: e.target.value }
-                              : item
-                          )
-                        )
-                      }
-                      placeholder="Logo URL"
-                      className="flex-1 min-w-0 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
-                    />
-                    <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
-                      <Upload className="w-3 h-3" />
-                      <span>Upload</span>
+                  {needsCustomLogo && (
+                    <div className="flex items-center gap-2">
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) onDivisionLogoUpload(d.id, f);
-                        }}
+                        type="text"
+                        value={d.logo_url ?? ""}
+                        onChange={(e) =>
+                          setDivisions((prev) =>
+                            prev.map((item) =>
+                              item.id === d.id
+                                ? { ...item, logo_url: e.target.value }
+                                : item
+                            )
+                          )
+                        }
+                        placeholder="Logo URL"
+                        className="flex-1 min-w-0 bg-transparent border border-white/10 px-2 py-1 text-[11px] text-[#c7c5b8] focus:outline-none focus:border-[#c89b3c]"
                       />
-                    </label>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => onSaveDivision(d)}
-                      className="xp-btn xp-btn-primary text-[11px] px-2 py-1 shrink-0"
-                      title="Save Division"
-                    >
-                      <Save className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => onDeleteDivision(d)}
-                      className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
-                      title="Delete Division"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                      <label className="xp-btn text-[11px] px-2 py-1 cursor-pointer shrink-0">
+                        <Upload className="w-3 h-3" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) onDivisionLogoUpload(d.id, f);
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onSaveDivision(d)}
+                        className="xp-btn xp-btn-primary text-[11px] px-2 py-1 shrink-0"
+                        title="Save Division"
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onDeleteDivision(d)}
+                        className="xp-btn xp-btn-danger text-[11px] px-2 py-1 shrink-0"
+                        title="Delete Division"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))
+                );
+              })
             )}
           </div>
           <form onSubmit={onAddDivision} className="flex flex-wrap gap-2 pt-2">
